@@ -2,12 +2,12 @@
 
 ## 1. Project Identity
 
-**Project:** Admin Hub Games
-**Repository:** `gatshaayanda/admin-hub-games`
-**Owner:** Ayanda Gatsha / Admin Hub
+**Project:** Admin Hub Games  
+**Repository:** `gatshaayanda/admin-hub-games`  
+**Owner:** Ayanda Gatsha / Admin Hub  
 **Role:** Reusable game foundation and studio/publisher shell for future Admin Hub games.
 
-Admin Hub Games is the game-development arm of Admin Hub. This repository is not Mhele itself. It is the foundation from which Mhele and future games can be built.
+Admin Hub Games is the game-development arm of Admin Hub. This repository is the foundation from which future games are built. It is not itself a single game.
 
 The project exists to make it easier to build games that are enjoyable to play, technically solid, mobile-friendly, and capable of growing into real products.
 
@@ -54,12 +54,13 @@ Use this workflow for meaningful changes:
 
 ## 4. Technology Baseline
 
-The foundation currently uses:
+The foundation uses:
 
 - Vite
 - TypeScript
 - Phaser
 - Vitest
+- Firebase
 - Node.js
 - Git / GitHub
 - VS Code + Git Bash
@@ -77,14 +78,25 @@ A reusable system belongs in the foundation when a real game experience proves t
 
 Do not build a giant custom game engine before the games require one.
 
-The foundation should grow through actual games:
+The foundation is built in this order:
 
-1. Build the foundation.
-2. Build Mhele.
-3. Notice what was genuinely reusable.
-4. Improve the foundation.
-5. Build the next game.
-6. Repeat.
+```text
+Admin Hub Games
+        ↓
+Firebase foundation
+        ↓
+Phaser foundation
+        ↓
+Publisher intro
+        ↓
+Reusable game shell
+        ↓
+Actual games
+        ↓
+Foundation refinement from real use
+```
+
+There is **no designated first game at the foundation stage**. Mhele is a future game and may be built from the foundation when ready; it should not dictate the foundation prematurely.
 
 ## 6. Current Mission
 
@@ -98,7 +110,7 @@ The foundation repository is:
 
 `gatshaayanda/admin-hub-games`
 
-Mhele should not be built directly inside this foundation repository unless the project structure explicitly calls for it. Future games should normally have their own repositories and consume/copy the proven foundation patterns as appropriate.
+Future games should normally have their own repositories and consume/copy proven foundation patterns as appropriate.
 
 ## 7. Publisher / Studio Experience
 
@@ -126,22 +138,22 @@ The intro should be:
 - easy to configure per game
 - subordinate to the game's own identity
 
-The foundation should make this a reusable experience rather than hard-coding it into one game.
+The first user-flow milestone is to let the user actually enter this intro in the browser and experience the transition into the game shell.
 
 ## 8. Foundation Architecture
 
-The first foundation milestone should establish a clean application/game shell rather than a giant engine.
+The first foundation milestone establishes a clean application/game shell rather than a giant engine.
 
-Expected areas include:
+Current foundation areas:
 
+- Firebase initialization foundation
 - Phaser bootstrap
 - application/game shell
 - configurable game metadata
-- scene structure
-- publisher intro
-- reusable UI foundation
-- input abstraction
-- pause/menu foundations where justified
+- publisher intro scene
+- initial scene structure
+- reusable UI foundation as needed
+- input abstraction as gameplay requires it
 - testing setup
 - documentation
 
@@ -305,40 +317,31 @@ Prefer:
 
 Do not add a service merely because a future game might need it.
 
-## 14. Firebase / Backend Policy
+## 14. Firebase Foundation
 
-Firebase is available for the Admin Hub Games ecosystem, but it is **not required by the foundation**.
-
-Firebase should be introduced when a real game requires features such as:
-
-- authentication
-- cloud saves
-- leaderboards
-- multiplayer/backend state
-- persistent player profiles
-- analytics that cannot be handled locally
-
-The foundation must remain usable without Firebase.
-
-Firebase project for this foundation:
+Firebase is part of the Admin Hub Games foundation and uses the dedicated Firebase project:
 
 - Project ID: `admin-hub-games`
 - Auth domain: `admin-hub-games.firebaseapp.com`
 - Storage bucket: `admin-hub-games.firebasestorage.app`
 
+The Firebase client is initialized through the foundation rather than being scattered across individual scenes.
+
+Firebase capabilities such as authentication, cloud saves, leaderboards, multiplayer/backend state, persistent profiles, and analytics should be added when the relevant game experience needs them.
+
 Do not copy Mhele's Firebase project configuration into this repository.
+
+Firebase web configuration values are client configuration, but production secrets and server credentials must never be committed to the repository.
 
 ## 15. Environment Variables
 
 This repository is a Vite application, not a Next.js application.
 
-Therefore Vite client-side environment variables should use the `VITE_` prefix when accessed through `import.meta.env`.
+Therefore Vite client-side environment variables use the `VITE_` prefix when accessed through `import.meta.env`.
 
 Do not introduce `NEXT_PUBLIC_` variables unless a future framework migration specifically requires them.
 
-Local environment files containing development configuration should not be committed when they contain machine-specific values. Maintain a safe `.env.example` when environment documentation is useful.
-
-Firebase web configuration values are client configuration, but production secrets and server credentials must never be committed to the repository.
+Local environment files containing development configuration should not be committed when they contain machine-specific values. Maintain `.env.example` as the environment contract.
 
 ## 16. Deployment
 
@@ -351,24 +354,23 @@ Before considering a deployment complete:
 3. verify there are no obvious runtime errors
 4. confirm environment configuration matches the intended project
 
-Do not confuse a successful deployment with a verified game experience.
+A successful deployment is not the same thing as a verified game experience.
 
 ## 17. Repository Structure
 
 The structure should evolve with the foundation. Avoid creating empty directories simply to represent future architecture.
 
-A likely direction is:
+Current direction:
 
 ```text
 src/
   main.ts
-  app/
+  firebase/
   game/
   scenes/
-  systems/
   ui/
+  systems/
   input/
-  config/
   tests/
 ```
 
@@ -376,21 +378,19 @@ Only introduce a directory when it has an actual purpose.
 
 ## 18. Mhele Relationship
 
-Mhele is Game #1 in the Admin Hub Games journey.
+Mhele is a future Admin Hub Games title and the original seed/reference for this repository.
 
-The original `mhele` repository is preserved as the seed/reference.
-
-The intended sequence is:
+The intended relationship is:
 
 1. Preserve the Mhele seed.
 2. Establish Admin Hub Games Foundation here.
 3. Build the reusable publisher/game shell.
-4. Create Mhele from the proven foundation.
-5. Build and play-test Mhele.
-6. Extract only genuinely reusable improvements.
-7. Use those improvements for future games.
+4. Choose and build an actual game from the foundation when ready.
+5. Use real game development to discover what should become reusable.
+6. Promote genuinely reusable improvements back into the foundation.
+7. Repeat for future titles.
 
-Mhele should improve because of the foundation, and the foundation should improve because of Mhele.
+Mhele must not be used as an excuse to prematurely hard-code Mhele-specific rules into the foundation.
 
 ## 19. Current Roadmap
 
@@ -400,6 +400,7 @@ Mhele should improve because of the foundation, and the foundation should improv
 - Admin Hub Games GitHub repository established: complete.
 
 ### Phase 1 — Admin Hub Games Foundation
+- Firebase foundation: established.
 - replace the Vite starter surface
 - establish Phaser bootstrap
 - establish application/game shell
@@ -414,26 +415,38 @@ Mhele should improve because of the foundation, and the foundation should improv
 ### Phase 2 — Core Reusable Systems
 Add only systems justified by upcoming game work.
 
-### Phase 3 — Mhele
-Build the first actual game using the foundation.
+### Phase 3 — First Actual Game
+Choose the first title when the foundation is ready. Mhele is not required to be first.
 
 ### Phase 4 — Foundation Refinement
-Promote genuinely reusable lessons from Mhele back into the foundation.
+Promote genuinely reusable lessons from the first game back into the foundation.
 
 ### Phase 5 — Future Games
 Build additional Admin Hub Games titles using the growing foundation.
 
 ## 20. Current Working Rule
 
-At the current stage, do **not** jump straight into building all of Mhele.
+At the current stage, do **not** jump straight into building a specific game.
 
 First make this repository feel like Admin Hub Games.
 
-The first meaningful visible milestone should be:
+The first meaningful visible milestone is:
 
 > Opening the project in the browser feels like entering a real game studio/publisher experience, not a Vite starter page.
 
-Then we build the systems needed to make the first real game efficiently.
+The immediate user flow is:
+
+```text
+Open app
+   ↓
+Admin Hub Games publisher intro
+   ↓
+Configured game title / handoff
+   ↓
+Reusable game shell
+```
+
+This flow should be simple enough to play through and review before more systems are added.
 
 ## 21. Current Checkpoint
 
@@ -441,11 +454,20 @@ The repository has been successfully separated from the original Mhele remote an
 
 `gatshaayanda/admin-hub-games`
 
-Current seed commits remain intentionally intact:
+The seed has been verified with `npm install` and `npm run build`, and Vercel deployment is already working.
 
-- `c01b357` — `chore: add Phaser and Vitest`
-- `ca0d26a` — `chore: initialize Mhele Phaser project`
+The current implementation checkpoint is **Phase 1 — Admin Hub Games Foundation**, moving from the Vite starter toward:
 
-The next implementation checkpoint is **Phase 1 — Admin Hub Games Foundation**.
+```text
+Admin Hub Games
+        ↓
+Firebase foundation
+        ↓
+Phaser foundation
+        ↓
+Publisher intro
+        ↓
+Reusable game shell
+```
 
 Do not rewrite the project blindly. Inspect the seed, establish the foundation deliberately, verify it, then checkpoint.
