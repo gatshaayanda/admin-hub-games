@@ -10,6 +10,8 @@ export class NameEntryScene extends Phaser.Scene {
   private caret!: Phaser.GameObjects.Text;
   private status!: Phaser.GameObjects.Text;
   private startButton!: Phaser.GameObjects.Container;
+  private nameInput?: HTMLInputElement;
+  private resizeHandler?: () => void;
 
   constructor() {
     super('NameEntryScene');
@@ -69,22 +71,98 @@ export class NameEntryScene extends Phaser.Scene {
     reset.on('pointerdown', () => this.resetLocalGameData());
 
     this.loadSavedName();
+    this.installNativeNameInput(box.x, box.y, boxWidth);
 
     this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
+      if (this.nameInput && document.activeElement === this.nameInput) return;
+      this.handleTextInput(event);
+    });
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.removeNativeNameInput());
+  }
+
+  private handleTextInput(event: KeyboardEvent) {
+    if (event.key === 'Enter') {
+      if (this.inputText.trim()) this.startGame();
+      return;
+    }
+    if (event.key === 'Backspace') {
+      this.inputText = this.inputText.slice(0, -1);
+      this.refresh();
+      this.syncNativeInput();
+      return;
+    }
+    if (event.key.length === 1 && this.inputText.length < 18 && /[a-zA-Z0-9 _-]/.test(event.key)) {
+      this.inputText += event.key;
+      this.refresh();
+      this.syncNativeInput();
+    }
+  }
+
+  private installNativeNameInput(x: number, y: number, boxWidth: number) {
+    if (!window.matchMedia('(pointer: coarse)').matches && navigator.maxTouchPoints === 0) return;
+
+    const input = document.createElement('input');
+    input.id = 'ahg-name-input';
+    input.type = 'text';
+    input.autocomplete = 'nickname';
+    input.autocapitalize = 'words';
+    input.spellcheck = false;
+    input.maxLength = 18;
+    input.inputMode = 'text';
+    input.setAttribute('aria-label', 'Player name');
+
+    input.addEventListener('input', () => {
+      this.inputText = input.value.replace(/[^a-zA-Z0-9 _-]/g, '').slice(0, 18);
+      if (input.value !== this.inputText) input.value = this.inputText;
+      this.refresh();
+    });
+    input.addEventListener('keydown', (event) => {
       if (event.key === 'Enter') {
+        event.preventDefault();
         if (this.inputText.trim()) this.startGame();
-        return;
-      }
-      if (event.key === 'Backspace') {
-        this.inputText = this.inputText.slice(0, -1);
-        this.refresh();
-        return;
-      }
-      if (event.key.length === 1 && this.inputText.length < 18 && /[a-zA-Z0-9 _-]/.test(event.key)) {
-        this.inputText += event.key;
-        this.refresh();
       }
     });
+
+    document.getElementById('app')?.appendChild(input);
+    this.nameInput = input;
+    this.positionNativeNameInput(x, y, boxWidth);
+    this.resizeHandler = () => this.positionNativeNameInput(x, y, boxWidth);
+    window.addEventListener('resize', this.resizeHandler, { passive: true });
+    window.addEventListener('orientationchange', this.resizeHandler, { passive: true });
+
+    input.focus({ preventScroll: true });
+  }
+
+  private positionNativeNameInput(x: number, y: number, boxWidth: number) {
+    const input = this.nameInput;
+    const canvas = document.querySelector<HTMLCanvasElement>('#app canvas');
+    if (!input || !canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = rect.width / this.scale.width;
+    const scaleY = rect.height / this.scale.height;
+    const fontSize = Math.max(16, Math.min(20, 20 * scaleY));
+
+    input.style.left = `${rect.left + (x - boxWidth / 2 + 12) * scaleX}px`;
+    input.style.top = `${rect.top + (y - 26) * scaleY}px`;
+    input.style.width = `${Math.max(80, (boxWidth - 24) * scaleX)}px`;
+    input.style.height = `${Math.max(38, 52 * scaleY)}px`;
+    input.style.fontSize = `${fontSize}px`;
+  }
+
+  private syncNativeInput() {
+    if (this.nameInput && this.nameInput.value !== this.inputText) this.nameInput.value = this.inputText;
+  }
+
+  private removeNativeNameInput() {
+    if (this.resizeHandler) {
+      window.removeEventListener('resize', this.resizeHandler);
+      window.removeEventListener('orientationchange', this.resizeHandler);
+    }
+    this.nameInput?.remove();
+    this.nameInput = undefined;
+    this.resizeHandler = undefined;
   }
 
   private loadSavedName() {
@@ -109,9 +187,11 @@ export class NameEntryScene extends Phaser.Scene {
     const playerName = this.inputText.trim();
     if (!playerName) {
       this.status.setText('Choose a name first.');
+      this.nameInput?.focus({ preventScroll: true });
       return;
     }
 
+    this.nameInput?.blur();
     this.registry.set('playerName', playerName);
     try {
       window.localStorage.setItem(PLAYER_NAME_KEY, playerName);
@@ -134,6 +214,7 @@ export class NameEntryScene extends Phaser.Scene {
     }
     this.registry.remove('playerName');
     this.inputText = '';
+    this.syncNativeInput();
     this.refresh();
     this.status.setText('Local name and private Gamebook cleared. World Notes are not deleted.');
   }
