@@ -1,9 +1,14 @@
 import Phaser from 'phaser';
+import { savePlayerProfile } from '../firebase/firebase';
+
+const PLAYER_NAME_KEY = 'admin-hub-games:player-name';
+const GAMEBOOK_KEY = 'admin-hub-games:gamebook';
 
 export class NameEntryScene extends Phaser.Scene {
   private inputText = '';
   private label!: Phaser.GameObjects.Text;
   private caret!: Phaser.GameObjects.Text;
+  private status!: Phaser.GameObjects.Text;
 
   constructor() {
     super('NameEntryScene');
@@ -14,33 +19,23 @@ export class NameEntryScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#d9c28f');
     this.drawBackdrop(width, height);
 
-    this.add.text(width / 2, height * 0.22, 'WELCOME', {
-      fontFamily: 'monospace',
-      fontSize: '18px',
-      fontStyle: 'bold',
-      color: '#30251e',
-      letterSpacing: 3,
+    this.add.text(width / 2, height * 0.18, 'WELCOME', {
+      fontFamily: 'monospace', fontSize: '18px', fontStyle: 'bold', color: '#30251e', letterSpacing: 3,
     }).setOrigin(0.5);
 
-    this.add.text(width / 2, height * 0.30, 'What should we call you?', {
-      fontFamily: 'monospace',
-      fontSize: '15px',
-      color: '#554335',
+    this.add.text(width / 2, height * 0.26, 'What should we call you?', {
+      fontFamily: 'monospace', fontSize: '15px', color: '#554335',
     }).setOrigin(0.5);
 
-    const box = this.add.rectangle(width / 2, height * 0.45, 300, 58, 0xf0e4c6, 1)
+    const box = this.add.rectangle(width / 2, height * 0.39, 300, 58, 0xf0e4c6, 1)
       .setStrokeStyle(3, 0x624937, 1);
 
     this.label = this.add.text(box.x - 125, box.y, '', {
-      fontFamily: 'monospace',
-      fontSize: '20px',
-      color: '#30251e',
+      fontFamily: 'monospace', fontSize: '20px', color: '#30251e',
     }).setOrigin(0, 0.5);
 
     this.caret = this.add.text(box.x - 125, box.y, '|', {
-      fontFamily: 'monospace',
-      fontSize: '20px',
-      color: '#30251e',
+      fontFamily: 'monospace', fontSize: '20px', color: '#30251e',
     }).setOrigin(0, 0.5);
 
     this.time.addEvent({
@@ -49,12 +44,21 @@ export class NameEntryScene extends Phaser.Scene {
       callback: () => this.caret.setVisible(!this.caret.visible),
     });
 
-    this.add.text(width / 2, height * 0.60, 'TYPE YOUR NAME  ·  ENTER TO CONTINUE', {
-      fontFamily: 'monospace',
-      fontSize: '10px',
-      color: '#6a5140',
-      letterSpacing: 1,
+    this.add.text(width / 2, height * 0.52, 'TYPE YOUR NAME  ·  ENTER TO CONTINUE', {
+      fontFamily: 'monospace', fontSize: '10px', color: '#6a5140', letterSpacing: 1,
     }).setOrigin(0.5);
+
+    this.status = this.add.text(width / 2, height * 0.60, '', {
+      fontFamily: 'monospace', fontSize: '9px', color: '#6a5140', align: 'center',
+    }).setOrigin(0.5);
+
+    const reset = this.add.text(width / 2, height * 0.70, 'RESET LOCAL GAME DATA', {
+      fontFamily: 'monospace', fontSize: '10px', color: '#6f3f32',
+      backgroundColor: '#f0dfb6', padding: { left: 14, right: 14, top: 9, bottom: 9 },
+    }).setOrigin(0.5).setInteractive({ useHandCursor: false });
+    reset.on('pointerdown', () => this.resetLocalGameData());
+
+    this.loadSavedName();
 
     this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
       if (event.key === 'Enter') {
@@ -75,23 +79,55 @@ export class NameEntryScene extends Phaser.Scene {
     });
   }
 
+  private loadSavedName() {
+    try {
+      const saved = window.localStorage.getItem(PLAYER_NAME_KEY);
+      if (saved) {
+        this.inputText = saved;
+        this.refresh();
+        this.status.setText('Your name is remembered on this device.');
+      }
+    } catch {
+      // The game still works if browser storage is unavailable.
+    }
+  }
+
   private refresh() {
     this.label.setText(this.inputText);
     this.caret.x = this.label.x + this.label.width + 4;
   }
 
-  private startGame() {
+  private async startGame() {
     const playerName = this.inputText.trim();
+    if (!playerName) return;
+
     this.registry.set('playerName', playerName);
 
     try {
-      window.localStorage.setItem('admin-hub-games:player-name', playerName);
+      window.localStorage.setItem(PLAYER_NAME_KEY, playerName);
     } catch {
       // The game still works if browser storage is unavailable.
     }
 
+    this.status.setText('Saving your player identity…');
+    await savePlayerProfile(playerName);
+
     this.cameras.main.fadeOut(450, 22, 18, 14);
     this.time.delayedCall(450, () => this.scene.start('GameShellScene'));
+  }
+
+  private resetLocalGameData() {
+    try {
+      window.localStorage.removeItem(PLAYER_NAME_KEY);
+      window.localStorage.removeItem(GAMEBOOK_KEY);
+    } catch {
+      // Ignore storage failures; reset still clears the in-memory state below.
+    }
+
+    this.registry.remove('playerName');
+    this.inputText = '';
+    this.refresh();
+    this.status.setText('Local name and private Gamebook cleared.');
   }
 
   private drawBackdrop(width: number, height: number) {
