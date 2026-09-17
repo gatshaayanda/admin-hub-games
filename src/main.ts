@@ -12,11 +12,14 @@ const config: Phaser.Types.Core.GameConfig = {
   width: 960,
   height: 540,
   backgroundColor: '#16120f',
+  input: { activePointers: 3 },
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
     width: 960,
     height: 540,
+    min: { width: 320, height: 180 },
+    max: { width: 1920, height: 1080 },
   },
   scene: [BootScene, PublisherIntroScene, NameEntryScene, GameShellScene],
 };
