@@ -1,6 +1,15 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, type User } from 'firebase/auth';
-import { doc, getFirestore, serverTimestamp, setDoc } from 'firebase/firestore';
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  getFirestore,
+  serverTimestamp,
+  setDoc,
+} from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -15,6 +24,14 @@ const firebaseConfig = {
 export const firebaseApp = initializeApp(firebaseConfig);
 export const firebaseAuth = getAuth(firebaseApp);
 export const firestore = getFirestore(firebaseApp);
+
+export type WorldNote = {
+  id: string;
+  authorId: string;
+  authorName: string;
+  villageId: string;
+  text: string;
+};
 
 export async function ensureAnonymousPlayer(): Promise<User> {
   if (firebaseAuth.currentUser) return firebaseAuth.currentUser;
@@ -34,6 +51,46 @@ export async function savePlayerProfile(displayName: string): Promise<void> {
       { merge: true },
     );
   } catch {
-    // Firestore can remain locked during development; local gameplay must still work.
+    // Firestore/network failures must never block local gameplay.
+  }
+}
+
+export async function createWorldNote(villageId: string, authorName: string, text: string): Promise<WorldNote | null> {
+  try {
+    const user = await ensureAnonymousPlayer();
+    const ref = await addDoc(collection(firestore, 'worldNotes'), {
+      authorId: user.uid,
+      authorName,
+      villageId,
+      text,
+      createdAt: serverTimestamp(),
+    });
+
+    return { id: ref.id, authorId: user.uid, authorName, villageId, text };
+  } catch {
+    return null;
+  }
+}
+
+export async function loadWorldNotes(villageId: string): Promise<WorldNote[]> {
+  try {
+    const snapshot = await getDocs(collection(firestore, 'worldNotes'));
+    return snapshot.docs
+      .map((item) => ({ id: item.id, ...item.data() }) as WorldNote)
+      .filter((note) => note.villageId === villageId)
+      .slice(-30)
+      .reverse();
+  } catch {
+    return [];
+  }
+}
+
+export async function deleteWorldNote(noteId: string): Promise<boolean> {
+  try {
+    const user = await ensureAnonymousPlayer();
+    await deleteDoc(doc(firestore, 'worldNotes', noteId));
+    return firebaseAuth.currentUser?.uid === user.uid;
+  } catch {
+    return false;
   }
 }
