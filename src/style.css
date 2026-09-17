@@ -10,13 +10,13 @@ body,
 }
 
 html {
-  background: #080808;
+  background: #16120f;
   overflow: hidden;
 }
 
 body {
   overflow: hidden;
-  background: #080808;
+  background: #16120f;
   font-family: Arial, sans-serif;
   overscroll-behavior: none;
   -webkit-user-select: none;
@@ -28,23 +28,15 @@ body {
 #app {
   position: fixed;
   inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 100vw;
   height: 100dvh;
   min-height: 180px;
   overflow: hidden;
-  background: #080808;
+  background: #16120f;
 }
 
 canvas {
   display: block;
-  width: auto;
-  height: auto;
-  max-width: 100%;
-  max-height: 100%;
-  margin: 0;
   touch-action: none;
 }
 
@@ -74,27 +66,31 @@ canvas {
   background: rgba(98, 73, 55, 0.2);
 }
 
+/* The touch layer is a dedicated handheld control deck. It never covers the
+   world with opaque controls; the game scene reserves the bottom band for it. */
 #ahg-touch-controls {
   position: fixed;
-  inset: 0;
+  inset: auto 0 0;
   z-index: 1000;
   width: 100vw;
-  height: 100dvh;
+  height: 96px;
+  padding: 0 max(18px, env(safe-area-inset-left)) max(10px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-right));
+  box-sizing: border-box;
   pointer-events: none;
   touch-action: none;
 }
 
 .ahg-touch-brand {
   position: absolute;
-  left: max(14px, env(safe-area-inset-left));
-  bottom: calc(14px + env(safe-area-inset-bottom));
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(12px, env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 1px;
   padding: 5px 8px;
-  border: 1px solid rgba(240, 223, 182, 0.72);
+  border: 1px solid rgba(240, 223, 182, 0.68);
   border-radius: 7px;
-  background: rgba(73, 53, 38, 0.78);
+  background: rgba(42, 31, 24, 0.78);
   color: #fff4d4;
   font: 700 8px/1.05 monospace;
   letter-spacing: 0.7px;
@@ -109,10 +105,10 @@ canvas {
 
 .ahg-dpad {
   position: absolute;
-  left: max(16px, env(safe-area-inset-left));
-  bottom: calc(74px + env(safe-area-inset-bottom));
-  width: 138px;
-  height: 138px;
+  left: max(18px, env(safe-area-inset-left));
+  bottom: max(9px, env(safe-area-inset-bottom));
+  width: 142px;
+  height: 78px;
   pointer-events: none;
 }
 
@@ -123,7 +119,7 @@ canvas {
   padding: 0;
   border: 2px solid rgba(240, 223, 182, 0.92);
   border-radius: 11px;
-  background: rgba(73, 53, 38, 0.9);
+  background: rgba(73, 53, 38, 0.94);
   box-shadow: 0 3px 0 rgba(44, 36, 29, 0.65);
   color: #fff4d4;
   font: 700 19px/1 monospace;
@@ -139,16 +135,16 @@ canvas {
   box-shadow: 0 1px 0 rgba(44, 36, 29, 0.65);
 }
 
-.ahg-touch-button.up { left: 46px; top: 0; }
-.ahg-touch-button.left { left: 0; top: 46px; }
-.ahg-touch-button.down { left: 46px; top: 92px; }
-.ahg-touch-button.right { left: 92px; top: 46px; }
+.ahg-touch-button.up { left: 48px; top: 0; }
+.ahg-touch-button.left { left: 0; top: 32px; }
+.ahg-touch-button.down { left: 48px; top: 32px; }
+.ahg-touch-button.right { left: 96px; top: 32px; }
 
 .ahg-touch-hint {
   position: absolute;
-  left: 118px;
-  bottom: calc(42px + env(safe-area-inset-bottom));
-  color: rgba(255, 244, 212, 0.72);
+  left: 180px;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  color: rgba(255, 244, 212, 0.62);
   font: 700 7px monospace;
   letter-spacing: 1.5px;
   pointer-events: none;
@@ -160,16 +156,26 @@ canvas {
   }
 }
 
+@media (orientation: portrait) {
+  #ahg-touch-controls {
+    height: 112px;
+  }
+
+  .ahg-touch-hint {
+    display: none;
+  }
+}
+
 @media (max-width: 420px) {
+  #ahg-touch-controls {
+    height: 104px;
+  }
+
   .ahg-dpad {
     left: max(10px, env(safe-area-inset-left));
-    bottom: calc(66px + env(safe-area-inset-bottom));
-    transform: scale(0.9);
-    transform-origin: bottom left;
   }
 
   .ahg-touch-brand {
-    left: max(10px, env(safe-area-inset-left));
-    bottom: calc(8px + env(safe-area-inset-bottom));
+    right: max(10px, env(safe-area-inset-right));
   }
 }
