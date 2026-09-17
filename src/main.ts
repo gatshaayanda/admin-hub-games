@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import './style.css';
+import './mobile-controls';
 import './firebase/firebase';
 import { BootScene } from './scenes/BootScene';
 import { PublisherIntroScene } from './scenes/PublisherIntroScene';
@@ -24,4 +25,5 @@ const config: Phaser.Types.Core.GameConfig = {
   scene: [BootScene, PublisherIntroScene, NameEntryScene, GameShellScene],
 };
 
-new Phaser.Game(config);
+const game = new Phaser.Game(config);
+(window as Window & { __AHG_GAME__?: unknown }).__AHG_GAME__ = game;
