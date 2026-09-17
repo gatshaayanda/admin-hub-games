@@ -4,6 +4,6 @@ export interface GameMetadata {
 }
 
 export const gameMetadata: GameMetadata = {
-  title: 'THE WORLD',
-  subtitle: 'A place for games, stories, and things still to be discovered.',
+  title: 'Admin Hub Games',
+  subtitle: 'Small worlds, stories, experiments and games made to be played.',
 };
