@@ -53,27 +53,36 @@ The rule is: **make games, not infrastructure for infrastructure's sake.**
 
 ## Publisher / World Experience
 
-The publisher intro is part of the game world. It is **not** a corporate title card and there is no player-facing “THE WORLD” title screen.
+The publisher intro is a recurring opening cinematic. It runs from the beginning every time the app/game is opened or the publisher entry scene is started. It is not a one-time onboarding screen.
 
-The intended opening is:
+The opening contract is:
 
 ```text
 quiet / dark opening
       ↓
-small living world appears
+world fades in and settles
       ↓
-player character enters the scene
+player character walks into the scene
       ↓
-brief Admin Hub Games identity appears naturally in-world
+character arrives and pauses
       ↓
-character arrives
+ADMIN HUB GAMES
+presents
+      ↓
+publisher identity holds clearly and deliberately
+      ↓
+identity fades away
       ↓
 name entry
       ↓
 actual game takes over
 ```
 
-The character is the player's entry point. The intro should feel like the beginning of a game, not a website splash screen.
+**Publisher timing is part of the product identity. Do not rush it.** The laptop and phone must experience the same deliberate sequence. Timing must not depend on viewport dimensions, pointer events, keyboard events, or incidental interaction. The publisher reveal should not be accidentally skipped by a click used to open/focus the app.
+
+The intended publisher treatment is prominent but restrained: **ADMIN HUB GAMES appears once, clearly, then gets out of the way and lets the game happen.** It is not a permanent website header and it is not a disposable tiny label.
+
+The character is the player's entry point. The intro should feel like the beginning of a game, not a website splash screen. There is no player-facing “THE WORLD” title screen.
 
 The visual language established here is a warm, chunky 2D/top-down pixel-game style with a specific Botswana-inspired sense of place: warm sky, dry grass, red earth, simple compound/studio architecture, utility tank, scrub and acacia-like trees. It should feel authentic and specific rather than a generic “African” art direction.
 
@@ -89,10 +98,13 @@ The same hero/world language used for the intro should be reusable by the actual
 
 - fades into a living game scene
 - animates the player character entering from outside the world
-- places Admin Hub Games identity on an in-world sign / environmental landmark
-- uses the actual world palette and hero language rather than a title-card aesthetic
-- accepts keyboard/click to skip
+- uses fixed cinematic timing independent of viewport size
+- pauses after the character arrives
+- presents a large, centered `ADMIN HUB GAMES` / `presents` publisher beat
+- holds the publisher identity long enough to register on laptop and phone
+- does not let incidental keyboard/pointer input skip the opening
 - transitions into the reusable name-entry handoff
+- places a smaller Admin Hub Games identity on an in-world sign/environmental landmark
 
 `NameEntryScene` now:
 
@@ -101,7 +113,7 @@ The same hero/world language used for the intro should be reusable by the actual
 - stores the chosen name in Phaser's shared registry as `playerName`
 - hands control to `GameShellScene`
 
-The next game-specific chat can replace/expand `GameShellScene` without rebuilding the publisher entry experience.
+The next game-specific chat should continue from this entry point rather than replacing the publisher opening with another abstract foundation screen.
 
 ## Game Architecture
 
@@ -151,7 +163,7 @@ Client configuration is not a secret; server credentials and production secrets 
 
 The app is browser-first and intended to support installable/mobile use.
 
-`index.html` owns the application metadata, theme color, description, title and manifest link. The repository includes an Admin Hub Games favicon and web manifest.
+`index.html` owns the application metadata, theme color, description, title and manifest link. The repository includes an Admin Hub Games favicon and web manifest. Verify that static metadata assets are actually served by Vite/Vercel rather than assuming repository-root files are public assets.
 
 Keep Vite environment variables under the `VITE_` prefix.
 
@@ -173,13 +185,13 @@ A successful build/deployment is not itself proof that the game experience is co
 
 Admin Hub Games can contain Botswana details, names, environments, humor, language and everyday references where they improve the experience, while keeping the core experience understandable internationally.
 
-Do not let publisher branding overwhelm the game. The player should feel they have entered a place and can play, not that they are viewing an Admin Hub website.
+Do not let publisher branding overwhelm the game. The player should feel they have entered a place and can play, not that they are viewing an Admin Hub website. The publisher identity gets one clear opening moment, then yields to the world.
 
 Future game influences can include exploration, management, arcade, strategy, simulation, puzzle and story experiences. These are creative directions, not a requirement to implement all of them in the foundation.
 
 ## Current Status
 
-Phase 1 — Admin Hub Games Foundation: **checkpointed**.
+Phase 1 — Admin Hub Games Foundation: **ready for game development handoff**.
 
 ```text
 Admin Hub Games
@@ -188,7 +200,7 @@ Firebase foundation       ✓
         ↓
 Phaser foundation         ✓
         ↓
-Character-entry intro     ✓
+Recurring publisher intro ✓
         ↓
 Name-entry handoff        ✓
         ↓
@@ -197,4 +209,4 @@ Reusable game shell       ✓ baseline
 Actual game               → next product work
 ```
 
-The next work should build the actual game/world from this entry point rather than replacing the intro with another abstract foundation screen.
+The next work should build the actual game/world from this entry point. Do not redesign the foundation merely because the first game has not yet been selected.
