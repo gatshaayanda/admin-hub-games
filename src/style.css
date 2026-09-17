@@ -78,27 +78,10 @@ canvas {
   touch-action: none;
 }
 
+/* Publisher branding is already carried by the Phaser HUD in the corner after
+   the opening cinematic. The touch deck stays purely functional. */
 .ahg-touch-brand {
-  position: absolute;
-  right: max(18px, env(safe-area-inset-right));
-  bottom: max(12px, env(safe-area-inset-bottom));
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding: 5px 8px;
-  border: 1px solid rgba(240, 223, 182, 0.68);
-  border-radius: 7px;
-  background: rgba(42, 31, 24, 0.78);
-  color: #fff4d4;
-  font: 700 8px/1.05 monospace;
-  letter-spacing: 0.7px;
-  pointer-events: none;
-}
-
-.ahg-touch-brand span {
-  color: #d9bd87;
-  font-size: 7px;
-  letter-spacing: 1.6px;
+  display: none;
 }
 
 .ahg-dpad {
@@ -215,9 +198,5 @@ canvas {
   .ahg-actions {
     right: max(10px, env(safe-area-inset-right));
     gap: 7px;
-  }
-
-  .ahg-touch-brand {
-    display: none;
   }
 }
