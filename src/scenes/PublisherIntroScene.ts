@@ -18,14 +18,14 @@ export class PublisherIntroScene extends Phaser.Scene {
     player.setDepth(20);
     shadow.setDepth(19);
 
-    // The publisher identity is part of the environment rather than a title card.
-    const brand = this.add.text(width * 0.075, height * 0.085, 'ADMIN HUB GAMES', {
+    // A quiet environmental mark remains throughout the journey.
+    const ambientBrand = this.add.text(width * 0.075, height * 0.085, 'ADMIN HUB GAMES', {
       fontFamily: 'monospace',
       fontSize: '15px',
       fontStyle: 'bold',
       color: '#33271f',
       letterSpacing: 2,
-    }).setAlpha(0).setDepth(30);
+    }).setDepth(30);
 
     const fade = this.add.rectangle(0, 0, width, height, 0x16120f, 1)
       .setOrigin(0)
@@ -48,29 +48,85 @@ export class PublisherIntroScene extends Phaser.Scene {
         player.y = height * 0.72 + bob;
         shadow.x = player.x;
       },
-      onComplete: () => {
-        this.tweens.add({
-          targets: brand,
-          alpha: 1,
-          duration: 500,
-          hold: 850,
-          yoyo: true,
-          ease: 'Sine.easeInOut',
-        });
-
-        this.time.delayedCall(1350, () => this.leaveIntro());
-      },
+      onComplete: () => this.showPublisherCard(ambientBrand, width, height),
     });
 
     this.input.keyboard?.once('keydown', () => this.leaveIntro());
     this.input.once('pointerdown', () => this.leaveIntro());
   }
 
+  private showPublisherCard(ambientBrand: Phaser.GameObjects.Text, width: number, height: number) {
+    // The player has arrived. Stop the motion and give the publisher identity a real moment.
+    const veil = this.add.rectangle(width / 2, height / 2, width, height, 0x16120f, 0.30)
+      .setDepth(80)
+      .setAlpha(0);
+
+    const panelWidth = Math.min(width * 0.78, 700);
+    const panelHeight = Math.min(height * 0.34, 190);
+    const panel = this.add.rectangle(width / 2, height * 0.48, panelWidth, panelHeight, 0x241c17, 0.88)
+      .setStrokeStyle(Math.max(2, Math.min(width, height) * 0.004), 0xd2bc8e, 0.9)
+      .setDepth(81)
+      .setAlpha(0)
+      .setScale(0.94);
+
+    const titleSize = Math.max(28, Math.min(56, Math.min(width, height) * 0.095));
+    const presentsSize = Math.max(14, Math.min(24, Math.min(width, height) * 0.038));
+
+    const title = this.add.text(width / 2, height * 0.455, 'ADMIN HUB GAMES', {
+      fontFamily: 'monospace',
+      fontSize: `${titleSize}px`,
+      fontStyle: 'bold',
+      color: '#f5e7c4',
+      letterSpacing: Math.max(2, Math.round(titleSize * 0.06)),
+      align: 'center',
+    }).setOrigin(0.5).setDepth(82).setAlpha(0).setScale(0.96);
+
+    const presents = this.add.text(width / 2, height * 0.575, 'presents', {
+      fontFamily: 'sans-serif',
+      fontSize: `${presentsSize}px`,
+      color: '#d9c28f',
+      fontStyle: 'italic',
+      align: 'center',
+    }).setOrigin(0.5).setDepth(82).setAlpha(0);
+
+    this.tweens.add({
+      targets: [veil, panel, title, presents],
+      alpha: 1,
+      duration: 700,
+      ease: 'Sine.easeOut',
+    });
+
+    this.tweens.add({
+      targets: [panel, title],
+      scale: 1,
+      duration: 900,
+      ease: 'Sine.easeOut',
+    });
+
+    // Hold the identity long enough to actually register on both laptop and phone.
+    this.time.delayedCall(3100, () => {
+      this.tweens.add({
+        targets: [veil, panel, title, presents],
+        alpha: 0,
+        duration: 900,
+        ease: 'Sine.easeInOut',
+        onComplete: () => {
+          veil.destroy();
+          panel.destroy();
+          title.destroy();
+          presents.destroy();
+          ambientBrand.setAlpha(1);
+          this.time.delayedCall(250, () => this.leaveIntro());
+        },
+      });
+    });
+  }
+
   private leaveIntro() {
     if (this.leaving) return;
     this.leaving = true;
-    this.cameras.main.fadeOut(550, 22, 18, 14);
-    this.time.delayedCall(550, () => this.scene.start('NameEntryScene'));
+    this.cameras.main.fadeOut(650, 22, 18, 14);
+    this.time.delayedCall(650, () => this.scene.start('NameEntryScene'));
   }
 
   private drawWorld(width: number, height: number) {
