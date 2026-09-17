@@ -81,7 +81,15 @@ export class NameEntryScene extends Phaser.Scene {
   }
 
   private startGame() {
-    this.registry.set('playerName', this.inputText.trim());
+    const playerName = this.inputText.trim();
+    this.registry.set('playerName', playerName);
+
+    try {
+      window.localStorage.setItem('admin-hub-games:player-name', playerName);
+    } catch {
+      // The game still works if browser storage is unavailable.
+    }
+
     this.cameras.main.fadeOut(450, 22, 18, 14);
     this.time.delayedCall(450, () => this.scene.start('GameShellScene'));
   }
