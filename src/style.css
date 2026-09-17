@@ -3,7 +3,15 @@ body,
 #app {
   width: 100%;
   height: 100%;
+  height: 100dvh;
+  min-height: 100%;
   margin: 0;
+  padding: 0;
+}
+
+html {
+  background: #080808;
+  overflow: hidden;
 }
 
 body {
@@ -13,37 +21,72 @@ body {
   overscroll-behavior: none;
   -webkit-user-select: none;
   user-select: none;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 #app {
+  position: fixed;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100vw;
   height: 100dvh;
   min-height: 180px;
+  overflow: hidden;
+  background: #080808;
 }
 
 canvas {
   display: block;
-  width: 100%;
-  height: 100%;
+  width: auto;
+  height: auto;
   max-width: 100%;
   max-height: 100%;
+  margin: 0;
   touch-action: none;
+}
+
+#ahg-name-input {
+  position: absolute;
+  z-index: 1100;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 8px 12px;
+  border: 0;
+  outline: none;
+  border-radius: 2px;
+  background: transparent;
+  color: #30251e;
+  font-family: monospace;
+  font-weight: 400;
+  line-height: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  caret-color: #30251e;
+  -webkit-user-select: text;
+  user-select: text;
+  touch-action: manipulation;
+}
+
+#ahg-name-input::selection {
+  background: rgba(98, 73, 55, 0.2);
 }
 
 #ahg-touch-controls {
   position: fixed;
   inset: 0;
   z-index: 1000;
+  width: 100vw;
+  height: 100dvh;
   pointer-events: none;
   touch-action: none;
 }
 
 .ahg-touch-brand {
   position: absolute;
-  left: 14px;
+  left: max(14px, env(safe-area-inset-left));
   bottom: calc(14px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
@@ -66,7 +109,7 @@ canvas {
 
 .ahg-dpad {
   position: absolute;
-  left: 16px;
+  left: max(16px, env(safe-area-inset-left));
   bottom: calc(74px + env(safe-area-inset-bottom));
   width: 138px;
   height: 138px;
@@ -117,23 +160,16 @@ canvas {
   }
 }
 
-@media (max-width: 700px) {
-  #app {
-    width: 100vw;
-    height: 100dvh;
-  }
-}
-
 @media (max-width: 420px) {
   .ahg-dpad {
-    left: 10px;
+    left: max(10px, env(safe-area-inset-left));
     bottom: calc(66px + env(safe-area-inset-bottom));
     transform: scale(0.9);
     transform-origin: bottom left;
   }
 
   .ahg-touch-brand {
-    left: 10px;
+    left: max(10px, env(safe-area-inset-left));
     bottom: calc(8px + env(safe-area-inset-bottom));
   }
 }
