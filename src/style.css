@@ -33,9 +33,107 @@ canvas {
   touch-action: none;
 }
 
+#ahg-touch-controls {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
+  touch-action: none;
+}
+
+.ahg-touch-brand {
+  position: absolute;
+  left: 14px;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 5px 8px;
+  border: 1px solid rgba(240, 223, 182, 0.72);
+  border-radius: 7px;
+  background: rgba(73, 53, 38, 0.78);
+  color: #fff4d4;
+  font: 700 8px/1.05 monospace;
+  letter-spacing: 0.7px;
+  pointer-events: none;
+}
+
+.ahg-touch-brand span {
+  color: #d9bd87;
+  font-size: 7px;
+  letter-spacing: 1.6px;
+}
+
+.ahg-dpad {
+  position: absolute;
+  left: 16px;
+  bottom: calc(74px + env(safe-area-inset-bottom));
+  width: 138px;
+  height: 138px;
+  pointer-events: none;
+}
+
+.ahg-touch-button {
+  position: absolute;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: 2px solid rgba(240, 223, 182, 0.92);
+  border-radius: 11px;
+  background: rgba(73, 53, 38, 0.9);
+  box-shadow: 0 3px 0 rgba(44, 36, 29, 0.65);
+  color: #fff4d4;
+  font: 700 19px/1 monospace;
+  -webkit-tap-highlight-color: transparent;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.ahg-touch-button.is-pressed,
+.ahg-touch-button:active {
+  transform: translateY(2px);
+  background: rgba(31, 107, 104, 0.96);
+  box-shadow: 0 1px 0 rgba(44, 36, 29, 0.65);
+}
+
+.ahg-touch-button.up { left: 46px; top: 0; }
+.ahg-touch-button.left { left: 0; top: 46px; }
+.ahg-touch-button.down { left: 46px; top: 92px; }
+.ahg-touch-button.right { left: 92px; top: 46px; }
+
+.ahg-touch-hint {
+  position: absolute;
+  left: 118px;
+  bottom: calc(42px + env(safe-area-inset-bottom));
+  color: rgba(255, 244, 212, 0.72);
+  font: 700 7px monospace;
+  letter-spacing: 1.5px;
+  pointer-events: none;
+}
+
+@media (pointer: coarse) {
+  body {
+    -webkit-touch-callout: none;
+  }
+}
+
 @media (max-width: 700px) {
   #app {
     width: 100vw;
     height: 100dvh;
+  }
+}
+
+@media (max-width: 420px) {
+  .ahg-dpad {
+    left: 10px;
+    bottom: calc(66px + env(safe-area-inset-bottom));
+    transform: scale(0.9);
+    transform-origin: bottom left;
+  }
+
+  .ahg-touch-brand {
+    left: 10px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
   }
 }
