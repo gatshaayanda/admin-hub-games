@@ -12,10 +12,24 @@ export class PublisherIntroScene extends Phaser.Scene {
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor('#050505');
 
-    const glow = this.add.circle(width / 2, height * 0.47, Math.min(width, height) * 0.18, 0xffffff, 0.025);
-    const rule = this.add.rectangle(width / 2, height * 0.53, Math.min(width * 0.32, 260), 1, 0xffffff, 0.18);
+    const glow = this.add.circle(
+      width / 2,
+      height * 0.46,
+      Math.min(width, height) * 0.22,
+      0xffffff,
+      0.025,
+    );
 
-    const adminHub = this.add.text(width / 2, height * 0.37, 'ADMIN HUB', {
+    const rule = this.add.rectangle(
+      width / 2,
+      height * 0.54,
+      Math.min(width * 0.34, 280),
+      1,
+      0xffffff,
+      0.18,
+    );
+
+    const adminHub = this.add.text(width / 2, height * 0.34, 'ADMIN HUB', {
       fontFamily: 'Arial, sans-serif',
       fontSize: `${Math.min(width * 0.085, 62)}px`,
       fontStyle: 'bold',
@@ -23,21 +37,21 @@ export class PublisherIntroScene extends Phaser.Scene {
       letterSpacing: 3,
     }).setOrigin(0.5);
 
-    const games = this.add.text(width / 2, height * 0.47, 'GAMES', {
+    const games = this.add.text(width / 2, height * 0.45, 'GAMES', {
       fontFamily: 'Arial, sans-serif',
       fontSize: `${Math.min(width * 0.055, 40)}px`,
       letterSpacing: 12,
       color: '#ffffff',
     }).setOrigin(0.5);
 
-    const presents = this.add.text(width / 2, height * 0.59, 'presents...', {
+    const presents = this.add.text(width / 2, height * 0.58, 'presents...', {
       fontFamily: 'Georgia, serif',
       fontSize: `${Math.min(width * 0.032, 22)}px`,
       fontStyle: 'italic',
       color: '#a8a8a8',
     }).setOrigin(0.5);
 
-    const title = this.add.text(width / 2, height * 0.70, gameMetadata.title, {
+    const title = this.add.text(width / 2, height * 0.69, gameMetadata.title, {
       fontFamily: 'Arial, sans-serif',
       fontSize: `${Math.min(width * 0.075, 54)}px`,
       fontStyle: 'bold',
@@ -45,27 +59,60 @@ export class PublisherIntroScene extends Phaser.Scene {
       letterSpacing: 4,
     }).setOrigin(0.5).setAlpha(0);
 
-    const subtitle = this.add.text(width / 2, height * 0.77, gameMetadata.subtitle ?? '', {
+    const subtitle = this.add.text(width / 2, height * 0.76, gameMetadata.subtitle ?? '', {
       fontFamily: 'Arial, sans-serif',
       fontSize: `${Math.min(width * 0.026, 18)}px`,
       color: '#777777',
       align: 'center',
     }).setOrigin(0.5).setAlpha(0);
 
-    const skip = this.add.text(width / 2, height - 28, 'PRESS ANY KEY · CLICK TO CONTINUE', {
+    const continueText = this.add.text(width / 2, height - 30, 'PRESS ANY KEY · CLICK TO ENTER', {
       fontFamily: 'Arial, sans-serif',
       fontSize: '11px',
       letterSpacing: 2,
-      color: '#555555',
+      color: '#666666',
     }).setOrigin(0.5).setAlpha(0);
 
     [glow, rule, adminHub, games, presents].forEach((element) => element.setAlpha(0));
 
-    this.tweens.add({ targets: glow, alpha: 1, duration: 1200, ease: 'Sine.easeOut' });
-    this.tweens.add({ targets: rule, alpha: 1, duration: 700, delay: 500, ease: 'Sine.easeOut' });
-    this.tweens.add({ targets: adminHub, alpha: 1, duration: 700, delay: 250, ease: 'Sine.easeOut' });
-    this.tweens.add({ targets: games, alpha: 1, duration: 700, delay: 500, ease: 'Sine.easeOut' });
-    this.tweens.add({ targets: presents, alpha: 1, duration: 650, delay: 850, ease: 'Sine.easeOut' });
+    this.tweens.add({
+      targets: glow,
+      alpha: 1,
+      duration: 1200,
+      ease: 'Sine.easeOut',
+    });
+
+    this.tweens.add({
+      targets: rule,
+      alpha: 1,
+      duration: 700,
+      delay: 500,
+      ease: 'Sine.easeOut',
+    });
+
+    this.tweens.add({
+      targets: adminHub,
+      alpha: 1,
+      duration: 700,
+      delay: 250,
+      ease: 'Sine.easeOut',
+    });
+
+    this.tweens.add({
+      targets: games,
+      alpha: 1,
+      duration: 700,
+      delay: 500,
+      ease: 'Sine.easeOut',
+    });
+
+    this.tweens.add({
+      targets: presents,
+      alpha: 1,
+      duration: 650,
+      delay: 850,
+      ease: 'Sine.easeOut',
+    });
 
     this.tweens.add({
       targets: title,
@@ -74,9 +121,20 @@ export class PublisherIntroScene extends Phaser.Scene {
       delay: 1450,
       ease: 'Sine.easeOut',
       onComplete: () => {
-        this.tweens.add({ targets: subtitle, alpha: 1, duration: 650, ease: 'Sine.easeOut' });
-        this.tweens.add({ targets: skip, alpha: 1, duration: 500, delay: 350, ease: 'Sine.easeOut' });
-        this.time.delayedCall(2400, () => this.leaveIntro());
+        this.tweens.add({
+          targets: subtitle,
+          alpha: 1,
+          duration: 650,
+          ease: 'Sine.easeOut',
+        });
+
+        this.tweens.add({
+          targets: continueText,
+          alpha: 1,
+          duration: 500,
+          delay: 350,
+          ease: 'Sine.easeOut',
+        });
       },
     });
 
