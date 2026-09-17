@@ -52,6 +52,8 @@ Use this workflow for meaningful changes:
 - Continue only from a verified checkpoint.
 - If the result is unexpected, stop and inspect rather than stacking another patch on top.
 
+For visual checkpoints, the preferred review path is the live Vercel deployment after GitHub push. Localhost remains a development/debugging tool, not the required review surface.
+
 ## 4. Technology Baseline
 
 The foundation uses:
@@ -102,38 +104,39 @@ There is **no designated first game at the foundation stage**. Mhele is a future
 
 Admin Hub Games should have a recognizable publisher identity inspired by classic game-company introductions, while remaining modern and lightweight.
 
-The intro is not just a logo card. It is the doorway into the eventual Admin Hub Games universe.
+The intro is a **character entering the actual game world**, not a corporate title card and not a separate “THE WORLD” title screen.
 
 Current intended experience:
 
 ```text
-BLACK
-  ↓
-ADMIN HUB
-  ↓
-GAMES
-  ↓
-presents...
-  ↓
-THE WORLD
-  ↓
-reusable game shell
-  ↓
-eventual playable world
+black / quiet opening
+      ↓
+small living game scene appears
+      ↓
+player character enters the scene
+      ↓
+brief Admin Hub Games identity appears naturally
+      ↓
+character arrives
+      ↓
+player takes control
 ```
 
-The intro should be:
+The intro should:
 
-- brief
-- memorable
-- cinematic without being heavy
-- skippable
-- lightweight
-- reusable
-- easy to configure
-- subordinate to the player's actual experience
+- be brief
+- be memorable
+- feel like a game opening
+- use the same visual language as the game that follows
+- avoid developer-facing language
+- avoid “THE WORLD” as a player-facing title
+- be skippable
+- be lightweight
+- hand directly into player control
 
-The current foundation deliberately stops after the shell. The eventual world should be built as a small vertical slice first, not as a giant map.
+The player should not be shown messages such as “reusable game shell ready” or other development-status copy.
+
+The eventual world should be built as a small vertical slice first, not as a giant map.
 
 ## 7. Foundation Architecture
 
@@ -218,7 +221,7 @@ A player should not need prior Botswana knowledge to understand the core objecti
 
 Local authenticity is an asset, not a restriction.
 
-The world should favor curiosity, discovery, player-paced exploration, and environmental storytelling over unnecessary pressure.
+The current visual foundation uses a warm, chunky top-down pixel-game language with Botswana-inspired environmental cues such as dry grass, warm earth, low compounds, simple buildings, and indigenous-looking trees. It should feel like a specific place, not a generic “African” art direction.
 
 ## 10. Mobile-First Controls
 
@@ -357,14 +360,13 @@ Mhele must not be used as an excuse to prematurely hard-code Mhele-specific rule
 - Firebase foundation: established.
 - replace the Vite starter surface: complete.
 - establish Phaser bootstrap: complete.
-- establish application/game shell: in progress / first visible shell established.
+- establish application/game shell: complete enough for first playable world entry.
 - establish configurable game metadata: established.
-- establish publisher intro: established and being refined.
+- establish publisher intro: world-entry version established.
 - establish initial scene structure: established.
 - establish reusable UI foundation: as needed.
 - establish input abstraction: as gameplay requires it.
 - establish testing conventions: baseline established.
-- update project documentation: ongoing.
 
 ### Phase 2 — Small World Slice
 Build only enough of the eventual world to validate the experience:
@@ -385,6 +387,8 @@ Find one thing
 Interact
 ```
 
+The first checkpoint is intentionally small: a character enters a recognizable, cohesive world and then becomes directly controllable. This is the start of the actual world, not a mock shell screen.
+
 ### Phase 3 — First Actual Game
 Choose the first title when the foundation/world entry experience is ready. Mhele is not required to be first.
 
@@ -402,21 +406,23 @@ First make this repository feel like Admin Hub Games.
 
 The first meaningful visible milestone is:
 
-> Opening the project in the browser feels like entering a real game studio/publisher experience, not a Vite starter page.
+> Opening the project in the browser feels like entering a real game, published by Admin Hub Games, rather than entering a developer dashboard or Vite starter page.
 
 The immediate review flow is:
 
 ```text
 Open app
    ↓
-Admin Hub Games publisher intro
+character enters the Admin Hub Games environment
    ↓
-THE WORLD
+brief publisher identity
    ↓
-Reusable game shell
+character arrives
+   ↓
+player control begins
 ```
 
-The next product milestone is not another abstract foundation layer. It is turning that shell into the first tiny playable piece of the world.
+The next product milestone is to expand this same playable environment, not replace it with another abstract foundation screen.
 
 ## 20. Current Checkpoint
 
@@ -426,7 +432,7 @@ The repository has been successfully separated from the original Mhele remote an
 
 The seed has been verified with `npm install` and `npm run build`, and Vercel deployment is already working.
 
-The current implementation checkpoint is **Phase 1 — Admin Hub Games Foundation**, moving from the Vite starter toward:
+The current implementation checkpoint is **Phase 1 — Admin Hub Games Foundation**, moving into the first playable world entry:
 
 ```text
 Admin Hub Games
@@ -435,9 +441,9 @@ Firebase foundation
         ↓
 Phaser foundation
         ↓
-Publisher intro
+Character-entry intro
         ↓
-Reusable game shell
+Controllable world
         ↓
 Small playable world slice
 ```
