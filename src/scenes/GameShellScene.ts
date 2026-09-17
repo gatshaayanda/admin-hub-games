@@ -16,7 +16,6 @@ export class GameShellScene extends Phaser.Scene {
     this.drawWorld(width, height);
 
     this.player = this.createPlayer(width * 0.44, height * 0.72);
-    this.add.ellipse(this.player.x, this.player.y + 28, 24, 9, 0x4a3524, 0.28).setDepth(0);
     this.player.setDepth(10);
 
     this.cursors = this.input.keyboard!.createCursorKeys();
@@ -56,9 +55,6 @@ export class GameShellScene extends Phaser.Scene {
       const distance = this.speed * (delta / 1000);
       this.player.x = Phaser.Math.Clamp(this.player.x + (dx / length) * distance, 24, this.scale.width - 24);
       this.player.y = Phaser.Math.Clamp(this.player.y + (dy / length) * distance, 115, this.scale.height - 42);
-
-      const bob = Math.sin(this.time.now / 75) * 1.5;
-      this.player.y += bob;
     }
   }
 
@@ -134,7 +130,10 @@ export class GameShellScene extends Phaser.Scene {
 
   private createPlayer(x: number, y: number) {
     const container = this.add.container(x, y);
+    const shadow = this.add.ellipse(0, 33, 24, 9, 0x4a3524, 0.28);
     const g = this.add.graphics();
+
+    // Chunky 2D character: dark skin, teal shirt, warm trousers, small backpack.
     g.fillStyle(0x2e241e, 1).fillRect(-9, -20, 18, 10);
     g.fillStyle(0x6e432c, 1).fillRect(-8, -13, 16, 13);
     g.fillStyle(0x1f6b68, 1).fillRect(-10, 0, 20, 19);
@@ -143,6 +142,8 @@ export class GameShellScene extends Phaser.Scene {
     g.fillStyle(0x263b3a, 1).fillRect(-11, 29, 9, 5);
     g.fillStyle(0x263b3a, 1).fillRect(2, 29, 9, 5);
     g.fillStyle(0x5b3d2a, 1).fillRect(9, 3, 6, 16);
+
+    container.add(shadow);
     container.add(g);
     return container;
   }
