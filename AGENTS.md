@@ -44,6 +44,10 @@ Publisher intro
         ↓
 Reusable game shell
         ↓
+Personal world
+        ↓
+Shared world
+        ↓
 Actual games
         ↓
 Foundation refinement from real use
@@ -110,10 +114,195 @@ The same hero/world language used for the intro should be reusable by the actual
 
 - asks the player what to call them
 - accepts keyboard text input
+- provides a touch-friendly **ENTER THE WORLD** button for phones
 - stores the chosen name in Phaser's shared registry as `playerName`
+- stores the chosen name locally on the device
+- saves the player profile through anonymous Firebase Auth when available
+- provides **RESET LOCAL GAME DATA** without deleting shared World Notes
 - hands control to `GameShellScene`
 
 The next game-specific chat should continue from this entry point rather than replacing the publisher opening with another abstract foundation screen.
+
+## Responsive / Mobile Contract
+
+Admin Hub Games is **phone-first capable, not merely desktop-scaled**.
+
+The game uses Phaser's responsive Scale Manager with a fixed logical game size and `FIT` scaling so the same world remains legible across laptop and Android viewports. Phaser's documentation identifies `FIT` as the general-purpose mode for preserving aspect ratio while fitting the available parent area. citehttps://docs.phaser.io/phaser/concepts/scale-manager
+
+Required controls:
+
+- laptop: WASD / arrow keys + mouse/tap-to-walk
+- phone: dynamic left-side virtual joystick + touch action buttons
+- phone: tap-to-walk remains available outside the joystick zone
+- phone: no keyboard is required to start, enter the world, explore, or open the Gamebook
+- controls must not make the world feel like a dashboard
+- touch targets must remain large enough to use comfortably
+- safe viewport behavior must be preserved through CSS `100dvh`, `touch-action: none`, and Phaser scaling
+
+Mobile verification is a gameplay requirement. A successful Vercel build alone is not proof of phone usability.
+
+## World Layout / Level Design Direction
+
+The first world is a **meta game about Admin Hub Games itself**. It should borrow useful readability from classic tile/grid platform-game level design without becoming a Lode Runner clone.
+
+The map should communicate at a glance:
+
+- a central hub / Chess House
+- branching paths to themed villages
+- distinct readable zones
+- places where a future actual game can physically appear
+- a clear home/studio where the player's development history can grow
+
+If a future level uses a compact tile/VGA-style or classic platform-game layout, its geometry, landmarks and visual language must still belong to Admin Hub Games. Do not copy another game's identity or simply paste an external level layout into the world.
+
+The world should visually evolve as real games are created: an arcade area can become associated with the Lode Runner-style game, a strategy area can host Mhele, and future systems can grow into physical places. The world is the visual history of the games being made.
+
+## Personal Gamebook vs Shared World Notes
+
+These are intentionally different systems:
+
+```text
+MY GAMEBOOK
+  ↓
+private discoveries / ideas
+  ↓
+localStorage on the player's device
+  ↓
+not visible to other players
+
+WORLD NOTES
+  ↓
+explicitly chosen “Leave in the world” notes
+  ↓
+Firestore
+  ↓
+visible to other players
+  ↓
+author can delete their own notes
+```
+
+Never silently turn a private Gamebook note into a public World Note.
+
+World Notes use anonymous Firebase Auth so a player can choose an arbitrary display name without signup friction. The shared document shape is:
+
+```text
+worldNotes/{noteId}
+  authorId
+  authorName
+  villageId
+  text
+  createdAt
+```
+
+Player profiles use:
+
+```text
+players/{uid}
+  displayName
+  updatedAt
+```
+
+The repository contains `firestore.rules` with narrow author-scoped write/delete rules. Do not replace these with public `allow read, write: if true` rules.
+
+**Important:** Reset Local Game Data clears the local name and private Gamebook only. It must not delete World Notes.
+
+Shared-world failures must degrade gracefully: the player should still be able to wander, use the private Gamebook, and play locally when Firebase/network access is unavailable.
+
+## Roadmap
+
+### Phase 1 — Personal World Foundation
+
+- recurring publisher intro
+- chosen display name
+- anonymous Firebase identity
+- local player-name persistence
+- Reset Local Game Data
+- private Gamebook
+- top-down world, avatar, camera and movement
+- village districts
+- Chess House
+- Home / Studio
+- ambient audio
+- desktop and mobile controls
+
+Status: **substantially complete; now being exercised through real gameplay.**
+
+### Phase 2 — Shared World
+
+- deliberate private vs public note choice
+- World Notes stored in Firestore
+- public reading of shared notes
+- chosen player name shown as author
+- author-only deletion
+- private Gamebook remains local/private
+- Firebase failure handling
+- narrow Firestore security rules
+
+Status: **implementation checkpoint now pushed; Firebase rules still need to be deployed to the project if the console is still using the old locked rules.**
+
+### Phase 3 — Alive World
+
+- NPCs with dialogue
+- characters who remember or react where justified
+- interactable objects
+- secrets and discoveries
+- small quests
+- visible development history
+- more meaningful village spaces
+- optional founder/admin-authored notes or interventions
+
+### Phase 4 — Actual Games
+
+Build real games from the world rather than expanding infrastructure indefinitely.
+
+First planned directions:
+
+1. **Mhele** — board/intersection game, connections, cows, mills, captures, turns, victory and bot.
+2. **Lode Runner-style game** — compact levels, platforms, ladders, digging, treasure, enemies, timers and completion.
+
+The Lode Runner-style game should be inspired by the genre's level readability and satisfying movement, while having an original Admin Hub Games identity and presentation.
+
+### Phase 5 — Reusable Systems Extracted From Real Games
+
+Only extract systems once multiple games justify them:
+
+- grid/board
+- collision
+- turns
+- inventory
+- dialogue
+- quests
+- AI
+- timer
+- score
+- resources
+- progression
+- level loading
+- shared save/settings/audio
+
+The rule remains: **smallest foundation that makes the next real game easier.**
+
+### Phase 6 — Mobile / PWA Release Polish
+
+- Android browser verification
+- safe-area handling
+- orientation behavior where useful
+- installable PWA
+- offline/local continuity
+- Firebase reconnect/loading states
+- performance checks
+- touch target/accessibility pass
+- save reliability
+
+### Phase 7 — Studio / Publisher Layer
+
+As real games exist, the world can become the place where the player discovers them:
+
+- game areas physically appear in the world
+- launch/enter points for finished games
+- development milestones become visible landmarks
+- shared/public notes become part of the community layer
+- Admin Hub Games remains the publisher identity, not a dashboard UI
 
 ## Game Architecture
 
@@ -140,8 +329,6 @@ Reusable foundation systems should be added when justified by actual games:
 - touch/gamepad controls
 - accessibility
 - analytics where justified
-
-Eventual shared-world systems may include avatar state, movement, collision, interactables, locations, environmental storytelling, discovery/progression, notebook/Gamebook and ambience.
 
 Do not prematurely implement the entire world. Grow it through a tiny playable vertical slice and real games.
 
@@ -178,6 +365,7 @@ Before a meaningful checkpoint:
 3. inspect runtime behavior
 4. push to GitHub
 5. verify the Vercel deployment
+6. exercise the mobile path on a real Android device where possible
 
 A successful build/deployment is not itself proof that the game experience is correct.
 
@@ -191,7 +379,7 @@ Future game influences can include exploration, management, arcade, strategy, si
 
 ## Current Status
 
-Phase 1 — Admin Hub Games Foundation: **ready for game development handoff**.
+Phase 1 — Admin Hub Games Foundation: **ready for real-world gameplay and continued game development.**
 
 ```text
 Admin Hub Games
@@ -204,9 +392,13 @@ Recurring publisher intro ✓
         ↓
 Name-entry handoff        ✓
         ↓
-Reusable game shell       ✓ baseline
+Responsive game shell     ✓
         ↓
-Actual game               → next product work
+Private Gamebook          ✓
+        ↓
+Shared World Notes        ✓ code checkpoint
+        ↓
+Actual games              → next product work
 ```
 
-The next work should build the actual game/world from this entry point. Do not redesign the foundation merely because the first game has not yet been selected.
+The next work should be driven by playing this foundation on laptop and Android, then building the first real game into it. Do not redesign the foundation merely because more features are possible.
