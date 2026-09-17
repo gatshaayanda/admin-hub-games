@@ -9,7 +9,7 @@
 
 Admin Hub Games is the game-development arm of Admin Hub. This repository is the foundation from which future games are built. It is not itself a single game.
 
-The project exists to make it easier to build games that are enjoyable to play, technically solid, mobile-friendly, and capable of growing into real products.
+The long-term creative direction is for Admin Hub Games to have a small, playable world that can become the front door to the studio's games: a place the player can enter, explore, discover ideas, and eventually encounter finished games. The foundation must support that direction without prematurely building the whole world.
 
 ## 2. Source of Truth
 
@@ -98,49 +98,44 @@ Foundation refinement from real use
 
 There is **no designated first game at the foundation stage**. Mhele is a future game and may be built from the foundation when ready; it should not dictate the foundation prematurely.
 
-## 6. Current Mission
-
-The current mission is to transform the original Mhele Phaser/Vite seed into the first **Admin Hub Games Foundation**.
-
-The original Mhele repository remains the seed/reference project:
-
-`gatshaayanda/mhele`
-
-The foundation repository is:
-
-`gatshaayanda/admin-hub-games`
-
-Future games should normally have their own repositories and consume/copy proven foundation patterns as appropriate.
-
-## 7. Publisher / Studio Experience
+## 6. Publisher / World Experience
 
 Admin Hub Games should have a recognizable publisher identity inspired by classic game-company introductions, while remaining modern and lightweight.
 
-Default publisher sequence:
+The intro is not just a logo card. It is the doorway into the eventual Admin Hub Games universe.
+
+Current intended experience:
 
 ```text
+BLACK
+  ↓
 ADMIN HUB
-
+  ↓
 GAMES
-
+  ↓
 presents...
-
-GAME TITLE
+  ↓
+THE WORLD
+  ↓
+reusable game shell
+  ↓
+eventual playable world
 ```
 
 The intro should be:
 
 - brief
 - memorable
-- skippable where appropriate
+- cinematic without being heavy
+- skippable
 - lightweight
 - reusable
-- easy to configure per game
-- subordinate to the game's own identity
+- easy to configure
+- subordinate to the player's actual experience
 
-The first user-flow milestone is to let the user actually enter this intro in the browser and experience the transition into the game shell.
+The current foundation deliberately stops after the shell. The eventual world should be built as a small vertical slice first, not as a giant map.
 
-## 8. Foundation Architecture
+## 7. Foundation Architecture
 
 The first foundation milestone establishes a clean application/game shell rather than a giant engine.
 
@@ -176,67 +171,23 @@ Potential reusable systems, to be added only when justified by real game needs:
 - accessibility helpers
 - analytics where justified
 
-### Story
-- dialogue
-- characters
-- choices
-- branching
-- consequences
-- endings
-- quests
+### Eventual World
+- player/avatar state
+- top-down or slightly angled movement
+- collision and boundaries
+- interactable objects
+- locations/areas
+- environmental storytelling
+- discovery/progression
+- notebook or Gamebook for discovered ideas
+- gentle ambience/audio
+- save state
 
-### Adventure
-- maps
-- exploration
-- collision
-- interaction
-- inventory
-- items
-- puzzles
-- checkpoints
-
-### Arcade
-- player movement
-- enemies
-- collision
-- score
-- timer
-- levels
-- difficulty
-- lives
-- power-ups
-
-### Management
-- money
-- resources
-- employees
-- customers
-- schedules
-- upgrades
-- events
-- progression
-
-### Strategy
-- turns
-- actions
-- resources
-- cards
-- territory
-- opponents
-- victory conditions
-
-### Simulation
-- needs
-- relationships
-- time
-- events
-- decisions
-- progression
-- persistent state
+The world systems should be introduced through a tiny playable slice: **intro → world → avatar → walk → find one thing → interact**.
 
 These categories are a catalogue, not a commitment to implement all of them now.
 
-## 9. Game Identity
+## 8. Game Identity
 
 Every game should feel like a game, not like a technology demo.
 
@@ -255,9 +206,9 @@ The foundation should handle common mechanics while allowing each game to have i
 
 Do not let the Admin Hub Games branding overwhelm the actual game.
 
-## 10. Creative Direction
+## 9. Creative Direction
 
-Early games may contain authentic Botswana details, settings, language, humor, environments, names, or cultural references where they improve the experience.
+The eventual Admin Hub Games world can contain authentic Botswana details, settings, language, humor, environments, names, or cultural references where they improve the experience.
 
 However:
 
@@ -267,7 +218,9 @@ A player should not need prior Botswana knowledge to understand the core objecti
 
 Local authenticity is an asset, not a restriction.
 
-## 11. Mobile-First Controls
+The world should favor curiosity, discovery, player-paced exploration, and environmental storytelling over unnecessary pressure.
+
+## 10. Mobile-First Controls
 
 Games should be designed with mobile play in mind even when desktop keyboard controls are also supported.
 
@@ -280,7 +233,7 @@ Prefer a shared input layer that can eventually map:
 
 Do not hard-code gameplay logic directly to one input device when a small abstraction can keep the game portable.
 
-## 12. Testing
+## 11. Testing
 
 Vitest is part of the baseline.
 
@@ -300,7 +253,7 @@ Good candidates include:
 
 Visual/gameplay verification should happen by running the game in a browser.
 
-## 13. Performance
+## 12. Performance
 
 The foundation should remain lightweight.
 
@@ -317,7 +270,7 @@ Prefer:
 
 Do not add a service merely because a future game might need it.
 
-## 14. Firebase Foundation
+## 13. Firebase Foundation
 
 Firebase is part of the Admin Hub Games foundation and uses the dedicated Firebase project:
 
@@ -333,7 +286,7 @@ Do not copy Mhele's Firebase project configuration into this repository.
 
 Firebase web configuration values are client configuration, but production secrets and server credentials must never be committed to the repository.
 
-## 15. Environment Variables
+## 14. Environment Variables
 
 This repository is a Vite application, not a Next.js application.
 
@@ -343,7 +296,7 @@ Do not introduce `NEXT_PUBLIC_` variables unless a future framework migration sp
 
 Local environment files containing development configuration should not be committed when they contain machine-specific values. Maintain `.env.example` as the environment contract.
 
-## 16. Deployment
+## 15. Deployment
 
 Vercel is the preferred lightweight deployment target where appropriate.
 
@@ -356,7 +309,7 @@ Before considering a deployment complete:
 
 A successful deployment is not the same thing as a verified game experience.
 
-## 17. Repository Structure
+## 16. Repository Structure
 
 The structure should evolve with the foundation. Avoid creating empty directories simply to represent future architecture.
 
@@ -376,7 +329,7 @@ src/
 
 Only introduce a directory when it has an actual purpose.
 
-## 18. Mhele Relationship
+## 17. Mhele Relationship
 
 Mhele is a future Admin Hub Games title and the original seed/reference for this repository.
 
@@ -385,14 +338,15 @@ The intended relationship is:
 1. Preserve the Mhele seed.
 2. Establish Admin Hub Games Foundation here.
 3. Build the reusable publisher/game shell.
-4. Choose and build an actual game from the foundation when ready.
-5. Use real game development to discover what should become reusable.
-6. Promote genuinely reusable improvements back into the foundation.
-7. Repeat for future titles.
+4. Build the small Admin Hub Games world slice when the shell is ready.
+5. Choose and build an actual game when ready.
+6. Use real game development to discover what should become reusable.
+7. Promote genuinely reusable improvements back into the foundation.
+8. Repeat for future titles.
 
 Mhele must not be used as an excuse to prematurely hard-code Mhele-specific rules into the foundation.
 
-## 19. Current Roadmap
+## 18. Current Roadmap
 
 ### Phase 0 — Seed
 - Mhele Vite/Phaser/Vitest seed: complete.
@@ -401,30 +355,46 @@ Mhele must not be used as an excuse to prematurely hard-code Mhele-specific rule
 
 ### Phase 1 — Admin Hub Games Foundation
 - Firebase foundation: established.
-- replace the Vite starter surface
-- establish Phaser bootstrap
-- establish application/game shell
-- establish configurable game metadata
-- establish publisher intro
-- establish initial scene structure
-- establish reusable UI foundation
-- establish input abstraction
-- establish testing conventions
-- update project documentation
+- replace the Vite starter surface: complete.
+- establish Phaser bootstrap: complete.
+- establish application/game shell: in progress / first visible shell established.
+- establish configurable game metadata: established.
+- establish publisher intro: established and being refined.
+- establish initial scene structure: established.
+- establish reusable UI foundation: as needed.
+- establish input abstraction: as gameplay requires it.
+- establish testing conventions: baseline established.
+- update project documentation: ongoing.
 
-### Phase 2 — Core Reusable Systems
-Add only systems justified by upcoming game work.
+### Phase 2 — Small World Slice
+Build only enough of the eventual world to validate the experience:
+
+```text
+Intro
+  ↓
+World
+  ↓
+Avatar
+  ↓
+Walk
+  ↓
+Look around
+  ↓
+Find one thing
+  ↓
+Interact
+```
 
 ### Phase 3 — First Actual Game
-Choose the first title when the foundation is ready. Mhele is not required to be first.
+Choose the first title when the foundation/world entry experience is ready. Mhele is not required to be first.
 
 ### Phase 4 — Foundation Refinement
-Promote genuinely reusable lessons from the first game back into the foundation.
+Promote genuinely reusable lessons from actual game development back into the foundation.
 
 ### Phase 5 — Future Games
 Build additional Admin Hub Games titles using the growing foundation.
 
-## 20. Current Working Rule
+## 19. Current Working Rule
 
 At the current stage, do **not** jump straight into building a specific game.
 
@@ -434,21 +404,21 @@ The first meaningful visible milestone is:
 
 > Opening the project in the browser feels like entering a real game studio/publisher experience, not a Vite starter page.
 
-The immediate user flow is:
+The immediate review flow is:
 
 ```text
 Open app
    ↓
 Admin Hub Games publisher intro
    ↓
-Configured game title / handoff
+THE WORLD
    ↓
 Reusable game shell
 ```
 
-This flow should be simple enough to play through and review before more systems are added.
+The next product milestone is not another abstract foundation layer. It is turning that shell into the first tiny playable piece of the world.
 
-## 21. Current Checkpoint
+## 20. Current Checkpoint
 
 The repository has been successfully separated from the original Mhele remote and pushed to:
 
@@ -468,6 +438,8 @@ Phaser foundation
 Publisher intro
         ↓
 Reusable game shell
+        ↓
+Small playable world slice
 ```
 
 Do not rewrite the project blindly. Inspect the seed, establish the foundation deliberately, verify it, then checkpoint.
