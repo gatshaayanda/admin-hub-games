@@ -2,90 +2,93 @@ import Phaser from 'phaser';
 import { gameMetadata } from '../game/GameConfig';
 
 export class PublisherIntroScene extends Phaser.Scene {
+  private leaving = false;
+
   constructor() {
     super('PublisherIntroScene');
   }
 
   create() {
     const { width, height } = this.scale;
+    this.cameras.main.setBackgroundColor('#050505');
 
-    this.cameras.main.setBackgroundColor('#080808');
+    const glow = this.add.circle(width / 2, height * 0.47, Math.min(width, height) * 0.18, 0xffffff, 0.025);
+    const rule = this.add.rectangle(width / 2, height * 0.53, Math.min(width * 0.32, 260), 1, 0xffffff, 0.18);
 
-    const adminHub = this.add.text(width / 2, height * 0.38, 'ADMIN HUB', {
+    const adminHub = this.add.text(width / 2, height * 0.37, 'ADMIN HUB', {
       fontFamily: 'Arial, sans-serif',
-      fontSize: `${Math.min(width * 0.09, 64)}px`,
+      fontSize: `${Math.min(width * 0.085, 62)}px`,
       fontStyle: 'bold',
       color: '#ffffff',
+      letterSpacing: 3,
     }).setOrigin(0.5);
 
-    const games = this.add.text(width / 2, height * 0.48, 'GAMES', {
+    const games = this.add.text(width / 2, height * 0.47, 'GAMES', {
       fontFamily: 'Arial, sans-serif',
-      fontSize: `${Math.min(width * 0.065, 44)}px`,
-      letterSpacing: 8,
+      fontSize: `${Math.min(width * 0.055, 40)}px`,
+      letterSpacing: 12,
       color: '#ffffff',
     }).setOrigin(0.5);
 
-    const presents = this.add.text(width / 2, height * 0.60, 'presents...', {
+    const presents = this.add.text(width / 2, height * 0.59, 'presents...', {
       fontFamily: 'Georgia, serif',
-      fontSize: `${Math.min(width * 0.035, 24)}px`,
+      fontSize: `${Math.min(width * 0.032, 22)}px`,
       fontStyle: 'italic',
-      color: '#b8b8b8',
+      color: '#a8a8a8',
     }).setOrigin(0.5);
 
-    const elements = [adminHub, games, presents];
-    elements.forEach((element) => element.setAlpha(0));
-
-    this.tweens.add({
-      targets: adminHub,
-      alpha: 1,
-      duration: 650,
-      ease: 'Sine.easeOut',
-    });
-
-    this.tweens.add({
-      targets: games,
-      alpha: 1,
-      duration: 650,
-      delay: 350,
-      ease: 'Sine.easeOut',
-    });
-
-    this.tweens.add({
-      targets: presents,
-      alpha: 1,
-      duration: 650,
-      delay: 750,
-      ease: 'Sine.easeOut',
-      onComplete: () => this.showGameTitle(),
-    });
-
-    this.input.keyboard?.on('keydown', () => this.skipIntro());
-    this.input.on('pointerdown', () => this.skipIntro());
-  }
-
-  private showGameTitle() {
-    const { width, height } = this.scale;
-    const title = this.add.text(width / 2, height * 0.73, gameMetadata.title, {
+    const title = this.add.text(width / 2, height * 0.70, gameMetadata.title, {
       fontFamily: 'Arial, sans-serif',
-      fontSize: `${Math.min(width * 0.075, 52)}px`,
+      fontSize: `${Math.min(width * 0.075, 54)}px`,
       fontStyle: 'bold',
       color: '#ffffff',
+      letterSpacing: 4,
     }).setOrigin(0.5).setAlpha(0);
+
+    const subtitle = this.add.text(width / 2, height * 0.77, gameMetadata.subtitle ?? '', {
+      fontFamily: 'Arial, sans-serif',
+      fontSize: `${Math.min(width * 0.026, 18)}px`,
+      color: '#777777',
+      align: 'center',
+    }).setOrigin(0.5).setAlpha(0);
+
+    const skip = this.add.text(width / 2, height - 28, 'PRESS ANY KEY · CLICK TO CONTINUE', {
+      fontFamily: 'Arial, sans-serif',
+      fontSize: '11px',
+      letterSpacing: 2,
+      color: '#555555',
+    }).setOrigin(0.5).setAlpha(0);
+
+    [glow, rule, adminHub, games, presents].forEach((element) => element.setAlpha(0));
+
+    this.tweens.add({ targets: glow, alpha: 1, duration: 1200, ease: 'Sine.easeOut' });
+    this.tweens.add({ targets: rule, alpha: 1, duration: 700, delay: 500, ease: 'Sine.easeOut' });
+    this.tweens.add({ targets: adminHub, alpha: 1, duration: 700, delay: 250, ease: 'Sine.easeOut' });
+    this.tweens.add({ targets: games, alpha: 1, duration: 700, delay: 500, ease: 'Sine.easeOut' });
+    this.tweens.add({ targets: presents, alpha: 1, duration: 650, delay: 850, ease: 'Sine.easeOut' });
 
     this.tweens.add({
       targets: title,
       alpha: 1,
-      duration: 700,
+      duration: 850,
+      delay: 1450,
       ease: 'Sine.easeOut',
       onComplete: () => {
-        this.time.delayedCall(1000, () => this.scene.start('GameShellScene'));
+        this.tweens.add({ targets: subtitle, alpha: 1, duration: 650, ease: 'Sine.easeOut' });
+        this.tweens.add({ targets: skip, alpha: 1, duration: 500, delay: 350, ease: 'Sine.easeOut' });
+        this.time.delayedCall(2400, () => this.leaveIntro());
       },
     });
+
+    this.input.keyboard?.on('keydown', () => this.leaveIntro());
+    this.input.on('pointerdown', () => this.leaveIntro());
   }
 
-  private skipIntro() {
-    if (this.scene.isActive('PublisherIntroScene')) {
-      this.scene.start('GameShellScene');
-    }
+  private leaveIntro() {
+    if (this.leaving) return;
+    this.leaving = true;
+
+    this.cameras.main.fadeOut(650, 0, 0, 0);
+    this.time.delayedCall(650, () => this.scene.start('GameShellScene'));
   }
 }
