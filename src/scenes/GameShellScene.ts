@@ -11,12 +11,13 @@ type Village = {
   note: string;
 };
 
-type PrivateNote = {
-  village: string;
-  text: string;
-};
+type PrivateNote = { village: string; text: string };
 
 const GAMEBOOK_KEY = 'admin-hub-games:gamebook';
+const WORLD_WIDTH = 2400;
+const WORLD_HEIGHT = 1400;
+const DESKTOP_DOCK = 86;
+const PORTRAIT_DOCK = 104;
 
 export class GameShellScene extends Phaser.Scene {
   private player!: Phaser.GameObjects.Container;
@@ -24,22 +25,20 @@ export class GameShellScene extends Phaser.Scene {
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private speed = 170;
   private target: Phaser.Math.Vector2 | null = null;
-  private joystickVector = new Phaser.Math.Vector2();
-  private joystickPointerId: number | null = null;
-  private joystickKnob!: Phaser.GameObjects.Arc;
-  private joystickBase!: Phaser.GameObjects.Arc;
+  public joystickVector = new Phaser.Math.Vector2();
   private interactKey!: Phaser.Input.Keyboard.Key;
   private gamebookKey!: Phaser.Input.Keyboard.Key;
-  private interactButton!: Phaser.GameObjects.Container;
   private gamebookButton!: Phaser.GameObjects.Container;
   private hintText!: Phaser.GameObjects.Text;
   private playerLabel!: Phaser.GameObjects.Text;
+  private statusText!: Phaser.GameObjects.Text;
   private gamebookOpen = false;
   private gamebookOverlay?: Phaser.GameObjects.Container;
   private activeVillage?: Village;
   private privateNotes: PrivateNote[] = [];
   private worldNotes: WorldNote[] = [];
-  private worldNotesLoading = false;
+  private ambientOscillators: OscillatorNode[] = [];
+  private ambientGain?: GainNode;
 
   private villages: Village[] = [
     { id: 'story', name: 'STORY VILLAGE', subtitle: 'Where choices become games', x: 420, y: 350, color: 0x6e5a9b, note: 'Ideas for dialogue, characters, choices, quests and endings live here.' },
@@ -58,13 +57,13 @@ export class GameShellScene extends Phaser.Scene {
   create() {
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor('#d9c28f');
-    this.drawWorld(2400, 1400);
+    this.drawWorld();
 
     this.player = this.createPlayer(1180, 1120);
     this.player.setDepth(20);
-    this.cameras.main.setBounds(0, 0, 2400, 1400);
+    this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
-    this.cameras.main.setDeadzone(width * 0.28, height * 0.24);
+    this.cameras.main.setDeadzone(Math.min(width * 0.28, 320), Math.min(height * 0.22, 150));
 
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.keys = this.input.keyboard!.addKeys('W,A,S,D') as Record<string, Phaser.Input.Keyboard.Key>;
@@ -74,20 +73,21 @@ export class GameShellScene extends Phaser.Scene {
     this.loadPrivateNotes();
     this.createWorldInteractions();
     this.createHud();
-    this.createMobileControls();
+    this.layoutViewport();
     this.createAmbientSound();
 
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.layoutViewport, this);
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (this.gamebookOpen) return;
-      if (this.tryStartJoystick(pointer)) return;
+      if (this.isInReservedUi(pointer.x, pointer.y)) return;
       const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
       this.target = new Phaser.Math.Vector2(worldPoint.x, worldPoint.y);
     });
-    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => this.updateJoystick(pointer));
-    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => this.endJoystick(pointer));
-    this.input.on('pointerupoutside', (pointer: Phaser.Input.Pointer) => this.endJoystick(pointer));
 
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.stopAmbientSound());
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.layoutViewport, this);
+      this.stopAmbientSound();
+    });
   }
 
   update(_time: number, delta: number) {
@@ -97,8 +97,6 @@ export class GameShellScene extends Phaser.Scene {
     let dy = this.joystickVector.y;
 
     if (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) {
-      dx = 0;
-      dy = 0;
       if (this.cursors.left.isDown || this.keys.A.isDown) dx -= 1;
       if (this.cursors.right.isDown || this.keys.D.isDown) dx += 1;
       if (this.cursors.up.isDown || this.keys.W.isDown) dy -= 1;
@@ -117,8 +115,8 @@ export class GameShellScene extends Phaser.Scene {
     if (dx !== 0 || dy !== 0) {
       const length = Math.hypot(dx, dy) || 1;
       const distance = this.speed * (delta / 1000);
-      this.player.x = Phaser.Math.Clamp(this.player.x + (dx / length) * distance, 42, 2358);
-      this.player.y = Phaser.Math.Clamp(this.player.y + (dy / length) * distance, 90, 1350);
+      this.player.x = Phaser.Math.Clamp(this.player.x + (dx / length) * distance, 42, WORLD_WIDTH - 42);
+      this.player.y = Phaser.Math.Clamp(this.player.y + (dy / length) * distance, 90, WORLD_HEIGHT - 50);
       if (this.target && Phaser.Math.Distance.Between(this.player.x, this.player.y, this.target.x, this.target.y) < 8) this.target = null;
     }
 
@@ -129,12 +127,39 @@ export class GameShellScene extends Phaser.Scene {
     this.playerLabel.setPosition(this.player.x, this.player.y - 48);
   }
 
-  private drawWorld(width: number, height: number) {
-    const g = this.add.graphics();
-    g.fillStyle(0xe7d6a4, 1).fillRect(0, 0, width, height);
-    g.fillStyle(0xc59a60, 1).fillRect(0, 360, width, height - 360);
+  private layoutViewport() {
+    const width = this.scale.width;
+    const height = this.scale.height;
+    const portrait = height > width;
+    const dock = portrait ? PORTRAIT_DOCK : DESKTOP_DOCK;
+    const gameHeight = Math.max(180, height - dock);
 
-    // The world reads like a game map: central hub, branching paths, distinct themed districts.
+    // The bottom band belongs to the handheld controls. The world camera never
+    // renders underneath it, so controls cannot obscure the playable world.
+    this.cameras.main.setViewport(0, 0, width, gameHeight);
+    this.cameras.main.setDeadzone(Math.min(width * 0.28, 320), Math.min(gameHeight * 0.22, 150));
+
+    if (this.hintText) {
+      this.hintText.setPosition(width / 2, 18);
+      this.hintText.setFontSize(portrait ? 8 : 10);
+    }
+    if (this.statusText) {
+      this.statusText.setPosition(18, 18);
+      this.statusText.setFontSize(portrait ? 8 : 10);
+    }
+    if (this.gamebookButton) this.gamebookButton.setPosition(width - 74, 28);
+  }
+
+  private isInReservedUi(x: number, y: number) {
+    const dock = this.scale.height > this.scale.width ? PORTRAIT_DOCK : DESKTOP_DOCK;
+    return y >= this.scale.height - dock;
+  }
+
+  private drawWorld() {
+    const g = this.add.graphics();
+    g.fillStyle(0xe7d6a4, 1).fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    g.fillStyle(0xc59a60, 1).fillRect(0, 360, WORLD_WIDTH, WORLD_HEIGHT - 360);
+
     g.lineStyle(56, 0xb18456, 1);
     g.beginPath();
     g.moveTo(1180, 1350); g.lineTo(1180, 760); g.lineTo(420, 350);
@@ -157,7 +182,10 @@ export class GameShellScene extends Phaser.Scene {
       this.drawGrass(x, y, 0.65 + (i % 4) * 0.1);
     }
 
-    this.drawTree(150, 180, 1.5); this.drawTree(2250, 180, 1.1); this.drawTree(2280, 1180, 1.35); this.drawTree(160, 1160, 1);
+    this.drawTree(150, 180, 1.5);
+    this.drawTree(2250, 180, 1.1);
+    this.drawTree(2280, 1180, 1.35);
+    this.drawTree(160, 1160, 1);
     this.drawBuilding(1180, 1160, 190, 100, 0xeee1c2, 0x53635c, 'HOME / STUDIO');
     this.add.text(1180, 1088, 'YOUR LITTLE PLACE', { fontFamily: 'monospace', fontSize: '13px', color: '#4b3829', stroke: '#f0dfb6', strokeThickness: 5 }).setOrigin(0.5).setDepth(6);
 
@@ -167,8 +195,6 @@ export class GameShellScene extends Phaser.Scene {
     this.add.text(1180, 526, 'you + the other you', { fontFamily: 'monospace', fontSize: '10px', color: '#594838' }).setOrigin(0.5).setDepth(6);
 
     this.villages.forEach((village) => this.drawVillage(village));
-    this.add.text(1180, 75, 'ADMIN HUB GAMES', { fontFamily: 'monospace', fontSize: '22px', color: '#fff4d4', stroke: '#493526', strokeThickness: 7 }).setOrigin(0.5).setDepth(5);
-    this.add.text(1180, 104, 'a little world for making games', { fontFamily: 'monospace', fontSize: '11px', color: '#fff4d4', stroke: '#493526', strokeThickness: 4 }).setOrigin(0.5).setDepth(5);
   }
 
   private drawVillage(village: Village) {
@@ -194,8 +220,8 @@ export class GameShellScene extends Phaser.Scene {
 
   private drawChessBoard(x: number, y: number) {
     const g = this.add.graphics();
-    const size = 48;
-    const startX = x - size / 2; const startY = y - 16;
+    const startX = x - 24;
+    const startY = y - 16;
     for (let row = 0; row < 4; row += 1) for (let col = 0; col < 4; col += 1) {
       g.fillStyle((row + col) % 2 === 0 ? 0xe8d4a7 : 0x73533a, 1).fillRect(startX + col * 12, startY + row * 12, 12, 12);
     }
@@ -232,69 +258,42 @@ export class GameShellScene extends Phaser.Scene {
   private createHud() {
     const name = String(this.registry.get('playerName') || 'Player');
     this.playerLabel = this.add.text(this.player.x, this.player.y - 48, name, { fontFamily: 'monospace', fontSize: '10px', color: '#fff4d4', stroke: '#493526', strokeThickness: 4 }).setOrigin(0.5).setDepth(30);
-    this.hintText = this.add.text(this.scale.width / 2, 20, 'WASD / ARROWS  •  TAP TO WALK  •  E TO EXPLORE  •  B GAMEBOOK', { fontFamily: 'monospace', fontSize: '10px', color: '#fff6dc', stroke: '#2c241d', strokeThickness: 4 }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(40).setAlpha(0.92);
-    this.add.text(18, this.scale.height - 18, 'Explore. Leave ideas behind.', { fontFamily: 'monospace', fontSize: '11px', color: '#fff6dc', stroke: '#2c241d', strokeThickness: 4 }).setOrigin(0, 1).setScrollFactor(0).setDepth(40).setAlpha(0.8);
-  }
 
-  private createMobileControls() {
-    const y = this.scale.height - 92;
-    this.joystickBase = this.add.circle(92, y, 58, 0x493526, 0.32).setStrokeStyle(3, 0xf0dfb6, 0.65).setScrollFactor(0).setDepth(50);
-    this.joystickKnob = this.add.circle(92, y, 24, 0xf0dfb6, 0.75).setScrollFactor(0).setDepth(51);
+    const plate = this.add.rectangle(12, 12, 174, 38, 0x2f251e, 0.76).setOrigin(0).setScrollFactor(0).setDepth(39).setStrokeStyle(1, 0xe7d6a4, 0.35);
+    this.statusText = this.add.text(24, 20, 'FREE ROAM  ·  LEVEL 01', { fontFamily: 'monospace', fontSize: '10px', color: '#fff4d4', letterSpacing: 1 }).setScrollFactor(0).setDepth(40);
+    this.statusText.setData('plate', plate);
 
-    this.interactButton = this.makeHudButton(this.scale.width - 78, y, 84, 84, 'EXPLORE');
-    this.interactButton.on('pointerdown', () => this.interact());
-    this.gamebookButton = this.makeHudButton(this.scale.width - 78, 62, 84, 46, 'GAMEBOOK');
+    const brand = this.add.text(this.scale.width - 16, 16, 'ADMIN HUB GAMES', { fontFamily: 'monospace', fontSize: '10px', color: '#fff4d4', stroke: '#493526', strokeThickness: 4, letterSpacing: 1.2 }).setOrigin(1, 0).setScrollFactor(0).setDepth(40);
+    brand.setData('brand', true);
+
+    this.hintText = this.add.text(this.scale.width / 2, 18, 'WASD / ARROWS  ·  TAP TO WALK  ·  E EXPLORE', { fontFamily: 'monospace', fontSize: '10px', color: '#fff6dc', stroke: '#2c241d', strokeThickness: 4 }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(40).setAlpha(0.9);
+
+    this.gamebookButton = this.makeHudButton(this.scale.width - 74, 28, 116, 42, 'GAMEBOOK');
     this.gamebookButton.on('pointerdown', () => this.toggleGamebook());
   }
 
   private makeHudButton(x: number, y: number, w: number, h: number, label: string) {
     const button = this.add.container(x, y).setScrollFactor(0).setDepth(50);
-    const shape = this.add.rectangle(0, 0, w, h, 0x493526, 0.84).setStrokeStyle(3, 0xf0dfb6, 0.9);
-    const text = this.add.text(0, 0, label, { fontFamily: 'monospace', fontSize: label === 'GAMEBOOK' ? '8px' : '9px', color: '#fff4d4', align: 'center' }).setOrigin(0.5);
+    const shape = this.add.rectangle(0, 0, w, h, 0x493526, 0.92).setStrokeStyle(2, 0xf0dfb6, 0.82);
+    const text = this.add.text(0, 0, label, { fontFamily: 'monospace', fontSize: '8px', color: '#fff4d4', align: 'center', letterSpacing: 1 }).setOrigin(0.5);
     button.add([shape, text]);
     button.setSize(w, h).setInteractive({ useHandCursor: false });
     return button;
-  }
-
-  private tryStartJoystick(pointer: Phaser.Input.Pointer) {
-    const isTouchZone = pointer.x < this.scale.width * 0.45 && pointer.y > this.scale.height * 0.52;
-    if (!isTouchZone || this.joystickPointerId !== null) return false;
-    this.joystickPointerId = pointer.id;
-    this.target = null;
-    this.updateJoystick(pointer);
-    return true;
-  }
-
-  private updateJoystick(pointer: Phaser.Input.Pointer) {
-    if (pointer.id !== this.joystickPointerId) return;
-    const center = new Phaser.Math.Vector2(this.joystickBase.x, this.joystickBase.y);
-    const offset = new Phaser.Math.Vector2(pointer.x, pointer.y).subtract(center);
-    const max = 46;
-    const length = Math.min(offset.length(), max);
-    const direction = offset.length() > 0 ? offset.normalize() : new Phaser.Math.Vector2();
-    this.joystickVector.copy(direction).scale(length / max);
-    this.joystickKnob.setPosition(center.x + direction.x * length, center.y + direction.y * length);
-  }
-
-  private endJoystick(pointer: Phaser.Input.Pointer) {
-    if (pointer.id !== this.joystickPointerId) return;
-    this.joystickPointerId = null;
-    this.joystickVector.set(0, 0);
-    this.joystickKnob.setPosition(this.joystickBase.x, this.joystickBase.y);
   }
 
   private createWorldInteractions() {
     this.villages.forEach((village) => {
       const zone = this.add.zone(village.x, village.y, 190, 150).setInteractive();
       zone.on('pointerdown', () => {
-        this.player.x = Phaser.Math.Clamp(village.x + 145, 42, 2358);
-        this.player.y = Phaser.Math.Clamp(village.y + 120, 90, 1350);
+        this.player.x = Phaser.Math.Clamp(village.x + 145, 42, WORLD_WIDTH - 42);
+        this.player.y = Phaser.Math.Clamp(village.y + 120, 90, WORLD_HEIGHT - 50);
         this.showVillageNote(village);
       });
     });
     const chessZone = this.add.zone(1180, 585, 220, 160).setInteractive();
     chessZone.on('pointerdown', () => {
-      this.player.x = 1180; this.player.y = 690;
+      this.player.x = 1180;
+      this.player.y = 690;
       this.interact();
     });
   }
@@ -303,11 +302,9 @@ export class GameShellScene extends Phaser.Scene {
     const nearest = this.findNearestVillage(145);
     this.activeVillage = nearest;
     if (nearest) {
-      this.hintText.setText(`${nearest.name}  •  E / EXPLORE TO LEAVE A NOTE`);
-      this.interactButton.setAlpha(1);
+      this.hintText.setText(`${nearest.name}  ·  E / EXPLORE TO LEAVE A NOTE`);
     } else {
-      this.hintText.setText('WASD / ARROWS  •  TAP TO WALK  •  E TO EXPLORE  •  B GAMEBOOK');
-      this.interactButton.setAlpha(0.72);
+      this.hintText.setText('WASD / ARROWS  ·  TAP TO WALK  ·  E EXPLORE  ·  B GAMEBOOK');
     }
   }
 
@@ -326,24 +323,26 @@ export class GameShellScene extends Phaser.Scene {
   private interact() {
     if (this.gamebookOpen) return;
     const village = this.findNearestVillage(170);
-    if (!village) { this.hintText.setText('Nothing here yet. Keep wandering.'); return; }
+    if (!village) {
+      this.showTransientMessage('Nothing here yet. Keep wandering.');
+      return;
+    }
     this.showVillageNote(village);
   }
 
   private showVillageNote(village: Village) {
     this.gamebookOpen = true;
     this.target = null;
-    const panelWidth = Math.min(this.scale.width * 0.9, 700);
-    const panelHeight = Math.min(this.scale.height * 0.82, 440);
+    const panelWidth = Math.min(this.scale.width * 0.88, 700);
+    const panelHeight = Math.min(this.scale.height * 0.78, 440);
     const panel = this.add.container(this.scale.width / 2, this.scale.height / 2).setScrollFactor(0).setDepth(100);
     const backdrop = this.add.rectangle(0, 0, panelWidth, panelHeight, 0x241b16, 0.97).setStrokeStyle(3, village.color, 1);
     const title = this.add.text(0, -panelHeight / 2 + 34, village.name, { fontFamily: 'monospace', fontSize: `${Math.max(18, Math.min(27, panelWidth * 0.04))}px`, color: '#fff4d4', stroke: '#493526', strokeThickness: 3 }).setOrigin(0.5);
     const subtitle = this.add.text(0, -panelHeight / 2 + 68, village.subtitle, { fontFamily: 'monospace', fontSize: '10px', color: '#d9bd87' }).setOrigin(0.5);
     const body = this.add.text(0, -panelHeight / 2 + 110, village.note, { fontFamily: 'monospace', fontSize: '12px', color: '#fff8e8', align: 'center', wordWrap: { width: panelWidth * 0.78 }, lineSpacing: 6 }).setOrigin(0.5);
-
-    const privateButton = this.makePanelButton(-panelWidth * 0.22, panelHeight / 2 - 62, '🔒 PRIVATE NOTE');
-    const worldButton = this.makePanelButton(panelWidth * 0.22, panelHeight / 2 - 62, '🌍 LEAVE IN WORLD');
-    const close = this.add.text(0, panelHeight / 2 - 18, 'TAP OUTSIDE / E / SPACE TO CLOSE', { fontFamily: 'monospace', fontSize: '9px', color: '#d9bd87' }).setOrigin(0.5);
+    const privateButton = this.makePanelButton(-panelWidth * 0.22, panelHeight / 2 - 58, 'PRIVATE NOTE');
+    const worldButton = this.makePanelButton(panelWidth * 0.22, panelHeight / 2 - 58, 'LEAVE IN WORLD');
+    const close = this.add.text(0, panelHeight / 2 - 16, 'E / SPACE / TAP OUTSIDE TO CLOSE', { fontFamily: 'monospace', fontSize: '8px', color: '#d9bd87' }).setOrigin(0.5);
     panel.add([backdrop, title, subtitle, body, privateButton, worldButton, close]);
     panel.setAlpha(0);
     this.tweens.add({ targets: panel, alpha: 1, duration: 180 });
@@ -353,7 +352,8 @@ export class GameShellScene extends Phaser.Scene {
     this.input.keyboard?.once('keydown-E', () => this.closeVillagePanel(panel));
     this.input.keyboard?.once('keydown-SPACE', () => this.closeVillagePanel(panel));
     this.input.once('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (pointer.x < this.scale.width * 0.45 && pointer.y > this.scale.height * 0.52) return;
+      if (this.isInReservedUi(pointer.x, pointer.y)) return;
+      if (Math.abs(pointer.x - this.scale.width / 2) < panelWidth / 2 && Math.abs(pointer.y - this.scale.height / 2) < panelHeight / 2) return;
       this.closeVillagePanel(panel);
     });
   }
@@ -405,22 +405,22 @@ export class GameShellScene extends Phaser.Scene {
     this.gamebookOpen = true;
     this.target = null;
     this.gamebookOverlay = this.add.container(this.scale.width / 2, this.scale.height / 2).setScrollFactor(0).setDepth(200);
-    const w = Math.min(this.scale.width * 0.92, 760);
-    const h = Math.min(this.scale.height * 0.84, 470);
+    const w = Math.min(this.scale.width * 0.9, 760);
+    const h = Math.min(this.scale.height * 0.78, 470);
     const backdrop = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x17110e, 0.74);
     const book = this.add.rectangle(0, 0, w, h, 0xd8bd83, 1).setStrokeStyle(6, 0x5a402d, 1);
     const inner = this.add.rectangle(0, 0, w - 34, h - 34, 0xeee0ba, 1).setStrokeStyle(2, 0x9a744c, 1);
-    const title = this.add.text(0, -h / 2 + 38, 'MY GAMEBOOK', { fontFamily: 'monospace', fontSize: '26px', color: '#493526' }).setOrigin(0.5);
+    const title = this.add.text(0, -h / 2 + 38, 'MY GAMEBOOK', { fontFamily: 'monospace', fontSize: `${Math.max(18, Math.min(26, w * 0.04))}px`, color: '#493526' }).setOrigin(0.5);
     const intro = this.add.text(0, -h / 2 + 72, 'Private discoveries and ideas. World Notes are separate.', { fontFamily: 'monospace', fontSize: '10px', color: '#73533a' }).setOrigin(0.5);
     const noteLines = this.privateNotes.length ? this.privateNotes.map((note) => `✦ ${note.village.toUpperCase()}\n  ${note.text}`).join('\n\n') : 'No private notes yet.\n\nVisit a village and choose PRIVATE NOTE.';
     const notes = this.add.text(-w / 2 + 34, -h / 2 + 112, noteLines, { fontFamily: 'monospace', fontSize: '11px', color: '#493526', wordWrap: { width: w - 68 }, lineSpacing: 6 });
-    const worldButton = this.makePanelButton(0, h / 2 - 72, '🌍 VIEW WORLD NOTES');
-    const deleteButton = this.makePanelButton(0, h / 2 - 18, 'DELETE MY WORLD NOTE');
-    const close = this.add.text(0, h / 2 - 18, 'B / ESC / TAP TO RETURN', { fontFamily: 'monospace', fontSize: '9px', color: '#73533a' }).setOrigin(0.5);
-    close.setVisible(false);
-    this.gamebookOverlay.add([backdrop, book, inner, title, intro, notes, worldButton, deleteButton]);
+    const worldButton = this.makePanelButton(0, h / 2 - 54, 'VIEW WORLD NOTES');
+    const deleteButton = this.makePanelButton(0, h / 2 + 2, 'DELETE MY WORLD NOTE');
+    const close = this.add.text(0, h / 2 + 36, 'B / ESC / TAP TO RETURN', { fontFamily: 'monospace', fontSize: '9px', color: '#73533a' }).setOrigin(0.5);
+    this.gamebookOverlay.add([backdrop, book, inner, title, intro, notes, worldButton, deleteButton, close]);
     worldButton.on('pointerdown', () => this.viewWorldNotes());
     deleteButton.on('pointerdown', () => this.deleteOwnWorldNote());
+    close.setInteractive().on('pointerdown', () => this.closeGamebook());
     this.gamebookOverlay.setAlpha(0);
     this.tweens.add({ targets: this.gamebookOverlay, alpha: 1, duration: 180 });
     this.input.keyboard?.once('keydown-B', () => this.closeGamebook());
@@ -429,13 +429,9 @@ export class GameShellScene extends Phaser.Scene {
 
   private async viewWorldNotes() {
     const village = this.activeVillage || this.villages[0];
-    this.worldNotesLoading = true;
     this.worldNotes = await loadWorldNotes(village.id);
-    this.worldNotesLoading = false;
-    const lines = this.worldNotes.length
-      ? this.worldNotes.map((note) => `✦ ${note.authorName}\n  ${note.text}`).join('\n\n')
-      : 'No shared notes here yet.\n\nBe the first person to leave one.';
-    this.showTransientMessage(this.worldNotesLoading ? 'Loading world notes…' : lines.slice(0, 180));
+    const lines = this.worldNotes.length ? this.worldNotes.map((note) => `✦ ${note.authorName}\n  ${note.text}`).join('\n\n') : 'No shared notes here yet.\n\nBe the first person to leave one.';
+    this.showTransientMessage(lines.slice(0, 180));
   }
 
   private async deleteOwnWorldNote() {
@@ -473,19 +469,24 @@ export class GameShellScene extends Phaser.Scene {
     } catch { this.privateNotes = []; }
   }
 
-  private ambientOscillators: OscillatorNode[] = [];
-  private ambientGain?: GainNode;
-
   private createAmbientSound() {
     try {
       const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (!AudioContextClass) return;
       const context = new AudioContextClass();
-      const gain = context.createGain(); gain.gain.value = 0.018; gain.connect(context.destination); this.ambientGain = gain;
+      const gain = context.createGain();
+      gain.gain.value = 0.018;
+      gain.connect(context.destination);
+      this.ambientGain = gain;
       const notes = [196, 246.94, 293.66, 246.94, 220, 261.63, 329.63, 261.63];
       notes.forEach((frequency, index) => {
-        const oscillator = context.createOscillator(); oscillator.type = 'sine'; oscillator.frequency.value = frequency; oscillator.connect(gain);
-        oscillator.start(context.currentTime + index * 0.55); oscillator.stop(context.currentTime + 0.55 * notes.length + 0.8); this.ambientOscillators.push(oscillator);
+        const oscillator = context.createOscillator();
+        oscillator.type = 'sine';
+        oscillator.frequency.value = frequency;
+        oscillator.connect(gain);
+        oscillator.start(context.currentTime + index * 0.55);
+        oscillator.stop(context.currentTime + 0.55 * notes.length + 0.8);
+        this.ambientOscillators.push(oscillator);
       });
       context.resume().catch(() => undefined);
     } catch { /* audio is optional */ }
