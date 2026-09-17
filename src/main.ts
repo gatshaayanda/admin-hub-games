@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import './style.css';
+import './mobile-controls';
 import './firebase/firebase';
 import { BootScene } from './scenes/BootScene';
 import { PublisherIntroScene } from './scenes/PublisherIntroScene';
