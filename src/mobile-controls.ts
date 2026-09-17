@@ -1,6 +1,12 @@
 type Direction = 'up' | 'down' | 'left' | 'right';
 type MovementVector = { x: number; y: number };
 
+type GameShell = {
+  joystickVector?: { set: (x: number, y: number) => unknown };
+  interact?: () => unknown;
+  toggleGamebook?: () => unknown;
+};
+
 type PhaserGame = {
   scene?: { getScene?: (key: string) => unknown };
 };
@@ -20,9 +26,7 @@ const vectors: Record<Direction, MovementVector> = {
 };
 
 function getScene() {
-  return window.__AHG_GAME__?.scene?.getScene?.('GameShellScene') as {
-    joystickVector?: { set: (x: number, y: number) => unknown };
-  } | undefined;
+  return window.__AHG_GAME__?.scene?.getScene?.('GameShellScene') as GameShell | undefined;
 }
 
 function setDirection(direction: Direction | null) {
@@ -65,6 +69,24 @@ function makeButton(direction: Direction, label: string) {
   return button;
 }
 
+function makeActionButton(label: string, action: 'interact' | 'book') {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'ahg-action-button';
+  button.setAttribute('aria-label', label);
+  button.innerHTML = `<span>${label}</span>`;
+  button.addEventListener('pointerdown', (event) => {
+    event.preventDefault();
+    const scene = getScene();
+    if (action === 'interact') scene?.interact?.();
+    else scene?.toggleGamebook?.();
+    button.classList.add('is-pressed');
+  });
+  button.addEventListener('pointerup', () => button.classList.remove('is-pressed'));
+  button.addEventListener('pointercancel', () => button.classList.remove('is-pressed'));
+  return button;
+}
+
 function install() {
   if (!TOUCH_DEVICE || document.getElementById('ahg-touch-controls')) return;
 
@@ -85,11 +107,15 @@ function install() {
     makeButton('right', '▶'),
   );
 
+  const actions = document.createElement('div');
+  actions.className = 'ahg-actions';
+  actions.append(makeActionButton('EXPLORE', 'interact'), makeActionButton('BOOK', 'book'));
+
   const hint = document.createElement('div');
   hint.className = 'ahg-touch-hint';
   hint.textContent = 'HOLD TO MOVE';
 
-  root.append(brand, dpad, hint);
+  root.append(brand, dpad, actions, hint);
   document.body.appendChild(root);
 }
 
