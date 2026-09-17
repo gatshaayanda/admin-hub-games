@@ -39,15 +39,20 @@ export async function ensureAnonymousPlayer(): Promise<User> {
   return credential.user;
 }
 
+export async function getAnonymousPlayerId(): Promise<string | null> {
+  try {
+    return (await ensureAnonymousPlayer()).uid;
+  } catch {
+    return null;
+  }
+}
+
 export async function savePlayerProfile(displayName: string): Promise<void> {
   try {
     const user = await ensureAnonymousPlayer();
     await setDoc(
       doc(firestore, 'players', user.uid),
-      {
-        displayName,
-        updatedAt: serverTimestamp(),
-      },
+      { displayName, updatedAt: serverTimestamp() },
       { merge: true },
     );
   } catch {
@@ -65,7 +70,6 @@ export async function createWorldNote(villageId: string, authorName: string, tex
       text,
       createdAt: serverTimestamp(),
     });
-
     return { id: ref.id, authorId: user.uid, authorName, villageId, text };
   } catch {
     return null;
@@ -87,9 +91,9 @@ export async function loadWorldNotes(villageId: string): Promise<WorldNote[]> {
 
 export async function deleteWorldNote(noteId: string): Promise<boolean> {
   try {
-    const user = await ensureAnonymousPlayer();
+    await ensureAnonymousPlayer();
     await deleteDoc(doc(firestore, 'worldNotes', noteId));
-    return firebaseAuth.currentUser?.uid === user.uid;
+    return true;
   } catch {
     return false;
   }
