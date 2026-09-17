@@ -10,7 +10,6 @@ export class PublisherIntroScene extends Phaser.Scene {
   create() {
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor('#d9c28f');
-
     this.drawWorld(width, height);
 
     const player = this.createPlayer(-48, height * 0.72);
@@ -18,7 +17,6 @@ export class PublisherIntroScene extends Phaser.Scene {
     player.setDepth(20);
     shadow.setDepth(19);
 
-    // A quiet environmental mark remains throughout the journey.
     const ambientBrand = this.add.text(width * 0.075, height * 0.085, 'ADMIN HUB GAMES', {
       fontFamily: 'monospace',
       fontSize: '15px',
@@ -34,43 +32,45 @@ export class PublisherIntroScene extends Phaser.Scene {
     this.tweens.add({
       targets: fade,
       alpha: 0,
-      duration: 850,
+      duration: 1000,
       ease: 'Sine.easeOut',
     });
 
+    // Keep the cinematic sequence independent of viewport dimensions and input.
+    // Opening the app always gives the publisher identity its intended moment.
     this.tweens.add({
       targets: [player, shadow],
       x: `+=${width * 0.50}`,
-      duration: 3100,
+      duration: 4200,
       ease: 'Sine.easeInOut',
       onUpdate: () => {
         const bob = Math.sin(this.time.now / 110) * 1.8;
         player.y = height * 0.72 + bob;
         shadow.x = player.x;
       },
-      onComplete: () => this.showPublisherCard(ambientBrand, width, height),
+      onComplete: () => {
+        this.time.delayedCall(700, () => this.showPublisherCard(ambientBrand, width, height));
+      },
     });
-
-    this.input.keyboard?.once('keydown', () => this.leaveIntro());
-    this.input.once('pointerdown', () => this.leaveIntro());
   }
 
   private showPublisherCard(ambientBrand: Phaser.GameObjects.Text, width: number, height: number) {
-    // The player has arrived. Stop the motion and give the publisher identity a real moment.
-    const veil = this.add.rectangle(width / 2, height / 2, width, height, 0x16120f, 0.30)
+    if (this.leaving) return;
+
+    const veil = this.add.rectangle(width / 2, height / 2, width, height, 0x16120f, 0.32)
       .setDepth(80)
       .setAlpha(0);
 
-    const panelWidth = Math.min(width * 0.78, 700);
-    const panelHeight = Math.min(height * 0.34, 190);
-    const panel = this.add.rectangle(width / 2, height * 0.48, panelWidth, panelHeight, 0x241c17, 0.88)
-      .setStrokeStyle(Math.max(2, Math.min(width, height) * 0.004), 0xd2bc8e, 0.9)
+    const panelWidth = Math.min(width * 0.82, 720);
+    const panelHeight = Math.min(height * 0.38, 210);
+    const panel = this.add.rectangle(width / 2, height * 0.48, panelWidth, panelHeight, 0x241c17, 0.92)
+      .setStrokeStyle(Math.max(2, Math.min(width, height) * 0.004), 0xd2bc8e, 0.95)
       .setDepth(81)
       .setAlpha(0)
       .setScale(0.94);
 
-    const titleSize = Math.max(28, Math.min(56, Math.min(width, height) * 0.095));
-    const presentsSize = Math.max(14, Math.min(24, Math.min(width, height) * 0.038));
+    const titleSize = Math.max(30, Math.min(60, Math.min(width, height) * 0.10));
+    const presentsSize = Math.max(15, Math.min(25, Math.min(width, height) * 0.04));
 
     const title = this.add.text(width / 2, height * 0.455, 'ADMIN HUB GAMES', {
       fontFamily: 'monospace',
@@ -89,26 +89,27 @@ export class PublisherIntroScene extends Phaser.Scene {
       align: 'center',
     }).setOrigin(0.5).setDepth(82).setAlpha(0);
 
+    // Deliberate cinematic entrance: no click/keypress can accidentally skip it.
     this.tweens.add({
       targets: [veil, panel, title, presents],
       alpha: 1,
-      duration: 700,
+      duration: 850,
       ease: 'Sine.easeOut',
     });
 
     this.tweens.add({
       targets: [panel, title],
       scale: 1,
-      duration: 900,
+      duration: 850,
       ease: 'Sine.easeOut',
     });
 
-    // Hold the identity long enough to actually register on both laptop and phone.
-    this.time.delayedCall(3100, () => {
+    // Hold for a full, repeatable publisher beat on laptop and phone.
+    this.time.delayedCall(3400, () => {
       this.tweens.add({
         targets: [veil, panel, title, presents],
         alpha: 0,
-        duration: 900,
+        duration: 1000,
         ease: 'Sine.easeInOut',
         onComplete: () => {
           veil.destroy();
@@ -116,7 +117,7 @@ export class PublisherIntroScene extends Phaser.Scene {
           title.destroy();
           presents.destroy();
           ambientBrand.setAlpha(1);
-          this.time.delayedCall(250, () => this.leaveIntro());
+          this.time.delayedCall(300, () => this.leaveIntro());
         },
       });
     });
@@ -125,8 +126,8 @@ export class PublisherIntroScene extends Phaser.Scene {
   private leaveIntro() {
     if (this.leaving) return;
     this.leaving = true;
-    this.cameras.main.fadeOut(650, 22, 18, 14);
-    this.time.delayedCall(650, () => this.scene.start('NameEntryScene'));
+    this.cameras.main.fadeOut(700, 22, 18, 14);
+    this.time.delayedCall(700, () => this.scene.start('NameEntryScene'));
   }
 
   private drawWorld(width: number, height: number) {
@@ -136,7 +137,6 @@ export class PublisherIntroScene extends Phaser.Scene {
     g.fillStyle(0xe8d6a8, 1).fillRect(0, 0, width, height);
     g.fillStyle(0xd7b879, 1).fillRect(0, height * 0.34, width, height * 0.66);
 
-    // Distant horizon and low hills.
     g.fillStyle(0xb58d61, 1);
     g.beginPath();
     g.moveTo(0, height * 0.42);
@@ -150,14 +150,12 @@ export class PublisherIntroScene extends Phaser.Scene {
     g.closePath();
     g.fillPath();
 
-    // Grassy field.
     for (let x = 18; x < width; x += 42) {
       const y = height * 0.47 + ((x * 13) % 105);
       g.fillStyle(0x71804a, 0.72).fillRect(x, y, 13, 5);
       g.fillStyle(0x899153, 0.65).fillRect(x + 4, y - 5, 5, 5);
     }
 
-    // Red-earth path leading into the settlement.
     g.fillStyle(0xa76545, 1);
     g.beginPath();
     g.moveTo(0, height * 0.78);
@@ -170,10 +168,8 @@ export class PublisherIntroScene extends Phaser.Scene {
     g.closePath();
     g.fillPath();
 
-    // A small compound/studio: a future landmark in the shared world.
     g.fillStyle(0x8d7254, 1).fillRect(width * 0.59, height * 0.35, width * 0.33, 11);
     g.fillStyle(0x705b48, 1).fillRect(width * 0.59, height * 0.35 + 11, width * 0.33, 4);
-
     g.fillStyle(0xe7dfc8, 1).fillRect(width * 0.64, height * 0.20, width * 0.19, height * 0.16);
     g.fillStyle(0x58635d, 1);
     g.beginPath();
@@ -182,17 +178,14 @@ export class PublisherIntroScene extends Phaser.Scene {
     g.lineTo(width * 0.86, height * 0.20);
     g.closePath();
     g.fillPath();
-
     g.fillStyle(0x9a704e, 1).fillRect(width * 0.72, height * 0.275, 22, 42);
     g.fillStyle(0x7693a0, 1).fillRect(width * 0.66, height * 0.25, 22, 19);
     g.fillStyle(0x7693a0, 1).fillRect(width * 0.79, height * 0.25, 22, 19);
 
-    // Water tank / utility silhouette.
     g.fillStyle(0x707671, 1).fillRect(width * 0.865, height * 0.22, 24, 60);
     g.fillStyle(0x505653, 1).fillRect(width * 0.855, height * 0.20, 44, 11);
     g.fillStyle(0x505653, 1).fillRect(width * 0.873, height * 0.19, 8, 8);
 
-    // Sign at the path: the brand exists in-world, not as a splash screen.
     g.fillStyle(0x4b392b, 1).fillRect(width * 0.46, height * 0.47, 7, 70);
     g.fillStyle(0x403126, 1).fillRect(width * 0.405, height * 0.465, 120, 39);
     g.fillStyle(0xd2bc8e, 1).fillRect(width * 0.412, height * 0.472, 106, 25);
@@ -209,12 +202,10 @@ export class PublisherIntroScene extends Phaser.Scene {
       letterSpacing: 2,
     }).setOrigin(0.5).setDepth(8);
 
-    // Acacia-inspired silhouettes.
     this.drawTree(width * 0.16, height * 0.29, 1.18);
     this.drawTree(width * 0.40, height * 0.28, 0.78);
     this.drawTree(width * 0.95, height * 0.43, 0.72);
 
-    // Small rocks and scrub create a little visual life without heavy assets.
     for (let i = 0; i < 18; i += 1) {
       const x = 24 + ((i * 149) % Math.max(80, width - 48));
       const y = height * 0.49 + ((i * 67) % Math.max(45, height * 0.42));
@@ -222,7 +213,6 @@ export class PublisherIntroScene extends Phaser.Scene {
       if (i % 4 === 0) g.fillStyle(0x687648, 0.9).fillRect(x + 8, y - 4, 4, 8);
     }
 
-    // Soft sun disk.
     g.fillStyle(0xf5df9c, 0.72).fillCircle(width * 0.87, height * 0.14, 34);
   }
 
@@ -239,8 +229,6 @@ export class PublisherIntroScene extends Phaser.Scene {
   private createPlayer(x: number, y: number) {
     const container = this.add.container(x, y);
     const g = this.add.graphics();
-
-    // The same simple hero language can be reused by the first real game.
     g.fillStyle(0x241d1a, 1).fillRect(-10, -22, 20, 10);
     g.fillStyle(0x70452e, 1).fillRect(-9, -14, 18, 14);
     g.fillStyle(0x236b68, 1).fillRect(-11, 0, 22, 19);
@@ -249,7 +237,6 @@ export class PublisherIntroScene extends Phaser.Scene {
     g.fillStyle(0x253a38, 1).fillRect(-12, 30, 10, 5);
     g.fillStyle(0x253a38, 1).fillRect(2, 30, 10, 5);
     g.fillStyle(0x5b3d2a, 1).fillRect(10, 3, 6, 16);
-
     container.add(g);
     return container;
   }
