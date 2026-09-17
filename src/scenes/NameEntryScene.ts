@@ -105,7 +105,7 @@ export class NameEntryScene extends Phaser.Scene {
     const input = document.createElement('input');
     input.id = 'ahg-name-input';
     input.type = 'text';
-    input.autocomplete = 'nickname';
+    input.setAttribute('autocomplete', 'nickname');
     input.autocapitalize = 'words';
     input.spellcheck = false;
     input.maxLength = 18;
