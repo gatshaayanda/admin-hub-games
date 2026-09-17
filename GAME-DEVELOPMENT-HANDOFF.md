@@ -3,13 +3,11 @@
 **Inspection date:** 2026-09-17  
 **Repository:** `gatshaayanda/admin-hub-games`  
 **Default branch:** `main`  
-**Purpose:** hand this foundation to the next development conversation so game work can continue without rebuilding the setup.
+**Purpose:** carry the foundation directly into the first playable Admin Hub Games world without rebuilding setup.
 
 ## 1. Current state
 
-The Admin Hub Games foundation is established and the project is ready to move into actual game/world development.
-
-The foundation is intentionally **not tied to a first game**. Mhele is a future title/reference only.
+The foundation is established and the first playable world vertical slice now exists.
 
 Current stack:
 
@@ -22,9 +20,9 @@ Current stack:
 - Browser-first / PWA-capable architecture
 - 960 × 540 Phaser base canvas with `Phaser.Scale.FIT`
 
-## 2. Opening user flow
+The project is intentionally not tied to one game. The first world is a **meta game-making world** that can grow alongside future titles.
 
-Every normal application launch begins here:
+## 2. Current player experience
 
 ```text
 OPEN LINK / APP
@@ -33,39 +31,133 @@ BootScene
       ↓
 PublisherIntroScene
       ↓
-living world fades in
-      ↓
-player character walks into the scene
-      ↓
-character arrives and pauses
-      ↓
-ADMIN HUB GAMES
-presents
-      ↓
-publisher identity holds clearly
-      ↓
-publisher identity fades away
+ADMIN HUB GAMES / presents
       ↓
 NameEntryScene
       ↓
-player enters name
-      ↓
 GameShellScene
+      ↓
+TOP-DOWN ADMIN HUB GAMES WORLD
+      ↓
+WANDER
+      ↓
+DISCOVER VILLAGES
+      ↓
+LEAVE IDEAS / NOTES
+      ↓
+GAMEBOOK
 ```
 
-This opening is a recurring publisher cinematic. It is **not one-time onboarding**.
+The publisher intro remains a recurring cinematic opening. The world is now the first actual playable experience after name entry.
 
-## 3. Publisher intro contract
+## 3. World concept
 
-The publisher identity is a product requirement:
+The game is a relaxed, top-down exploration world representing the Admin Hub Games creative universe.
+
+The player controls a small avatar representing their presence in the world. The character can wander between themed villages that represent game-system families.
+
+Current villages:
+
+- Story Village
+- Adventure Village
+- Management Village
+- Strategy Village
+- Arcade Village
+- Simulation Village
+- Puzzle Village
+- Chess House
+- Home / Studio
+
+The design intent is **meta but playable**: the player is exploring the same kinds of systems they are learning to build. The world itself becomes a visual game-idea notebook.
+
+## 4. First vertical slice implemented
+
+`GameShellScene` now provides:
+
+- large top-down world beyond the camera viewport
+- camera follow and world bounds
+- avatar movement with WASD / arrow keys
+- tap-to-walk on touch devices
+- explore/interact button for mobile
+- themed system villages
+- Chess House as the connection between the player's real chess interest and the game world
+- discovery panels for villages
+- persistent Gamebook notes via browser local storage
+- `B` to open the Gamebook
+- `E` / tap to explore nearby locations
+- player name carried from `NameEntryScene`
+- simple procedural ambient sound that is optional and never blocks gameplay
+- reusable chunky Botswana-inspired visual language from the publisher intro
+
+This is intentionally a **small vertical slice**, not a finished world.
+
+## 5. Design direction
+
+The intended feel is:
+
+> **“Let me just walk around for five minutes.”**
+
+It should be calm, curious, slightly adventurous and personal.
+
+The world should reward wandering rather than constantly demanding objectives.
+
+Creative principle:
+
+> **Start local → make it globally understandable.**
+
+Use Botswana-inspired details without turning the world into a generic stereotype or a corporate “African” theme.
+
+## 6. Gamebook concept
+
+The Gamebook is a core meta mechanic.
+
+When the player discovers a village, its system note is saved locally. Future development can turn this into a richer notebook where the player can write their own game ideas, revisit discoveries and eventually connect notes to playable games.
+
+Long-term concept:
+
+```text
+PLAYER IDEA
+     ↓
+GAMEBOOK NOTE
+     ↓
+SYSTEM VILLAGE
+     ↓
+GAME PROTOTYPE
+     ↓
+PLAYABLE GAME
+     ↓
+WORLD EXPANDS
+```
+
+## 7. Chess connection
+
+The Chess House is deliberately part of the first world rather than a separate menu item.
+
+It is intended as a subtle bridge between:
+
+```text
+real player
+    ↓
+real chess activity
+    ↓
+Chess.com / BoardSignal
+    ↓
+Admin Hub Games world
+    ↓
+avatar + Chess House
+```
+
+Do not invent live Chess.com data inside the game yet. The first slice only establishes the thematic connection. A future integration can be added when it has a clear gameplay purpose.
+
+## 8. Publisher intro contract
+
+The publisher identity remains a product requirement:
 
 > **ADMIN HUB GAMES appears once, clearly, then gets out of the way and lets the game happen.**
 
 The intro should feel like a real game opening, not a website splash screen.
 
-Current implementation deliberately uses fixed timing so laptop and phone do not get different cinematic pacing from viewport dimensions or accidental input.
-
-Current approximate sequence:
+Current fixed sequence:
 
 - dark/world fade: 1.0s
 - character entrance: 4.2s
@@ -75,160 +167,9 @@ Current approximate sequence:
 - publisher fade: 1.0s
 - transition: 0.7s
 
-The intro no longer installs keyboard/pointer skip handlers. This prevents a click used to open/focus the app from accidentally rushing through the publisher moment.
+No incidental keyboard/pointer skip handlers should be reintroduced.
 
-The prominent publisher card is responsive to the 960 × 540 canvas and uses `Math.min(width, height)` for type sizing, so the identity remains readable when the landscape canvas is fitted into a portrait phone viewport.
-
-## 4. Visual direction
-
-The current world is a warm, chunky 2D/top-down style with a Botswana-inspired sense of place:
-
-- warm sky
-- dry grass
-- red earth
-- simple compound/studio architecture
-- utility/water tank
-- scrub and acacia-like trees
-- in-world Admin Hub Games sign
-- small reusable player character
-
-Creative principle:
-
-**Start local → make it globally understandable.**
-
-Do not replace this direction with a corporate splash screen or generic African visual stereotype.
-
-## 5. Existing scenes
-
-### `BootScene`
-Immediately starts `PublisherIntroScene`.
-
-### `PublisherIntroScene`
-The current publisher/world opening cinematic. This is the main entry experience and should be preserved as the game foundation grows.
-
-### `NameEntryScene`
-Asks:
-
-> What should we call you?
-
-Accepts keyboard input, stores the result in Phaser registry as `playerName`, then transitions to `GameShellScene`.
-
-### `GameShellScene`
-Reusable baseline handoff. This is where the next actual game/world experience can begin.
-
-## 6. Main Phaser bootstrap
-
-`src/main.ts` configures:
-
-```text
-Phaser.AUTO
-960 × 540
-Scale.FIT
-CENTER_BOTH
-BootScene
-PublisherIntroScene
-NameEntryScene
-GameShellScene
-```
-
-The project intentionally uses a landscape game canvas because the shared world/game direction is currently landscape-first. Portrait phones fit that canvas rather than changing the game coordinate system.
-
-## 7. Firebase
-
-Firebase is initialized centrally from `src/firebase/firebase.ts`.
-
-The project is intended to use its dedicated Admin Hub Games Firebase project, not another game's Firebase project.
-
-## 8. Web / PWA foundation
-
-`index.html` currently contains:
-
-- viewport configuration
-- theme color
-- description
-- application name
-- Apple mobile metadata
-- favicon link
-- manifest link
-- page title
-
-A favicon and manifest exist in the repository root.
-
-### Follow-up verification item
-
-The repository currently has `favicon.svg` and `manifest.webmanifest` at the repository root while Vite's normal static-public directory is `public/`. The connected GitHub file wrapper would not create nested `public/` files and returned a SHA-required error, so this was **not silently faked as complete**.
-
-Before treating the PWA metadata as fully production-verified, the next development pass should confirm that `/favicon.svg` and `/manifest.webmanifest` are actually served by the deployed Vercel build, and if not, move/copy them into a Vite-served asset location or otherwise configure Vite correctly.
-
-This does **not** block game development.
-
-## 9. Git / checkpoint history
-
-The latest publisher timing fix is:
-
-`ae854273f0b44be25b407ec2947c368f79b0fd79`
-
-`fix: make publisher intro timing deterministic`
-
-The foundation documentation checkpoint is:
-
-`e334c0021057ecc4ec48b4c32d5c4af5aad0cfdb`
-
-`docs: lock publisher intro cinematic contract`
-
-This handoff report is the subsequent documentation checkpoint.
-
-## 10. Verification status
-
-### Source inspection
-
-Completed.
-
-### Foundation wiring
-
-Confirmed from repository source:
-
-- Phaser bootstrap exists
-- Firebase initialization is imported
-- publisher intro is the first real scene after boot
-- name-entry handoff exists
-- game shell exists
-- PWA metadata exists
-- Vitest/build scripts exist
-
-### Vercel connector verification
-
-The connected Vercel tool was asked for project slug `admin-hub-games` under the known team and returned `404 Not Found`. Therefore the live production deployment was **not falsely marked as verified** in this report.
-
-The repository remains the source of truth. The next chat should use the project's normal GitHub → Vercel workflow and visually verify the live deployment before declaring the next checkpoint complete.
-
-## 11. What the next game-development chat should do
-
-Do **not** rebuild the foundation.
-
-Start from:
-
-```text
-Admin Hub Games publisher intro
-        ↓
-Name Entry
-        ↓
-Game Shell
-        ↓
-FIRST ACTUAL GAME / WORLD VERTICAL SLICE
-```
-
-The first game has deliberately not been selected yet. The next chat can decide what to build based on what is most enjoyable/useful, but it should preserve the publisher entry experience.
-
-Good candidates already discussed include exploration/world wandering, a Lode Runner-inspired game, management/simulation, story/adventure, arcade, strategy, puzzle, chess-related experiences and other systems the owner personally wants to play.
-
-The guiding principle is:
-
-> **Make games, not infrastructure for infrastructure's sake.**
-
-Build reusable systems only when an actual game needs them.
-
-## 12. Architecture rule
+## 9. Foundation architecture
 
 Keep the conceptual separation:
 
@@ -240,11 +181,101 @@ GAME RULES / STATE
 PHASER RENDERS STATE
 ```
 
-Do not turn the foundation into a giant custom engine prematurely.
+Do not turn the project into a giant custom engine.
 
-## 13. User workflow preference
+Build reusable systems when real games prove that they should be reusable.
 
-Owner workflow:
+Likely future shared systems from the world:
+
+- avatar state
+- movement
+- collision
+- interactables
+- locations
+- environmental storytelling
+- discovery/progression
+- notebook/Gamebook
+- ambience/audio
+- save/load
+- settings
+- touch controls
+- accessibility
+
+## 10. Firebase
+
+Firebase is initialized centrally from `src/firebase/firebase.ts`.
+
+Dedicated project:
+
+- Project ID: `admin-hub-games`
+- Auth domain: `admin-hub-games.firebaseapp.com`
+- Storage bucket: `admin-hub-games.firebasestorage.app`
+
+Do not copy another game's Firebase project configuration into this repository.
+
+## 11. PWA follow-up
+
+The repository has favicon and manifest metadata, but the earlier inspection identified that the files were at repository root rather than Vite's conventional `public/` location.
+
+This remains a verification item. Confirm `/favicon.svg` and `/manifest.webmanifest` on the deployed Vercel build before calling PWA metadata production-verified.
+
+This does not block world/game development.
+
+## 12. Verification status for the first world slice
+
+Source inspection: **completed**.
+
+World implementation: **committed to GitHub**.
+
+Latest world commit:
+
+`82d07373a8f4e8faafd87f37b1669307dbf3ca27`
+
+`feat: turn game shell into first Admin Hub Games world slice`
+
+A local production build could not be executed from this inspection environment because outbound network/DNS access to GitHub was unavailable, so the new TypeScript has **not** been falsely marked as locally build-verified.
+
+Next local station checkpoint should run:
+
+```text
+npm ci
+npm run build
+npm test
+```
+
+Then push/deploy and visually inspect the live Vercel build.
+
+## 13. Next development direction
+
+Do not rebuild the foundation.
+
+Continue the world in small playable slices:
+
+```text
+CURRENT
+  ↓
+world + avatar + villages + Gamebook
+  ↓
+NPCs / ambient life
+  ↓
+better interactions
+  ↓
+real editable notes
+  ↓
+Chess House connection
+  ↓
+first embedded mini-game
+  ↓
+Mhele
+  ↓
+Lode Runner-style game
+  ↓
+world grows with every game made
+```
+
+The next meaningful goal is **more life and discovery**, not a giant map.
+
+## 14. Owner workflow
 
 **START → BUILD → VERIFY → CHECKPOINT → CONTINUE / RECOVER**
 
@@ -252,12 +283,6 @@ Owner workflow:
 - VS Code + Git Bash is the normal local workflow.
 - Avoid PowerShell.
 - Localhost is for development/debugging.
-- For meaningful visual checkpoints, push to GitHub and review the Vercel deployment.
+- Push meaningful visual checkpoints and verify the Vercel deployment.
 - Do not ask the owner for screenshots when browser/live verification can be performed another way.
 - Unexpected results should stop the workflow rather than being patched blindly.
-
-## 14. Handoff instruction
-
-The next chat should read this report and `AGENTS.md` first, inspect the current repository state, then continue directly into game development.
-
-**Do not ask the owner to repeat the foundation history.**
