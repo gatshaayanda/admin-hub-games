@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { adminHubAudio } from '../audio';
 import { createWorldNote, deleteWorldNote, getAnonymousPlayerId, isFounderAdmin, loadWorldNotes, loadWorldNoteReports, reportWorldNote, type WorldNote } from '../firebase/firebase';
 import { type InteractionModalData } from './InteractionModalScene';
 
@@ -46,12 +47,8 @@ export class GameShellScene extends Phaser.Scene {
   private activeVillage?: Village;
   private privateNotes: PrivateNote[] = [];
   private worldNotes: WorldNote[] = [];
-  private ambientOscillators: OscillatorNode[] = [];
-  private ambientGain?: GainNode;
-  private ambientContext?: AudioContext;
-  private ambientTimer?: number;
-  private ambientStarted = false;
   private gamebookInputOverlay?: Phaser.GameObjects.Container;
+  private gamebookBusy = false;
 
   private villages: Village[] = [
     { id: 'systems-hall', name: 'SYSTEMS HALL', subtitle: 'The shared lobby of Admin Hub Games', x: 1180, y: 760, color: 0x2f7775, note: 'The first lobby. The systems once imagined as separate houses are gathered here while the foundation is being built.' },
@@ -99,7 +96,6 @@ export class GameShellScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layoutViewport, this);
       window.removeEventListener('ahg:escape', escapeHandler);
-      this.stopAmbientSound();
       this.gamebookInputOverlay?.destroy();
       this.gamebookInputOverlay = undefined;
     });
@@ -714,10 +710,10 @@ export class GameShellScene extends Phaser.Scene {
     const buttons = [
       ['VIEW WORLD NOTES', () => this.viewWorldNotes()],
       ['DELETE A WORLD NOTE', () => this.deleteOwnWorldNote()],
-      ['REPORT A WORLD NOTE', () => this.reportWorldNoteFlow().then((message) => this.showTransientMessage(message))],
-      ['WORLD NOTE REPORTS', () => this.viewAdminReports().then((message) => this.showTransientMessage(message))],
+      ['REPORT A WORLD NOTE', () => this.reportWorldNoteFlow()],
+      ['WORLD NOTE REPORTS', () => this.viewAdminReports()],
       ['HOW TO PLAY THE LOBBY', () => this.showLobbyManual()],
-      ['CLOSE GAMEBOOK', () => this.closeGamebook()],
+      ['CLOSE GAMEBOOK', () => { this.closeGamebook(); return undefined; }],
     ] as const;
 
     const actionButtons = buttons.map(([label, action], index) => {
@@ -729,7 +725,7 @@ export class GameShellScene extends Phaser.Scene {
       text.setFontSize(portrait ? '9px' : '8px');
       button.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
         event.stopPropagation();
-        action();
+        void this.runGamebookAction(action);
       });
       return button;
     });
@@ -742,6 +738,19 @@ export class GameShellScene extends Phaser.Scene {
     // the same key event would open and immediately close the Gamebook.
     this.input.keyboard?.once('keydown-ESC', () => this.closeGamebook());
   }
+  private async runGamebookAction(action: () => Promise<string | void> | string | void) {
+    if (this.gamebookBusy) return;
+    this.gamebookBusy = true;
+    try {
+      const message = await action();
+      if (message) this.showTransientMessage(message);
+    } catch {
+      this.showTransientMessage('Something went wrong. The Hall is still here.');
+    } finally {
+      this.gamebookBusy = false;
+    }
+  }
+
   private async reportWorldNoteFlow() {
     const village = this.activeVillage || this.getSystemsHallLocation();
     const notes = await loadWorldNotes(village.id);
@@ -796,6 +805,7 @@ export class GameShellScene extends Phaser.Scene {
   private closeGamebook() {
     if (!this.gamebookOpen || !this.gamebookOverlay) return;
     this.gamebookOpen = false;
+    this.gamebookBusy = false;
     const overlay = this.gamebookOverlay;
     this.gamebookOverlay = undefined;
     this.tweens.add({ targets: overlay, alpha: 0, duration: 140, onComplete: () => overlay.destroy() });
@@ -808,73 +818,26 @@ export class GameShellScene extends Phaser.Scene {
   private loadPrivateNotes() {
     try {
       const raw = window.localStorage.getItem(GAMEBOOK_KEY);
-      if (raw) this.privateNotes = JSON.parse(raw) as PrivateNote[];
+      if (!raw) { this.privateNotes = []; return; }
+      const parsed: unknown = JSON.parse(raw);
+      if (!Array.isArray(parsed)) { this.privateNotes = []; return; }
+      this.privateNotes = parsed
+        .filter((item): item is { village?: unknown; text?: unknown } => typeof item === 'object' && item !== null)
+        .map((item) => ({
+          village: typeof item.village === 'string' ? item.village.slice(0, 40) : 'unknown',
+          text: typeof item.text === 'string' ? item.text.trim().slice(0, 500) : '',
+        }))
+        .filter((item) => item.text.length > 0)
+        .slice(-50);
     } catch { this.privateNotes = []; }
   }
 
   private installAmbientAudioGesture() {
     const start = () => {
-      this.startAmbientSound();
+      adminHubAudio.start();
       window.removeEventListener('pointerdown', start);
       window.removeEventListener('keydown', start);
     };
     window.addEventListener('pointerdown', start, { once: true });
     window.addEventListener('keydown', start, { once: true });
   }
-
-  private startAmbientSound() {
-    if (this.ambientStarted) {
-      if (this.ambientContext?.state === 'suspended') this.ambientContext.resume().catch(() => undefined);
-      return;
-    }
-    try {
-      const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (!AudioContextClass) return;
-      const context = new AudioContextClass();
-      const gain = context.createGain();
-      gain.gain.value = 0.012;
-      gain.connect(context.destination);
-      this.ambientContext = context;
-      this.ambientGain = gain;
-      this.ambientStarted = true;
-      const notes = [196, 246.94, 293.66, 246.94, 220, 261.63, 329.63, 261.63];
-      const beat = 0.55;
-      const loopLength = notes.length * beat;
-      const scheduleLoop = () => {
-        if (!this.ambientContext || !this.ambientGain) return;
-        const now = this.ambientContext.currentTime + 0.03;
-        notes.forEach((frequency, index) => {
-          const oscillator = this.ambientContext!.createOscillator();
-          const noteGain = this.ambientContext!.createGain();
-          oscillator.type = 'sine';
-          oscillator.frequency.value = frequency;
-          noteGain.gain.setValueAtTime(0, now + index * beat);
-          noteGain.gain.linearRampToValueAtTime(0.55, now + index * beat + 0.05);
-          noteGain.gain.exponentialRampToValueAtTime(0.001, now + index * beat + 0.48);
-          oscillator.connect(noteGain);
-          noteGain.connect(this.ambientGain!);
-          oscillator.start(now + index * beat);
-          oscillator.stop(now + index * beat + 0.5);
-          this.ambientOscillators.push(oscillator);
-        });
-        this.ambientTimer = window.setTimeout(() => {
-          this.ambientOscillators = [];
-          scheduleLoop();
-        }, loopLength * 1000 - 120);
-      };
-      context.resume().then(scheduleLoop).catch(() => scheduleLoop());
-    } catch { /* audio is optional */ }
-  }
-
-  private stopAmbientSound() {
-    if (this.ambientTimer !== undefined) window.clearTimeout(this.ambientTimer);
-    this.ambientTimer = undefined;
-    this.ambientOscillators.forEach((oscillator) => { try { oscillator.stop(); } catch { /* already stopped */ } });
-    this.ambientOscillators = [];
-    this.ambientGain?.disconnect();
-    this.ambientGain = undefined;
-    this.ambientContext?.close().catch(() => undefined);
-    this.ambientContext = undefined;
-    this.ambientStarted = false;
-  }
-}
