@@ -175,7 +175,7 @@ export class PublisherIntroScene extends Phaser.Scene {
   }
 
   private shouldShowHallIntro() {
-    try { return window.localStorage.getItem('admin-hub-games:hall-intro-v1-seen') !== 'seen'; } catch { return true; }
+    try { return window.localStorage.getItem('admin-hub-games:hall-intro-v2-seen') !== 'seen'; } catch { return true; }
   }
 
   private drawWorld(width: number, height: number) {
