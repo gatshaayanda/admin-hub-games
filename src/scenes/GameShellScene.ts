@@ -257,8 +257,7 @@ export class GameShellScene extends Phaser.Scene {
   private drawChessBoard(x: number, y: number) {
     const g = this.add.graphics();
     const startX = x - 24;
-    const startY = y - 16;
-    for (let row = 0; row < 4; row += 1) for (let col = 0; col < 4; col += 1) {
+    const startY = y - 16;    for (let row = 0; row < 4; row += 1) for (let col = 0; col < 4; col += 1) {
       g.fillStyle((row + col) % 2 === 0 ? 0xe8d4a7 : 0x73533a, 1).fillRect(startX + col * 12, startY + row * 12, 12, 12);
     }
     g.fillStyle(0x2e241e, 1).fillCircle(x - 12, y - 4, 4);
@@ -429,7 +428,7 @@ export class GameShellScene extends Phaser.Scene {
       body: location.id === 'systems-hall' ? this.buildSystemsHallText() : location.note,
       accent: location.color,
       onPrivateNote: () => this.writePrivateNote(location),
-      onWorldNote: () => this.writeWorldNote(location),
+      onWorldNote: (text) => this.writeWorldNote(location, text),
     };
 
     // Keep GameShell running while the modal owns input. Pausing the parent scene
@@ -439,8 +438,25 @@ export class GameShellScene extends Phaser.Scene {
   }
 
   private buildSystemsHallText() {
-    const villages = this.villages.map((village) => '• ' + village.name + ' — ' + village.subtitle).join('\n');
-    return 'THE SYSTEMS OF ADMIN HUB GAMES\n\n' + villages + '\n\nLeave a thought for this world. APPLE publishes it to the shared world. BANANA lets you remove your own note, while founder/admin moderation can remove bad notes. Any player can report a note.';
+    return [
+      'THE SYSTEMS HALL',
+      '',
+      'This is the shared home of Admin Hub Games — a place to wander, think, write and build.',
+      '',
+      'IDEA WALL',
+      'Capture mechanics, questions, experiments and game ideas. Private notes stay in your Gamebook; LEAVE IN WORLD makes a note visible to everyone.',
+      '',
+      'BUILD CHAMBER',
+      'Turn an idea into one small playable slice. Build it, test it, push it, then return and decide what comes next.',
+      '',
+      'GAME GATE',
+      'Finished Admin Hub Games titles will eventually have entrances here. The gate stays quiet while the catalogue grows.',
+      '',
+      'PLAYER CAMP',
+      'Your little place in the world — your player, discoveries and the games you build over time.',
+      '',
+      'Keep wandering. The Hall is the studio loop: WANDER → DISCOVER → THINK → WRITE → BUILD → RETURN.'
+    ].join('\n');
   }
 
   private makePanelButton(x: number, y: number, label: string) {
@@ -460,16 +476,14 @@ export class GameShellScene extends Phaser.Scene {
     return 'Saved privately in your Gamebook.';
   }
 
-  private async writeWorldNote(village: Village) {
-    // One simple write: the player is already choosing "LEAVE IN WORLD".
-    // Avoid browser confirmation prompts here; they can make the game look frozen.
-    const text = window.prompt('Write a note for ' + village.name + '. Other players will see it:', '')?.trim();
-    if (!text) return 'World note cancelled.';
+  private async writeWorldNote(village: Village, text?: string) {
+    const cleanText = text?.trim().slice(0, 500);
+    if (!cleanText) return 'World note cancelled.';
 
     const authorName = String(this.registry.get('playerName') || 'Player');
     this.showTransientMessage('Publishing your note to the shared world…');
     try {
-      const note = await createWorldNote(village.id, authorName, text.slice(0, 500));
+      const note = await createWorldNote(village.id, authorName, cleanText);
       if (note) {
         this.worldNotes = [note, ...this.worldNotes];
         return 'Your note is now part of the shared world.';
@@ -485,6 +499,69 @@ export class GameShellScene extends Phaser.Scene {
     this.tweens.add({ targets: text, alpha: 0, delay: 1800, duration: 500, onComplete: () => text.destroy() });
   }
 
+  private showLobbyManual() {
+    const width = this.scale.width;
+    const height = this.scale.height;
+    const portrait = height > width;
+    const panelWidth = Math.min(width * 0.92, 680);
+    const panelHeight = Math.min(height * 0.86, portrait ? 620 : 500);
+
+    const overlay = this.add.container(width / 2, height / 2)
+      .setScrollFactor(0)
+      .setDepth(260);
+
+    const backdrop = this.add.rectangle(0, 0, width, height, 0x17110e, 0.82).setInteractive();
+    backdrop.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => event.stopPropagation());
+
+    const panel = this.add.rectangle(0, 0, panelWidth, panelHeight, 0xeee0ba, 1)
+      .setStrokeStyle(5, 0x5a402d, 1);
+
+    const title = this.add.text(0, -panelHeight / 2 + 30, 'HOW TO PLAY THE LOBBY', {
+      fontFamily: 'monospace', fontSize: portrait ? '18px' : '22px', fontStyle: 'bold',
+      color: '#493526', align: 'center', wordWrap: { width: panelWidth - 60 }
+    }).setOrigin(0.5);
+
+    const body = this.add.text(0, -panelHeight / 2 + 72, [
+      '1 · WANDER',
+      'Walk around the Hall. Tap to move on mobile, or use WASD / arrows.',
+      '',
+      '2 · DISCOVER',
+      'Approach a station until its name appears, then choose EXPLORE.',
+      '',
+      '3 · THINK',
+      'Read the space and decide what you want to make or remember.',
+      '',
+      '4 · WRITE',
+      'PRIVATE NOTE saves to your Gamebook. LEAVE IN WORLD publishes a shared note.',
+      '',
+      '5 · BUILD',
+      'Use the BUILD CHAMBER to turn one idea into a small playable slice.',
+      '',
+      '6 · RETURN',
+      'Come back after building. The Hall is your studio home, not a checklist.',
+      '',
+      'GAMEBOOK',
+      'Your private notes, shared-world tools and this manual live here.'
+    ].join('\n'), {
+      fontFamily: 'monospace', fontSize: portrait ? '10px' : '11px', color: '#493526',
+      wordWrap: { width: panelWidth - 60 }, lineSpacing: portrait ? 3 : 4,
+      align: 'left'
+    }).setOrigin(0.5, 0);
+
+    body.setFixedSize(panelWidth - 60, panelHeight - 128);
+    body.setMaxLines(portrait ? 28 : 24);
+
+    const close = this.makePanelButton(0, panelHeight / 2 - 34, Math.min(190, panelWidth * 0.48), 42, 'BACK TO GAMEBOOK');
+    close.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
+      overlay.destroy();
+    });
+
+    overlay.add([backdrop, panel, title, body, close]);
+    overlay.setAlpha(0);
+    this.tweens.add({ targets: overlay, alpha: 1, duration: 140 });
+  }
+
   private toggleGamebook() {
     if (this.gamebookOpen) { this.closeGamebook(); return; }
 
@@ -498,7 +575,6 @@ export class GameShellScene extends Phaser.Scene {
     const panelHeight = Math.min(height * 0.90, portrait ? 640 : 560);
     const buttonHeight = portrait ? 44 : 48;
     const buttonGap = 7;
-    const actionCount = 6;
     const top = -panelHeight / 2;
 
     this.gamebookOverlay = this.add.container(width / 2, height / 2)
@@ -517,8 +593,7 @@ export class GameShellScene extends Phaser.Scene {
       .setStrokeStyle(2, 0x9a744c, 1);
 
     const title = this.add.text(0, top + 30, 'MY GAMEBOOK', {
-      fontFamily: 'monospace',
-      fontSize: portrait ? '24px' : '28px',
+      fontFamily: 'monospace',      fontSize: portrait ? '24px' : '28px',
       fontStyle: 'bold',
       color: '#493526',
       align: 'center',
@@ -547,23 +622,26 @@ export class GameShellScene extends Phaser.Scene {
     notes.setFixedSize(panelWidth - 68, notesHeight);
     notes.setMaxLines(portrait ? 3 : 4);
 
-    const firstButtonY = top + 92 + notesHeight + buttonHeight / 2 + 6;
+    const buttonAreaTop = top + 172;
+    const buttonAreaBottom = panelHeight / 2 - 38;
+    const fittedButtonHeight = Math.min(buttonHeight, Math.max(34, (buttonAreaBottom - buttonAreaTop - buttonGap * 5) / 6));
+    const firstButtonY = buttonAreaTop + fittedButtonHeight / 2;
     const buttons = [
       ['VIEW WORLD NOTES', () => this.viewWorldNotes()],
       ['DELETE A WORLD NOTE', () => this.deleteOwnWorldNote()],
       ['REPORT A WORLD NOTE', () => this.reportWorldNoteFlow().then((message) => this.showTransientMessage(message))],
       ['WORLD NOTE REPORTS', () => this.viewAdminReports().then((message) => this.showTransientMessage(message))],
-      ['HOW TO PLAY THE LOBBY', () => this.showTransientMessage('LOBBY MANUAL · WANDER → EXPLORE → THINK → WRITE → BUILD → RETURN. IDEA WALL = ideas. BUILD CHAMBER = next playable slice. GAME GATE = finished games. GAMEBOOK = private notes. APPLE publishes; BANANA cleans up your own note.')],
+      ['HOW TO PLAY THE LOBBY', () => this.showLobbyManual()],
       ['CLOSE GAMEBOOK', () => this.closeGamebook()],
     ] as const;
 
     const actionButtons = buttons.map(([label, action], index) => {
-      const button = this.makePanelButton(0, firstButtonY + index * (buttonHeight + buttonGap), label);
-      button.setSize(Math.min(280, panelWidth * 0.72), buttonHeight);
+      const button = this.makePanelButton(0, firstButtonY + index * (fittedButtonHeight + buttonGap), label);
+      button.setSize(Math.min(280, panelWidth * 0.72), fittedButtonHeight);
       const shape = button.list[0] as Phaser.GameObjects.Rectangle;
-      shape.setSize(Math.min(280, panelWidth * 0.72), buttonHeight);
+      shape.setSize(Math.min(280, panelWidth * 0.72), fittedButtonHeight);
       const text = button.list[1] as Phaser.GameObjects.Text;
-      text.setFontSize(portrait ? '10px' : '9px');
+      text.setFontSize(portrait ? '9px' : '8px');
       button.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
         event.stopPropagation();
         action();
