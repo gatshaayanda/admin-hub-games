@@ -230,12 +230,10 @@ export class GameShellScene extends Phaser.Scene {
     this.add.text(1180, 704, 'SYSTEMS HALL', { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '18px' : '16px', color: '#2e241e', stroke: '#e7d6a4', strokeThickness: 5 }).setOrigin(0.5).setDepth(6);
     this.add.text(1180, 724, 'the village crossroads', { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '12px' : '10px', color: '#594838' }).setOrigin(0.5).setDepth(6);
 
-    this.drawBuilding(1180, 585, 150, 92, 0xe9dfc4, 0x5d5548, 'CHESS HOUSE');
-    this.drawChessBoard(1180, 585);
-    this.add.text(1180, 505, 'CHESS HOUSE', { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '18px' : '16px', color: '#2e241e', stroke: '#e7d6a4', strokeThickness: 5 }).setOrigin(0.5).setDepth(6);
-    this.add.text(1180, 526, 'you + the other you', { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '12px' : '10px', color: '#594838' }).setOrigin(0.5).setDepth(6);
-
-    this.villages.forEach((village) => this.drawVillage(village));
+    // The lobby starts as one place: Systems Hall. The former system houses are
+    // represented inside the Hall rather than scattered across the first play space.
+    this.add.text(1180, 505, 'THE SYSTEMS BEGIN HERE', { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '18px' : '16px', color: '#2e241e', stroke: '#e7d6a4', strokeThickness: 5 }).setOrigin(0.5).setDepth(6);
+    this.add.text(1180, 528, 'one hall · many possible games', { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '12px' : '10px', color: '#594838' }).setOrigin(0.5).setDepth(6);
   }
 
   private drawVillage(village: Village) {
@@ -383,7 +381,7 @@ export class GameShellScene extends Phaser.Scene {
     let nearest: Village | undefined;
     let nearestDistance = radius;
 
-    const locations = [...this.villages, this.getHomeLocation()];
+    const locations = [this.getSystemsHallLocation(), this.getHomeLocation()];
     for (const location of locations) {
       const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, location.x, location.y);
       if (distance < nearestDistance) {
@@ -444,7 +442,9 @@ export class GameShellScene extends Phaser.Scene {
       onWorldNote: () => this.writeWorldNote(location),
     };
 
-    this.scene.pause('GameShellScene');
+    // Keep GameShell running while the modal owns input. Pausing the parent scene
+    // makes browser prompt-based actions fragile on some browsers; the explicit
+    // interactionModalOpen guard already prevents gameplay input underneath it.
     this.scene.launch('InteractionModalScene', data);
   }
 
