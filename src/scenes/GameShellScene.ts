@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { adminHubAudio } from '../audio';
 import { createWorldNote, deleteWorldNote, getAnonymousPlayerId, isFounderAdmin, loadWorldNotes, loadWorldNoteReports, reportWorldNote, type WorldNote } from '../firebase/firebase';
 import { type InteractionModalData } from './InteractionModalScene';
+import { openNativeNoteComposer } from '../ui/nativeNoteComposer';
 
 type Village = {
   id: string;
@@ -499,41 +500,12 @@ export class GameShellScene extends Phaser.Scene {
   }
 
   private openTextComposer(titleText: string, hintText: string, placeholder: string, maxLength: number): Promise<string | null> {
-    return new Promise((resolve) => {
-      const width = this.scale.width;
-      const height = this.scale.height;
-      const portrait = height > width;
-      const panelWidth = Math.min(width * 0.90, 600);
-      const panelHeight = Math.min(height * 0.64, portrait ? 430 : 360);
-      const overlay = this.add.container(width / 2, height / 2).setScrollFactor(0).setDepth(320);
-      this.gamebookInputOverlay = overlay;
-
-      const backdrop = this.add.rectangle(0, 0, width, height, 0x17110e, 0.76).setInteractive();
-      backdrop.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => event.stopPropagation());
-      const panel = this.add.rectangle(0, 0, panelWidth, panelHeight, 0xeee0ba, 1).setStrokeStyle(4, 0x5a402d, 1);
-      const title = this.add.text(0, -panelHeight / 2 + 28, titleText, { fontFamily: 'monospace', fontSize: portrait ? '18px' : '22px', fontStyle: 'bold', color: '#493526', align: 'center', wordWrap: { width: panelWidth - 44 } }).setOrigin(0.5);
-      const hint = this.add.text(0, -panelHeight / 2 + 60, hintText, { fontFamily: 'monospace', fontSize: portrait ? '10px' : '11px', color: '#73533a', align: 'center', wordWrap: { width: panelWidth - 44 } }).setOrigin(0.5);
-      const input = this.add.dom(0, 8, 'textarea', { width: Math.max(220, panelWidth - 64) + 'px', height: Math.max(105, panelHeight - 155) + 'px', background: '#fff8e8', color: '#493526', border: '2px solid #9a744c', borderRadius: '6px', padding: '10px', fontFamily: 'monospace', fontSize: portrait ? '14px' : '13px', resize: 'none', outline: 'none' }, '');
-      const node = input.node as HTMLTextAreaElement;
-      node.maxLength = maxLength;
-      node.placeholder = placeholder;
-      const save = this.makePanelButton(-Math.min(105, panelWidth * 0.18), panelHeight / 2 - 32, 'SAVE NOTE');
-      const cancel = this.makePanelButton(Math.min(105, panelWidth * 0.18), panelHeight / 2 - 32, 'CANCEL');
-      let finished = false;
-      const finish = (value: string | null) => {
-        if (finished) return;
-        finished = true;
-        input.destroy();
-        overlay.destroy();
-        if (this.gamebookInputOverlay === overlay) this.gamebookInputOverlay = undefined;
-        resolve(value);
-      };
-      save.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => { event.stopPropagation(); const value = node.value.trim().slice(0, maxLength); finish(value || null); });
-      cancel.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => { event.stopPropagation(); this.time.delayedCall(0, () => finish(null)); });
-      node.addEventListener('pointerdown', (event) => event.stopPropagation());
-      node.addEventListener('keydown', (event) => { if (event.key === 'Escape') finish(null); });
-      overlay.add([backdrop, panel, title, hint, input, save, cancel]);
-      node.focus();
+    return openNativeNoteComposer({
+      title: titleText,
+      hint: hintText,
+      placeholder,
+      maxLength,
+      actionLabel: 'SAVE NOTE',
     });
   }
 
