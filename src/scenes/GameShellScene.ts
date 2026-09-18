@@ -98,6 +98,7 @@ export class GameShellScene extends Phaser.Scene {
       window.removeEventListener('ahg:escape', escapeHandler);
       this.gamebookInputOverlay?.destroy();
       this.gamebookInputOverlay = undefined;
+      adminHubAudio.stop();
     });
   }
 
@@ -636,6 +637,7 @@ export class GameShellScene extends Phaser.Scene {
     close.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
       overlay.destroy();
+      this.toggleGamebook();
     });
 
     overlay.add([backdrop, panel, title, body, close]);
@@ -708,11 +710,11 @@ export class GameShellScene extends Phaser.Scene {
     const fittedButtonHeight = Math.min(buttonHeight, Math.max(34, (buttonAreaBottom - buttonAreaTop - buttonGap * 5) / 6));
     const firstButtonY = buttonAreaTop + fittedButtonHeight / 2;
     const buttons = [
-      ['VIEW WORLD NOTES', () => this.viewWorldNotes()],
-      ['DELETE A WORLD NOTE', () => this.deleteOwnWorldNote()],
-      ['REPORT A WORLD NOTE', () => this.reportWorldNoteFlow()],
-      ['WORLD NOTE REPORTS', () => this.viewAdminReports()],
-      ['HOW TO PLAY THE LOBBY', () => this.showLobbyManual()],
+      ['VIEW WORLD NOTES', () => { this.closeGamebook(); return this.viewWorldNotes(); }],
+      ['DELETE A WORLD NOTE', () => { this.closeGamebook(); return this.deleteOwnWorldNote(); }],
+      ['REPORT A WORLD NOTE', () => { this.closeGamebook(); return this.reportWorldNoteFlow(); }],
+      ['WORLD NOTE REPORTS', () => { this.closeGamebook(); return this.viewAdminReports(); }],
+      ['HOW TO PLAY THE LOBBY', () => { this.closeGamebook(); this.showLobbyManual(); return undefined; }],
       ['CLOSE GAMEBOOK', () => { this.closeGamebook(); return undefined; }],
     ] as const;
 
