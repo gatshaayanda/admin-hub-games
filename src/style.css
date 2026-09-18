@@ -185,3 +185,7 @@ canvas {
   .ahg-joystick { width: 82px; height: 82px; }
   .ahg-action-button { width: 60px; height: 60px; }
 }
+
+
+/* Native name input is the single visual text field on touch devices. */
+#ahg-name-input { font-family: monospace; }

@@ -22,6 +22,11 @@ const PORTRAIT_DOCK = 120;
 
 export class GameShellScene extends Phaser.Scene {
   private player!: Phaser.GameObjects.Container;
+  private playerPoseA!: Phaser.GameObjects.Graphics;
+  private playerPoseB!: Phaser.GameObjects.Graphics;
+  private playerAnimTime = 0;
+  private playerMoving = false;
+  private playerFacing = 1;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private speed = 170;
@@ -125,6 +130,9 @@ export class GameShellScene extends Phaser.Scene {
       }
     }
 
+    this.playerMoving = dx !== 0 || dy !== 0;
+    if (Math.abs(dx) > 0.08) this.playerFacing = dx < 0 ? -1 : 1;
+
     if (dx !== 0 || dy !== 0) {
       const length = Math.hypot(dx, dy) || 1;
       const distance = this.speed * (delta / 1000);
@@ -145,6 +153,8 @@ export class GameShellScene extends Phaser.Scene {
       this.interactAt(this.getHomeLocation());
     }
 
+    this.playerAnimTime += delta;
+    this.updatePlayerAnimation();
     this.playerLabel.setPosition(this.player.x, this.player.y - 48);
   }
 
@@ -267,15 +277,28 @@ export class GameShellScene extends Phaser.Scene {
   private createPlayer(x: number, y: number) {
     const container = this.add.container(x, y);
     const shadow = this.add.ellipse(0, 33, 24, 9, 0x4a3524, 0.28);
-    const g = this.add.graphics();
-    g.fillStyle(0x2e241e, 1).fillRect(-9, -20, 18, 10);
-    g.fillStyle(0x6e432c, 1).fillRect(-8, -13, 16, 13);
-    g.fillStyle(0x1f6b68, 1).fillRect(-10, 0, 20, 19);
-    g.fillStyle(0xd4a45d, 1).fillRect(-9, 19, 7, 12).fillRect(2, 19, 7, 12);
-    g.fillStyle(0x263b3a, 1).fillRect(-11, 29, 9, 5).fillRect(2, 29, 9, 5);
-    g.fillStyle(0x5b3d2a, 1).fillRect(9, 3, 6, 16);
-    container.add([shadow, g]);
+    const makePose = (legOffset: number, bob: number) => {
+      const g = this.add.graphics();
+      g.fillStyle(0x2e241e, 1).fillRect(-9, -20 + bob, 18, 10);
+      g.fillStyle(0x6e432c, 1).fillRect(-8, -13 + bob, 16, 13);
+      g.fillStyle(0x1f6b68, 1).fillRect(-10, bob, 20, 19);
+      g.fillStyle(0xd4a45d, 1).fillRect(-9 + legOffset, 19 + bob, 7, 12).fillRect(2 - legOffset, 19 + bob, 7, 12);
+      g.fillStyle(0x263b3a, 1).fillRect(-11 + legOffset, 29 + bob, 9, 5).fillRect(2 - legOffset, 29 + bob, 9, 5);
+      g.fillStyle(0x5b3d2a, 1).fillRect(9, 3 + bob, 6, 16);
+      return g;
+    };
+    this.playerPoseA = makePose(0, 0);
+    this.playerPoseB = makePose(2, 1).setVisible(false);
+    container.add([shadow, this.playerPoseA, this.playerPoseB]);
     return container;
+  }
+
+  private updatePlayerAnimation() {
+    if (!this.playerPoseA || !this.playerPoseB) return;
+    const step = this.playerMoving ? 120 : 650;
+    const showB = Math.floor(this.playerAnimTime / step) % 2 === 1;
+    this.playerPoseA.setVisible(!showB).setScale(this.playerFacing, 1);
+    this.playerPoseB.setVisible(showB).setScale(this.playerFacing, 1);
   }
 
   private createHud() {

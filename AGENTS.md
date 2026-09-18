@@ -535,3 +535,8 @@ Quality gates:
 - PWA/mobile behavior remains part of the game experience rather than an afterthought.
 
 **Do not expand the world until this loop has been exercised as one continuous playthrough.**
+
+
+## First-Playthrough Fix Checkpoint — September 2026
+
+Phone playthrough remains the release gate. This checkpoint removes the modal resize/restart freeze path, prevents duplicate modal actions, makes the native mobile name field visually authoritative instead of competing with Phaser text, and adds two idle/two walking procedural player poses with facing direction. Do not call the experience PWA-ready until the deployed phone flow is pleasant from name entry through first exploration and modal return.

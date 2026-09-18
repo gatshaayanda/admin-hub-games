@@ -11,7 +11,6 @@ export type InteractionModalData = {
 
 export class InteractionModalScene extends Phaser.Scene {
   private closing = false;
-  private resizeHandler?: () => void;
 
   constructor() {
     super('InteractionModalScene');
@@ -24,7 +23,6 @@ export class InteractionModalScene extends Phaser.Scene {
     const panelHeight = Math.min(height * (portrait ? 0.78 : 0.68), 500);
 
     this.input.topOnly = true;
-    this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
 
     const backdrop = this.add.rectangle(width / 2, height / 2, width, height, 0x100c09, 0.72)
       .setDepth(1)
@@ -115,7 +113,6 @@ export class InteractionModalScene extends Phaser.Scene {
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.closing = true;
-      this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
       window.removeEventListener('ahg:escape', escapeHandler);
     });
 
@@ -132,13 +129,6 @@ export class InteractionModalScene extends Phaser.Scene {
         });
       },
     });
-  }
-
-  private handleResize() {
-    if (this.closing) return;
-    const data = this.registry.get('activeInteractionModal') as InteractionModalData | undefined;
-    if (!data) return;
-    this.scene.restart(data);
   }
 
   private makeButton(x: number, y: number, width: number, height: number, label: string, accent: number) {
@@ -160,8 +150,11 @@ export class InteractionModalScene extends Phaser.Scene {
     return button;
   }
 
+  private actionRunning = false;
+
   private async runAction(action?: () => Promise<string | void> | string | void) {
-    if (this.closing) return;
+    if (this.closing || this.actionRunning) return;
+    this.actionRunning = true;
     let message: string | void;
 
     try {

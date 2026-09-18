@@ -207,7 +207,7 @@ export class NameEntryScene extends Phaser.Scene {
     input.style.top = `${rect.top + (y - 26) * scaleY}px`;
     input.style.width = `${Math.max(80, (boxWidth - 24) * scaleX)}px`;
     input.style.height = `${Math.max(38, 52 * scaleY)}px`;
-    input.style.fontSize = `${fontSize}px`;
+    input.style.fontSize = `${fontSize}px`; input.style.fontFamily = 'monospace'; input.style.color = '#30251e'; input.style.background = '#f0e4c6'; input.style.border = '0'; input.style.outline = 'none'; input.style.padding = '0'; input.style.margin = '0'; input.style.lineHeight = `${Math.max(38, 52 * scaleY)}px`; input.style.boxSizing = 'border-box'; input.style.zIndex = '100';
   }
 
   private syncNativeInput() {
