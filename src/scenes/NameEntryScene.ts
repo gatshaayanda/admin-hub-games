@@ -265,10 +265,15 @@ export class NameEntryScene extends Phaser.Scene {
     this.time.delayedCall(450, () => this.scene.start(this.shouldShowHallIntro() ? 'HallIntroScene' : 'GameShellScene'));
   }
 
+  private shouldShowHallIntro() {
+    try { return window.localStorage.getItem(HALL_INTRO_KEY) !== 'seen'; } catch { return true; }
+  }
+
   private resetLocalGameData() {
     try {
       window.localStorage.removeItem(PLAYER_NAME_KEY);
       window.localStorage.removeItem(GAMEBOOK_KEY);
+      window.localStorage.removeItem(HALL_INTRO_KEY);
     } catch {
       // Ignore storage failures.
     }
