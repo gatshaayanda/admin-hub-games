@@ -119,5 +119,5 @@ export function openNativeNoteComposer(options: NativeNoteComposerOptions): Prom
     });
     cancel.addEventListener('click', () => finish(null));
     window.addEventListener('keydown', onKeyDown);
-\n  });
+  });
 }
