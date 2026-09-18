@@ -93,7 +93,7 @@ export class HallIntroScene extends Phaser.Scene {
     this.leaving = true;
     try { window.localStorage.setItem(HALL_INTRO_KEY, 'seen'); } catch { /* optional */ }
     this.cameras.main.fadeOut(500, 22, 18, 14);
-    this.time.delayedCall(500, () => this.scene.start('GameShellScene'));
+    this.time.delayedCall(500, () => this.scene.start('NameEntryScene'));
   }
 
   private drawBackdrop(width: number, height: number) {
