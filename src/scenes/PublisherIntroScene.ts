@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { adminHubAudio } from '../audio';
 
 export class PublisherIntroScene extends Phaser.Scene {
   private leaving = false;
@@ -10,6 +11,10 @@ export class PublisherIntroScene extends Phaser.Scene {
   }
 
   create() {
+    // Start the publisher music as early as the browser policy allows.
+    // The global audio unlock listeners remain in place for the first user gesture.
+    adminHubAudio.start();
+
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor('#070b1d');
     this.drawWorld(width, height);
