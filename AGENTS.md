@@ -145,19 +145,41 @@ Mobile verification is a gameplay requirement. A successful Vercel build alone i
 
 ## World Layout / Level Design Direction
 
-The first world is a **meta game about Admin Hub Games itself**. It should borrow useful readability from classic tile/grid platform-game level design without becoming a Lode Runner clone.
+The first world is a **meta game about Admin Hub Games itself**. The first playable space is the **Systems Hall lobby**.
 
-The map should communicate at a glance:
+The Hall is deliberately one place rather than a collection of separate system houses. Its job is to be a safe, memorable home base where the player can wander, discover, think, write and plan the next game.
 
-- a central hub / Chess House
-- branching paths to themed villages
-- distinct readable zones
-- places where a future actual game can physically appear
-- a clear home/studio where the player's development history can grow
+Inside the Hall are small functional landmarks rather than separate buildings:
 
-If a future level uses a compact tile/VGA-style or classic platform-game layout, its geometry, landmarks and visual language must still belong to Admin Hub Games. Do not copy another game's identity or simply paste an external level layout into the world.
+- **IDEA WALL** — capture mechanics, questions, experiments and game ideas.
+- **BUILD CHAMBER** — the development ritual: choose one small playable slice, build it, test it, push it, then return to the Hall.
+- **GAME GATE** — the future entrances for finished Admin Hub Games titles.
+- **PLAYER CAMP** — the player's small home/return point.
+- **GAMEBOOK** — the private notebook and operating manual.
 
-The world should visually evolve as real games are created: an arcade area can become associated with the Lode Runner-style game, a strategy area can host Mhele, and future systems can grow into physical places. The world is the visual history of the games being made.
+The intended lobby loop is:
+
+```
+WANDER
+  ↓
+DISCOVER
+  ↓
+THINK
+  ↓
+WRITE
+  ↓
+BUILD
+  ↓
+RETURN
+  ↓
+DISCOVER AGAIN
+```
+
+The Hall should reward curiosity without forcing a quest marker or checklist. Landmarks, paths, signs, lighting, small animations and changes to the environment should communicate what matters before the player opens a menu. This follows the useful hub-world principle that a hub should be worth inhabiting, not merely a level-select screen, and that environmental cues can teach players without stopping play. citehttps://www.bosnan.net/essays/hub-world-designhttps://create.roblox.com/docs/production/game-design/onboarding-techniques
+
+As real games are created, the Hall becomes the visual history of the studio: the Game Gate gains entrances, the Build Chamber reflects active projects, and old development ideas can remain as environmental traces.
+
+Individual games still get their own worlds. The Hall is the publisher's shared home, not a template that forces every game into one visual genre.
 
 ## Personal Gamebook vs Shared World Notes
 
