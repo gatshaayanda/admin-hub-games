@@ -1,6 +1,7 @@
 const DB_NAME = 'admin-hub-games';
 const DB_VERSION = 3;
 
+// Private Gamebook notes are local-only structured data; they never enter the shared World Notes sync path.
 export type PrivateGamebookNote = { id: string; village: string; text: string; createdAt: number };
 
 export type LocalWorldNote = {
