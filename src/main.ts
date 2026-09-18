@@ -16,6 +16,7 @@ const config: Phaser.Types.Core.GameConfig = {
   height: 540,
   backgroundColor: '#16120f',
   input: { activePointers: 3 },
+  dom: { createContainer: true },
   scale: {
     mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.NO_CENTER,
