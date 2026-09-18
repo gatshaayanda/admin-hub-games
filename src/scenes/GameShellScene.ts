@@ -48,6 +48,8 @@ export class GameShellScene extends Phaser.Scene {
   private privateNotes: PrivateNote[] = [];
   private worldNotes: WorldNote[] = [];
   private gamebookInputOverlay?: Phaser.GameObjects.Container;
+  private lobbyManualOverlay?: Phaser.GameObjects.Container;
+  private gamebookEscapeHandler?: () => void;
   private gamebookBusy = false;
 
   private villages: Village[] = [
@@ -81,7 +83,11 @@ export class GameShellScene extends Phaser.Scene {
     this.layoutViewport();
 
     const escapeHandler = () => {
-      if (this.gamebookOpen) this.closeGamebook();
+      if (this.gamebookOpen) {
+        this.closeGamebook();
+      } else if (this.lobbyManualOverlay) {
+        this.closeLobbyManual();
+      }
     };
     window.addEventListener('ahg:escape', escapeHandler);
 
@@ -98,6 +104,12 @@ export class GameShellScene extends Phaser.Scene {
       window.removeEventListener('ahg:escape', escapeHandler);
       this.gamebookInputOverlay?.destroy();
       this.gamebookInputOverlay = undefined;
+      this.lobbyManualOverlay?.destroy();
+      this.lobbyManualOverlay = undefined;
+      if (this.gamebookEscapeHandler) {
+        this.input.keyboard?.off('keydown-ESC', this.gamebookEscapeHandler);
+        this.gamebookEscapeHandler = undefined;
+      }
       adminHubAudio.stop();
     });
   }
@@ -591,6 +603,8 @@ export class GameShellScene extends Phaser.Scene {
     const overlay = this.add.container(width / 2, height / 2)
       .setScrollFactor(0)
       .setDepth(260);
+    this.lobbyManualOverlay?.destroy();
+    this.lobbyManualOverlay = overlay;
 
     const backdrop = this.add.rectangle(0, 0, width, height, 0x17110e, 0.82).setInteractive();
     backdrop.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => event.stopPropagation());
@@ -636,7 +650,7 @@ export class GameShellScene extends Phaser.Scene {
     const close = this.makePanelButton(0, panelHeight / 2 - 34, 'BACK TO GAMEBOOK');
     close.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
-      overlay.destroy();
+      this.closeLobbyManual();
       this.toggleGamebook();
     });
 
@@ -738,7 +752,8 @@ export class GameShellScene extends Phaser.Scene {
     this.tweens.add({ targets: this.gamebookOverlay, alpha: 1, duration: 180 });
     // B is handled by GameShell.update(). Do not register a second B handler here:
     // the same key event would open and immediately close the Gamebook.
-    this.input.keyboard?.once('keydown-ESC', () => this.closeGamebook());
+    this.gamebookEscapeHandler = () => this.closeGamebook();
+    this.input.keyboard?.on('keydown-ESC', this.gamebookEscapeHandler);
   }
   private async runGamebookAction(action: () => Promise<string | void> | string | void) {
     if (this.gamebookBusy) return;
@@ -810,7 +825,18 @@ export class GameShellScene extends Phaser.Scene {
     this.gamebookBusy = false;
     const overlay = this.gamebookOverlay;
     this.gamebookOverlay = undefined;
-    this.tweens.add({ targets: overlay, alpha: 0, duration: 140, onComplete: () => overlay.destroy() });
+    if (this.gamebookEscapeHandler) {
+      this.input.keyboard?.off('keydown-ESC', this.gamebookEscapeHandler);
+      this.gamebookEscapeHandler = undefined;
+    }
+    overlay.destroy();
+  }
+
+  private closeLobbyManual() {
+    if (!this.lobbyManualOverlay) return;
+    const overlay = this.lobbyManualOverlay;
+    this.lobbyManualOverlay = undefined;
+    overlay.destroy();
   }
 
   private savePrivateNotes() {
