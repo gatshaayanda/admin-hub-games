@@ -3,6 +3,7 @@ export class AdminHubAudio {
   private master?: GainNode;
   private timer?: number;
   private started = false;
+  private enabled = false;
 
   start() {
     if (this.started) {
@@ -19,10 +20,24 @@ export class AdminHubAudio {
     this.master.connect(this.context.destination);
     this.started = true;
     void this.context.resume();
+    this.enabled = true;
     this.scheduleBar();
   }
 
+  stop() {
+    if (!this.started) return;
+    this.enabled = false;
+    if (this.timer !== undefined) window.clearTimeout(this.timer);
+    this.timer = undefined;
+    this.master?.disconnect();
+    this.master = undefined;
+    void this.context?.close();
+    this.context = undefined;
+    this.started = false;
+  }
+
   private scheduleBar() {
+    if (!this.enabled) return;
     const context = this.context;
     const master = this.master;
     if (!context || !master) return;
@@ -50,13 +65,3 @@ export class AdminHubAudio {
 
 export const adminHubAudio = new AdminHubAudio();
 
-const startAudio = () => {
-  adminHubAudio.start();
-  window.removeEventListener('pointerdown', startAudio);
-  window.removeEventListener('keydown', startAudio);
-  window.removeEventListener('touchstart', startAudio);
-};
-
-window.addEventListener('pointerdown', startAudio, { passive: true });
-window.addEventListener('keydown', startAudio, { passive: true });
-window.addEventListener('touchstart', startAudio, { passive: true });
