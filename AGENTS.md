@@ -88,7 +88,7 @@ The intended publisher treatment is prominent but restrained: **ADMIN HUB GAMES 
 
 The character is the player's entry point. The intro should feel like the beginning of a game, not a website splash screen. There is no player-facing “THE WORLD” title screen.
 
-The visual language established here is a warm, chunky 2D/top-down pixel-game style with a specific Botswana-inspired sense of place: warm sky, dry grass, red earth, simple compound/studio architecture, utility tank, scrub and acacia-like trees. It should feel authentic and specific rather than a generic “African” art direction.
+The publisher intro is intentionally distinct from any individual game's environment. Its visual language is a clean, nocturnal fantasy-studio identity: deep indigo space, stars, restrained teal energy, warm gold accents, geometric medieval/futurist motifs, and a small travelling player figure. Individual games may then establish their own worlds, including the Botswana-inspired landscapes used by the Admin Hub meta-world.
 
 Creative principle:
 
