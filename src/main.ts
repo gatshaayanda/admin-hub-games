@@ -6,6 +6,7 @@ import { BootScene } from './scenes/BootScene';
 import { PublisherIntroScene } from './scenes/PublisherIntroScene';
 import { NameEntryScene } from './scenes/NameEntryScene';
 import { GameShellScene } from './scenes/GameShellScene';
+import { InteractionModalScene } from './scenes/InteractionModalScene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -22,7 +23,7 @@ const config: Phaser.Types.Core.GameConfig = {
     min: { width: 320, height: 180 },
     max: { width: 1920, height: 1080 },
   },
-  scene: [BootScene, PublisherIntroScene, NameEntryScene, GameShellScene],
+  scene: [BootScene, PublisherIntroScene, NameEntryScene, GameShellScene, InteractionModalScene],
 };
 
 const game = new Phaser.Game(config);
