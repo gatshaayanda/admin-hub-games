@@ -628,3 +628,25 @@ Shared note ritual:
 - Firestore rules remain authoritative: authors can delete their own notes, while cross-player deletion and report review require a real Firebase `admin` claim.
 
 The Systems Hall is part of the canonical lobby foundation and should survive future game cloning unless a new title deliberately replaces the world layer.
+
+
+## Offline-First PWA Checkpoint — September 2026
+
+The canonical base now treats the installed game as a local-first experience.
+
+Current implementation:
+- sw.js registers a service worker that precaches the application shell and runtime-caches same-origin game JavaScript, CSS, images, fonts, audio and manifest resources.
+- src/pwa.ts registers the service worker and requests persistent browser storage where the browser allows it.
+- the web manifest now has a stable app identity, scope, standalone display mode and 192/512 install icons.
+- private player/Gamebook state remains device-local.
+- World Notes now use IndexedDB as the local source for immediate reads/writes, with an outbox for Firebase synchronization.
+- World Note creation works locally first; Firebase is a synchronization destination rather than a prerequisite for continuing to play.
+- queued profile, note creation, deletion and report mutations retry on startup, online, focus and visibility recovery.
+- the synchronization path uses deterministic local note IDs so a retry can safely use Firestore setDoc without creating duplicate notes.
+- offline deletions use local tombstones so a later remote refresh does not resurrect content the player already removed locally.
+
+The service worker and local database are foundations, not proof of offline readiness. The release gate remains a real installed-device test:
+
+install while online → launch once online → airplane mode → Publisher Intro → Hall Cinematic → Name Entry → Systems Hall → move / explore / Gamebook → write a private note → write a World Note → close → reopen offline → continue playing → restore network → verify queued World Note syncs to Firestore.
+
+Do not describe the game as fully offline-verified until that sequence has been exercised on a real Android device and the installed app has been reopened with the network disabled.
