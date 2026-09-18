@@ -36,6 +36,7 @@ export class GameShellScene extends Phaser.Scene {
   private gamebookKey!: Phaser.Input.Keyboard.Key;
   private gamebookButton!: Phaser.GameObjects.Container;
   private hintText!: Phaser.GameObjects.Text;
+  private brandText!: Phaser.GameObjects.Text;
   private playerLabel!: Phaser.GameObjects.Text;
   private statusText!: Phaser.GameObjects.Text;
   private gamebookOpen = false;
@@ -162,13 +163,24 @@ export class GameShellScene extends Phaser.Scene {
     this.cameras.main.setViewport(0, 0, width, height);
     this.cameras.main.setDeadzone(Math.min(width * 0.28, 320), Math.min(height * 0.22, 150));
 
-    if (this.hintText) {
-      this.hintText.setPosition(width / 2, 18);
-      this.hintText.setFontSize(portrait ? 12 : 10);
-    }
+    const touchDevice = window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+    const compactHeader = touchDevice || width < 560;
+
     if (this.statusText) {
-      this.statusText.setPosition(18, 18);
-      this.statusText.setFontSize(portrait ? 12 : 10);
+      this.statusText.setPosition(compactHeader ? 18 : 24, compactHeader ? 18 : 20);
+      this.statusText.setFontSize(compactHeader ? 9 : (portrait ? 12 : 10));
+      this.statusText.setWordWrapWidth(compactHeader ? Math.min(150, width * 0.36) : 174);
+    }
+    if (this.brandText) {
+      this.brandText.setVisible(!compactHeader);
+      this.brandText.setPosition(width - 16, compactHeader ? 16 : 16);
+    }
+    if (this.hintText) {
+      this.hintText.setPosition(width / 2, compactHeader ? 48 : 18);
+      this.hintText.setFontSize(compactHeader ? 9 : (portrait ? 12 : 10));
+      this.hintText.setFixedSize(Math.min(width * (compactHeader ? 0.84 : 0.74), 760), compactHeader ? 30 : 24);
+      this.hintText.setAlign('center');
+      this.hintText.setWordWrapWidth(Math.min(width * (compactHeader ? 0.84 : 0.74), 760));
     }
     if (this.gamebookButton) this.gamebookButton.setPosition(width - 74, 28);
   }
@@ -300,8 +312,8 @@ export class GameShellScene extends Phaser.Scene {
     this.statusText = this.add.text(24, 20, 'FREE ROAM  ·  LEVEL 01', { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '12px' : '10px', color: '#fff4d4', letterSpacing: 1 }).setScrollFactor(0).setDepth(40);
     this.statusText.setData('plate', plate);
 
-    const brand = this.add.text(this.scale.width - 16, 16, 'ADMIN HUB GAMES', { fontFamily: 'monospace', fontSize: '10px', color: '#fff4d4', stroke: '#493526', strokeThickness: 4, letterSpacing: 1.2 }).setOrigin(1, 0).setScrollFactor(0).setDepth(40);
-    brand.setData('brand', true);
+    this.brandText = this.add.text(this.scale.width - 16, 16, 'ADMIN HUB GAMES', { fontFamily: 'monospace', fontSize: '10px', color: '#fff4d4', stroke: '#493526', strokeThickness: 4, letterSpacing: 1.2 }).setOrigin(1, 0).setScrollFactor(0).setDepth(40);
+    this.brandText.setData('brand', true);
 
     this.hintText = this.add.text(this.scale.width / 2, 18, 'WASD / ARROWS  ·  TAP TO WALK  ·  E EXPLORE', { fontFamily: 'monospace', fontSize: '10px', color: '#fff6dc', stroke: '#2c241d', strokeThickness: 4 }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(40).setAlpha(0.9);
 
@@ -476,55 +488,99 @@ export class GameShellScene extends Phaser.Scene {
 
   private toggleGamebook() {
     if (this.gamebookOpen) { this.closeGamebook(); return; }
+
     this.gamebookOpen = true;
     this.target = null;
-    this.gamebookOverlay = this.add.container(this.scale.width / 2, this.scale.height / 2).setScrollFactor(0).setDepth(200);
-    const w = Math.min(this.scale.width * 0.94, 760);
-    const h = Math.min(this.scale.height * (this.scale.height > this.scale.width ? 0.82 : 0.78), 500);
-    const backdrop = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x17110e, 0.74);
-    const book = this.add.rectangle(0, 0, w, h, 0xd8bd83, 1).setStrokeStyle(6, 0x5a402d, 1);
-    const inner = this.add.rectangle(0, 0, w - 34, h - 34, 0xeee0ba, 1).setStrokeStyle(2, 0x9a744c, 1);
-    const title = this.add.text(0, -h / 2 + 38, 'MY GAMEBOOK', { fontFamily: 'monospace', fontSize: `${Math.max(this.scale.height > this.scale.width ? 24 : 20, Math.min(this.scale.height > this.scale.width ? 32 : 28, w * 0.045))}px`, color: '#493526' }).setOrigin(0.5);
-    const intro = this.add.text(0, -h / 2 + 72, 'Private discoveries and ideas. World Notes are separate.', { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '13px' : '10px', color: '#73533a' }).setOrigin(0.5);
-    const noteLines = this.privateNotes.length ? this.privateNotes.map((note) => `✦ ${note.village.toUpperCase()}\n  ${note.text}`).join('\n\n') : 'No private notes yet.\n\nVisit a village and choose PRIVATE NOTE.';
-    const notes = this.add.text(-w / 2 + 34, -h / 2 + 112, noteLines, { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '14px' : '11px', color: '#493526', wordWrap: { width: w - 68 }, lineSpacing: 6 });
-    const worldButton = this.makePanelButton(0, h / 2 - 120, 'VIEW WORLD NOTES');
-    const deleteButton = this.makePanelButton(0, h / 2 - 70, 'BANANA · DELETE A NOTE');
-    const reportButton = this.makePanelButton(0, h / 2 - 20, 'REPORT A WORLD NOTE');
-    const adminButton = this.makePanelButton(0, h / 2 + 30, 'ADMIN · VIEW REPORTS');
-    const manualButton = this.makePanelButton(0, h / 2 + 80, 'HOW TO PLAY THE LOBBY');
-    const close = this.makePanelButton(0, h / 2 + 130, 'CLOSE GAMEBOOK');
-    this.gamebookOverlay.add([backdrop, book, inner, title, intro, notes, worldButton, deleteButton, reportButton, adminButton, manualButton, close]);
-    worldButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
+
+    const width = this.scale.width;
+    const height = this.scale.height;
+    const portrait = height > width;
+    const panelWidth = Math.min(width * 0.94, 760);
+    const panelHeight = Math.min(height * 0.90, portrait ? 640 : 560);
+    const buttonHeight = portrait ? 44 : 48;
+    const buttonGap = 7;
+    const actionCount = 6;
+    const actionStackHeight = actionCount * buttonHeight + (actionCount - 1) * buttonGap;
+    const top = -panelHeight / 2;
+
+    this.gamebookOverlay = this.add.container(width / 2, height / 2)
+      .setScrollFactor(0)
+      .setDepth(200);
+
+    const backdrop = this.add.rectangle(0, 0, width, height, 0x17110e, 0.78)
+      .setInteractive();
+    backdrop.on('pointerdown', (_pointer, _localX, _localY, event) => {
       event.stopPropagation();
-      this.viewWorldNotes();
     });
-    deleteButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
-      event.stopPropagation();
-      this.deleteOwnWorldNote();
+
+    const book = this.add.rectangle(0, 0, panelWidth, panelHeight, 0xd8bd83, 1)
+      .setStrokeStyle(6, 0x5a402d, 1);
+    const inner = this.add.rectangle(0, 0, panelWidth - 34, panelHeight - 34, 0xeee0ba, 1)
+      .setStrokeStyle(2, 0x9a744c, 1);
+
+    const title = this.add.text(0, top + 30, 'MY GAMEBOOK', {
+      fontFamily: 'monospace',
+      fontSize: portrait ? '24px' : '28px',
+      fontStyle: 'bold',
+      color: '#493526',
+      align: 'center',
+    }).setOrigin(0.5);
+
+    const intro = this.add.text(0, top + 62, 'Private discoveries and ideas. World Notes are separate.', {
+      fontFamily: 'monospace',
+      fontSize: portrait ? '10px' : '11px',
+      color: '#73533a',
+      align: 'center',
+      wordWrap: { width: panelWidth - 64 },
+    }).setOrigin(0.5);
+
+    const noteLines = this.privateNotes.length
+      ? this.privateNotes.slice(-3).map((note) => '✦ ' + note.village.toUpperCase() + ' — ' + note.text).join('\\n')
+      : 'No private notes yet. Visit a place and choose PRIVATE NOTE.';
+
+    const notesHeight = Math.max(48, Math.min(72, panelHeight * 0.15));
+    const notes = this.add.text(-panelWidth / 2 + 34, top + 84, noteLines, {
+      fontFamily: 'monospace',
+      fontSize: portrait ? '10px' : '11px',
+      color: '#493526',
+      wordWrap: { width: panelWidth - 68 },
+      lineSpacing: 4,
+    }).setOrigin(0, 0);
+    notes.setFixedSize(panelWidth - 68, notesHeight);
+    notes.setMaxLines(portrait ? 3 : 4);
+
+    const firstButtonY = top + 92 + notesHeight + buttonHeight / 2 + 6;
+    const buttons = [
+      ['VIEW WORLD NOTES', () => this.viewWorldNotes()],
+      ['BANANA · DELETE A NOTE', () => this.deleteOwnWorldNote()],
+      ['REPORT A WORLD NOTE', () => this.reportWorldNoteFlow().then((message) => this.showTransientMessage(message))],
+      ['ADMIN · VIEW REPORTS', () => this.viewAdminReports().then((message) => this.showTransientMessage(message))],
+      ['HOW TO PLAY THE LOBBY', () => this.showTransientMessage('LOBBY MANUAL · WANDER → EXPLORE → THINK → WRITE → BUILD → RETURN. IDEA WALL = ideas. BUILD CHAMBER = next playable slice. GAME GATE = finished games. GAMEBOOK = private notes. APPLE publishes; BANANA cleans up your own note.')],
+      ['CLOSE GAMEBOOK', () => this.closeGamebook()],
+    ] as const;
+
+    const actionButtons = buttons.map(([label, action], index) => {
+      const button = this.makePanelButton(0, firstButtonY + index * (buttonHeight + buttonGap), label);
+      button.setSize(Math.min(280, panelWidth * 0.72), buttonHeight);
+      const shape = button.list[0] as Phaser.GameObjects.Rectangle;
+      shape.setSize(Math.min(280, panelWidth * 0.72), buttonHeight);
+      const text = button.list[1] as Phaser.GameObjects.Text;
+      text.setFontSize(portrait ? '10px' : '9px');
+      button.removeAllListeners('pointerdown');
+      button.on('pointerdown', (_pointer, _localX, _localY, event) => {
+        event.stopPropagation();
+        action();
+      });
+      return button;
     });
-    reportButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
-      event.stopPropagation();
-      this.reportWorldNoteFlow().then((message) => this.showTransientMessage(message));
-    });
-    adminButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
-      event.stopPropagation();
-      this.viewAdminReports().then((message) => this.showTransientMessage(message));
-    });
-    manualButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
-      event.stopPropagation();
-      this.showTransientMessage('LOBBY MANUAL · WANDER → EXPLORE → THINK → WRITE → BUILD → RETURN. IDEA WALL = ideas. BUILD CHAMBER = next playable slice. GAME GATE = finished games. GAMEBOOK = private notes. APPLE publishes; BANANA cleans up your own note.');
-    });
-    close.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
-      event.stopPropagation();
-      this.closeGamebook();
-    });
+
+    this.gamebookOverlay.add([backdrop, book, inner, title, intro, notes, ...actionButtons]);
     this.gamebookOverlay.setAlpha(0);
+
     this.tweens.add({ targets: this.gamebookOverlay, alpha: 1, duration: 180 });
     this.input.keyboard?.once('keydown-B', () => this.closeGamebook());
     this.input.keyboard?.once('keydown-ESC', () => this.closeGamebook());
   }
-
   private async reportWorldNoteFlow() {
     const village = this.activeVillage || this.getSystemsHallLocation();
     const notes = await loadWorldNotes(village.id);
