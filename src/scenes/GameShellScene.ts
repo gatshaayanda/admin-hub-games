@@ -167,7 +167,7 @@ export class GameShellScene extends Phaser.Scene {
     if (this.gamebookButton) this.gamebookButton.setPosition(width - 74, 28);
   }
 
-  private isInReservedUi(x: number, y: number) {
+  private isInReservedUi(_x: number, y: number) {
     const dock = this.scale.height > this.scale.width ? PORTRAIT_DOCK : DESKTOP_DOCK;
     return y >= this.scale.height - dock;
   }
@@ -301,7 +301,7 @@ export class GameShellScene extends Phaser.Scene {
   private createWorldInteractions() {
     this.villages.forEach((village) => {
       const zone = this.add.zone(village.x, village.y, 190, 150).setInteractive();
-      zone.on('pointerdown', (pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
+      zone.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
         event.stopPropagation();
         this.player.x = Phaser.Math.Clamp(village.x + 145, 42, WORLD_WIDTH - 42);
         this.player.y = Phaser.Math.Clamp(village.y + 120, 90, WORLD_HEIGHT - 50);
@@ -310,7 +310,7 @@ export class GameShellScene extends Phaser.Scene {
     });
 
     const homeZone = this.add.zone(1180, 1160, 220, 150).setInteractive();
-    homeZone.on('pointerdown', (pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
+    homeZone.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
       this.player.x = 1180;
       this.player.y = 1240;
