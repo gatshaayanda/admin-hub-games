@@ -7,8 +7,13 @@ type GameShell = {
   toggleGamebook?: () => unknown;
 };
 
+type PhaserSceneManager = {
+  getScene?: (key: string) => GameShell & { scene?: unknown };
+  isActive?: (key: string) => boolean;
+};
+
 type PhaserGame = {
-  scene?: { getScene?: (key: string) => unknown };
+  scene?: PhaserSceneManager;
 };
 
 declare global {
@@ -26,12 +31,21 @@ const vectors: Record<Direction, MovementVector> = {
 };
 
 function getScene() {
-  return window.__AHG_GAME__?.scene?.getScene?.('GameShellScene') as GameShell | undefined;
+  return window.__AHG_GAME__?.scene?.getScene?.('GameShellScene');
+}
+
+function isGameplayVisible() {
+  const manager = window.__AHG_GAME__?.scene;
+  if (!manager) return false;
+  if (manager.isActive) {
+    return manager.isActive('GameShellScene') && !manager.isActive('InteractionModalScene');
+  }
+  return Boolean(getScene());
 }
 
 function setDirection(direction: Direction | null) {
   const scene = getScene();
-  if (!scene?.joystickVector) return;
+  if (!scene?.joystickVector || !isGameplayVisible()) return;
   if (!direction) {
     scene.joystickVector.set(0, 0);
     return;
@@ -77,6 +91,7 @@ function makeActionButton(label: string, action: 'interact' | 'book') {
   button.innerHTML = `<span>${label}</span>`;
   button.addEventListener('pointerdown', (event) => {
     event.preventDefault();
+    if (!isGameplayVisible()) return;
     const scene = getScene();
     if (action === 'interact') scene?.interact?.();
     else scene?.toggleGamebook?.();
@@ -93,10 +108,6 @@ function install() {
   const root = document.createElement('div');
   root.id = 'ahg-touch-controls';
   root.setAttribute('aria-label', 'Admin Hub Games mobile controls');
-
-  const brand = document.createElement('div');
-  brand.className = 'ahg-touch-brand';
-  brand.innerHTML = '<strong>ADMIN HUB</strong><span>GAMES</span>';
 
   const dpad = document.createElement('div');
   dpad.className = 'ahg-dpad';
@@ -115,9 +126,19 @@ function install() {
   hint.className = 'ahg-touch-hint';
   hint.textContent = 'HOLD TO MOVE';
 
-  root.append(brand, dpad, actions, hint);
+  root.append(dpad, actions, hint);
   document.body.appendChild(root);
 }
 
+function syncVisibility() {
+  const root = document.getElementById('ahg-touch-controls');
+  if (!root) return;
+  const visible = isGameplayVisible();
+  root.classList.toggle('is-hidden', !visible);
+  if (!visible) setDirection(null);
+}
+
 install();
-window.addEventListener('resize', install, { passive: true });
+syncVisibility();
+window.addEventListener('resize', syncVisibility, { passive: true });
+window.setInterval(syncVisibility, 150);
