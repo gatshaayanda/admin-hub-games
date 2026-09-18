@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 
 export class PublisherIntroScene extends Phaser.Scene {
   private leaving = false;
+  private introReady = false;
   private resizeHandler?: () => void;
 
   constructor() {
@@ -27,6 +28,13 @@ export class PublisherIntroScene extends Phaser.Scene {
       letterSpacing: 2.5,
     }).setDepth(30);
 
+    const skipHint = this.add.text(width * 0.925, height * 0.90, 'TAP TO ENTER', {
+      fontFamily: 'monospace', fontSize: '10px', fontStyle: 'bold', color: '#a9b8d6', letterSpacing: 1.5,
+    }).setOrigin(1, 0.5).setAlpha(0).setDepth(90);
+
+    this.input.once('pointerdown', () => this.skipIntro());
+    this.input.keyboard?.once('keydown', () => this.skipIntro());
+
     const fade = this.add.rectangle(0, 0, width, height, 0x070b1d, 1)
       .setOrigin(0)
       .setDepth(100);
@@ -43,7 +51,7 @@ export class PublisherIntroScene extends Phaser.Scene {
     this.tweens.add({
       targets: [player, shadow],
       x: `+=${width * 0.50}`,
-      duration: 4200,
+      duration: 3000,
       ease: 'Sine.easeInOut',
       onUpdate: () => {
         const bob = Math.sin(this.time.now / 110) * 1.8;
@@ -51,7 +59,10 @@ export class PublisherIntroScene extends Phaser.Scene {
         shadow.x = player.x;
       },
       onComplete: () => {
-        this.time.delayedCall(700, () => this.showPublisherCard(ambientBrand, width, height));
+        this.introReady = true;
+        skipHint.setAlpha(0.82);
+        this.tweens.add({ targets: skipHint, alpha: 0.38, duration: 900, yoyo: true, repeat: -1 });
+        this.time.delayedCall(350, () => this.showPublisherCard(ambientBrand, width, height));
       },
     });
 
@@ -100,9 +111,18 @@ export class PublisherIntroScene extends Phaser.Scene {
       align: 'center',
     }).setOrigin(0.5).setDepth(82).setAlpha(0);
 
-    // Deliberate cinematic entrance: no click/keypress can accidentally skip it.
+
+    const descriptor = this.add.text(width / 2, height * 0.635, 'BUILD  ·  PLAY  ·  RETURN', {
+      fontFamily: 'monospace',
+      fontSize: `${Math.max(9, Math.min(12, Math.min(width, height) * 0.018))}px`,
+      color: '#a9b8d6',
+      letterSpacing: 2,
+      align: 'center',
+    }).setOrigin(0.5).setDepth(82).setAlpha(0);
+
+    // The identity beat remains cinematic, but becomes skippable once the player has had a brief moment to see the world and character.
     this.tweens.add({
-      targets: [veil, panel, title, presents],
+      targets: [veil, panel, title, presents, descriptor],
       alpha: 1,
       duration: 850,
       ease: 'Sine.easeOut',
@@ -116,7 +136,7 @@ export class PublisherIntroScene extends Phaser.Scene {
     });
 
     // Hold for a full, repeatable publisher beat on laptop and phone.
-    this.time.delayedCall(3400, () => {
+    this.time.delayedCall(2200, () => {
       this.tweens.add({
         targets: [veil, panel, title, presents],
         alpha: 0,
@@ -127,6 +147,7 @@ export class PublisherIntroScene extends Phaser.Scene {
           panel.destroy();
           title.destroy();
           presents.destroy();
+          descriptor.destroy();
           ambientBrand.setAlpha(1);
           this.time.delayedCall(300, () => this.leaveIntro());
         },
@@ -134,11 +155,16 @@ export class PublisherIntroScene extends Phaser.Scene {
     });
   }
 
+  private skipIntro() {
+    if (!this.introReady || this.leaving) return;
+    this.leaveIntro();
+  }
+
   private leaveIntro() {
     if (this.leaving) return;
     this.leaving = true;
-    this.cameras.main.fadeOut(700, 22, 18, 14);
-    this.time.delayedCall(700, () => this.scene.start('NameEntryScene'));
+    this.cameras.main.fadeOut(450, 22, 18, 14);
+    this.time.delayedCall(450, () => this.scene.start('NameEntryScene'));
   }
 
   private drawWorld(width: number, height: number) {
