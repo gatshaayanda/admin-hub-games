@@ -575,7 +575,8 @@ export class GameShellScene extends Phaser.Scene {
     this.gamebookOverlay.setAlpha(0);
 
     this.tweens.add({ targets: this.gamebookOverlay, alpha: 1, duration: 180 });
-    this.input.keyboard?.once('keydown-B', () => this.closeGamebook());
+    // B is handled by GameShell.update(). Do not register a second B handler here:
+    // the same key event would open and immediately close the Gamebook.
     this.input.keyboard?.once('keydown-ESC', () => this.closeGamebook());
   }
   private async reportWorldNoteFlow() {
