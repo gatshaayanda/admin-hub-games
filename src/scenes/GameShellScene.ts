@@ -42,7 +42,6 @@ export class GameShellScene extends Phaser.Scene {
   private interactionModalOpen = false;
   private homeTriggerArmed = false;
   private gamebookOverlay?: Phaser.GameObjects.Container;
-  private manualOverlay?: Phaser.GameObjects.Container;
   private activeVillage?: Village;
   private privateNotes: PrivateNote[] = [];
   private worldNotes: WorldNote[] = [];
@@ -202,13 +201,19 @@ export class GameShellScene extends Phaser.Scene {
     this.add.text(1180, 875, 'THE LOBBY · ONE PLACE TO BEGIN', { fontFamily: 'monospace', fontSize: '16px', color: '#594838' }).setOrigin(0.5).setDepth(6);
     this.add.text(1180, 920, 'EXPLORE SYSTEMS  ·  LEAVE A NOTE  ·  BUILD GAMES', { fontFamily: 'monospace', fontSize: '13px', color: '#594838' }).setOrigin(0.5).setDepth(6);
 
-    // The Hall contains three small stations rather than separate houses. They are deliberately
-    // readable from a distance so exploration teaches the player what the lobby is for.
-    this.drawLobbyStation(860, 760, 'IDEA WALL', 'NOTES', 0xd6a84d, 'A place to capture game ideas and questions.');
-    this.drawLobbyStation(1500, 760, 'BUILD CHAMBER', 'PLAN', 0x4d9b98, 'A quiet place to turn ideas into actual games.');
-    this.drawLobbyStation(1180, 470, 'GAME GATE', 'PLAY', 0x7353a6, 'Finished games will eventually open from here.');
+    // The Hall is one place, but it has distinct stations so exploration has purpose.
+    for (const [x, y, title, verb, accent] of [
+      [860, 760, 'IDEA WALL', 'NOTES', 0xd6a84d],
+      [1500, 760, 'BUILD CHAMBER', 'PLAN', 0x4d9b98],
+      [1180, 470, 'GAME GATE', 'PLAY', 0x7353a6],
+    ] as const) {
+      this.add.circle(x, y, 38, 0xeee0ba, 1).setStrokeStyle(4, accent, 0.95).setDepth(7);
+      this.add.circle(x, y, 22, accent, 0.18).setDepth(7);
+      this.add.text(x, y - 1, verb, { fontFamily: 'monospace', fontSize: '10px', color: '#493526', fontStyle: 'bold' }).setOrigin(0.5).setDepth(8);
+      this.add.text(x, y + 52, title, { fontFamily: 'monospace', fontSize: '11px', color: '#fff4d4', stroke: '#493526', strokeThickness: 4 }).setOrigin(0.5).setDepth(8);
+    }
 
-    // Small moving motes make the Hall feel inhabited without turning it into a noisy UI.
+    // Small moving motes make the Hall feel inhabited without becoming visual noise.
     for (const [x, y, radius] of [[1010, 670, 4], [1350, 680, 3], [1090, 840, 3], [1290, 835, 4]] as const) {
       const mote = this.add.circle(x, y, radius, 0xf2d27b, 0.65).setDepth(7);
       this.tweens.add({ targets: mote, y: y - 18, alpha: 0.12, duration: 1800 + radius * 140, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: radius * 120 });
@@ -224,16 +229,6 @@ export class GameShellScene extends Phaser.Scene {
     for (const [x, y] of [[420, 430], [1940, 430], [420, 1090], [1940, 1090]] as const) this.drawTree(x, y, 1);
     this.drawTree(760, 420, 0.8); this.drawTree(1600, 420, 0.8);
     this.drawBuilding(1180, 1120, 180, 100, 0xf0e4c6, 0x493526, 'PLAYER CAMP');
-  }
-
-  private drawLobbyStation(x: number, y: number, title: string, verb: string, accent: number, _note: string) {
-    const g = this.add.graphics().setDepth(6);
-    g.fillStyle(0x493526, 0.28).fillEllipse(x, y + 18, 112, 34);
-    g.fillStyle(0xeee0ba, 1).fillCircle(x, y, 38);
-    g.lineStyle(4, accent, 0.95).strokeCircle(x, y, 38);
-    g.fillStyle(accent, 0.22).fillCircle(x, y, 24);
-    this.add.text(x, y - 2, verb, { fontFamily: 'monospace', fontSize: '10px', color: '#493526', fontStyle: 'bold' }).setOrigin(0.5).setDepth(8);
-    this.add.text(x, y + 52, title, { fontFamily: 'monospace', fontSize: '11px', color: '#fff4d4', stroke: '#493526', strokeThickness: 4 }).setOrigin(0.5).setDepth(8);
   }
 
   private drawBuilding(x: number, y: number, w: number, h: number, wall: number, roof: number, label: string) {
@@ -375,8 +370,8 @@ export class GameShellScene extends Phaser.Scene {
       this.getSystemsHallLocation(),
       this.getHomeLocation(),
       { id: 'idea-wall', name: 'IDEA WALL', subtitle: 'Capture what you want to build next', x: 860, y: 760, color: 0xd6a84d, note: 'Bring a game idea here. Write it privately first if you are still thinking, or use LEAVE IN WORLD when you want the idea to become part of the shared world.' },
-      { id: 'build-chamber', name: 'BUILD CHAMBER', subtitle: 'Turn an idea into a playable slice', x: 1500, y: 760, color: 0x4d9b98, note: 'This is the development ritual: choose one small playable goal, build it, test it, push it, then return here and decide what comes next. The Hall is the safe place between games.' },
-      { id: 'game-gate', name: 'GAME GATE', subtitle: 'The games we finish will live here', x: 1180, y: 470, color: 0x7353a6, note: 'This gate is intentionally quiet for now. As Admin Hub Games ships real games, each finished title can gain an entrance here.' },
+      { id: 'build-chamber', name: 'BUILD CHAMBER', subtitle: 'Turn an idea into a playable slice', x: 1500, y: 760, color: 0x4d9b98, note: 'The development rhythm is simple: one small playable goal, build it, test it, push it, then return here and decide what comes next.' },
+      { id: 'game-gate', name: 'GAME GATE', subtitle: 'The games we finish will live here', x: 1180, y: 470, color: 0x7353a6, note: 'This gate stays quiet until real games exist. Finished Admin Hub Games titles can eventually gain an entrance here.' },
     ];
     for (const location of locations) {
       const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, location.x, location.y);
@@ -493,12 +488,12 @@ export class GameShellScene extends Phaser.Scene {
     const intro = this.add.text(0, -h / 2 + 72, 'Private discoveries and ideas. World Notes are separate.', { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '13px' : '10px', color: '#73533a' }).setOrigin(0.5);
     const noteLines = this.privateNotes.length ? this.privateNotes.map((note) => `✦ ${note.village.toUpperCase()}\n  ${note.text}`).join('\n\n') : 'No private notes yet.\n\nVisit a village and choose PRIVATE NOTE.';
     const notes = this.add.text(-w / 2 + 34, -h / 2 + 112, noteLines, { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '14px' : '11px', color: '#493526', wordWrap: { width: w - 68 }, lineSpacing: 6 });
-    const worldButton = this.makePanelButton(0, h / 2 - 145, 'VIEW WORLD NOTES');
-    const deleteButton = this.makePanelButton(0, h / 2 - 95, 'BANANA · DELETE A NOTE');
-    const reportButton = this.makePanelButton(0, h / 2 - 45, 'REPORT A WORLD NOTE');
-    const adminButton = this.makePanelButton(0, h / 2 + 5, 'ADMIN · VIEW REPORTS');
-    const manualButton = this.makePanelButton(0, h / 2 + 55, 'HOW TO PLAY THE LOBBY');
-    const close = this.makePanelButton(0, h / 2 + 105, 'CLOSE GAMEBOOK');
+    const worldButton = this.makePanelButton(0, h / 2 - 120, 'VIEW WORLD NOTES');
+    const deleteButton = this.makePanelButton(0, h / 2 - 70, 'BANANA · DELETE A NOTE');
+    const reportButton = this.makePanelButton(0, h / 2 - 20, 'REPORT A WORLD NOTE');
+    const adminButton = this.makePanelButton(0, h / 2 + 30, 'ADMIN · VIEW REPORTS');
+    const manualButton = this.makePanelButton(0, h / 2 + 80, 'HOW TO PLAY THE LOBBY');
+    const close = this.makePanelButton(0, h / 2 + 130, 'CLOSE GAMEBOOK');
     this.gamebookOverlay.add([backdrop, book, inner, title, intro, notes, worldButton, deleteButton, reportButton, adminButton, manualButton, close]);
     worldButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
@@ -518,7 +513,7 @@ export class GameShellScene extends Phaser.Scene {
     });
     manualButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
-      this.showInstructionManual();
+      this.showTransientMessage('LOBBY MANUAL · WANDER → EXPLORE → THINK → WRITE → BUILD → RETURN. IDEA WALL = ideas. BUILD CHAMBER = next playable slice. GAME GATE = finished games. GAMEBOOK = private notes. APPLE publishes; BANANA cleans up your own note.');
     });
     close.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
@@ -528,46 +523,6 @@ export class GameShellScene extends Phaser.Scene {
     this.tweens.add({ targets: this.gamebookOverlay, alpha: 1, duration: 180 });
     this.input.keyboard?.once('keydown-B', () => this.closeGamebook());
     this.input.keyboard?.once('keydown-ESC', () => this.closeGamebook());
-  }
-
-  private showInstructionManual() {
-    if (this.manualOverlay) return;
-
-    const width = this.scale.width;
-    const height = this.scale.height;
-    const portrait = height > width;
-    const w = Math.min(width * 0.92, 760);
-    const h = Math.min(height * (portrait ? 0.84 : 0.78), 560);
-    const overlay = this.add.container(width / 2, height / 2).setScrollFactor(0).setDepth(260);
-    const backdrop = this.add.rectangle(0, 0, width, height, 0x100c09, 0.82).setInteractive();
-    backdrop.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => { event.stopPropagation(); this.closeInstructionManual(); });
-    const book = this.add.rectangle(0, 0, w, h, 0xd8bd83, 1).setStrokeStyle(6, 0x5a402d, 1);
-    const inner = this.add.rectangle(0, 0, w - 30, h - 30, 0xeee0ba, 1).setStrokeStyle(2, 0x9a744c, 1);
-    const title = this.add.text(0, -h / 2 + 34, 'SYSTEMS HALL · FIELD MANUAL', { fontFamily: 'monospace', fontSize: portrait ? '20px' : '24px', color: '#493526', fontStyle: 'bold', align: 'center' }).setOrigin(0.5);
-    const text = this.add.text(-w / 2 + 28, -h / 2 + 76,
-      'THIS IS NOT A MENU. IT IS THE LOBBY.\\n\\n' +
-      '1 · WANDER\\nWalk around. Tap where you want to go on desktop or phone. The Hall is deliberately safe and low-pressure.\\n\\n' +
-      '2 · EXPLORE\\nWalk close to a place until the prompt changes, then press E or tap EXPLORE. Look at the world before opening anything.\\n\\n' +
-      '3 · THINK\\nThe IDEA WALL is for questions, mechanics, screenshots in your head, and game ideas. Keep exploring: there is no correct route.\\n\\n' +
-      '4 · WRITE\\nPRIVATE NOTE keeps an idea on this device. LEAVE IN WORLD publishes it to the shared world only after APPLE confirms it.\\n\\n' +
-      '5 · BUILD\\nThe BUILD CHAMBER is the rhythm: one small idea → playable slice → test → push → return to the Hall → decide the next slice.\\n\\n' +
-      '6 · RETURN\\nThe GAME GATE is where finished games will eventually appear. Your Hall becomes the history of what you actually built.\\n\\n' +
-      'GAMEBOOK = your private notebook. WORLD NOTES = the public layer.\\nBANANA = cleanup for your own published notes; founder/admin moderation handles bad actors.\\n\\n' +
-      'The best session can be simple: explore → discover → write → build → come back tomorrow.',
-      { fontFamily: 'monospace', fontSize: portrait ? '12px' : '11px', color: '#493526', wordWrap: { width: w - 56 }, lineSpacing: portrait ? 4 : 3 });
-    text.setMaxLines(portrait ? 23 : 25);
-    const close = this.makePanelButton(0, h / 2 - 28, Math.min(220, w * 0.38), 50, 'RETURN TO THE HALL');
-    overlay.add([backdrop, book, inner, title, text, close]);
-    close.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => { event.stopPropagation(); this.closeInstructionManual(); });
-    this.manualOverlay = overlay;
-    this.input.keyboard?.once('keydown-ESC', () => this.closeInstructionManual());
-  }
-
-  private closeInstructionManual() {
-    if (!this.manualOverlay) return;
-    const overlay = this.manualOverlay;
-    this.manualOverlay = undefined;
-    overlay.destroy();
   }
 
   private async reportWorldNoteFlow() {
