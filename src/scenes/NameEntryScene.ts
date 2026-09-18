@@ -10,6 +10,11 @@ export class NameEntryScene extends Phaser.Scene {
   private caret!: Phaser.GameObjects.Text;
   private status!: Phaser.GameObjects.Text;
   private startButton!: Phaser.GameObjects.Container;
+  private resetButton!: Phaser.GameObjects.Container;
+  private welcomeText!: Phaser.GameObjects.Text;
+  private promptText!: Phaser.GameObjects.Text;
+  private instructionText!: Phaser.GameObjects.Text;
+  private nameBox!: Phaser.GameObjects.Rectangle;
   private nameInput?: HTMLInputElement;
   private resizeHandler?: () => void;
 
@@ -22,11 +27,11 @@ export class NameEntryScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#d9c28f');
     this.drawBackdrop(width, height);
 
-    this.add.text(width / 2, height * 0.15, 'WELCOME', {
+    this.welcomeText = this.add.text(width / 2, height * 0.15, 'WELCOME', {
       fontFamily: 'monospace', fontSize: `${Math.max(16, Math.min(24, width * 0.024))}px`, fontStyle: 'bold', color: '#30251e', letterSpacing: 3,
     }).setOrigin(0.5);
 
-    this.add.text(width / 2, height * 0.24, 'What should we call you?', {
+    this.promptText = this.add.text(width / 2, height * 0.24, 'What should we call you?', {
       fontFamily: 'monospace', fontSize: `${Math.max(13, Math.min(19, width * 0.018))}px`, color: '#554335',
     }).setOrigin(0.5);
 
@@ -34,6 +39,7 @@ export class NameEntryScene extends Phaser.Scene {
     const box = this.add.rectangle(width / 2, height * 0.37, boxWidth, 58, 0xf0e4c6, 1)
       .setStrokeStyle(3, 0x624937, 1);
 
+    this.nameBox = box;
     this.label = this.add.text(box.x - boxWidth / 2 + 18, box.y, '', {
       fontFamily: 'monospace', fontSize: '20px', color: '#30251e',
     }).setOrigin(0, 0.5);
@@ -44,7 +50,7 @@ export class NameEntryScene extends Phaser.Scene {
 
     this.time.addEvent({ delay: 500, loop: true, callback: () => this.caret.setVisible(!this.caret.visible) });
 
-    this.add.text(width / 2, height * 0.49, 'TYPE YOUR NAME  ·  ENTER TO CONTINUE', {
+    this.instructionText = this.add.text(width / 2, height * 0.49, 'TYPE YOUR NAME  ·  ENTER TO CONTINUE', {
       fontFamily: 'monospace', fontSize: '10px', color: '#6a5140', letterSpacing: 1,
     }).setOrigin(0.5);
 
@@ -64,11 +70,18 @@ export class NameEntryScene extends Phaser.Scene {
       wordWrap: { width: width * 0.82 },
     }).setOrigin(0.5);
 
-    const reset = this.add.text(width / 2, height * 0.82, 'RESET LOCAL GAME DATA', {
-      fontFamily: 'monospace', fontSize: '10px', color: '#6f3f32',
-      backgroundColor: '#f0dfb6', padding: { left: 14, right: 14, top: 9, bottom: 9 },
-    }).setOrigin(0.5).setInteractive({ useHandCursor: false });
-    reset.on('pointerdown', () => this.resetLocalGameData());
+    this.resetButton = this.add.container(width / 2, height * 0.82).setDepth(10);
+    const resetShape = this.add.rectangle(0, 0, Math.min(260, width * 0.72), 48, 0xf0dfb6, 0.96)
+      .setStrokeStyle(2, 0xb18b62, 0.85);
+    const resetText = this.add.text(0, 0, 'RESET LOCAL GAME DATA', {
+      fontFamily: 'monospace', fontSize: '10px', color: '#6f3f32', fontStyle: 'bold',
+    }).setOrigin(0.5);
+    this.resetButton.add([resetShape, resetText]);
+    this.resetButton.setSize(resetShape.width, resetShape.height).setInteractive({ useHandCursor: false });
+    this.resetButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
+      this.resetLocalGameData();
+    });
 
     this.loadSavedName();
     this.installNativeNameInput(box.x, box.y, boxWidth);
@@ -78,7 +91,13 @@ export class NameEntryScene extends Phaser.Scene {
       this.handleTextInput(event);
     });
 
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.removeNativeNameInput());
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.layoutForViewport, this);
+    this.layoutForViewport();
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.layoutForViewport, this);
+      this.removeNativeNameInput();
+    });
   }
 
   private handleTextInput(event: KeyboardEvent) {
@@ -131,7 +150,44 @@ export class NameEntryScene extends Phaser.Scene {
     window.addEventListener('resize', this.resizeHandler, { passive: true });
     window.addEventListener('orientationchange', this.resizeHandler, { passive: true });
 
-    input.focus({ preventScroll: true });
+    // Do not force the mobile keyboard open on scene entry. The player can tap the
+    // field when ready; this keeps the welcome screen visually calm and unobstructed.
+  }
+
+  private layoutForViewport() {
+    const { width, height } = this.scale;
+    const portrait = height > width;
+    const boxWidth = Math.min(440, width * (portrait ? 0.82 : 0.72));
+    const buttonWidth = Math.min(300, width * (portrait ? 0.74 : 0.58));
+    const compact = height < 600;
+
+    this.welcomeText.setPosition(width / 2, height * (compact ? 0.11 : 0.15));
+    this.welcomeText.setFontSize(portrait ? 22 : 24);
+    this.promptText.setPosition(width / 2, height * (compact ? 0.19 : 0.24));
+    this.promptText.setFontSize(portrait ? 16 : 19);
+
+    this.nameBox.setPosition(width / 2, height * (compact ? 0.31 : 0.37));
+    this.nameBox.setSize(boxWidth, portrait ? 62 : 58);
+    this.label.setPosition(width / 2 - boxWidth / 2 + 18, this.nameBox.y);
+    this.caret.setPosition(this.label.x + this.label.width + 4, this.nameBox.y);
+
+    this.instructionText.setPosition(width / 2, height * (compact ? 0.42 : 0.49));
+    this.instructionText.setFontSize(portrait ? 11 : 10);
+
+    this.startButton.setPosition(width / 2, height * (compact ? 0.53 : 0.59));
+    this.startButton.setSize(buttonWidth, 58);
+    const startShape = this.startButton.list[0] as Phaser.GameObjects.Rectangle;
+    startShape.setSize(buttonWidth, 58);
+    const startText = this.startButton.list[1] as Phaser.GameObjects.Text;
+    startText.setFontSize(portrait ? 12 : 11);
+
+    this.status.setPosition(width / 2, height * (compact ? 0.64 : 0.69));
+    this.status.setWordWrapWidth(width * 0.84);
+
+    this.resetButton.setPosition(width / 2, Math.min(height - (portrait ? 74 : 48), height * 0.82));
+    this.nameBox.setStrokeStyle(3, 0x624937, 1);
+
+    this.positionNativeNameInput(this.nameBox.x, this.nameBox.y, boxWidth);
   }
 
   private positionNativeNameInput(x: number, y: number, boxWidth: number) {

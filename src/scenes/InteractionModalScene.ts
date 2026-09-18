@@ -64,8 +64,13 @@ export class InteractionModalScene extends Phaser.Scene {
       color: '#fff8e8',
       align: 'center',
       wordWrap: { width: panelWidth * 0.78 },
-      lineSpacing: 7,
+      lineSpacing: portrait ? 8 : 7,
     }).setOrigin(0.5, 0).setDepth(3);
+
+    const actionTop = height / 2 + panelHeight / 2 - (portrait ? 132 : 104);
+    const bodyHeight = Math.max(92, actionTop - (height / 2 - panelHeight / 2 + 112) - 18);
+    body.setFixedSize(panelWidth * 0.78, bodyHeight);
+    body.setMaxLines(portrait ? 7 : 6);
 
     const buttonWidth = Math.min(250, panelWidth * (portrait ? 0.38 : 0.34));
     const buttonY = height / 2 + panelHeight / 2 - (portrait ? 104 : 72);

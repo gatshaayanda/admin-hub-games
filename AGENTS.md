@@ -440,3 +440,52 @@ Actual games              → next product work
 ```
 
 The next work should be driven by playing this foundation on laptop and Android, then building the first real game into it. Do not redesign the foundation merely because more features are possible.
+
+
+## Mobile Full-Viewport / Handheld UI Checkpoint — September 2026
+
+The current mobile presentation is intentionally **handheld-first**, not a webpage framed around a game canvas.
+
+Implementation rules:
+- Phaser uses `Phaser.Scale.RESIZE` so the Canvas fills the available parent space regardless of aspect ratio. Phaser documents `EXPAND` as retaining FIT-style aspect-ratio fitting, which can leave unused space; RESIZE is the deliberate choice for this project. citehttps://docs.phaser.io/phaser/concepts/scale-manager
+- The Canvas is pinned to the application's top-left/full viewport through CSS. Do not reintroduce fixed-width wrappers, centered canvas margins, or a secondary dark footer around gameplay.
+- The bottom joystick/action dock is a transparent overlay over the world. The camera should not reserve a separate band of world height for it.
+- CSS uses `100dvh` and safe-area environment variables. Safe-area insets are the browser-provided values for keeping essential UI away from notches/rounded display edges. citehttps://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Values/env
+- Mobile discrete actions use native button semantics where possible. Continuous joystick movement remains pointer-driven because it is a real-time game control.
+- Touch actions should not depend on tiny text labels. Navigation/action targets are deliberately at least 48px where practical; general web guidance recommends at least 44px CSS pixels for interactive targets. citehttps://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/button
+- Modal body copy must be bounded so long village descriptions cannot collide with the action row. Phaser Text supports fixed sizes and maximum line counts. citehttps://docs.phaser.io/api-documentation/class/gameobjects-text
+- The native mobile name field must not automatically summon the keyboard merely because the Name Entry scene opened. The player chooses when to focus it.
+- Orientation/viewport changes are real runtime states. Scenes containing responsive onboarding or modal UI should listen to Phaser's resize event and reposition their UI rather than assuming the first viewport dimensions remain valid. Phaser exposes a Scene resize event for this purpose. citehttps://docs.phaser.io/phaser/concepts/scenes
+
+### Handheld visual language
+Do not copy Game Boy Advance or Nintendo DS branding. Use their useful interaction principles:
+- world-first presentation
+- chunky readable controls
+- strong hierarchy
+- clear pressed states
+- dedicated interaction zones
+
+Admin Hub Games keeps its own visual identity:
+- warm sky
+- dry grass
+- red earth
+- dark brown/charcoal UI
+- warm cream text
+- amber/terracotta accents
+- restrained teal as a secondary action accent
+
+### Verification gate for future mobile UI changes
+Before calling a mobile presentation change complete:
+1. confirm canvas fills portrait width and height with no letterbox/frame;
+2. confirm onboarding is edge-to-edge and the native name field aligns with its Phaser field;
+3. confirm publisher intro remains cinematic and is not accidentally skippable;
+4. confirm modal action buttons remain reachable and readable in portrait;
+5. confirm modal/Gamebook can always be exited by touch;
+6. confirm joystick, EXPLORE and BOOK do not block modal buttons;
+7. confirm safe-area spacing on devices with browser UI/notches;
+8. confirm Vercel production build succeeds;
+9. exercise the deployed build on a real Android device where possible.
+
+The principle remains:
+
+> **The game should feel like a game that happens to run in a browser, not a website that happens to contain a game.**

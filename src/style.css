@@ -153,3 +153,35 @@ canvas {
 }
 .ahg-overlay-backdrop .ahg-back-button { pointer-events: auto; }
 
+
+/* Full-viewport game surface: Phaser RESIZE owns the actual canvas dimensions. */
+#app > canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Keep native mobile form controls large enough to operate comfortably. */
+#ahg-name-input {
+  min-height: 44px;
+}
+
+/* Keyboard focus should remain visible without breaking the game aesthetic. */
+.ahg-action-button:focus-visible,
+.ahg-back-button:focus-visible {
+  outline: 3px solid #f5e7c4;
+  outline-offset: 3px;
+}
+
+/* Very short screens: reduce decoration before reducing the actual controls. */
+@media (max-height: 520px) {
+  #ahg-touch-controls { height: 92px; }
+  .ahg-joystick { width: 82px; height: 82px; }
+  .ahg-action-button { width: 60px; height: 60px; }
+}

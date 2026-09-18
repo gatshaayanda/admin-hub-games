@@ -22,7 +22,7 @@ const config: Phaser.Types.Core.GameConfig = {
     width: 960,
     height: 540,
     min: { width: 320, height: 180 },
-    max: { width: 1920, height: 1080 },
+    max: { width: 0, height: 0 },
   },
   scene: [BootScene, PublisherIntroScene, NameEntryScene, GameShellScene, InteractionModalScene],
 };

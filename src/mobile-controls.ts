@@ -104,19 +104,20 @@ function makeActionButton(label: string, action: 'interact' | 'book') {
   button.setAttribute('aria-label', label);
   button.innerHTML = `<span>${label}</span>`;
 
-  button.addEventListener('pointerdown', (event) => {
+  button.addEventListener('click', (event) => {
     event.preventDefault();
+    event.stopPropagation();
     if (!isGameplayVisible() || isModalVisible()) return;
 
     const scene = getScene();
     if (action === 'interact') scene?.interact?.();
     else scene?.toggleGamebook?.();
-
-    button.classList.add('is-pressed');
   });
 
+  button.addEventListener('pointerdown', () => button.classList.add('is-pressed'));
   button.addEventListener('pointerup', () => button.classList.remove('is-pressed'));
   button.addEventListener('pointercancel', () => button.classList.remove('is-pressed'));
+  button.addEventListener('pointerleave', () => button.classList.remove('is-pressed'));
   return button;
 }
 
@@ -132,7 +133,7 @@ function install() {
   back.className = 'ahg-back-button is-hidden';
   back.setAttribute('aria-label', 'Back');
   back.textContent = '‹ BACK';
-  back.addEventListener('pointerdown', (event) => {
+  back.addEventListener('click', (event) => {
     event.preventDefault();
     event.stopPropagation();
     window.dispatchEvent(new Event('ahg:escape'));
