@@ -2,301 +2,229 @@ import Phaser from 'phaser';
 
 export class PublisherIntroScene extends Phaser.Scene {
   private leaving = false;
-  private elapsed = 0;
-  private background?: Phaser.GameObjects.Graphics;
-  private stars?: Phaser.GameObjects.Graphics;
-  private horizon?: Phaser.GameObjects.Graphics;
-  private player?: Phaser.GameObjects.Container;
-  private playerGlow?: Phaser.GameObjects.Arc;
-  private logoMark?: Phaser.GameObjects.Graphics;
-  private logoTitle?: Phaser.GameObjects.Text;
-  private logoRule?: Phaser.GameObjects.Rectangle;
-  private presents?: Phaser.GameObjects.Text;
-  private topLabel?: Phaser.GameObjects.Text;
-  private veil?: Phaser.GameObjects.Rectangle;
+  private resizeHandler?: () => void;
 
   constructor() {
     super('PublisherIntroScene');
   }
 
   create() {
+    const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor('#070b1d');
-    this.buildScene(this.scale.width, this.scale.height);
-
+    this.drawWorld(width, height);
     this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
+
+    const player = this.createPlayer(-48, height * 0.72);
+    const shadow = this.add.ellipse(-48, height * 0.75, 28, 9, 0x000000, 0.35);
+    player.setDepth(20);
+    shadow.setDepth(19);
+
+    const ambientBrand = this.add.text(width * 0.075, height * 0.085, 'ADMIN HUB GAMES', {
+      fontFamily: 'monospace',
+      fontSize: '12px',
+      fontStyle: 'bold',
+      color: '#a9b8d6',
+      letterSpacing: 2.5,
+    }).setDepth(30);
+
+    const fade = this.add.rectangle(0, 0, width, height, 0x070b1d, 1)
+      .setOrigin(0)
+      .setDepth(100);
+
+    this.tweens.add({
+      targets: fade,
+      alpha: 0,
+      duration: 1000,
+      ease: 'Sine.easeOut',
+    });
+
+    // Keep the cinematic sequence independent of viewport dimensions and input.
+    // Opening the app always gives the publisher identity its intended moment.
+    this.tweens.add({
+      targets: [player, shadow],
+      x: `+=${width * 0.50}`,
+      duration: 4200,
+      ease: 'Sine.easeInOut',
+      onUpdate: () => {
+        const bob = Math.sin(this.time.now / 110) * 1.8;
+        player.y = height * 0.72 + bob;
+        shadow.x = player.x;
+      },
+      onComplete: () => {
+        this.time.delayedCall(700, () => this.showPublisherCard(ambientBrand, width, height));
+      },
+    });
+
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
     });
   }
 
-  update(_time: number, delta: number) {
-    if (this.leaving) return;
-    this.elapsed += delta;
-
-    if (this.elapsed < 700) {
-      const p = Phaser.Math.Clamp(this.elapsed / 700, 0, 1);
-      this.setVeil(1 - p);
-      this.positionPlayer(0);
-      return;
-    }
-
-    if (this.elapsed < 3300) {
-      const p = Phaser.Math.Clamp((this.elapsed - 700) / 2600, 0, 1);
-      this.setVeil(0);
-      this.positionPlayer(p);
-      return;
-    }
-
-    if (this.elapsed < 4000) {
-      this.positionPlayer(1);
-      this.setVeil(0);
-      return;
-    }
-
-    if (this.elapsed < 4950) {
-      const p = Phaser.Math.Clamp((this.elapsed - 4000) / 950, 0, 1);
-      this.positionPlayer(1);
-      this.revealBrand(Phaser.Math.Easing.Cubic.Out(p));
-      return;
-    }
-
-    if (this.elapsed < 6750) {
-      this.positionPlayer(1);
-      this.revealBrand(1);
-      return;
-    }
-
-    if (this.elapsed < 7550) {
-      const p = Phaser.Math.Clamp((this.elapsed - 6750) / 800, 0, 1);
-      this.revealBrand(1 - Phaser.Math.Easing.Cubic.InOut(p));
-      this.setVeil(p);
-      return;
-    }
-
-    this.leaveIntro();
-  }
-
-  private buildScene(width: number, height: number) {
-    this.background = this.add.graphics().setDepth(1);
-    this.stars = this.add.graphics().setDepth(2);
-    this.horizon = this.add.graphics().setDepth(3);
-    this.drawBackground(width, height);
-
-    this.player = this.createPlayer(-Math.max(60, width * 0.08), height * 0.72);
-    this.player.setDepth(20);
-
-    this.playerGlow = this.add.circle(this.player.x, height * 0.75, 26, 0x55d6c2, 0.10)
-      .setDepth(19);
-
-    this.topLabel = this.add.text(width / 2, Math.max(28, height * 0.075), 'A STUDIO FOR PLAYABLE WORLDS', {
-      fontFamily: 'monospace',
-      fontSize: Math.max(9, Math.min(12, width * 0.011)) + 'px',
-      color: '#a9b8d6',
-      letterSpacing: 2.2,
-      align: 'center',
-    }).setOrigin(0.5).setDepth(30).setAlpha(0);
-
-    this.logoMark = this.add.graphics().setDepth(31).setAlpha(0);
-    this.drawLogoMark(width / 2, height * 0.43, Math.min(width, height));
-
-    this.logoTitle = this.add.text(width / 2, height * 0.535, 'ADMIN HUB GAMES', {
-      fontFamily: 'monospace',
-      fontSize: Math.max(24, Math.min(54, Math.min(width, height) * 0.082)) + 'px',
-      fontStyle: 'bold',
-      color: '#f4f7ff',
-      letterSpacing: Math.max(3, Math.round(Math.min(width, height) * 0.006)),
-      align: 'center',
-    }).setOrigin(0.5).setDepth(32).setAlpha(0);
-
-    this.logoRule = this.add.rectangle(width / 2, height * 0.595, Math.min(190, width * 0.34), 2, 0x55d6c2, 0.9)
-      .setDepth(32).setScaleX(0).setAlpha(0);
-
-    this.presents = this.add.text(width / 2, height * 0.64, 'presents', {
-      fontFamily: 'sans-serif',
-      fontSize: Math.max(14, Math.min(20, Math.min(width, height) * 0.031)) + 'px',
-      color: '#e2bd67',
-      letterSpacing: 3,
-      align: 'center',
-    }).setOrigin(0.5).setDepth(32).setAlpha(0);
-
-    this.veil = this.add.rectangle(0, 0, width, height, 0x070b1d, 1)
-      .setOrigin(0)
-      .setDepth(100);
-
-    this.setVeil(1);
-    this.revealBrand(0);
-  }
-
   private handleResize(width: number, height: number) {
     if (this.leaving) return;
-
     this.cameras.main.setViewport(0, 0, width, height);
-    this.drawBackground(width, height);
-
-    const p = Phaser.Math.Clamp((this.elapsed - 700) / 2600, 0, 1);
-    if (this.player) {
-      this.player.x = Phaser.Math.Linear(-Math.max(60, width * 0.08), width * 0.50, Phaser.Math.Easing.Sine.InOut(p));
-      this.player.y = height * 0.72;
-      this.playerGlow?.setPosition(this.player.x, height * 0.75);
-    }
-
-    this.topLabel?.setPosition(width / 2, Math.max(28, height * 0.075));
-    this.logoTitle?.setPosition(width / 2, height * 0.535)
-      .setFontSize(Math.max(24, Math.min(54, Math.min(width, height) * 0.082)));
-    this.logoRule?.setPosition(width / 2, height * 0.595)
-      .setSize(Math.min(190, width * 0.34), 2);
-    this.presents?.setPosition(width / 2, height * 0.64)
-      .setFontSize(Math.max(14, Math.min(20, Math.min(width, height) * 0.031)));
-
-    this.logoMark?.clear();
-    this.drawLogoMark(width / 2, height * 0.43, Math.min(width, height));
-    this.veil?.setSize(width, height);
   }
 
-  private drawBackground(width: number, height: number) {
-    this.background?.clear();
-    this.stars?.clear();
-    this.horizon?.clear();
+  private showPublisherCard(ambientBrand: Phaser.GameObjects.Text, width: number, height: number) {
+    if (this.leaving) return;
 
-    const bg = this.background;
-    const stars = this.stars;
-    const horizon = this.horizon;
-    if (!bg || !stars || !horizon) return;
+    const veil = this.add.rectangle(width / 2, height / 2, width, height, 0x16120f, 0.32)
+      .setDepth(80)
+      .setAlpha(0);
 
-    bg.fillStyle(0x070b1d, 1).fillRect(0, 0, width, height);
-    bg.fillStyle(0x111a42, 1).fillRect(0, height * 0.30, width, height * 0.40);
-    bg.fillStyle(0x0d1830, 1).fillRect(0, height * 0.70, width, height * 0.30);
+    const panelWidth = Math.min(width * 0.82, 720);
+    const panelHeight = Math.min(height * 0.38, 210);
+    const panel = this.add.rectangle(width / 2, height * 0.48, panelWidth, panelHeight, 0x10172d, 0.92)
+      .setStrokeStyle(Math.max(2, Math.min(width, height) * 0.004), 0x55d6c2, 0.95)
+      .setDepth(81)
+      .setAlpha(0)
+      .setScale(0.94);
 
-    for (let i = 0; i < 64; i += 1) {
-      const x = (i * 173.7) % width;
-      const y = (i * 83.9) % (height * 0.60);
-      const radius = i % 9 === 0 ? 1.5 : i % 3 === 0 ? 1.0 : 0.65;
-      stars.fillStyle(i % 7 === 0 ? 0xe2bd67 : 0xdce7ff, i % 5 === 0 ? 0.90 : 0.58);
-      stars.fillCircle(x, y, radius);
-    }
+    const titleSize = Math.max(30, Math.min(60, Math.min(width, height) * 0.10));
+    const presentsSize = Math.max(15, Math.min(25, Math.min(width, height) * 0.04));
 
-    stars.fillStyle(0x24385b, 0.55).fillCircle(width * 0.76, height * 0.25, Math.max(70, Math.min(width, height) * 0.19));
-    stars.fillStyle(0x55d6c2, 0.08).fillCircle(width * 0.76, height * 0.25, Math.max(115, Math.min(width, height) * 0.27));
-    stars.fillStyle(0xe2bd67, 0.90).fillCircle(width * 0.76, height * 0.25, Math.max(24, Math.min(width, height) * 0.055));
-    stars.fillStyle(0xf4f7ff, 0.22).fillCircle(width * 0.75, height * 0.24, Math.max(16, Math.min(width, height) * 0.035));
+    const title = this.add.text(width / 2, height * 0.455, 'ADMIN HUB GAMES', {
+      fontFamily: 'monospace',
+      fontSize: `${titleSize}px`,
+      fontStyle: 'bold',
+      color: '#f4f7ff',
+      letterSpacing: Math.max(2, Math.round(titleSize * 0.06)),
+      align: 'center',
+    }).setOrigin(0.5).setDepth(82).setAlpha(0).setScale(0.96);
 
-    horizon.fillStyle(0x050816, 1);
-    horizon.beginPath();
-    horizon.moveTo(0, height * 0.68);
-    horizon.lineTo(width * 0.14, height * 0.61);
-    horizon.lineTo(width * 0.28, height * 0.66);
-    horizon.lineTo(width * 0.42, height * 0.57);
-    horizon.lineTo(width * 0.56, height * 0.65);
-    horizon.lineTo(width * 0.70, height * 0.56);
-    horizon.lineTo(width * 0.86, height * 0.63);
-    horizon.lineTo(width, height * 0.57);
-    horizon.lineTo(width, height);
-    horizon.lineTo(0, height);
-    horizon.closePath();
-    horizon.fillPath();
+    const presents = this.add.text(width / 2, height * 0.575, 'presents', {
+      fontFamily: 'sans-serif',
+      fontSize: `${presentsSize}px`,
+      color: '#e2bd67',
+      fontStyle: 'italic',
+      align: 'center',
+    }).setOrigin(0.5).setDepth(82).setAlpha(0);
 
-    horizon.fillStyle(0x24385b, 0.95);
-    horizon.fillRect(width * 0.16, height * 0.53, 28, height * 0.16);
-    horizon.fillRect(width * 0.20, height * 0.48, 20, height * 0.21);
-    horizon.fillRect(width * 0.80, height * 0.51, 30, height * 0.18);
-    horizon.fillRect(width * 0.84, height * 0.46, 20, height * 0.23);
+    // Deliberate cinematic entrance: no click/keypress can accidentally skip it.
+    this.tweens.add({
+      targets: [veil, panel, title, presents],
+      alpha: 1,
+      duration: 850,
+      ease: 'Sine.easeOut',
+    });
 
-    horizon.fillStyle(0x55d6c2, 0.75);
-    horizon.fillRect(width * 0.195, height * 0.50, 4, height * 0.10);
-    horizon.fillRect(width * 0.835, height * 0.48, 4, height * 0.10);
+    this.tweens.add({
+      targets: [panel, title],
+      scale: 1,
+      duration: 850,
+      ease: 'Sine.easeOut',
+    });
 
-    horizon.lineStyle(1, 0x55d6c2, 0.12);
-    for (let i = 0; i < 8; i += 1) {
-      const y = height * (0.72 + i * 0.035);
-      horizon.lineBetween(width * 0.08, y, width * 0.92, y);
-    }
-
-    horizon.fillStyle(0xe2bd67, 0.45);
-    horizon.fillRect(width * 0.10, height * 0.695, width * 0.18, 1);
-    horizon.fillRect(width * 0.72, height * 0.695, width * 0.18, 1);
-  }
-
-  private drawLogoMark(x: number, y: number, minDimension: number) {
-    const g = this.logoMark;
-    if (!g) return;
-
-    const s = Math.max(20, Math.min(42, minDimension * 0.065));
-    g.lineStyle(Math.max(2, s * 0.055), 0x55d6c2, 1);
-    g.strokeCircle(x, y, s);
-    g.lineStyle(Math.max(1, s * 0.035), 0xe2bd67, 0.95);
-    g.strokeCircle(x, y, s * 0.70);
-
-    g.fillStyle(0x55d6c2, 0.95);
-    g.fillTriangle(x, y - s * 0.46, x - s * 0.32, y + s * 0.28, x + s * 0.32, y + s * 0.28);
-
-    g.fillStyle(0x070b1d, 1);
-    g.fillCircle(x, y, s * 0.30);
-    g.fillStyle(0xf4f7ff, 0.95);
-    g.fillRect(x - s * 0.055, y - s * 0.17, s * 0.11, s * 0.34);
-  }
-
-  private positionPlayer(progress: number) {
-    if (!this.player) return;
-
-    const width = this.scale.width;
-    const height = this.scale.height;
-    const eased = Phaser.Math.Easing.Sine.InOut(Phaser.Math.Clamp(progress, 0, 1));
-
-    this.player.x = Phaser.Math.Linear(-Math.max(60, width * 0.08), width * 0.50, eased);
-    this.player.y = height * 0.72 + Math.sin(this.elapsed / 105) * 1.2;
-    this.playerGlow?.setPosition(this.player.x, height * 0.75);
-  }
-
-  private revealBrand(alpha: number) {
-    this.topLabel?.setAlpha(alpha * 0.9);
-    this.logoMark?.setAlpha(alpha);
-    this.logoTitle?.setAlpha(alpha);
-    this.logoRule?.setAlpha(alpha).setScale(1, 1);
-    if (this.logoRule) this.logoRule.scaleX = 0.2 + alpha * 0.8;
-    this.presents?.setAlpha(alpha);
-    this.logoTitle?.setScale(0.97 + alpha * 0.03);
-  }
-
-  private setVeil(alpha: number) {
-    this.veil?.setAlpha(Phaser.Math.Clamp(alpha, 0, 1));
+    // Hold for a full, repeatable publisher beat on laptop and phone.
+    this.time.delayedCall(3400, () => {
+      this.tweens.add({
+        targets: [veil, panel, title, presents],
+        alpha: 0,
+        duration: 1000,
+        ease: 'Sine.easeInOut',
+        onComplete: () => {
+          veil.destroy();
+          panel.destroy();
+          title.destroy();
+          presents.destroy();
+          ambientBrand.setAlpha(1);
+          this.time.delayedCall(300, () => this.leaveIntro());
+        },
+      });
+    });
   }
 
   private leaveIntro() {
     if (this.leaving) return;
     this.leaving = true;
-    this.cameras.main.fadeOut(450, 7, 11, 29);
-    this.time.delayedCall(450, () => this.scene.start('NameEntryScene'));
+    this.cameras.main.fadeOut(700, 22, 18, 14);
+    this.time.delayedCall(700, () => this.scene.start('NameEntryScene'));
+  }
+
+  private drawWorld(width: number, height: number) {
+    const g = this.add.graphics();
+
+    g.fillStyle(0x070b1d, 1).fillRect(0, 0, width, height);
+    g.fillStyle(0x111a42, 1).fillRect(0, height * 0.30, width, height * 0.40);
+    g.fillStyle(0x0d1830, 1).fillRect(0, height * 0.70, width, height * 0.30);
+
+    // Publisher-world starfield: this identity belongs to Admin Hub Games, not to any one game's biome.
+    for (let i = 0; i < 64; i += 1) {
+      const x = (i * 173.7) % width;
+      const y = (i * 83.9) % (height * 0.60);
+      const radius = i % 9 === 0 ? 1.5 : i % 3 === 0 ? 1.0 : 0.65;
+      g.fillStyle(i % 7 === 0 ? 0xe2bd67 : 0xdce7ff, i % 5 === 0 ? 0.90 : 0.58);
+      g.fillCircle(x, y, radius);
+    }
+
+    g.fillStyle(0x24385b, 0.55).fillCircle(width * 0.76, height * 0.25, Math.max(70, Math.min(width, height) * 0.19));
+    g.fillStyle(0x55d6c2, 0.08).fillCircle(width * 0.76, height * 0.25, Math.max(115, Math.min(width, height) * 0.27));
+    g.fillStyle(0xe2bd67, 0.90).fillCircle(width * 0.76, height * 0.25, Math.max(24, Math.min(width, height) * 0.055));
+    g.fillStyle(0xf4f7ff, 0.22).fillCircle(width * 0.75, height * 0.24, Math.max(16, Math.min(width, height) * 0.035));
+
+    g.fillStyle(0x050816, 1);
+    g.beginPath();
+    g.moveTo(0, height * 0.68);
+    g.lineTo(width * 0.14, height * 0.61);
+    g.lineTo(width * 0.28, height * 0.66);
+    g.lineTo(width * 0.42, height * 0.57);
+    g.lineTo(width * 0.56, height * 0.65);
+    g.lineTo(width * 0.70, height * 0.56);
+    g.lineTo(width * 0.86, height * 0.63);
+    g.lineTo(width, height * 0.57);
+    g.lineTo(width, height);
+    g.lineTo(0, height);
+    g.closePath();
+    g.fillPath();
+
+    // Abstract fantasy towers with small teal signal lights.
+    g.fillStyle(0x24385b, 0.95);
+    g.fillRect(width * 0.16, height * 0.53, 28, height * 0.16);
+    g.fillRect(width * 0.20, height * 0.48, 20, height * 0.21);
+    g.fillRect(width * 0.80, height * 0.51, 30, height * 0.18);
+    g.fillRect(width * 0.84, height * 0.46, 20, height * 0.23);
+    g.fillStyle(0x55d6c2, 0.75);
+    g.fillRect(width * 0.195, height * 0.50, 4, height * 0.10);
+    g.fillRect(width * 0.835, height * 0.48, 4, height * 0.10);
+
+    g.lineStyle(1, 0x55d6c2, 0.12);
+    for (let i = 0; i < 8; i += 1) {
+      const y = height * (0.72 + i * 0.035);
+      g.lineBetween(width * 0.08, y, width * 0.92, y);
+    }
+    g.fillStyle(0xe2bd67, 0.45);
+    g.fillRect(width * 0.10, height * 0.695, width * 0.18, 1);
+    g.fillRect(width * 0.72, height * 0.695, width * 0.18, 1);
+
+    this.drawTree(width * 0.16, height * 0.29, 1.0);
+    this.drawTree(width * 0.40, height * 0.28, 0.70);
+    this.drawTree(width * 0.95, height * 0.43, 0.62);
+  }
+
+  private drawTree(x: number, y: number, scale: number) {
+    const g = this.add.graphics();
+    g.fillStyle(0x17213f, 1).fillRect(x - 5 * scale, y + 18 * scale, 10 * scale, 52 * scale);
+    g.fillStyle(0x1f3155, 1);
+    g.fillRect(x - 46 * scale, y, 92 * scale, 17 * scale);
+    g.fillRect(x - 34 * scale, y - 11 * scale, 68 * scale, 16 * scale);
+    g.fillRect(x - 17 * scale, y - 21 * scale, 34 * scale, 13 * scale);
+    g.fillStyle(0x31546a, 1).fillRect(x - 33 * scale, y - 4 * scale, 66 * scale, 8 * scale);
   }
 
   private createPlayer(x: number, y: number) {
-    const c = this.add.container(x, y);
-    const shadow = this.add.ellipse(0, 30, 30, 8, 0x000000, 0.35);
-
-    const cloak = this.add.graphics();
-    cloak.fillStyle(0x1b8f8a, 1);
-    cloak.beginPath();
-    cloak.moveTo(-13, 4);
-    cloak.lineTo(13, 4);
-    cloak.lineTo(9, 28);
-    cloak.lineTo(-11, 28);
-    cloak.closePath();
-    cloak.fillPath();
-    cloak.fillStyle(0x55d6c2, 0.85).fillRect(-3, 5, 6, 22);
-
-    const body = this.add.graphics();
-    body.fillStyle(0xe6c982, 1).fillCircle(0, -12, 8);
-    body.fillStyle(0x11182f, 1).fillRect(-8, -21, 16, 7).fillRect(-11, -17, 22, 4);
-    body.fillStyle(0x24385b, 1).fillRect(-8, -3, 16, 12);
-    body.fillStyle(0xe2bd67, 1).fillRect(-10, 8, 7, 19).fillRect(3, 8, 7, 19);
-    body.fillStyle(0x080d20, 1).fillRect(-12, 27, 9, 5).fillRect(3, 27, 9, 5);
-
-    const staff = this.add.graphics();
-    staff.lineStyle(3, 0xe2bd67, 1);
-    staff.lineBetween(13, 2, 17, 29);
-    staff.fillStyle(0x55d6c2, 1).fillCircle(13, 0, 5);
-    staff.fillStyle(0xffffff, 0.85).fillCircle(13, 0, 2);
-
-    c.add([shadow, cloak, body, staff]);
-    return c;
+    const container = this.add.container(x, y);
+    const g = this.add.graphics();
+    g.fillStyle(0x11182f, 1).fillRect(-10, -22, 20, 10);
+    g.fillStyle(0xe6c982, 1).fillRect(-9, -14, 18, 14);
+    g.fillStyle(0x1b8f8a, 1).fillRect(-11, 0, 22, 19);
+    g.fillStyle(0x55d6c2, 0.90).fillRect(-3, 2, 6, 17);
+    g.fillStyle(0xe2bd67, 1).fillRect(-9, 19, 7, 13);
+    g.fillStyle(0xe2bd67, 1).fillRect(2, 19, 7, 13);
+    g.fillStyle(0x10172d, 1).fillRect(-12, 30, 10, 5);
+    g.fillStyle(0x10172d, 1).fillRect(2, 30, 10, 5);
+    g.fillStyle(0xe2bd67, 1).fillRect(10, 3, 6, 16);
+    g.fillStyle(0x55d6c2, 1).fillCircle(13, 1, 5);
+    container.add(g);
+    return container;
   }
 }
