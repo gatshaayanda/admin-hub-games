@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 
-const HALL_INTRO_KEY = 'admin-hub-games:hall-intro-seen';
+const HALL_INTRO_KEY = 'admin-hub-games:hall-intro-v1-seen';
 
 export class HallIntroScene extends Phaser.Scene {
   private leaving = false;
