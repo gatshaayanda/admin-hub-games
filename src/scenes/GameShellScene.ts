@@ -625,7 +625,8 @@ export class GameShellScene extends Phaser.Scene {
     if (!notes.length) return 'There are no world notes here to remove.';
 
     const founderAdmin = await isFounderAdmin();
-    const visibleNotes = founderAdmin ? notes : notes.filter((note) => note.authorId === (await getAnonymousPlayerId()));
+    const myId = founderAdmin ? null : await getAnonymousPlayerId();
+    const visibleNotes = founderAdmin ? notes : notes.filter((note) => note.authorId === myId);
 
     if (!visibleNotes.length) return 'You have no world notes here to remove.';
 
