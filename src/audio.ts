@@ -123,7 +123,7 @@ export class AdminHubAudio {
 
 export const adminHubAudio = new AdminHubAudio();
 
-// Browsers intentionally gate Web Audio until the user interacts with the page.
+// Browsers intentionally gate Web Audio until the user interacts with the page. Publisher entry requests startup immediately.
 // Install the unlock path at the publisher level so audio can begin during the
 // opening/Hall experience instead of waiting for GameShell to mount.
 const unlockAudio = () => adminHubAudio.start();
