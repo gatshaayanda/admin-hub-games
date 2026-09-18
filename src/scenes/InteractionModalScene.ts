@@ -29,6 +29,7 @@ export class InteractionModalScene extends Phaser.Scene {
       .setDepth(1)
       .setInteractive();
 
+    // Explicit Phaser event types keep strict production builds deterministic.
     backdrop.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
       this.close();
@@ -45,20 +46,11 @@ export class InteractionModalScene extends Phaser.Scene {
 
     const top = height / 2 - panelHeight / 2;
     const title = this.add.text(width / 2, top + 28, data.title, {
-      fontFamily: 'monospace',
-      fontSize: portrait ? '22px' : '28px',
-      fontStyle: 'bold',
-      color: '#fff4d4',
-      align: 'center',
-      wordWrap: { width: panelWidth * 0.82 },
+      fontFamily: 'monospace', fontSize: portrait ? '22px' : '28px', fontStyle: 'bold', color: '#fff4d4', align: 'center', wordWrap: { width: panelWidth * 0.82 },
     }).setOrigin(0.5).setDepth(3);
 
     const subtitle = this.add.text(width / 2, top + 62, data.subtitle, {
-      fontFamily: 'monospace',
-      fontSize: compact ? '10px' : (portrait ? '12px' : '10px'),
-      color: '#d9bd87',
-      align: 'center',
-      wordWrap: { width: panelWidth * 0.78 },
+      fontFamily: 'monospace', fontSize: compact ? '10px' : (portrait ? '12px' : '10px'), color: '#d9bd87', align: 'center', wordWrap: { width: panelWidth * 0.78 },
     }).setOrigin(0.5).setDepth(3);
 
     const buttonY = height / 2 + panelHeight / 2 - (portrait ? 104 : 86);
@@ -66,12 +58,7 @@ export class InteractionModalScene extends Phaser.Scene {
     const bodyHeight = Math.max(92, buttonY - bodyTop - 34);
 
     const body = this.add.text(width / 2, bodyTop, data.body, {
-      fontFamily: 'monospace',
-      fontSize: compact ? '12px' : (portrait ? '14px' : '12px'),
-      color: '#fff8e8',
-      align: 'center',
-      wordWrap: { width: panelWidth * 0.78 },
-      lineSpacing: compact ? 5 : 7,
+      fontFamily: 'monospace', fontSize: compact ? '12px' : (portrait ? '14px' : '12px'), color: '#fff8e8', align: 'center', wordWrap: { width: panelWidth * 0.78 }, lineSpacing: compact ? 5 : 7,
     }).setOrigin(0.5, 0).setDepth(3);
 
     body.setFixedSize(panelWidth * 0.78, bodyHeight);
@@ -81,14 +68,7 @@ export class InteractionModalScene extends Phaser.Scene {
     const gap = Math.min(panelWidth * (portrait ? 0.18 : 0.20), 120);
     const privateButton = this.makeButton(width / 2 - gap, buttonY, buttonWidth, 50, 'PRIVATE NOTE', 0xd6a84d);
     const worldButton = this.makeButton(width / 2 + gap, buttonY, buttonWidth, 50, 'LEAVE IN WORLD', 0x4d9b98);
-    const closeButton = this.makeButton(
-      width / 2,
-      height / 2 + panelHeight / 2 - 28,
-      Math.min(180, panelWidth * 0.38),
-      44,
-      'CLOSE',
-      0x6d5947,
-    );
+    const closeButton = this.makeButton(width / 2, height / 2 + panelHeight / 2 - 28, Math.min(180, panelWidth * 0.38), 44, 'CLOSE', 0x6d5947);
 
     privateButton.on('pointerdown', async (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
@@ -124,29 +104,16 @@ export class InteractionModalScene extends Phaser.Scene {
       alpha: 0,
       duration: 0,
       onComplete: () => {
-        this.tweens.add({
-          targets: [backdrop, panel, title, subtitle, body, privateButton, worldButton, closeButton],
-          alpha: 1,
-          duration: 180,
-          ease: 'Sine.easeOut',
-        });
+        this.tweens.add({ targets: [backdrop, panel, title, subtitle, body, privateButton, worldButton, closeButton], alpha: 1, duration: 180, ease: 'Sine.easeOut' });
       },
     });
   }
+
   private makeButton(x: number, y: number, width: number, height: number, label: string, accent: number) {
     const portrait = this.scale.height > this.scale.width;
     const button = this.add.container(x, y).setDepth(4);
-    const shape = this.add.rectangle(0, 0, width, height, 0x493526, 0.96)
-      .setStrokeStyle(2, accent, 0.95);
-    const text = this.add.text(0, 0, label, {
-      fontFamily: 'monospace',
-      fontSize: portrait ? '12px' : '9px',
-      fontStyle: 'bold',
-      color: '#fff4d4',
-      align: 'center',
-      letterSpacing: 0.7,
-    }).setOrigin(0.5);
-
+    const shape = this.add.rectangle(0, 0, width, height, 0x493526, 0.96).setStrokeStyle(2, accent, 0.95);
+    const text = this.add.text(0, 0, label, { fontFamily: 'monospace', fontSize: portrait ? '12px' : '9px', fontStyle: 'bold', color: '#fff4d4', align: 'center', letterSpacing: 0.7 }).setOrigin(0.5);
     button.add([shape, text]);
     button.setSize(width, height).setInteractive({ useHandCursor: false });
     return button;
@@ -158,13 +125,8 @@ export class InteractionModalScene extends Phaser.Scene {
     if (this.closing || this.actionRunning) return;
     this.actionRunning = true;
     let message: string | void;
-
-    try {
-      message = await action?.();
-    } catch {
-      message = 'Something went wrong. The world is still here.';
-    }
-
+    try { message = await action?.(); }
+    catch { message = 'Something went wrong. The world is still here.'; }
     this.close();
     if (message) this.registry.set('modalMessage', message);
   }
