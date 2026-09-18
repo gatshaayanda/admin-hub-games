@@ -49,13 +49,7 @@ export class GameShellScene extends Phaser.Scene {
   private ambientGain?: GainNode;
 
   private villages: Village[] = [
-    { id: 'story', name: 'STORY VILLAGE', subtitle: 'Where choices become games', x: 420, y: 350, color: 0x6e5a9b, note: 'Ideas for dialogue, characters, choices, quests and endings live here.' },
-    { id: 'adventure', name: 'ADVENTURE VILLAGE', subtitle: 'Go somewhere and find out', x: 1000, y: 300, color: 0x4d7b5b, note: 'Exploration, maps, inventory, items, puzzles and secrets.' },
-    { id: 'management', name: 'MANAGEMENT VILLAGE', subtitle: 'Build something that keeps moving', x: 1610, y: 380, color: 0xb67a43, note: 'Money, resources, schedules, people, upgrades and simulation.' },
-    { id: 'strategy', name: 'STRATEGY VILLAGE', subtitle: 'Think ahead', x: 380, y: 930, color: 0x496a8a, note: 'Turns, territory, cards, resources, opponents and objectives.' },
-    { id: 'arcade', name: 'ARCADE VILLAGE', subtitle: 'One more run', x: 980, y: 900, color: 0x8d4f58, note: 'Score, timers, enemies, waves, power-ups and increasingly difficult challenges.' },
-    { id: 'simulation', name: 'SIMULATION VILLAGE', subtitle: 'Watch a little world live', x: 1610, y: 930, color: 0x6d7650, note: 'Virtual pets, businesses, towns, football management and living systems.' },
-    { id: 'puzzle', name: 'PUZZLE VILLAGE', subtitle: 'There must be a way', x: 2100, y: 650, color: 0x8b6b3f, note: 'Grid rules, objects, logic, moves, undo, hints and satisfying solutions.' },
+    { id: 'systems-hall', name: 'SYSTEMS HALL', subtitle: 'The shared lobby of Admin Hub Games', x: 1180, y: 760, color: 0x2f7775, note: 'The first lobby. The systems once imagined as separate houses are gathered here while the foundation is being built.' },
   ];
 
   constructor() {
@@ -67,7 +61,7 @@ export class GameShellScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#d9c28f');
     this.drawWorld();
 
-    this.player = this.createPlayer(1180, 1120);
+    this.player = this.createPlayer(1180, 1040);
     this.player.setDepth(20);
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
@@ -192,58 +186,31 @@ export class GameShellScene extends Phaser.Scene {
 
   private drawWorld() {
     const g = this.add.graphics();
-    g.fillStyle(0xe7d6a4, 1).fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-    g.fillStyle(0xc59a60, 1).fillRect(0, 360, WORLD_WIDTH, WORLD_HEIGHT - 360);
-
-    g.lineStyle(56, 0xb18456, 1);
+    g.fillStyle(0xe8d6a8, 1).fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    g.fillStyle(0xd0ad70, 1).fillRect(0, WORLD_HEIGHT * 0.58, WORLD_WIDTH, WORLD_HEIGHT * 0.42);
+    g.fillStyle(0xa76545, 1);
     g.beginPath();
-    g.moveTo(1180, 1350); g.lineTo(1180, 760); g.lineTo(420, 350);
-    g.moveTo(1180, 760); g.lineTo(1000, 300);
-    g.moveTo(1180, 760); g.lineTo(1610, 380);
-    g.moveTo(1180, 760); g.lineTo(380, 930);
-    g.moveTo(1180, 760); g.lineTo(980, 900);
-    g.moveTo(1180, 760); g.lineTo(1610, 930);
-    g.moveTo(1180, 760); g.lineTo(2100, 650);
-    g.strokePath();
-    g.lineStyle(4, 0x9a7248, 0.7).strokeCircle(1180, 760, 125);
+    g.moveTo(0, 980); g.lineTo(520, 840); g.lineTo(980, 900); g.lineTo(1420, 820); g.lineTo(1900, 900); g.lineTo(WORLD_WIDTH, 820);
+    g.lineTo(WORLD_WIDTH, WORLD_HEIGHT); g.lineTo(0, WORLD_HEIGHT); g.closePath(); g.fillPath();
 
-    g.fillStyle(0x7da3a3, 0.9).fillEllipse(1980, 1160, 260, 130);
-    g.fillStyle(0xd5bd84, 1).fillEllipse(1980, 1160, 190, 80);
+    // Lobby foundation: one readable Systems Hall first. Former system houses are intentionally absent.
+    this.drawBuilding(1180, 760, 300, 170, 0xe9dfc4, 0x2f7775, 'SYSTEMS HALL');
+    this.add.circle(1180, 760, 68, 0x0f5a60, 0.14).setStrokeStyle(4, 0x2f7775, 0.9).setDepth(4);
+    this.add.text(1180, 760, '✦', { fontFamily: 'sans-serif', fontSize: '54px', color: '#f2d27b' }).setOrigin(0.5).setDepth(5);
+    this.add.text(1180, 652, 'SYSTEMS HALL', { fontFamily: 'monospace', fontSize: '24px', color: '#2e241e', stroke: '#e7d6a4', strokeThickness: 6 }).setOrigin(0.5).setDepth(6);
+    this.add.text(1180, 875, 'THE LOBBY · ONE PLACE TO BEGIN', { fontFamily: 'monospace', fontSize: '16px', color: '#594838' }).setOrigin(0.5).setDepth(6);
+    this.add.text(1180, 920, 'EXPLORE SYSTEMS  ·  LEAVE A NOTE  ·  BUILD GAMES', { fontFamily: 'monospace', fontSize: '13px', color: '#594838' }).setOrigin(0.5).setDepth(6);
 
-    for (let i = 0; i < 70; i += 1) {
-      const x = 45 + ((i * 173) % 2260);
-      const y = 130 + ((i * 97) % 1160);
-      if (Phaser.Math.Distance.Between(x, y, 1180, 760) < 180) continue;
-      this.drawGrass(x, y, 0.65 + (i % 4) * 0.1);
-    }
+    // Simple paths converge on the Hall instead of branching into separate houses.
+    g.lineStyle(22, 0xb48b58, 0.7);
+    g.lineBetween(1180, 1180, 1180, 900);
+    g.lineBetween(1180, 760, 650, 760);
+    g.lineBetween(1180, 760, 1710, 760);
+    g.lineBetween(1180, 760, 1180, 360);
 
-    this.drawTree(150, 180, 1.5);
-    this.drawTree(2250, 180, 1.1);
-    this.drawTree(2280, 1180, 1.35);
-    this.drawTree(160, 1160, 1);
-    this.drawBuilding(1180, 1160, 190, 100, 0xeee1c2, 0x53635c, 'HOME / STUDIO');
-    this.add.text(1180, 1088, 'YOUR LITTLE PLACE', { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '16px' : '13px', color: '#4b3829', stroke: '#f0dfb6', strokeThickness: 5 }).setOrigin(0.5).setDepth(6);
-
-    this.drawBuilding(1180, 760, 190, 104, 0xe9dfc4, 0x2f7775, 'SYSTEMS HALL');
-    this.add.circle(1180, 760, 38, 0x0f5a60, 0.18).setStrokeStyle(3, 0x2f7775, 0.8).setDepth(4);
-    this.add.text(1180, 760, '✦', { fontFamily: 'sans-serif', fontSize: '34px', color: '#f2d27b' }).setOrigin(0.5).setDepth(5);
-    this.add.text(1180, 704, 'SYSTEMS HALL', { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '18px' : '16px', color: '#2e241e', stroke: '#e7d6a4', strokeThickness: 5 }).setOrigin(0.5).setDepth(6);
-    this.add.text(1180, 724, 'the village crossroads', { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '12px' : '10px', color: '#594838' }).setOrigin(0.5).setDepth(6);
-
-    // The lobby starts as one place: Systems Hall. The former system houses are
-    // represented inside the Hall rather than scattered across the first play space.
-    this.add.text(1180, 505, 'THE SYSTEMS BEGIN HERE', { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '18px' : '16px', color: '#2e241e', stroke: '#e7d6a4', strokeThickness: 5 }).setOrigin(0.5).setDepth(6);
-    this.add.text(1180, 528, 'one hall · many possible games', { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '12px' : '10px', color: '#594838' }).setOrigin(0.5).setDepth(6);
-  }
-
-  private drawVillage(village: Village) {
-    const g = this.add.graphics();
-    g.fillStyle(village.color, 0.16).fillCircle(village.x, village.y, 105);
-    g.lineStyle(3, village.color, 0.6).strokeCircle(village.x, village.y, 105);
-    this.drawBuilding(village.x, village.y, 130, 78, 0xf0dfb6, village.color, village.name.replace(' VILLAGE', ''));
-    this.add.text(village.x, village.y + 64, village.name, { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '19px' : '14px', color: '#342a22', stroke: '#e7d6a4', strokeThickness: 5 }).setOrigin(0.5).setDepth(7);
-    this.add.text(village.x, village.y + 86, village.subtitle, { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '12px' : '9px', stroke: '#e7d6a4', strokeThickness: 3 }).setOrigin(0.5).setDepth(7);
-    this.add.text(village.x + 72, village.y - 72, '✦', { fontFamily: 'sans-serif', fontSize: '24px', color: '#fff1bd', stroke: '#493526', strokeThickness: 4 }).setOrigin(0.5).setDepth(8);
+    for (const [x, y] of [[420, 430], [1940, 430], [420, 1090], [1940, 1090]] as const) this.drawTree(x, y, 1);
+    this.drawTree(760, 420, 0.8); this.drawTree(1600, 420, 0.8);
+    this.drawBuilding(1180, 1120, 180, 100, 0xf0e4c6, 0x493526, 'PLAYER CAMP');
   }
 
   private drawBuilding(x: number, y: number, w: number, h: number, wall: number, roof: number, label: string) {
