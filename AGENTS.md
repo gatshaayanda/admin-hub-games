@@ -232,11 +232,29 @@ The repository contains `firestore.rules` with narrow author-scoped write/delete
 
 Shared-world failures must degrade gracefully: the player should still be able to wander, use the private Gamebook, and play locally when Firebase/network access is unavailable.
 
-## Interaction Modal State Contract
+## Location Interaction State Contract
 
-World interactions use `InteractionModalScene` as a dedicated Phaser overlay scene. The gameplay scene pauses while the modal is open and resumes when it closes. Phaser's scene lifecycle explicitly supports this pause/launch/resume modal pattern. citehttps://docs.phaser.io/phaser/concepts/scenes
+Location interactions use a native HTML dialog-style menu layered above the Phaser world. This is deliberate: the menu and note composer must not depend on Phaser Scene lifecycle mutation during a mobile pointer event. The GameShell remains running while the native menu owns the screen, and gameplay input is guarded until the menu closes.
 
-The modal must provide real pointer/touch buttons for every action. Keyboard hints (`E`, `SPACE`, `ESC`) are optional desktop shortcuts, never the only way to dismiss or act on a modal. Interactive modal objects should stop propagation so a button tap cannot also trigger a backdrop close. Phaser's unified pointer API covers both mouse and touch. citehttps://docs.phaser.io/phaser/concepts/input
+Every location uses the same interaction contract:
+
+```
+WALK / APPROACH
+      ↓
+EXPLORE
+      ↓
+native location menu
+      ↓
+PRIVATE NOTE  |  LEAVE IN WORLD
+      ↓
+native note composer
+      ↓
+close DOM UI first
+      ↓
+local save or Firestore write
+```
+
+The menu must provide real pointer/touch buttons for every action. Keyboard ESC is an optional desktop escape, never the only way to dismiss or act on a location. Native HTML controls are preferred for discrete mobile actions because they avoid Phaser pointer-dispatch and SceneManager teardown hazards. Touch targets should remain at least 48px where practical.
 
 Doorway interactions must have an explicit proximity prompt and, where appropriate, a small automatic trigger when the player crosses the doorway threshold. Never require a physical keyboard key to advance a mobile-only flow.
 
