@@ -843,3 +843,4 @@ export class GameShellScene extends Phaser.Scene {
     window.addEventListener('pointerdown', start, { once: true });
     window.addEventListener('keydown', start, { once: true });
   }
+}
