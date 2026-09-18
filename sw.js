@@ -1,4 +1,4 @@
-const CACHE_NAME = 'admin-hub-games-v3';
+const CACHE_NAME = 'admin-hub-games-v4';
 const CORE_ASSETS = [
   '/',
   '/manifest.webmanifest',
@@ -51,13 +51,14 @@ self.addEventListener('fetch', (event) => {
   }
 
   const destination = request.destination;
+  const pathname = new URL(request.url).pathname.toLowerCase();
+  const staticExtension = /\.(?:js|mjs|css|png|jpe?g|webp|gif|svg|ico|avif|mp3|wav|ogg|m4a|woff2?|ttf|json|webmanifest)$/i.test(pathname);
   const cacheable = destination === 'script'
     || destination === 'style'
     || destination === 'image'
     || destination === 'font'
     || destination === 'audio'
-    || request.url.endsWith('.json')
-    || request.url.endsWith('.webmanifest');
+    || staticExtension;
 
   if (!cacheable) return;
 
