@@ -197,7 +197,17 @@ export class InteractionModalScene extends Phaser.Scene {
     });
 
     if (this.closing) return;
-    await this.runAction(action ? () => action(text || undefined) : undefined);
+
+    // Close the Phaser modal before starting the Firestore write. The Android
+    // browser must not keep a Phaser Scene alive while a native touch action
+    // waits on Firebase/network I/O.
+    const publish = action;
+    this.close();
+    if (!publish) return;
+
+    window.setTimeout(() => {
+      void publish(text || undefined);
+    }, 0);
   }
 
   private async runAction(action?: () => Promise<string | void> | string | void) {
