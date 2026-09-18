@@ -7,21 +7,33 @@ export class AdminHubAudio {
 
   start() {
     if (this.started) {
-      void this.context?.resume();
+      this.resume();
       return;
     }
 
     const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AudioContextClass) return;
 
-    this.context = new AudioContextClass();
-    this.master = this.context.createGain();
-    this.master.gain.value = 0.035;
-    this.master.connect(this.context.destination);
-    this.started = true;
-    void this.context.resume();
-    this.enabled = true;
-    this.scheduleBar();
+    try {
+      this.context = new AudioContextClass();
+      this.master = this.context.createGain();
+      this.master.gain.value = 0.035;
+      this.master.connect(this.context.destination);
+      this.started = true;
+      this.enabled = true;
+      this.resume();
+      this.scheduleBar();
+    } catch {
+      this.context = undefined;
+      this.master = undefined;
+      this.started = false;
+      this.enabled = false;
+    }
+  }
+
+  resume() {
+    if (!this.started || !this.context) return;
+    if (this.context.state === 'suspended') void this.context.resume();
   }
 
   stop() {
