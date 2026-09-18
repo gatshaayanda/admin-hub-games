@@ -1,7 +1,9 @@
 const DB_NAME = 'admin-hub-games';
 const DB_VERSION = 3;
 
-export type PrivateGamebookNote = { id: string; village: string; text: string; createdAt: number };\n\nexport type LocalWorldNote = {
+export type PrivateGamebookNote = { id: string; village: string; text: string; createdAt: number };
+
+export type LocalWorldNote = {
   id: string;
   remoteId?: string;
   authorId: string;
