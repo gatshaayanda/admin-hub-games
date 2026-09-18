@@ -75,8 +75,6 @@ canvas {
   visibility: hidden;
   pointer-events: none;
 }
-
-#ahg-touch-controls {
   position: fixed;
   inset: auto 0 0;
   z-index: 1000;
