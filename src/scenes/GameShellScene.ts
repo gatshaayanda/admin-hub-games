@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { createWorldNote, deleteWorldNote, getAnonymousPlayerId, loadWorldNotes, type WorldNote } from '../firebase/firebase';
+import { type InteractionModalData } from './InteractionModalScene';
 
 type Village = {
   id: string;
@@ -33,6 +34,7 @@ export class GameShellScene extends Phaser.Scene {
   private playerLabel!: Phaser.GameObjects.Text;
   private statusText!: Phaser.GameObjects.Text;
   private gamebookOpen = false;
+  private interactionModalOpen = false;
   private gamebookOverlay?: Phaser.GameObjects.Container;
   private activeVillage?: Village;
   private privateNotes: PrivateNote[] = [];
@@ -78,7 +80,7 @@ export class GameShellScene extends Phaser.Scene {
 
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layoutViewport, this);
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (this.gamebookOpen) return;
+      if (this.gamebookOpen || this.interactionModalOpen) return;
       if (this.isInReservedUi(pointer.x, pointer.y)) return;
       const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
       this.target = new Phaser.Math.Vector2(worldPoint.x, worldPoint.y);
@@ -91,7 +93,13 @@ export class GameShellScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number) {
-    if (!this.player || this.gamebookOpen) return;
+    if (!this.player || this.gamebookOpen || this.interactionModalOpen) return;
+
+    const modalMessage = this.registry.get('modalMessage');
+    if (typeof modalMessage === 'string' && modalMessage) {
+      this.registry.remove('modalMessage');
+      this.showTransientMessage(modalMessage);
+    }
 
     let dx = this.joystickVector.x;
     let dy = this.joystickVector.y;
@@ -284,14 +292,25 @@ export class GameShellScene extends Phaser.Scene {
   private createWorldInteractions() {
     this.villages.forEach((village) => {
       const zone = this.add.zone(village.x, village.y, 190, 150).setInteractive();
-      zone.on('pointerdown', () => {
+      zone.on('pointerdown', (pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
+        event.stopPropagation();
         this.player.x = Phaser.Math.Clamp(village.x + 145, 42, WORLD_WIDTH - 42);
         this.player.y = Phaser.Math.Clamp(village.y + 120, 90, WORLD_HEIGHT - 50);
-        this.showVillageNote(village);
+        this.interactAt(village);
       });
     });
+
+    const homeZone = this.add.zone(1180, 1160, 220, 150).setInteractive();
+    homeZone.on('pointerdown', (pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
+      this.player.x = 1180;
+      this.player.y = 1240;
+      this.interactAt(this.getHomeLocation());
+    });
+
     const chessZone = this.add.zone(1180, 585, 220, 160).setInteractive();
-    chessZone.on('pointerdown', () => {
+    chessZone.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
       this.player.x = 1180;
       this.player.y = 690;
       this.interact();
@@ -299,63 +318,88 @@ export class GameShellScene extends Phaser.Scene {
   }
 
   private updateNearbyPrompt() {
-    const nearest = this.findNearestVillage(145);
+    const nearest = this.findNearestLocation(145);
     this.activeVillage = nearest;
     if (nearest) {
-      this.hintText.setText(`${nearest.name}  ·  E / EXPLORE TO LEAVE A NOTE`);
+      this.hintText.setText(`${nearest.name}  ·  E / EXPLORE`);
     } else {
       this.hintText.setText('WASD / ARROWS  ·  TAP TO WALK  ·  E EXPLORE  ·  B GAMEBOOK');
     }
   }
 
-  private findNearestVillage(radius: number): Village | undefined {
+  private getHomeLocation(): Village {
+    return {
+      id: 'home',
+      name: 'YOUR LITTLE PLACE',
+      subtitle: 'Your room in the world',
+      x: 1180,
+      y: 1160,
+      color: 0x53635c,
+      note: 'This is your little place inside Admin Hub Games. It is the home base for your player, your discoveries and the games you build over time.',
+    };
+  }
+
+  private findNearestLocation(radius: number): Village | undefined {
     let nearest: Village | undefined;
     let nearestDistance = radius;
-    for (const village of this.villages) {
-      const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, village.x, village.y);
-      if (distance < nearestDistance) { nearest = village; nearestDistance = distance; }
+
+    const locations = [...this.villages, this.getHomeLocation()];
+    for (const location of locations) {
+      const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, location.x, location.y);
+      if (distance < nearestDistance) {
+        nearest = location;
+        nearestDistance = distance;
+      }
     }
+
     const chessDistance = Phaser.Math.Distance.Between(this.player.x, this.player.y, 1180, 585);
-    if (chessDistance < nearestDistance) nearest = { id: 'chess', name: 'CHESS HOUSE', subtitle: 'you + the other you', x: 1180, y: 585, color: 0x73533a, note: 'Your real chess life meets this little world here. One you plays on Chess.com. This one wanders, notices things and leaves ideas behind.' };
+    if (chessDistance < nearestDistance) {
+      nearest = {
+        id: 'chess',
+        name: 'CHESS HOUSE',
+        subtitle: 'you + the other you',
+        x: 1180,
+        y: 585,
+        color: 0x73533a,
+        note: 'Your real chess life meets this little world here. One you plays on Chess.com. This one wanders, notices things and leaves ideas behind.',
+      };
+    }
+
     return nearest;
   }
 
   private interact() {
-    if (this.gamebookOpen) return;
-    const village = this.findNearestVillage(170);
-    if (!village) {
+    if (this.gamebookOpen || this.interactionModalOpen) return;
+    const location = this.findNearestLocation(170);
+    if (!location) {
       this.showTransientMessage('Nothing here yet. Keep wandering.');
       return;
     }
-    this.showVillageNote(village);
+    this.interactAt(location);
   }
 
-  private showVillageNote(village: Village) {
-    this.gamebookOpen = true;
-    this.target = null;
-    const panelWidth = Math.min(this.scale.width * 0.88, 700);
-    const panelHeight = Math.min(this.scale.height * 0.78, 440);
-    const panel = this.add.container(this.scale.width / 2, this.scale.height / 2).setScrollFactor(0).setDepth(100);
-    const backdrop = this.add.rectangle(0, 0, panelWidth, panelHeight, 0x241b16, 0.97).setStrokeStyle(3, village.color, 1);
-    const title = this.add.text(0, -panelHeight / 2 + 34, village.name, { fontFamily: 'monospace', fontSize: `${Math.max(18, Math.min(27, panelWidth * 0.04))}px`, color: '#fff4d4', stroke: '#493526', strokeThickness: 3 }).setOrigin(0.5);
-    const subtitle = this.add.text(0, -panelHeight / 2 + 68, village.subtitle, { fontFamily: 'monospace', fontSize: '10px', color: '#d9bd87' }).setOrigin(0.5);
-    const body = this.add.text(0, -panelHeight / 2 + 110, village.note, { fontFamily: 'monospace', fontSize: '12px', color: '#fff8e8', align: 'center', wordWrap: { width: panelWidth * 0.78 }, lineSpacing: 6 }).setOrigin(0.5);
-    const privateButton = this.makePanelButton(-panelWidth * 0.22, panelHeight / 2 - 58, 'PRIVATE NOTE');
-    const worldButton = this.makePanelButton(panelWidth * 0.22, panelHeight / 2 - 58, 'LEAVE IN WORLD');
-    const close = this.add.text(0, panelHeight / 2 - 16, 'E / SPACE / TAP OUTSIDE TO CLOSE', { fontFamily: 'monospace', fontSize: '8px', color: '#d9bd87' }).setOrigin(0.5);
-    panel.add([backdrop, title, subtitle, body, privateButton, worldButton, close]);
-    panel.setAlpha(0);
-    this.tweens.add({ targets: panel, alpha: 1, duration: 180 });
+  private interactAt(location: Village) {
+    if (this.gamebookOpen || this.interactionModalOpen) return;
 
-    privateButton.on('pointerdown', () => this.writePrivateNote(village));
-    worldButton.on('pointerdown', () => this.writeWorldNote(village, panel));
-    this.input.keyboard?.once('keydown-E', () => this.closeVillagePanel(panel));
-    this.input.keyboard?.once('keydown-SPACE', () => this.closeVillagePanel(panel));
-    this.input.once('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (this.isInReservedUi(pointer.x, pointer.y)) return;
-      if (Math.abs(pointer.x - this.scale.width / 2) < panelWidth / 2 && Math.abs(pointer.y - this.scale.height / 2) < panelHeight / 2) return;
-      this.closeVillagePanel(panel);
+    this.target = null;
+    this.interactionModalOpen = true;
+
+    const modal = this.scene.get('InteractionModalScene') as Phaser.Scene;
+    modal.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.interactionModalOpen = false;
     });
+
+    const data: InteractionModalData = {
+      title: location.name,
+      subtitle: location.subtitle,
+      body: location.note,
+      accent: location.color,
+      onPrivateNote: () => this.writePrivateNote(location),
+      onWorldNote: () => this.writeWorldNote(location),
+    };
+
+    this.scene.pause('GameShellScene');
+    this.scene.launch('InteractionModalScene', data);
   }
 
   private makePanelButton(x: number, y: number, label: string) {
@@ -369,30 +413,25 @@ export class GameShellScene extends Phaser.Scene {
 
   private async writePrivateNote(village: Village) {
     const text = window.prompt(`Private note for ${village.name}:`, '')?.trim();
-    if (!text) return;
+    if (!text) return 'Private note cancelled.';
     this.privateNotes.push({ village: village.id, text: text.slice(0, 500) });
     this.savePrivateNotes();
-    this.showTransientMessage('Saved privately in your Gamebook.');
+    return 'Saved privately in your Gamebook.';
   }
 
-  private async writeWorldNote(village: Village, panel: Phaser.GameObjects.Container) {
+  private async writeWorldNote(village: Village) {
     const text = window.prompt(`Leave a note in ${village.name}. Other players will see it:`, '')?.trim();
-    if (!text) return;
+    if (!text) return 'World note cancelled.';
+
     const authorName = String(this.registry.get('playerName') || 'Player');
     const note = await createWorldNote(village.id, authorName, text.slice(0, 500));
+
     if (note) {
       this.worldNotes = [note, ...this.worldNotes];
-      this.showTransientMessage('Your note is now part of the world.');
-    } else {
-      this.showTransientMessage('Could not reach the shared world. Your private game still works.');
+      return 'Your note is now part of the world.';
     }
-    this.closeVillagePanel(panel);
-  }
 
-  private closeVillagePanel(panel: Phaser.GameObjects.Container) {
-    if (!panel.active) return;
-    this.gamebookOpen = false;
-    this.tweens.add({ targets: panel, alpha: 0, duration: 140, onComplete: () => panel.destroy() });
+    return 'Could not reach the shared world. Your private game still works.';
   }
 
   private showTransientMessage(message: string) {
