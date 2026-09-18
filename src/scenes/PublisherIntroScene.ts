@@ -171,7 +171,11 @@ export class PublisherIntroScene extends Phaser.Scene {
     if (this.leaving) return;
     this.leaving = true;
     this.cameras.main.fadeOut(450, 22, 18, 14);
-    this.time.delayedCall(450, () => this.scene.start('NameEntryScene'));
+    this.time.delayedCall(450, () => this.scene.start(this.shouldShowHallIntro() ? 'HallIntroScene' : 'GameShellScene'));
+  }
+
+  private shouldShowHallIntro() {
+    try { return window.localStorage.getItem('admin-hub-games:hall-intro-v1-seen') !== 'seen'; } catch { return true; }
   }
 
   private drawWorld(width: number, height: number) {
