@@ -114,6 +114,7 @@ export class InteractionModalScene extends Phaser.Scene {
   }
 
   private makeButton(x: number, y: number, width: number, height: number, label: string, accent: number) {
+    const portrait = this.scale.height > this.scale.width;
     const button = this.add.container(x, y).setDepth(4);
     const shape = this.add.rectangle(0, 0, width, height, 0x493526, 0.96)
       .setStrokeStyle(2, accent, 0.95);
