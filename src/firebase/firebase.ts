@@ -95,6 +95,16 @@ export async function loadWorldNotes(villageId: string): Promise<WorldNote[]> {
   }
 }
 
+export async function isFounderAdmin(): Promise<boolean> {
+  try {
+    const user = await ensureAnonymousPlayer();
+    const token = await user.getIdTokenResult();
+    return token.claims.admin === true;
+  } catch {
+    return false;
+  }
+}
+
 export async function deleteWorldNote(noteId: string): Promise<boolean> {
   try {
     await ensureAnonymousPlayer();
