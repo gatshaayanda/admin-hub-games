@@ -36,7 +36,7 @@ export class InteractionModalScene extends Phaser.Scene {
       event: Phaser.Types.Input.EventData,
     ) => {
       event.stopPropagation();
-      this.time.delayedCall(0, () => this.close());
+      window.setTimeout(() => this.close(), 0);
     };
 
     backdrop.on('pointerdown', pointerHandler);
@@ -109,7 +109,7 @@ export class InteractionModalScene extends Phaser.Scene {
       event: Phaser.Types.Input.EventData,
     ) => {
       event.stopPropagation();
-      this.time.delayedCall(0, () => { void this.runAction(data.onPrivateNote); });
+      window.setTimeout(() => { void this.runAction(data.onPrivateNote); }, 0);
     });
 
     worldButton.on('pointerdown', async (
@@ -119,7 +119,7 @@ export class InteractionModalScene extends Phaser.Scene {
       event: Phaser.Types.Input.EventData,
     ) => {
       event.stopPropagation();
-      this.time.delayedCall(0, () => this.openWorldNoteComposer(data.onWorldNote));
+      window.setTimeout(() => this.openWorldNoteComposer(data.onWorldNote), 0);
     });
 
     closeButton.on('pointerdown', (
@@ -236,15 +236,15 @@ export class InteractionModalScene extends Phaser.Scene {
       event.stopPropagation();
       const text = (input.node as HTMLTextAreaElement).value.trim();
       if (!text) return;
-      this.time.delayedCall(0, async () => {
+      window.setTimeout(async () => {
         finish();
         await this.runAction(action ? () => action(text) : undefined);
-      });
+      }, 0);
     });
 
     cancel.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
-      this.time.delayedCall(0, finish);
+      window.setTimeout(finish, 0);
     });
 
     overlay.add([backdrop, panel, title, hint, input, publish, cancel]);
@@ -270,8 +270,14 @@ export class InteractionModalScene extends Phaser.Scene {
   private close() {
     if (this.closing) return;
     this.closing = true;
-    this.registry.remove('activeInteractionModal');
-    this.scene.stop('InteractionModalScene');
-    this.scene.resume('GameShellScene');
+
+    // Android WebView/Chrome can be unstable when a Scene is stopped/resumed
+    // from Phaser's own pointer/timer dispatch. Move the Scene-manager mutation
+    // onto the browser task queue so Phaser has completely finished the touch.
+    window.setTimeout(() => {
+      this.registry.remove('activeInteractionModal');
+      this.scene.stop('InteractionModalScene');
+      this.scene.resume('GameShellScene');
+    }, 0);
   }
 }
