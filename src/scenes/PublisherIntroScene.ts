@@ -11,6 +11,8 @@ export class PublisherIntroScene extends Phaser.Scene {
   private panel?: Phaser.GameObjects.Rectangle;
   private title?: Phaser.GameObjects.Text;
   private presents?: Phaser.GameObjects.Text;
+  private signAdmin?: Phaser.GameObjects.Text;
+  private signGames?: Phaser.GameObjects.Text;
 
   constructor() {
     super('PublisherIntroScene');
@@ -87,6 +89,13 @@ export class PublisherIntroScene extends Phaser.Scene {
     this.playerShadow = this.add.ellipse(this.player.x, height * 0.75, 28, 9, 0x3a2b21, 0.28)
       .setDepth(19);
 
+    this.signAdmin = this.add.text(width * 0.465, height * 0.484, 'ADMIN HUB', {
+      fontFamily: 'monospace', fontSize: '9px', color: '#403126', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(8);
+    this.signGames = this.add.text(width * 0.465, height * 0.514, 'GAMES', {
+      fontFamily: 'monospace', fontSize: '7px', color: '#73563d', letterSpacing: 2,
+    }).setOrigin(0.5).setDepth(8);
+
     this.ambientBrand = this.add.text(width * 0.055, height * 0.065, 'ADMIN HUB GAMES', {
       fontFamily: 'monospace',
       fontSize: Math.max(14, Math.min(20, width * 0.018)) + 'px',
@@ -147,6 +156,8 @@ export class PublisherIntroScene extends Phaser.Scene {
 
     this.ambientBrand?.setPosition(width * 0.055, height * 0.065)
       .setFontSize(Math.max(14, Math.min(20, width * 0.018)));
+    this.signAdmin?.setPosition(width * 0.465, height * 0.484);
+    this.signGames?.setPosition(width * 0.465, height * 0.514);
 
     const panelWidth = Math.min(width * 0.82, 720);
     const panelHeight = Math.min(height * 0.38, 210);
@@ -253,19 +264,6 @@ export class PublisherIntroScene extends Phaser.Scene {
     g.fillStyle(0x4b392b, 1).fillRect(width * 0.46, height * 0.47, 7, 70);
     g.fillStyle(0x403126, 1).fillRect(width * 0.405, height * 0.465, 120, 39);
     g.fillStyle(0xd2bc8e, 1).fillRect(width * 0.412, height * 0.472, 106, 25);
-    this.add.text(width * 0.465, height * 0.484, 'ADMIN HUB', {
-      fontFamily: 'monospace',
-      fontSize: '9px',
-      color: '#403126',
-      fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(8);
-    this.add.text(width * 0.465, height * 0.514, 'GAMES', {
-      fontFamily: 'monospace',
-      fontSize: '7px',
-      color: '#73563d',
-      letterSpacing: 2,
-    }).setOrigin(0.5).setDepth(8);
-
     this.drawTree(width * 0.16, height * 0.29, 1.18);
     this.drawTree(width * 0.40, height * 0.28, 0.78);
     this.drawTree(width * 0.95, height * 0.43, 0.72);
