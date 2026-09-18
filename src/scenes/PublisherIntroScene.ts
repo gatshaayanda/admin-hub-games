@@ -163,8 +163,10 @@ export class PublisherIntroScene extends Phaser.Scene {
     const horizon = this.horizon;
     if (!bg || !stars || !horizon) return;
 
-    bg.fillGradientStyle(0x070b1d, 0x111a42, 0x070b1d, 0x182a52, 1);
+    bg.fillStyle(0x0b1230, 1);
     bg.fillRect(0, 0, width, height);
+    bg.fillStyle(0x111a42, 0.72);
+    bg.fillRect(0, height * 0.34, width, height * 0.36);
 
     bg.fillStyle(0x15234b, 0.55);
     bg.fillCircle(width * 0.76, height * 0.26, Math.max(90, Math.min(width, height) * 0.20));
