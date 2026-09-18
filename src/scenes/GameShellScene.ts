@@ -461,11 +461,10 @@ export class GameShellScene extends Phaser.Scene {
   }
 
   private async writeWorldNote(village: Village) {
+    // One simple write: the player is already choosing "LEAVE IN WORLD".
+    // Avoid browser confirmation prompts here; they can make the game look frozen.
     const text = window.prompt('Write a note for ' + village.name + '. Other players will see it:', '')?.trim();
     if (!text) return 'World note cancelled.';
-
-    const keyword = window.prompt('Type APPLE to confirm this note should be published to the shared world:', '')?.trim().toLowerCase();
-    if (keyword !== 'apple') return 'Note discarded. Nothing was saved.';
 
     const authorName = String(this.registry.get('playerName') || 'Player');
     this.showTransientMessage('Publishing your note to the shared world…');
@@ -473,7 +472,7 @@ export class GameShellScene extends Phaser.Scene {
       const note = await createWorldNote(village.id, authorName, text.slice(0, 500));
       if (note) {
         this.worldNotes = [note, ...this.worldNotes];
-        return 'APPLE accepted. Your note is now part of the world.';
+        return 'Your note is now part of the shared world.';
       }
       return 'Could not reach the shared world. Nothing was saved.';
     } catch {
@@ -551,9 +550,9 @@ export class GameShellScene extends Phaser.Scene {
     const firstButtonY = top + 92 + notesHeight + buttonHeight / 2 + 6;
     const buttons = [
       ['VIEW WORLD NOTES', () => this.viewWorldNotes()],
-      ['BANANA · DELETE A NOTE', () => this.deleteOwnWorldNote()],
+      ['DELETE A WORLD NOTE', () => this.deleteOwnWorldNote()],
       ['REPORT A WORLD NOTE', () => this.reportWorldNoteFlow().then((message) => this.showTransientMessage(message))],
-      ['ADMIN · VIEW REPORTS', () => this.viewAdminReports().then((message) => this.showTransientMessage(message))],
+      ['WORLD NOTE REPORTS', () => this.viewAdminReports().then((message) => this.showTransientMessage(message))],
       ['HOW TO PLAY THE LOBBY', () => this.showTransientMessage('LOBBY MANUAL · WANDER → EXPLORE → THINK → WRITE → BUILD → RETURN. IDEA WALL = ideas. BUILD CHAMBER = next playable slice. GAME GATE = finished games. GAMEBOOK = private notes. APPLE publishes; BANANA cleans up your own note.')],
       ['CLOSE GAMEBOOK', () => this.closeGamebook()],
     ] as const;
@@ -622,53 +621,27 @@ export class GameShellScene extends Phaser.Scene {
 
   private async deleteOwnWorldNote() {
     const village = this.activeVillage || this.getSystemsHallLocation();
-    const keyword = window.prompt('Type BANANA to open world-note cleanup:', '')?.trim().toLowerCase();
-    if (keyword !== 'banana') return 'Cleanup cancelled. Nothing was deleted.';
-
     const notes = await loadWorldNotes(village.id);
+    if (!notes.length) return 'There are no world notes here to remove.';
+
     const founderAdmin = await isFounderAdmin();
+    const visibleNotes = founderAdmin ? notes : notes.filter((note) => note.authorId === (await getAnonymousPlayerId()));
 
-    if (founderAdmin) {
-      if (!notes.length) return 'BANANA accepted. There are no world notes here to clean up.';
-
-      const choice = window.prompt(
-        notes.map((note, index) => (index + 1) + '. ' + note.authorName + ': ' + note.text).join('\n\n') +
-        '\n\nEnter the note number to delete:',
-      );
-      if (choice === null) return 'Cleanup cancelled.';
-      const index = Number(choice) - 1;
-      const note = notes[index];
-      if (!note) return 'That note was not found.';
-
-      const confirmation = window.prompt(
-        'Delete this world note?\n\n' +
-        note.authorName + ': ' + note.text +
-        '\n\nType BANANA again to confirm founder cleanup:',
-      );
-      if (confirmation?.trim().toLowerCase() !== 'banana') return 'Cleanup cancelled. Nothing was deleted.';
-
-      const deleted = await deleteWorldNote(note.id);
-      return deleted
-        ? 'BANANA accepted. The selected world note was removed from the shared world.'
-        : 'Could not delete that note.';
-    }
-
-    const myId = await getAnonymousPlayerId();
-    const mine = notes.filter((note) => note.authorId === myId);
-    if (!mine.length) return 'BANANA accepted. You have no world notes here. Other players cannot delete your notes; only their own or founder/admin moderation can remove them.';
+    if (!visibleNotes.length) return 'You have no world notes here to remove.';
 
     const choice = window.prompt(
-      mine.length === 1
-        ? 'Delete this note?\n\n' + mine[0].text + '\n\nType BANANA again to confirm.'
-        : mine.map((note, index) => (index + 1) + '. ' + note.text).join('\n\n') + '\n\nEnter the note number to delete:',
+      visibleNotes.map((note, index) => (index + 1) + '. ' + note.authorName + ': ' + note.text).join('\n\n') +
+      '\n\nEnter the note number to delete:',
     );
     if (choice === null) return 'Cleanup cancelled.';
-    if (mine.length === 1 && choice.trim().toLowerCase() !== 'banana') return 'Cleanup cancelled. Nothing was deleted.';
-    const index = mine.length === 1 ? 0 : Number(choice) - 1;
-    const note = mine[index];
+    const index = Number(choice) - 1;
+    const note = visibleNotes[index];
     if (!note) return 'That note was not found.';
+
     const deleted = await deleteWorldNote(note.id);
-    return deleted ? 'BANANA accepted. Your world note was deleted.' : 'Could not delete that note.';
+    return deleted
+      ? 'The selected world note was removed from the shared world.'
+      : 'Could not delete that note.';
   }
 
   private closeGamebook() {
