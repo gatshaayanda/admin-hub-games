@@ -500,7 +500,6 @@ export class GameShellScene extends Phaser.Scene {
     const buttonHeight = portrait ? 44 : 48;
     const buttonGap = 7;
     const actionCount = 6;
-    const actionStackHeight = actionCount * buttonHeight + (actionCount - 1) * buttonGap;
     const top = -panelHeight / 2;
 
     this.gamebookOverlay = this.add.container(width / 2, height / 2)
@@ -566,7 +565,6 @@ export class GameShellScene extends Phaser.Scene {
       shape.setSize(Math.min(280, panelWidth * 0.72), buttonHeight);
       const text = button.list[1] as Phaser.GameObjects.Text;
       text.setFontSize(portrait ? '10px' : '9px');
-      button.removeAllListeners('pointerdown');
       button.on('pointerdown', (_pointer, _localX, _localY, event) => {
         event.stopPropagation();
         action();
