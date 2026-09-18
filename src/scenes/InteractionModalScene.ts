@@ -134,8 +134,9 @@ export class InteractionModalScene extends Phaser.Scene {
 
     this.registry.set('activeInteractionModal', data);
 
-    this.input.keyboard?.once('keydown-E', () => this.close());
-    this.input.keyboard?.once('keydown-SPACE', () => this.close());
+    // E/SPACE are gameplay/interact keys and can be the same event that opened
+    // this modal. Registering listeners for them here can immediately close a
+    // freshly opened modal. ESC remains the explicit keyboard close action.
     this.input.keyboard?.once('keydown-ESC', () => this.close());
 
     const escapeHandler = () => this.close();
