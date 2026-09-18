@@ -532,7 +532,54 @@ export class GameShellScene extends Phaser.Scene {
     if (!noteId) return 'Gamebook closed.';
     const note = notes.find((item) => item.id === noteId);
     if (!note) return 'That note could not be found.';
-    this.showTransientMessage(`${note.village.toUpperCase()}\n\n${note.text}`.slice(0, 700));
+    this.showPrivateNoteDetail(note);
+  }
+
+  private showPrivateNoteDetail(note: PrivateNote) {
+    const width = this.scale.width;
+    const height = this.scale.height;
+    const portrait = height > width;
+    const panelWidth = Math.min(width * 0.92, 680);
+    const panelHeight = Math.min(height * 0.78, portrait ? 560 : 460);
+    const overlay = this.add.container(width / 2, height / 2).setScrollFactor(0).setDepth(330);
+    this.gamebookInputOverlay = overlay;
+
+    const backdrop = this.add.rectangle(0, 0, width, height, 0x17110e, 0.78).setInteractive();
+    backdrop.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => event.stopPropagation());
+
+    const panel = this.add.rectangle(0, 0, panelWidth, panelHeight, 0xeee0ba, 1).setStrokeStyle(4, 0x5a402d, 1);
+    const title = this.add.text(0, -panelHeight / 2 + 30, note.village.toUpperCase(), {
+      fontFamily: 'monospace',
+      fontSize: portrait ? '17px' : '21px',
+      fontStyle: 'bold',
+      color: '#493526',
+      align: 'center',
+      wordWrap: { width: panelWidth - 54 },
+    }).setOrigin(0.5);
+
+    const body = this.add.text(-panelWidth / 2 + 30, -panelHeight / 2 + 78, note.text, {
+      fontFamily: 'monospace',
+      fontSize: portrait ? '12px' : '14px',
+      color: '#493526',
+      wordWrap: { width: panelWidth - 60 },
+      lineSpacing: 7,
+    }).setOrigin(0, 0);
+    body.setFixedSize(panelWidth - 60, panelHeight - 150);
+
+    const closeDetail = () => {
+      overlay.disableInteractive();
+      overlay.setVisible(false);
+      window.setTimeout(() => overlay.destroy(), 0);
+      if (this.gamebookInputOverlay === overlay) this.gamebookInputOverlay = undefined;
+    };
+    const close = this.makePanelButton(0, panelHeight / 2 - 40, 'BACK TO GAMEBOOK');
+    close.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
+      closeDetail();
+    });
+
+    overlay.add([backdrop, panel, title, body, close]);
+    this.input.keyboard?.once('keydown-ESC', closeDetail);
   }
 
   private async writePrivateNote(village: Village) {
