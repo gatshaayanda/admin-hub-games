@@ -129,7 +129,7 @@ export class InteractionModalScene extends Phaser.Scene {
       event: Phaser.Types.Input.EventData,
     ) => {
       event.stopPropagation();
-      this.close();
+      this.time.delayedCall(0, () => this.close());
     });
 
     this.registry.set('activeInteractionModal', data);
