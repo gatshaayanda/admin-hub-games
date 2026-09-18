@@ -3,7 +3,7 @@ import { savePlayerProfile } from '../firebase/firebase';
 
 const PLAYER_NAME_KEY = 'admin-hub-games:player-name';
 const GAMEBOOK_KEY = 'admin-hub-games:gamebook';
-const HALL_INTRO_KEY = 'admin-hub-games:hall-intro-seen';
+const HALL_INTRO_KEY = 'admin-hub-games:hall-intro-v1-seen';
 
 export class NameEntryScene extends Phaser.Scene {
   private inputText = '';
