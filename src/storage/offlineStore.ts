@@ -34,7 +34,8 @@ function openDb() {
       if (!db.objectStoreNames.contains('worldNotes')) db.createObjectStore('worldNotes', { keyPath: 'id' });
       if (!db.objectStoreNames.contains('outbox')) db.createObjectStore('outbox', { keyPath: 'id' });
       if (!db.objectStoreNames.contains('tombstones')) db.createObjectStore('tombstones', { keyPath: 'id' });
-      if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'key' });\n      if (!db.objectStoreNames.contains('gamebookNotes')) db.createObjectStore('gamebookNotes', { keyPath: 'id' });
+      if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'key' });
+      if (!db.objectStoreNames.contains('gamebookNotes')) db.createObjectStore('gamebookNotes', { keyPath: 'id' });
     };
     request.onsuccess = () => {
       const db = request.result;
