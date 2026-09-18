@@ -6,7 +6,7 @@ export type InteractionModalData = {
   body: string;
   accent: number;
   onPrivateNote?: () => Promise<string | void> | string | void;
-  onWorldNote?: () => Promise<string | void> | string | void;
+  onWorldNote?: (text?: string) => Promise<string | void> | string | void;
 };
 
 export class InteractionModalScene extends Phaser.Scene {
@@ -119,7 +119,7 @@ export class InteractionModalScene extends Phaser.Scene {
       event: Phaser.Types.Input.EventData,
     ) => {
       event.stopPropagation();
-      await this.runAction(data.onWorldNote);
+      this.openWorldNoteComposer(data.onWorldNote);
     });
 
     closeButton.on('pointerdown', (
@@ -182,6 +182,73 @@ export class InteractionModalScene extends Phaser.Scene {
   }
 
   private actionRunning = false;
+
+  private openWorldNoteComposer(action?: (text?: string) => Promise<string | void> | string | void) {
+    if (this.closing) return;
+
+    const { width, height } = this.scale;
+    const portrait = height > width;
+    const composerWidth = Math.min(width * 0.88, 560);
+    const composerHeight = Math.min(height * 0.62, portrait ? 420 : 360);
+
+    const overlay = this.add.container(width / 2, height / 2).setDepth(20);
+    const backdrop = this.add.rectangle(0, 0, width, height, 0x100c09, 0.72).setInteractive();
+    backdrop.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => event.stopPropagation());
+
+    const panel = this.add.rectangle(0, 0, composerWidth, composerHeight, 0xeee0ba, 1)
+      .setStrokeStyle(4, 0x4d9b98, 1);
+
+    const title = this.add.text(0, -composerHeight / 2 + 28, 'LEAVE IN WORLD', {
+      fontFamily: 'monospace', fontSize: portrait ? '17px' : '20px', fontStyle: 'bold',
+      color: '#493526', align: 'center'
+    }).setOrigin(0.5);
+
+    const hint = this.add.text(0, -composerHeight / 2 + 58, 'Write something other players can see.', {
+      fontFamily: 'monospace', fontSize: '10px', color: '#73533a',
+      align: 'center', wordWrap: { width: composerWidth - 44 }
+    }).setOrigin(0.5);
+
+    const input = this.add.dom(0, -8, 'textarea', {
+      width: Math.max(220, composerWidth - 64) + 'px',
+      height: Math.max(110, composerHeight - 150) + 'px',
+      background: '#fff8e8',
+      color: '#493526',
+      border: '2px solid #9a744c',
+      borderRadius: '6px',
+      padding: '10px',
+      fontFamily: 'monospace',
+      fontSize: portrait ? '14px' : '13px',
+      resize: 'none',
+      outline: 'none'
+    }, '');
+    (input.node as HTMLTextAreaElement).maxLength = 500;
+    (input.node as HTMLTextAreaElement).placeholder = 'Your note…';
+
+    const publish = this.makeButton(-Math.min(100, composerWidth * 0.18), composerHeight / 2 - 34, Math.min(190, composerWidth * 0.34), 46, 'PUBLISH', 0x4d9b98);
+    const cancel = this.makeButton(Math.min(100, composerWidth * 0.18), composerHeight / 2 - 34, Math.min(190, composerWidth * 0.34), 46, 'CANCEL', 0x6d5947);
+
+    const finish = () => {
+      input.destroy();
+      overlay.destroy();
+    };
+
+    publish.on('pointerdown', async (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
+      const text = (input.node as HTMLTextAreaElement).value.trim();
+      if (!text) return;
+      finish();
+      await this.runAction(action ? () => action(text) : undefined);
+    });
+
+    cancel.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
+      finish();
+    });
+
+    overlay.add([backdrop, panel, title, hint, input, publish, cancel]);
+    input.node.addEventListener('pointerdown', (event) => event.stopPropagation());
+    (input.node as HTMLTextAreaElement).focus();
+  }
 
   private async runAction(action?: () => Promise<string | void> | string | void) {
     if (this.closing || this.actionRunning) return;
