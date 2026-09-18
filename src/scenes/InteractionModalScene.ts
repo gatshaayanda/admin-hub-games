@@ -29,7 +29,7 @@ export class InteractionModalScene extends Phaser.Scene {
       .setDepth(1)
       .setInteractive();
 
-    backdrop.on('pointerdown', (_pointer, _localX, _localY, event) => {
+    backdrop.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
       this.close();
     });
@@ -39,7 +39,7 @@ export class InteractionModalScene extends Phaser.Scene {
       .setDepth(2)
       .setInteractive();
 
-    panel.on('pointerdown', (_pointer, _localX, _localY, event) => {
+    panel.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
     });
 
@@ -90,17 +90,17 @@ export class InteractionModalScene extends Phaser.Scene {
       0x6d5947,
     );
 
-    privateButton.on('pointerdown', async (_pointer, _localX, _localY, event) => {
+    privateButton.on('pointerdown', async (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
       await this.runAction(data.onPrivateNote);
     });
 
-    worldButton.on('pointerdown', async (_pointer, _localX, _localY, event) => {
+    worldButton.on('pointerdown', async (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
       await this.runAction(data.onWorldNote);
     });
 
-    closeButton.on('pointerdown', (_pointer, _localX, _localY, event) => {
+    closeButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
       this.close();
     });
