@@ -73,7 +73,14 @@ export class InteractionModalScene extends Phaser.Scene {
 
     const privateButton = this.makeButton(width / 2 - gap, buttonY, buttonWidth, 50, 'PRIVATE NOTE', 0xd6a84d);
     const worldButton = this.makeButton(width / 2 + gap, buttonY, buttonWidth, 50, 'LEAVE IN WORLD', 0x4d9b98);
-    const closeButton = this.makeButton(width / 2, height / 2 + panelHeight / 2 - 24, Math.min(170, panelWidth * 0.34), portrait ? 42 : 34, 'CLOSE', 0x6d5947);
+    const closeButton = this.makeButton(
+      width / 2,
+      height / 2 + panelHeight / 2 - 28,
+      Math.min(180, panelWidth * 0.38),
+      50,
+      'CLOSE',
+      0x6d5947,
+    );
 
     privateButton.on('pointerdown', async (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
@@ -94,8 +101,12 @@ export class InteractionModalScene extends Phaser.Scene {
     this.input.keyboard?.once('keydown-SPACE', () => this.close());
     this.input.keyboard?.once('keydown-ESC', () => this.close());
 
+    const escapeHandler = () => this.close();
+    window.addEventListener('ahg:escape', escapeHandler);
+
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.closing = true;
+      window.removeEventListener('ahg:escape', escapeHandler);
     });
 
     this.tweens.add({

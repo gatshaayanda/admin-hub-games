@@ -37,6 +37,10 @@ body {
 
 canvas {
   display: block;
+  width: 100vw;
+  height: 100dvh;
+  margin: 0;
+  padding: 0;
   touch-action: none;
 }
 
@@ -117,3 +121,35 @@ canvas {
 @media (pointer: coarse) { body { -webkit-touch-callout:none; } }
 @media (orientation: portrait) { #ahg-touch-controls { height:clamp(112px,17vh,140px); } .ahg-touch-hint { display:none; } }
 @media (max-width:420px) { #ahg-touch-controls { height:112px; } .ahg-actions { right:max(9px,env(safe-area-inset-right)); gap:7px; } .ahg-joystick { left:max(9px,env(safe-area-inset-left)); } }
+
+
+.ahg-back-button {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  left: max(12px, env(safe-area-inset-left));
+  min-width: 52px;
+  min-height: 52px;
+  padding: 0 14px;
+  border: 2px solid rgba(240,223,182,.92);
+  border-radius: 14px;
+  background: rgba(55,43,34,.92);
+  box-shadow: 0 4px 0 rgba(44,36,29,.62);
+  color: #fff4d4;
+  font: 700 13px/1 monospace;
+  letter-spacing: .7px;
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.ahg-back-button:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 rgba(44,36,29,.62);
+}
+.ahg-back-button.is-hidden { display: none; }
+.ahg-overlay-backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.ahg-overlay-backdrop .ahg-back-button { pointer-events: auto; }
+

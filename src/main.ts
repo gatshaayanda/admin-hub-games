@@ -16,8 +16,9 @@ const config: Phaser.Types.Core.GameConfig = {
   backgroundColor: '#16120f',
   input: { activePointers: 3 },
   scale: {
-    mode: Phaser.Scale.EXPAND,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
+    mode: Phaser.Scale.RESIZE,
+    autoCenter: Phaser.Scale.NO_CENTER,
+    expandParent: true,
     width: 960,
     height: 540,
     min: { width: 320, height: 180 },

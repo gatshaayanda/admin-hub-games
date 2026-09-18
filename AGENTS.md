@@ -127,21 +127,21 @@ The next game-specific chat should continue from this entry point rather than re
 
 Admin Hub Games is **phone-first capable, not merely desktop-scaled**.
 
-The game uses Phaser's responsive Scale Manager with a fixed logical game size and `FIT` scaling so the same world remains legible across laptop and Android viewports. Phaser's documentation identifies `FIT` as the general-purpose mode for preserving aspect ratio while fitting the available parent area. citehttps://docs.phaser.io/phaser/concepts/scale-manager
+The game uses Phaser's responsive Scale Manager with `RESIZE` so the canvas itself fills the available parent area on laptop and Android viewports. This deliberately avoids portrait letterboxing; the world camera and UI adapt to the actual viewport dimensions. citehttps://docs.phaser.io/phaser/concepts/scale-manager
 
 Required controls:
 
 - laptop: WASD / arrow keys + mouse/tap-to-walk
 - phone: dynamic left-side virtual joystick + touch action buttons
-- mobile controls are mounted only while `GameShellScene` is active; they must not appear over name entry, publisher intro, or modal scenes
+- mobile controls are mounted only while `GameShellScene` is active; they must not appear over name entry or publisher intro; gameplay controls hide while a modal/Gamebook is open, while a contextual `BACK` escape handle remains available
 - interaction modals use a dedicated Phaser Scene, not an in-place GameShell overlay
 - phone: tap-to-walk remains available outside the joystick zone
 - phone: no keyboard is required to start, enter the world, explore, or open the Gamebook
 - controls must not make the world feel like a dashboard
-- touch targets must remain large enough to use comfortably
+- touch targets must remain large enough to use comfortably (48px minimum for modal/navigation actions)
 - safe viewport behavior must be preserved through CSS `100dvh`, `touch-action: none`, and Phaser scaling
 
-Mobile verification is a gameplay requirement. A successful Vercel build alone is not proof of phone usability.
+Mobile verification is a gameplay requirement. A successful Vercel build alone is not proof of phone usability. Full-viewport layout must be checked for portrait and landscape behavior, modal escape, control layering and real-device touch.
 
 ## World Layout / Level Design Direction
 

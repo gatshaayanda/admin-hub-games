@@ -79,6 +79,11 @@ export class GameShellScene extends Phaser.Scene {
     this.layoutViewport();
     this.createAmbientSound();
 
+    const escapeHandler = () => {
+      if (this.gamebookOpen) this.closeGamebook();
+    };
+    window.addEventListener('ahg:escape', escapeHandler);
+
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layoutViewport, this);
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (this.gamebookOpen || this.interactionModalOpen) return;
@@ -90,6 +95,7 @@ export class GameShellScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layoutViewport, this);
       this.stopAmbientSound();
+      window.removeEventListener('ahg:escape', escapeHandler);
     });
   }
 
@@ -148,13 +154,11 @@ export class GameShellScene extends Phaser.Scene {
     const width = this.scale.width;
     const height = this.scale.height;
     const portrait = height > width;
-    const dock = portrait ? PORTRAIT_DOCK : DESKTOP_DOCK;
-    const gameHeight = Math.max(180, height - dock);
 
-    // The bottom band belongs to the handheld controls. The world camera never
-    // renders underneath it, so controls cannot obscure the playable world.
-    this.cameras.main.setViewport(0, 0, width, gameHeight);
-    this.cameras.main.setDeadzone(Math.min(width * 0.28, 320), Math.min(gameHeight * 0.22, 150));
+    // Mobile controls are a transparent overlay above the world. Keep the camera
+    // full-screen so the game never creates a letterboxed separator beneath them.
+    this.cameras.main.setViewport(0, 0, width, height);
+    this.cameras.main.setDeadzone(Math.min(width * 0.28, 320), Math.min(height * 0.22, 150));
 
     if (this.hintText) {
       this.hintText.setPosition(width / 2, 18);
@@ -165,6 +169,10 @@ export class GameShellScene extends Phaser.Scene {
       this.statusText.setFontSize(portrait ? 12 : 10);
     }
     if (this.gamebookButton) this.gamebookButton.setPosition(width - 74, 28);
+  }
+
+  public isGamebookOpen() {
+    return this.gamebookOpen;
   }
 
   private isInReservedUi(_x: number, y: number) {
@@ -413,7 +421,7 @@ export class GameShellScene extends Phaser.Scene {
 
   private makePanelButton(x: number, y: number, label: string) {
     const button = this.add.container(x, y).setScrollFactor(0).setDepth(101);
-    const shape = this.add.rectangle(0, 0, Math.min(280, this.scale.width * 0.72), this.scale.height > this.scale.width ? 58 : 48, 0x493526, 0.95).setStrokeStyle(2, 0xf0dfb6, 0.9);
+    const shape = this.add.rectangle(0, 0, Math.min(280, this.scale.width * 0.72), Math.max(50, this.scale.height > this.scale.width ? 58 : 50), 0x493526, 0.95).setStrokeStyle(2, 0xf0dfb6, 0.9);
     const text = this.add.text(0, 0, label, { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '12px' : '9px', color: '#fff4d4', align: 'center' }).setOrigin(0.5);
     button.add([shape, text]);
     button.setSize(shape.width, shape.height).setInteractive({ useHandCursor: false });
@@ -464,11 +472,20 @@ export class GameShellScene extends Phaser.Scene {
     const notes = this.add.text(-w / 2 + 34, -h / 2 + 112, noteLines, { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '14px' : '11px', color: '#493526', wordWrap: { width: w - 68 }, lineSpacing: 6 });
     const worldButton = this.makePanelButton(0, h / 2 - 54, 'VIEW WORLD NOTES');
     const deleteButton = this.makePanelButton(0, h / 2 + 2, 'DELETE MY WORLD NOTE');
-    const close = this.add.text(0, h / 2 + 36, 'B / ESC / TAP TO RETURN', { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '12px' : '9px', color: '#73533a' }).setOrigin(0.5);
+    const close = this.makePanelButton(0, h / 2 + 38, 'CLOSE GAMEBOOK');
     this.gamebookOverlay.add([backdrop, book, inner, title, intro, notes, worldButton, deleteButton, close]);
-    worldButton.on('pointerdown', () => this.viewWorldNotes());
-    deleteButton.on('pointerdown', () => this.deleteOwnWorldNote());
-    close.setInteractive().on('pointerdown', () => this.closeGamebook());
+    worldButton.on('pointerdown', (_pointer, _localX, _localY, event) => {
+      event.stopPropagation();
+      this.viewWorldNotes();
+    });
+    deleteButton.on('pointerdown', (_pointer, _localX, _localY, event) => {
+      event.stopPropagation();
+      this.deleteOwnWorldNote();
+    });
+    close.on('pointerdown', (_pointer, _localX, _localY, event) => {
+      event.stopPropagation();
+      this.closeGamebook();
+    });
     this.gamebookOverlay.setAlpha(0);
     this.tweens.add({ targets: this.gamebookOverlay, alpha: 1, duration: 180 });
     this.input.keyboard?.once('keydown-B', () => this.closeGamebook());
