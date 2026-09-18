@@ -1,8 +1,8 @@
 import Phaser from 'phaser';
 import { adminHubAudio } from '../audio';
 import { createWorldNote, deleteWorldNote, getAnonymousPlayerId, isFounderAdmin, loadWorldNotes, loadWorldNoteReports, reportWorldNote, type WorldNote } from '../firebase/firebase';
-import { type InteractionModalData } from './InteractionModalScene';
 import { openNativeNoteComposer } from '../ui/nativeNoteComposer';
+import { openNativeLocationMenu } from '../ui/nativeLocationMenu';
 
 type Village = {
   id: string;
@@ -107,6 +107,10 @@ export class GameShellScene extends Phaser.Scene {
       this.gamebookInputOverlay = undefined;
       this.lobbyManualOverlay?.destroy();
       this.lobbyManualOverlay = undefined;
+      window.setTimeout(() => {
+        const menu = document.getElementById('ahg-location-menu');
+        menu?.remove();
+      }, 0);
       if (this.gamebookEscapeHandler) {
         this.input.keyboard?.off('keydown-ESC', this.gamebookEscapeHandler);
         this.gamebookEscapeHandler = undefined;
@@ -429,30 +433,50 @@ export class GameShellScene extends Phaser.Scene {
     this.interactAt(location);
   }
 
-  private interactAt(location: Village) {
+  private async interactAt(location: Village) {
     if (this.gamebookOpen || this.interactionModalOpen) return;
 
     this.target = null;
     this.interactionModalOpen = true;
 
-    const modal = this.scene.get('InteractionModalScene') as Phaser.Scene;
-    modal.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.interactionModalOpen = false;
-    });
-
-    const data: InteractionModalData = {
+    const body = location.id === 'systems-hall' ? this.buildSystemsHallText() : location.note;
+    const choice = await openNativeLocationMenu({
       title: location.name,
       subtitle: location.subtitle,
-      body: location.id === 'systems-hall' ? this.buildSystemsHallText() : location.note,
-      accent: location.color,
-      onPrivateNote: () => this.writePrivateNote(location),
-      onWorldNote: (text) => this.writeWorldNote(location, text),
-    };
+      body,
+      actions: [
+        { label: 'PRIVATE NOTE', value: 'private', accent: '#d6a84d' },
+        { label: 'LEAVE IN WORLD', value: 'world', accent: '#4d9b98' },
+      ],
+    });
 
-    // Keep GameShell running while the modal owns input. Pausing the parent scene
-    // makes browser prompt-based actions fragile on some browsers; the explicit
-    // interactionModalOpen guard already prevents gameplay input underneath it.
-    this.scene.launch('InteractionModalScene', data);
+    this.interactionModalOpen = false;
+
+    // The native menu is removed before any game action begins. This keeps the
+    // browser out of Phaser's pointer-dispatch lifecycle and gives every location
+    // exactly the same safe interaction path on touch and desktop.
+    if (choice === 'private') {
+      const message = await this.writePrivateNote(location);
+      if (message) this.showTransientMessage(message);
+      return;
+    }
+
+    if (choice === 'world') {
+      const composerText = await openNativeNoteComposer({
+        title: 'LEAVE IN WORLD',
+        hint: 'Write something other players can see.',
+        placeholder: 'Your note…',
+        maxLength: 500,
+        actionLabel: 'PUBLISH',
+      });
+      if (!composerText) {
+        this.showTransientMessage('World note cancelled.');
+        return;
+      }
+
+      const message = await this.writeWorldNote(location, composerText);
+      this.showTransientMessage(message);
+    }
   }
 
   private buildSystemsHallText() {
