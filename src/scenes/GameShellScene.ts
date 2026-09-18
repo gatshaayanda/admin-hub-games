@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { createWorldNote, deleteWorldNote, getAnonymousPlayerId, isFounderAdmin, loadWorldNotes, type WorldNote } from '../firebase/firebase';
+import { createWorldNote, deleteWorldNote, getAnonymousPlayerId, isFounderAdmin, loadWorldNotes, loadWorldNoteReports, reportWorldNote, type WorldNote } from '../firebase/firebase';
 import { type InteractionModalData } from './InteractionModalScene';
 
 type Village = {
@@ -508,9 +508,10 @@ export class GameShellScene extends Phaser.Scene {
     const noteLines = this.privateNotes.length ? this.privateNotes.map((note) => `✦ ${note.village.toUpperCase()}\n  ${note.text}`).join('\n\n') : 'No private notes yet.\n\nVisit a village and choose PRIVATE NOTE.';
     const notes = this.add.text(-w / 2 + 34, -h / 2 + 112, noteLines, { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '14px' : '11px', color: '#493526', wordWrap: { width: w - 68 }, lineSpacing: 6 });
     const worldButton = this.makePanelButton(0, h / 2 - 54, 'VIEW WORLD NOTES');
-    const deleteButton = this.makePanelButton(0, h / 2 + 2, 'BANANA · DELETE MY NOTE');
-    const close = this.makePanelButton(0, h / 2 + 38, 'CLOSE GAMEBOOK');
-    this.gamebookOverlay.add([backdrop, book, inner, title, intro, notes, worldButton, deleteButton, close]);
+    const deleteButton = this.makePanelButton(0, h / 2 + 2, 'BANANA · DELETE A NOTE');
+    const reportButton = this.makePanelButton(0, h / 2 + 58, 'REPORT A WORLD NOTE');
+    const close = this.makePanelButton(0, h / 2 + 114, 'CLOSE GAMEBOOK');
+    this.gamebookOverlay.add([backdrop, book, inner, title, intro, notes, worldButton, deleteButton, reportButton, close]);
     worldButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
       this.viewWorldNotes();
@@ -518,6 +519,10 @@ export class GameShellScene extends Phaser.Scene {
     deleteButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
       this.deleteOwnWorldNote();
+    });
+    reportButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
+      this.reportWorldNoteFlow().then((message) => this.showTransientMessage(message));
     });
     close.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
@@ -527,6 +532,40 @@ export class GameShellScene extends Phaser.Scene {
     this.tweens.add({ targets: this.gamebookOverlay, alpha: 1, duration: 180 });
     this.input.keyboard?.once('keydown-B', () => this.closeGamebook());
     this.input.keyboard?.once('keydown-ESC', () => this.closeGamebook());
+  }
+
+  private async reportWorldNoteFlow() {
+    const village = this.activeVillage || this.getSystemsHallLocation();
+    const notes = await loadWorldNotes(village.id);
+    if (!notes.length) return 'There are no world notes here to report.';
+
+    const choice = window.prompt(
+      notes.map((note, index) => `${index + 1}. ${note.authorName}: ${note.text}`).join('\\n\\n') +
+      '\\n\\nEnter the note number to report:',
+    );
+    if (choice === null) return 'Report cancelled.';
+    const note = notes[Number(choice) - 1];
+    if (!note) return 'That note was not found.';
+
+    const reason = window.prompt('Why are you reporting this note? (optional details, max 300 characters)', '')?.trim();
+    if (!reason) return 'Report cancelled. Please give a reason so the admin system can understand what is happening.';
+
+    const reporterName = String(this.registry.get('playerName') || 'Player');
+    const reported = await reportWorldNote(note, reporterName, reason.slice(0, 300));
+    return reported
+      ? 'Report submitted. The admin system has recorded it for review.'
+      : 'Could not submit the report. Please try again later.';
+  }
+
+  private async viewAdminReports() {
+    const founderAdmin = await isFounderAdmin();
+    if (!founderAdmin) return 'Admin reports are only available to the founder/admin identity.';
+    const reports = await loadWorldNoteReports();
+    if (!reports.length) return 'ADMIN REPORTS · No reports have been recorded yet.';
+    const lines = reports.slice(0, 12).map((report, index) =>
+      `${index + 1}. ${report.reporterName} reported note ${report.noteId}\\n  Village: ${report.villageId}\\n  Reason: ${report.reason}`,
+    ).join('\\n\\n');
+    return `ADMIN REPORTS · ${reports.length} recorded\\n\\n${lines}`.slice(0, 1800);
   }
 
   private async viewWorldNotes() {
@@ -571,7 +610,7 @@ export class GameShellScene extends Phaser.Scene {
 
     const myId = await getAnonymousPlayerId();
     const mine = notes.filter((note) => note.authorId === myId);
-    if (!mine.length) return 'BANANA accepted. You have no world notes here.';
+    if (!mine.length) return 'BANANA accepted. You have no world notes here. Other players cannot delete your notes; only their own or founder/admin moderation can remove them.';
 
     const choice = window.prompt(
       mine.length === 1
