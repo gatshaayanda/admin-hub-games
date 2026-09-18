@@ -3,26 +3,27 @@ import Phaser from 'phaser';
 export class PublisherIntroScene extends Phaser.Scene {
   private leaving = false;
   private elapsed = 0;
-  private worldGraphics?: Phaser.GameObjects.Graphics;
+  private background?: Phaser.GameObjects.Graphics;
+  private stars?: Phaser.GameObjects.Graphics;
+  private horizon?: Phaser.GameObjects.Graphics;
   private player?: Phaser.GameObjects.Container;
-  private playerShadow?: Phaser.GameObjects.Ellipse;
-  private ambientBrand?: Phaser.GameObjects.Text;
-  private veil?: Phaser.GameObjects.Rectangle;
-  private panel?: Phaser.GameObjects.Rectangle;
-  private title?: Phaser.GameObjects.Text;
+  private playerGlow?: Phaser.GameObjects.Arc;
+  private logoMark?: Phaser.GameObjects.Graphics;
+  private logoTitle?: Phaser.GameObjects.Text;
+  private logoRule?: Phaser.GameObjects.Rectangle;
   private presents?: Phaser.GameObjects.Text;
-  private signAdmin?: Phaser.GameObjects.Text;
-  private signGames?: Phaser.GameObjects.Text;
+  private topLabel?: Phaser.GameObjects.Text;
+  private veil?: Phaser.GameObjects.Rectangle;
 
   constructor() {
     super('PublisherIntroScene');
   }
 
   create() {
-    this.cameras.main.setBackgroundColor('#d9c28f');
-    this.buildResponsiveScene();
-    this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
+    this.cameras.main.setBackgroundColor('#070b1d');
+    this.buildScene(this.scale.width, this.scale.height);
 
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
     });
@@ -30,144 +31,205 @@ export class PublisherIntroScene extends Phaser.Scene {
 
   update(_time: number, delta: number) {
     if (this.leaving) return;
-
     this.elapsed += delta;
 
-    if (this.elapsed < 850) {
-      const progress = Phaser.Math.Clamp(this.elapsed / 850, 0, 1);
-      this.setFade(1 - progress);
+    if (this.elapsed < 700) {
+      const p = Phaser.Math.Clamp(this.elapsed / 700, 0, 1);
+      this.setVeil(1 - p);
       this.positionPlayer(0);
       return;
     }
 
-    if (this.elapsed < 4050) {
-      const progress = Phaser.Math.Clamp((this.elapsed - 850) / 3200, 0, 1);
-      this.setFade(0);
-      this.positionPlayer(progress);
+    if (this.elapsed < 3300) {
+      const p = Phaser.Math.Clamp((this.elapsed - 700) / 2600, 0, 1);
+      this.setVeil(0);
+      this.positionPlayer(p);
       return;
     }
 
-    if (this.elapsed < 4650) {
-      this.setFade(0);
+    if (this.elapsed < 4000) {
       this.positionPlayer(1);
+      this.setVeil(0);
       return;
     }
 
-    if (this.elapsed < 5500) {
-      const progress = Phaser.Math.Clamp((this.elapsed - 4650) / 850, 0, 1);
+    if (this.elapsed < 4950) {
+      const p = Phaser.Math.Clamp((this.elapsed - 4000) / 950, 0, 1);
       this.positionPlayer(1);
-      this.setPublisherAlpha(Phaser.Math.Easing.Sine.Out(progress));
+      this.revealBrand(Phaser.Math.Easing.Cubic.Out(p));
       return;
     }
 
-    if (this.elapsed < 7350) {
+    if (this.elapsed < 6750) {
       this.positionPlayer(1);
-      this.setPublisherAlpha(1);
+      this.revealBrand(1);
       return;
     }
 
-    if (this.elapsed < 8150) {
-      const progress = Phaser.Math.Clamp((this.elapsed - 7350) / 800, 0, 1);
-      this.setPublisherAlpha(1 - Phaser.Math.Easing.Sine.InOut(progress));
-      this.setFade(progress);
+    if (this.elapsed < 7550) {
+      const p = Phaser.Math.Clamp((this.elapsed - 6750) / 800, 0, 1);
+      this.revealBrand(1 - Phaser.Math.Easing.Cubic.InOut(p));
+      this.setVeil(p);
       return;
     }
 
     this.leaveIntro();
   }
 
-  private buildResponsiveScene() {
-    const width = this.scale.width;
-    const height = this.scale.height;
+  private buildScene(width: number, height: number) {
+    this.background = this.add.graphics().setDepth(1);
+    this.stars = this.add.graphics().setDepth(2);
+    this.horizon = this.add.graphics().setDepth(3);
+    this.drawBackground(width, height);
 
-    this.worldGraphics = this.add.graphics().setDepth(1);
-    this.drawWorld(width, height);
-
-    this.player = this.createPlayer(-Math.max(48, width * 0.06), height * 0.72);
+    this.player = this.createPlayer(-Math.max(60, width * 0.08), height * 0.72);
     this.player.setDepth(20);
 
-    this.playerShadow = this.add.ellipse(this.player.x, height * 0.75, 28, 9, 0x3a2b21, 0.28)
+    this.playerGlow = this.add.circle(this.player.x, height * 0.75, 26, 0x55d6c2, 0.10)
       .setDepth(19);
 
-    this.signAdmin = this.add.text(width * 0.465, height * 0.484, 'ADMIN HUB', {
-      fontFamily: 'monospace', fontSize: '9px', color: '#403126', fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(8);
-    this.signGames = this.add.text(width * 0.465, height * 0.514, 'GAMES', {
-      fontFamily: 'monospace', fontSize: '7px', color: '#73563d', letterSpacing: 2,
-    }).setOrigin(0.5).setDepth(8);
-
-    this.ambientBrand = this.add.text(width * 0.055, height * 0.065, 'ADMIN HUB GAMES', {
+    this.topLabel = this.add.text(width / 2, Math.max(28, height * 0.075), 'A STUDIO FOR PLAYABLE WORLDS', {
       fontFamily: 'monospace',
-      fontSize: Math.max(14, Math.min(20, width * 0.018)) + 'px',
-      fontStyle: 'bold',
-      color: '#33271f',
-      letterSpacing: 2.5,
-    }).setDepth(30).setAlpha(0.9);
+      fontSize: Math.max(9, Math.min(12, width * 0.011)) + 'px',
+      color: '#8da4c9',
+      letterSpacing: 2.2,
+      align: 'center',
+    }).setOrigin(0.5).setDepth(30).setAlpha(0);
 
-    this.veil = this.add.rectangle(0, 0, width, height, 0x16120f, 1)
+    this.logoMark = this.add.graphics().setDepth(31).setAlpha(0);
+    this.drawLogoMark(width / 2, height * 0.43, Math.min(width, height));
+
+    this.logoTitle = this.add.text(width / 2, height * 0.535, 'ADMIN HUB GAMES', {
+      fontFamily: 'monospace',
+      fontSize: Math.max(24, Math.min(54, Math.min(width, height) * 0.082)) + 'px',
+      fontStyle: 'bold',
+      color: '#f4f7ff',
+      letterSpacing: Math.max(3, Math.round(Math.min(width, height) * 0.006)),
+      align: 'center',
+    }).setOrigin(0.5).setDepth(32).setAlpha(0);
+
+    this.logoRule = this.add.rectangle(width / 2, height * 0.595, Math.min(190, width * 0.34), 2, 0x55d6c2, 0.9)
+      .setDepth(32).setScaleX(0).setAlpha(0);
+
+    this.presents = this.add.text(width / 2, height * 0.64, 'presents', {
+      fontFamily: 'sans-serif',
+      fontSize: Math.max(14, Math.min(20, Math.min(width, height) * 0.031)) + 'px',
+      color: '#e2bd67',
+      letterSpacing: 3,
+      align: 'center',
+    }).setOrigin(0.5).setDepth(32).setAlpha(0);
+
+    this.veil = this.add.rectangle(0, 0, width, height, 0x070b1d, 1)
       .setOrigin(0)
       .setDepth(100);
 
-    const panelWidth = Math.min(width * 0.82, 720);
-    const panelHeight = Math.min(height * 0.38, 210);
-
-    this.panel = this.add.rectangle(width / 2, height * 0.48, panelWidth, panelHeight, 0x241c17, 0.94)
-      .setStrokeStyle(Math.max(2, Math.min(width, height) * 0.004), 0xd2bc8e, 0.95)
-      .setDepth(81)
-      .setAlpha(0);
-
-    const titleSize = Math.max(28, Math.min(60, Math.min(width, height) * 0.10));
-    const presentsSize = Math.max(15, Math.min(25, Math.min(width, height) * 0.04));
-
-    this.title = this.add.text(width / 2, height * 0.455, 'ADMIN HUB GAMES', {
-      fontFamily: 'monospace',
-      fontSize: titleSize + 'px',
-      fontStyle: 'bold',
-      color: '#f5e7c4',
-      letterSpacing: Math.max(2, Math.round(titleSize * 0.06)),
-      align: 'center',
-    }).setOrigin(0.5).setDepth(82).setAlpha(0);
-
-    this.presents = this.add.text(width / 2, height * 0.575, 'presents', {
-      fontFamily: 'sans-serif',
-      fontSize: presentsSize + 'px',
-      color: '#d9c28f',
-      fontStyle: 'italic',
-      align: 'center',
-    }).setOrigin(0.5).setDepth(82).setAlpha(0);
-
-    this.setPublisherAlpha(0);
-    this.setFade(1);
+    this.setVeil(1);
+    this.revealBrand(0);
   }
 
   private handleResize(width: number, height: number) {
     if (this.leaving) return;
 
     this.cameras.main.setViewport(0, 0, width, height);
-    this.worldGraphics?.clear();
-    if (this.worldGraphics) this.drawWorld(width, height);
+    this.drawBackground(width, height);
 
-    const progress = Phaser.Math.Clamp((this.elapsed - 850) / 3200, 0, 1);
+    const p = Phaser.Math.Clamp((this.elapsed - 700) / 2600, 0, 1);
     if (this.player) {
-      this.player.x = Phaser.Math.Linear(-Math.max(48, width * 0.06), width * 0.50, Phaser.Math.Easing.Sine.InOut(progress));
+      this.player.x = Phaser.Math.Linear(-Math.max(60, width * 0.08), width * 0.50, Phaser.Math.Easing.Sine.InOut(p));
       this.player.y = height * 0.72;
-      this.playerShadow?.setPosition(this.player.x, height * 0.75);
+      this.playerGlow?.setPosition(this.player.x, height * 0.75);
     }
 
-    this.ambientBrand?.setPosition(width * 0.055, height * 0.065)
-      .setFontSize(Math.max(14, Math.min(20, width * 0.018)));
-    this.signAdmin?.setPosition(width * 0.465, height * 0.484);
-    this.signGames?.setPosition(width * 0.465, height * 0.514);
+    this.topLabel?.setPosition(width / 2, Math.max(28, height * 0.075));
+    this.logoTitle?.setPosition(width / 2, height * 0.535)
+      .setFontSize(Math.max(24, Math.min(54, Math.min(width, height) * 0.082)));
+    this.logoRule?.setPosition(width / 2, height * 0.595)
+      .setSize(Math.min(190, width * 0.34), 2);
+    this.presents?.setPosition(width / 2, height * 0.64)
+      .setFontSize(Math.max(14, Math.min(20, Math.min(width, height) * 0.031)));
 
-    const panelWidth = Math.min(width * 0.82, 720);
-    const panelHeight = Math.min(height * 0.38, 210);
-    this.panel?.setPosition(width / 2, height * 0.48).setSize(panelWidth, panelHeight);
-
-    const titleSize = Math.max(28, Math.min(60, Math.min(width, height) * 0.10));
-    const presentsSize = Math.max(15, Math.min(25, Math.min(width, height) * 0.04));
-    this.title?.setPosition(width / 2, height * 0.455).setFontSize(titleSize);
-    this.presents?.setPosition(width / 2, height * 0.575).setFontSize(presentsSize);
+    this.logoMark?.clear();
+    this.drawLogoMark(width / 2, height * 0.43, Math.min(width, height));
     this.veil?.setSize(width, height);
+  }
+
+  private drawBackground(width: number, height: number) {
+    this.background?.clear();
+    this.stars?.clear();
+    this.horizon?.clear();
+
+    const bg = this.background;
+    const stars = this.stars;
+    const horizon = this.horizon;
+    if (!bg || !stars || !horizon) return;
+
+    bg.fillGradientStyle(0x070b1d, 0x111a42, 0x070b1d, 0x182a52, 1);
+    bg.fillRect(0, 0, width, height);
+
+    bg.fillStyle(0x15234b, 0.55);
+    bg.fillCircle(width * 0.76, height * 0.26, Math.max(90, Math.min(width, height) * 0.20));
+    bg.fillStyle(0x55d6c2, 0.05);
+    bg.fillCircle(width * 0.76, height * 0.26, Math.max(140, Math.min(width, height) * 0.30));
+
+    for (let i = 0; i < 58; i += 1) {
+      const x = (i * 173.7) % width;
+      const y = (i * 83.9) % (height * 0.58);
+      const radius = i % 9 === 0 ? 1.7 : i % 3 === 0 ? 1.2 : 0.7;
+      stars.fillStyle(i % 7 === 0 ? 0xe2bd67 : 0xdce7ff, i % 5 === 0 ? 0.9 : 0.55);
+      stars.fillCircle(x, y, radius);
+    }
+
+    stars.fillStyle(0xffffff, 0.08);
+    stars.fillCircle(width * 0.76, height * 0.26, Math.max(38, Math.min(width, height) * 0.09));
+    stars.fillStyle(0xe2bd67, 0.18);
+    stars.fillCircle(width * 0.76, height * 0.26, Math.max(26, Math.min(width, height) * 0.065));
+
+    horizon.fillStyle(0x050816, 1);
+    horizon.beginPath();
+    horizon.moveTo(0, height * 0.68);
+    horizon.lineTo(width * 0.14, height * 0.60);
+    horizon.lineTo(width * 0.28, height * 0.66);
+    horizon.lineTo(width * 0.43, height * 0.57);
+    horizon.lineTo(width * 0.58, height * 0.65);
+    horizon.lineTo(width * 0.73, height * 0.55);
+    horizon.lineTo(width * 0.86, height * 0.63);
+    horizon.lineTo(width, height * 0.57);
+    horizon.lineTo(width, height);
+    horizon.lineTo(0, height);
+    horizon.closePath();
+    horizon.fillPath();
+
+    horizon.fillStyle(0x0d1830, 1);
+    horizon.fillRect(0, height * 0.70, width, height * 0.30);
+
+    horizon.lineStyle(1, 0x55d6c2, 0.12);
+    for (let i = 0; i < 9; i += 1) {
+      const y = height * (0.71 + i * 0.035);
+      horizon.lineBetween(width * 0.10, y, width * 0.90, y);
+    }
+
+    horizon.fillStyle(0xe2bd67, 0.55);
+    horizon.fillRect(width * 0.13, height * 0.695, width * 0.18, 1);
+    horizon.fillRect(width * 0.69, height * 0.695, width * 0.18, 1);
+  }
+
+  private drawLogoMark(x: number, y: number, minDimension: number) {
+    const g = this.logoMark;
+    if (!g) return;
+
+    const s = Math.max(20, Math.min(42, minDimension * 0.065));
+    g.lineStyle(Math.max(2, s * 0.055), 0x55d6c2, 1);
+    g.strokeCircle(x, y, s);
+    g.lineStyle(Math.max(1, s * 0.035), 0xe2bd67, 0.95);
+    g.strokeCircle(x, y, s * 0.70);
+
+    g.fillStyle(0x55d6c2, 0.95);
+    g.fillTriangle(x, y - s * 0.46, x - s * 0.32, y + s * 0.28, x + s * 0.32, y + s * 0.28);
+
+    g.fillStyle(0x070b1d, 1);
+    g.fillCircle(x, y, s * 0.30);
+    g.fillStyle(0xf4f7ff, 0.95);
+    g.fillRect(x - s * 0.055, y - s * 0.17, s * 0.11, s * 0.34);
   }
 
   private positionPlayer(progress: number) {
@@ -177,139 +239,73 @@ export class PublisherIntroScene extends Phaser.Scene {
     const height = this.scale.height;
     const eased = Phaser.Math.Easing.Sine.InOut(Phaser.Math.Clamp(progress, 0, 1));
 
-    this.player.x = Phaser.Math.Linear(-Math.max(48, width * 0.06), width * 0.50, eased);
-    this.player.y = height * 0.72 + Math.sin(this.elapsed / 110) * 1.5;
-    this.playerShadow?.setPosition(this.player.x, height * 0.75);
+    this.player.x = Phaser.Math.Linear(-Math.max(60, width * 0.08), width * 0.50, eased);
+    this.player.y = height * 0.72 + Math.sin(this.elapsed / 105) * 1.2;
+    this.playerGlow?.setPosition(this.player.x, height * 0.75);
   }
 
-  private setPublisherAlpha(alpha: number) {
-    this.panel?.setAlpha(alpha);
-    this.title?.setAlpha(alpha);
+  private revealBrand(alpha: number) {
+    this.topLabel?.setAlpha(alpha * 0.9);
+    this.logoMark?.setAlpha(alpha);
+    this.logoTitle?.setAlpha(alpha);
+    this.logoRule?.setAlpha(alpha).setScale(1, 1);
+    this.logoRule?.setScaleX(0.2 + alpha * 0.8);
     this.presents?.setAlpha(alpha);
-    this.panel?.setScale(0.94 + alpha * 0.06);
-    this.title?.setScale(0.96 + alpha * 0.04);
-    this.ambientBrand?.setAlpha(alpha >= 0.98 ? 0.9 : 0);
+    this.logoTitle?.setScale(0.97 + alpha * 0.03);
   }
 
-  private setFade(alpha: number) {
+  private setVeil(alpha: number) {
     this.veil?.setAlpha(Phaser.Math.Clamp(alpha, 0, 1));
   }
 
   private leaveIntro() {
     if (this.leaving) return;
     this.leaving = true;
-    this.cameras.main.fadeOut(500, 22, 18, 14);
-    this.time.delayedCall(500, () => this.scene.start('NameEntryScene'));
-  }
-
-  private drawWorld(width: number, height: number) {
-    const g = this.worldGraphics;
-    if (!g) return;
-
-    g.fillStyle(0xd8c18d, 1).fillRect(0, 0, width, height);
-    g.fillStyle(0xc6a66c, 0.28).fillRect(0, 0, width, height * 0.34);
-    g.fillStyle(0xd7b879, 1).fillRect(0, height * 0.34, width, height * 0.66);
-
-    g.fillStyle(0xb58d61, 1);
-    g.beginPath();
-    g.moveTo(0, height * 0.42);
-    g.lineTo(width * 0.18, height * 0.34);
-    g.lineTo(width * 0.33, height * 0.40);
-    g.lineTo(width * 0.53, height * 0.31);
-    g.lineTo(width * 0.76, height * 0.40);
-    g.lineTo(width, height * 0.33);
-    g.lineTo(width, height * 0.52);
-    g.lineTo(0, height * 0.52);
-    g.closePath();
-    g.fillPath();
-
-    for (let x = 18; x < width; x += Math.max(30, width * 0.044)) {
-      const y = height * 0.47 + ((x * 13) % Math.max(70, height * 0.20));
-      g.fillStyle(0x71804a, 0.72).fillRect(x, y, 13, 5);
-      g.fillStyle(0x899153, 0.65).fillRect(x + 4, y - 5, 5, 5);
-    }
-
-    g.fillStyle(0xa76545, 1);
-    g.beginPath();
-    g.moveTo(0, height * 0.78);
-    g.lineTo(width * 0.20, height * 0.68);
-    g.lineTo(width * 0.45, height * 0.70);
-    g.lineTo(width * 0.66, height * 0.59);
-    g.lineTo(width, height * 0.55);
-    g.lineTo(width, height);
-    g.lineTo(0, height);
-    g.closePath();
-    g.fillPath();
-
-    g.fillStyle(0x8d7254, 1).fillRect(width * 0.59, height * 0.35, width * 0.33, 11);
-    g.fillStyle(0x705b48, 1).fillRect(width * 0.59, height * 0.35 + 11, width * 0.33, 4);
-    g.fillStyle(0xe7dfc8, 1).fillRect(width * 0.64, height * 0.20, width * 0.19, height * 0.16);
-
-    g.fillStyle(0x58635d, 1);
-    g.beginPath();
-    g.moveTo(width * 0.61, height * 0.20);
-    g.lineTo(width * 0.735, height * 0.105);
-    g.lineTo(width * 0.86, height * 0.20);
-    g.closePath();
-    g.fillPath();
-
-    g.fillStyle(0x9a704e, 1).fillRect(width * 0.72, height * 0.275, 22, 42);
-    g.fillStyle(0x7693a0, 1).fillRect(width * 0.66, height * 0.25, 22, 19);
-    g.fillStyle(0x7693a0, 1).fillRect(width * 0.79, height * 0.25, 22, 19);
-
-    g.fillStyle(0x707671, 1).fillRect(width * 0.865, height * 0.22, 24, 60);
-    g.fillStyle(0x505653, 1).fillRect(width * 0.855, height * 0.20, 44, 11);
-    g.fillStyle(0x505653, 1).fillRect(width * 0.873, height * 0.19, 8, 8);
-
-    g.fillStyle(0x4b392b, 1).fillRect(width * 0.46, height * 0.47, 7, 70);
-    g.fillStyle(0x403126, 1).fillRect(width * 0.405, height * 0.465, 120, 39);
-    g.fillStyle(0xd2bc8e, 1).fillRect(width * 0.412, height * 0.472, 106, 25);
-    this.drawTree(width * 0.16, height * 0.29, 1.18);
-    this.drawTree(width * 0.40, height * 0.28, 0.78);
-    this.drawTree(width * 0.95, height * 0.43, 0.72);
-
-    for (let i = 0; i < 18; i += 1) {
-      const x = 24 + ((i * 149) % Math.max(80, width - 48));
-      const y = height * 0.49 + ((i * 67) % Math.max(45, height * 0.42));
-      g.fillStyle(i % 2 ? 0x79644d : 0x9b805d, 1).fillRect(x, y, 7, 4);
-      if (i % 4 === 0) g.fillStyle(0x687648, 0.9).fillRect(x + 8, y - 4, 4, 8);
-    }
-
-    g.fillStyle(0xf5df9c, 0.72).fillCircle(width * 0.87, height * 0.14, Math.max(24, Math.min(42, width * 0.035)));
-  }
-
-  private drawTree(x: number, y: number, scale: number) {
-    const g = this.worldGraphics;
-    if (!g) return;
-    g.fillStyle(0x684a34, 1).fillRect(x - 5 * scale, y + 18 * scale, 10 * scale, 52 * scale);
-    g.fillStyle(0x445a37, 1);
-    g.fillRect(x - 46 * scale, y, 92 * scale, 17 * scale);
-    g.fillRect(x - 34 * scale, y - 11 * scale, 68 * scale, 16 * scale);
-    g.fillRect(x - 17 * scale, y - 21 * scale, 34 * scale, 13 * scale);
-    g.fillStyle(0x637344, 1).fillRect(x - 33 * scale, y - 4 * scale, 66 * scale, 8 * scale);
+    this.cameras.main.fadeOut(450, 7, 11, 29);
+    this.time.delayedCall(450, () => this.scene.start('NameEntryScene'));
   }
 
   private createPlayer(x: number, y: number) {
-    const container = this.add.container(x, y);
-    const shadow = this.add.ellipse(0, 33, 24, 9, 0x4a3524, 0.28);
+    const c = this.add.container(x, y);
+    const shadow = this.add.ellipse(0, 30, 30, 8, 0x000000, 0.35);
 
-    const poseA = this.add.graphics();
-    poseA.fillStyle(0x241d1a, 1).fillRect(-10, -22, 20, 10);
-    poseA.fillStyle(0x70452e, 1).fillRect(-9, -14, 18, 14);
-    poseA.fillStyle(0x236b68, 1).fillRect(-11, 0, 22, 19);
-    poseA.fillStyle(0xd5a45d, 1).fillRect(-9, 19, 7, 13).fillRect(2, 19, 7, 13);
-    poseA.fillStyle(0x253a38, 1).fillRect(-12, 30, 10, 5).fillRect(2, 30, 10, 5);
-    poseA.fillStyle(0x5b3d2a, 1).fillRect(10, 3, 6, 16);
+    const cloak = this.add.graphics();
+    cloak.fillStyle(0x1b8f8a, 1);
+    cloak.beginPath();
+    cloak.moveTo(-13, 4);
+    cloak.lineTo(13, 4);
+    cloak.lineTo(9, 28);
+    cloak.lineTo(-11, 28);
+    cloak.closePath();
+    cloak.fillPath();
 
-    const poseB = this.add.graphics();
-    poseB.fillStyle(0x241d1a, 1).fillRect(-10, -22, 20, 10);
-    poseB.fillStyle(0x70452e, 1).fillRect(-9, -14, 18, 14);
-    poseB.fillStyle(0x236b68, 1).fillRect(-11, 1, 22, 19);
-    poseB.fillStyle(0xd5a45d, 1).fillRect(-7, 20, 7, 13).fillRect(0, 18, 7, 13);
-    poseB.fillStyle(0x253a38, 1).fillRect(-10, 31, 10, 5).fillRect(0, 29, 10, 5);
-    poseB.fillStyle(0x5b3d2a, 1).fillRect(10, 4, 6, 16);
+    cloak.fillStyle(0x55d6c2, 0.85);
+    cloak.fillRect(-3, 5, 6, 22);
 
-    container.add([shadow, poseA, poseB]);
-    return container;
+    const body = this.add.graphics();
+    body.fillStyle(0xe6c982, 1);
+    body.fillCircle(0, -12, 8);
+    body.fillStyle(0x10172d, 1);
+    body.fillRect(-8, -21, 16, 7);
+    body.fillRect(-11, -17, 22, 4);
+    body.fillStyle(0x24385b, 1);
+    body.fillRect(-8, -3, 16, 12);
+    body.fillStyle(0xe2bd67, 1);
+    body.fillRect(-10, 8, 7, 19);
+    body.fillRect(3, 8, 7, 19);
+    body.fillStyle(0x080d20, 1);
+    body.fillRect(-12, 27, 9, 5);
+    body.fillRect(3, 27, 9, 5);
+
+    const staff = this.add.graphics();
+    staff.lineStyle(3, 0xe2bd67, 1);
+    staff.lineBetween(13, 2, 17, 29);
+    staff.fillStyle(0x55d6c2, 1);
+    staff.fillCircle(13, 0, 5);
+    staff.fillStyle(0xffffff, 0.85);
+    staff.fillCircle(13, 0, 2);
+
+    c.add([shadow, cloak, body, staff]);
+    return c;
   }
 }
