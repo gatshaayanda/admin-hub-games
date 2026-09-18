@@ -6,6 +6,7 @@ import './firebase/firebase';
 import { BootScene } from './scenes/BootScene';
 import { PublisherIntroScene } from './scenes/PublisherIntroScene';
 import { NameEntryScene } from './scenes/NameEntryScene';
+import { HallIntroScene } from './scenes/HallIntroScene';
 import { GameShellScene } from './scenes/GameShellScene';
 
 const config: Phaser.Types.Core.GameConfig = {
@@ -25,7 +26,7 @@ const config: Phaser.Types.Core.GameConfig = {
     min: { width: 320, height: 180 },
     max: { width: 0, height: 0 },
   },
-  scene: [BootScene, PublisherIntroScene, NameEntryScene, GameShellScene],
+  scene: [BootScene, PublisherIntroScene, NameEntryScene, HallIntroScene, GameShellScene],
 };
 
 // Keep the publisher shell configuration centralized for every Admin Hub Games title.
