@@ -32,8 +32,9 @@ export class PublisherIntroScene extends Phaser.Scene {
       fontFamily: 'monospace', fontSize: '10px', fontStyle: 'bold', color: '#a9b8d6', letterSpacing: 1.5,
     }).setOrigin(1, 0.5).setAlpha(0).setDepth(90);
 
-    this.input.once('pointerdown', () => this.skipIntro());
-    this.input.keyboard?.once('keydown', () => this.skipIntro());
+    const skip = () => this.skipIntro();
+    this.input.on('pointerdown', skip);
+    this.input.keyboard?.on('keydown', skip);
 
     const fade = this.add.rectangle(0, 0, width, height, 0x070b1d, 1)
       .setOrigin(0)
@@ -68,6 +69,8 @@ export class PublisherIntroScene extends Phaser.Scene {
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
+      this.input.off('pointerdown', skip);
+      this.input.keyboard?.off('keydown', skip);
     });
   }
 
@@ -156,7 +159,11 @@ export class PublisherIntroScene extends Phaser.Scene {
   }
 
   private skipIntro() {
-    if (!this.introReady || this.leaving) return;
+    if (this.leaving) return;
+    // A tap/key can arrive before the character reveal. It intentionally does
+    // nothing then, but the handler stays alive so the player's next input can
+    // skip once the identity beat is ready.
+    if (!this.introReady) return;
     this.leaveIntro();
   }
 
