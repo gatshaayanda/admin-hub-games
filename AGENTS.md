@@ -243,7 +243,10 @@ Status: **substantially complete; now being exercised through real gameplay.**
 - World Notes stored in Firestore
 - public reading of shared notes
 - chosen player name shown as author
-- author-only deletion
+- authors can delete their own published notes with BANANA;
+- other players cannot delete another player's note;
+- any player can report a bad published note;
+- founder/admin moderation can delete any published note and review the report stream;
 - private Gamebook remains local/private
 - Firebase failure handling
 - narrow Firestore security rules
@@ -575,11 +578,13 @@ The Hall lists the current system villages and is the deliberate place for share
 
 Shared note ritual:
 - write the note;
-- enter **APPLE** to commit it to Firestore;
-- the note remains in the shared world for other players to see;
-- enter **BANANA** to open deletion of a note owned by the current player;
-- Firestore author-scoped rules remain authoritative. Do not put a secret admin delete key in browser code or weaken rules to let anonymous players delete other people's notes.
-
-If founder-wide deletion of other players' notes is wanted later, implement a real founder/admin identity and corresponding Firestore authorization. A client-side keyword alone is not security.
+- enter **APPLE** to confirm publication to Firestore;
+- the published note enters the shared world for other players to see;
+- the author can later use **BANANA** to delete their own published note;
+- other players cannot delete someone else's note, but they can report it;
+- the founder/admin identity can use **BANANA** to moderate any published note;
+- the admin report stream records what players are flagging so the game can be understood and moderated over time;
+- APPLE and BANANA are workflow confirmations, not security credentials;
+- Firestore rules remain authoritative: authors can delete their own notes, while cross-player deletion and report review require a real Firebase `admin` claim.
 
 The Systems Hall is part of the canonical lobby foundation and should survive future game cloning unless a new title deliberately replaces the world layer.
