@@ -474,15 +474,15 @@ export class GameShellScene extends Phaser.Scene {
     const deleteButton = this.makePanelButton(0, h / 2 + 2, 'DELETE MY WORLD NOTE');
     const close = this.makePanelButton(0, h / 2 + 38, 'CLOSE GAMEBOOK');
     this.gamebookOverlay.add([backdrop, book, inner, title, intro, notes, worldButton, deleteButton, close]);
-    worldButton.on('pointerdown', (_pointer, _localX, _localY, event) => {
+    worldButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
       this.viewWorldNotes();
     });
-    deleteButton.on('pointerdown', (_pointer, _localX, _localY, event) => {
+    deleteButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
       this.deleteOwnWorldNote();
     });
-    close.on('pointerdown', (_pointer, _localX, _localY, event) => {
+    close.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
       this.closeGamebook();
     });
