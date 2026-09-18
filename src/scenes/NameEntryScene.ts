@@ -3,6 +3,7 @@ import { savePlayerProfile } from '../firebase/firebase';
 
 const PLAYER_NAME_KEY = 'admin-hub-games:player-name';
 const GAMEBOOK_KEY = 'admin-hub-games:gamebook';
+const HALL_INTRO_KEY = 'admin-hub-games:hall-intro-seen';
 
 export class NameEntryScene extends Phaser.Scene {
   private inputText = '';
@@ -261,7 +262,7 @@ export class NameEntryScene extends Phaser.Scene {
     this.status.setText('Entering your world…');
     void savePlayerProfile(playerName);
     this.cameras.main.fadeOut(450, 22, 18, 14);
-    this.time.delayedCall(450, () => this.scene.start('GameShellScene'));
+    this.time.delayedCall(450, () => this.scene.start(this.shouldShowHallIntro() ? 'HallIntroScene' : 'GameShellScene'));
   }
 
   private resetLocalGameData() {
