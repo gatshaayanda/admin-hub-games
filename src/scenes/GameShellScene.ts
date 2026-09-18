@@ -508,7 +508,7 @@ export class GameShellScene extends Phaser.Scene {
 
     const backdrop = this.add.rectangle(0, 0, width, height, 0x17110e, 0.78)
       .setInteractive();
-    backdrop.on('pointerdown', (_pointer, _localX, _localY, event) => {
+    backdrop.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
     });
 
@@ -565,7 +565,7 @@ export class GameShellScene extends Phaser.Scene {
       shape.setSize(Math.min(280, panelWidth * 0.72), buttonHeight);
       const text = button.list[1] as Phaser.GameObjects.Text;
       text.setFontSize(portrait ? '10px' : '9px');
-      button.on('pointerdown', (_pointer, _localX, _localY, event) => {
+      button.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
         event.stopPropagation();
         action();
       });
