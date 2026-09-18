@@ -529,7 +529,7 @@ export class GameShellScene extends Phaser.Scene {
         resolve(value);
       };
       save.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => { event.stopPropagation(); const value = node.value.trim().slice(0, maxLength); finish(value || null); });
-      cancel.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => { event.stopPropagation(); finish(null); });
+      cancel.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => { event.stopPropagation(); this.time.delayedCall(0, () => finish(null)); });
       node.addEventListener('pointerdown', (event) => event.stopPropagation());
       node.addEventListener('keydown', (event) => { if (event.key === 'Escape') finish(null); });
       overlay.add([backdrop, panel, title, hint, input, save, cancel]);
@@ -560,7 +560,7 @@ export class GameShellScene extends Phaser.Scene {
         button.setSize(Math.min(520, panelWidth - 64), buttonHeight);
         const shape = button.list[0] as Phaser.GameObjects.Rectangle;
         shape.setSize(Math.min(520, panelWidth - 64), buttonHeight);
-        button.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => { event.stopPropagation(); finish(choice.value); });
+        button.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => { event.stopPropagation(); this.time.delayedCall(0, () => finish(choice.value)); });
         return button;
       });
       const cancel = this.makePanelButton(0, panelHeight / 2 - 32, 'CANCEL');
@@ -650,8 +650,10 @@ export class GameShellScene extends Phaser.Scene {
     const close = this.makePanelButton(0, panelHeight / 2 - 34, 'BACK TO GAMEBOOK');
     close.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
-      this.closeLobbyManual();
-      this.toggleGamebook();
+      this.time.delayedCall(0, () => {
+        this.closeLobbyManual();
+        this.toggleGamebook();
+      });
     });
 
     overlay.add([backdrop, panel, title, body, close]);
@@ -741,7 +743,7 @@ export class GameShellScene extends Phaser.Scene {
       text.setFontSize(portrait ? '9px' : '8px');
       button.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
         event.stopPropagation();
-        void this.runGamebookAction(action);
+        this.time.delayedCall(0, () => { void this.runGamebookAction(action); });
       });
       return button;
     });
