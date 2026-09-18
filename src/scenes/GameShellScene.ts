@@ -224,6 +224,12 @@ export class GameShellScene extends Phaser.Scene {
     this.drawBuilding(1180, 1160, 190, 100, 0xeee1c2, 0x53635c, 'HOME / STUDIO');
     this.add.text(1180, 1088, 'YOUR LITTLE PLACE', { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '16px' : '13px', color: '#4b3829', stroke: '#f0dfb6', strokeThickness: 5 }).setOrigin(0.5).setDepth(6);
 
+    this.drawBuilding(1180, 760, 190, 104, 0xe9dfc4, 0x2f7775, 'SYSTEMS HALL');
+    this.add.circle(1180, 760, 38, 0x0f5a60, 0.18).setStrokeStyle(3, 0x2f7775, 0.8).setDepth(4);
+    this.add.text(1180, 760, '✦', { fontFamily: 'sans-serif', fontSize: '34px', color: '#f2d27b' }).setOrigin(0.5).setDepth(5);
+    this.add.text(1180, 704, 'SYSTEMS HALL', { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '18px' : '16px', color: '#2e241e', stroke: '#e7d6a4', strokeThickness: 5 }).setOrigin(0.5).setDepth(6);
+    this.add.text(1180, 724, 'the village crossroads', { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '12px' : '10px', color: '#594838' }).setOrigin(0.5).setDepth(6);
+
     this.drawBuilding(1180, 585, 150, 92, 0xe9dfc4, 0x5d5548, 'CHESS HOUSE');
     this.drawChessBoard(1180, 585);
     this.add.text(1180, 505, 'CHESS HOUSE', { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '18px' : '16px', color: '#2e241e', stroke: '#e7d6a4', strokeThickness: 5 }).setOrigin(0.5).setDepth(6);
@@ -349,6 +355,18 @@ export class GameShellScene extends Phaser.Scene {
     }
   }
 
+  private getSystemsHallLocation(): Village {
+    return {
+      id: 'systems-hall',
+      name: 'SYSTEMS HALL',
+      subtitle: 'The crossroads of Admin Hub Games',
+      x: 1180,
+      y: 760,
+      color: 0x2f7775,
+      note: 'Every game begins here. Explore the villages to see the systems we build, leave a thought for the world, or read what other players have left behind.',
+    };
+  }
+
   private getHomeLocation(): Village {
     return {
       id: 'home',
@@ -372,6 +390,12 @@ export class GameShellScene extends Phaser.Scene {
         nearest = location;
         nearestDistance = distance;
       }
+    }
+
+    const hallDistance = Phaser.Math.Distance.Between(this.player.x, this.player.y, 1180, 760);
+    if (hallDistance < nearestDistance) {
+      nearest = this.getSystemsHallLocation();
+      nearestDistance = hallDistance;
     }
 
     const chessDistance = Phaser.Math.Distance.Between(this.player.x, this.player.y, 1180, 585);
@@ -414,7 +438,7 @@ export class GameShellScene extends Phaser.Scene {
     const data: InteractionModalData = {
       title: location.name,
       subtitle: location.subtitle,
-      body: location.note,
+      body: location.id === 'systems-hall' ? this.buildSystemsHallText() : location.note,
       accent: location.color,
       onPrivateNote: () => this.writePrivateNote(location),
       onWorldNote: () => this.writeWorldNote(location),
@@ -422,6 +446,11 @@ export class GameShellScene extends Phaser.Scene {
 
     this.scene.pause('GameShellScene');
     this.scene.launch('InteractionModalScene', data);
+  }
+
+  private buildSystemsHallText() {
+    const villages = this.villages.map((village) => '• ' + village.name + ' — ' + village.subtitle).join('\n');
+    return 'THE SYSTEMS OF ADMIN HUB GAMES\n\n' + villages + '\n\nLeave a thought for this world. Apple saves it to the shared world. Banana is the cleanup command for notes you own.';
   }
 
   private makePanelButton(x: number, y: number, label: string) {
@@ -442,18 +471,21 @@ export class GameShellScene extends Phaser.Scene {
   }
 
   private async writeWorldNote(village: Village) {
-    const text = window.prompt(`Leave a note in ${village.name}. Other players will see it:`, '')?.trim();
+    const text = window.prompt('Write a note for ' + village.name + '. Other players will see it:', '')?.trim();
     if (!text) return 'World note cancelled.';
+
+    const keyword = window.prompt('Type APPLE to save this note in the shared world:', '')?.trim().toLowerCase();
+    if (keyword !== 'apple') return 'Note discarded. Nothing was saved.';
 
     const authorName = String(this.registry.get('playerName') || 'Player');
     const note = await createWorldNote(village.id, authorName, text.slice(0, 500));
 
     if (note) {
       this.worldNotes = [note, ...this.worldNotes];
-      return 'Your note is now part of the world.';
+      return 'APPLE accepted. Your note is now part of the world.';
     }
 
-    return 'Could not reach the shared world. Your private game still works.';
+    return 'Could not reach the shared world. Nothing was saved.';
   }
 
   private showTransientMessage(message: string) {
@@ -476,7 +508,7 @@ export class GameShellScene extends Phaser.Scene {
     const noteLines = this.privateNotes.length ? this.privateNotes.map((note) => `✦ ${note.village.toUpperCase()}\n  ${note.text}`).join('\n\n') : 'No private notes yet.\n\nVisit a village and choose PRIVATE NOTE.';
     const notes = this.add.text(-w / 2 + 34, -h / 2 + 112, noteLines, { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '14px' : '11px', color: '#493526', wordWrap: { width: w - 68 }, lineSpacing: 6 });
     const worldButton = this.makePanelButton(0, h / 2 - 54, 'VIEW WORLD NOTES');
-    const deleteButton = this.makePanelButton(0, h / 2 + 2, 'DELETE MY WORLD NOTE');
+    const deleteButton = this.makePanelButton(0, h / 2 + 2, 'BANANA · DELETE MY NOTE');
     const close = this.makePanelButton(0, h / 2 + 38, 'CLOSE GAMEBOOK');
     this.gamebookOverlay.add([backdrop, book, inner, title, intro, notes, worldButton, deleteButton, close]);
     worldButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
@@ -498,26 +530,34 @@ export class GameShellScene extends Phaser.Scene {
   }
 
   private async viewWorldNotes() {
-    const village = this.activeVillage || this.villages[0];
+    const village = this.activeVillage || this.getSystemsHallLocation();
     this.worldNotes = await loadWorldNotes(village.id);
     const lines = this.worldNotes.length ? this.worldNotes.map((note) => `✦ ${note.authorName}\n  ${note.text}`).join('\n\n') : 'No shared notes here yet.\n\nBe the first person to leave one.';
     this.showTransientMessage(lines.slice(0, 180));
   }
 
   private async deleteOwnWorldNote() {
-    const village = this.activeVillage || this.villages[0];
+    const village = this.activeVillage || this.getSystemsHallLocation();
+    const keyword = window.prompt('Type BANANA to open your world-note cleanup:', '')?.trim().toLowerCase();
+    if (keyword !== 'banana') return 'Cleanup cancelled. Nothing was deleted.';
+
     const notes = await loadWorldNotes(village.id);
     const myId = await getAnonymousPlayerId();
     const mine = notes.filter((note) => note.authorId === myId);
-    if (!mine.length) { this.showTransientMessage('You have no world notes here.'); return; }
-    const choice = window.prompt(mine.length === 1 ? `Delete this note?\n\n${mine[0].text}\n\nType DELETE to confirm.` : mine.map((note, index) => `${index + 1}. ${note.text}`).join('\n\n') + '\n\nEnter the note number to delete:');
-    if (choice === null) return;
-    if (mine.length === 1 && choice.trim().toUpperCase() !== 'DELETE') return;
+    if (!mine.length) return 'BANANA accepted. You have no world notes here.';
+
+    const choice = window.prompt(
+      mine.length === 1
+        ? 'Delete this note?\n\n' + mine[0].text + '\n\nType BANANA again to confirm.'
+        : mine.map((note, index) => (index + 1) + '. ' + note.text).join('\n\n') + '\n\nEnter the note number to delete:',
+    );
+    if (choice === null) return 'Cleanup cancelled.';
+    if (mine.length === 1 && choice.trim().toLowerCase() !== 'banana') return 'Cleanup cancelled. Nothing was deleted.';
     const index = mine.length === 1 ? 0 : Number(choice) - 1;
     const note = mine[index];
-    if (!note) return;
+    if (!note) return 'That note was not found.';
     const deleted = await deleteWorldNote(note.id);
-    this.showTransientMessage(deleted ? 'World note deleted.' : 'Could not delete that note.');
+    return deleted ? 'BANANA accepted. Your world note was deleted.' : 'Could not delete that note.';
   }
 
   private closeGamebook() {

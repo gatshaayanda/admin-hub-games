@@ -566,3 +566,20 @@ The clone inherits the publisher intro, player/name handoff, responsive Phaser s
 START. This repository was cloned from the Admin Hub Games canonical base. Read AGENTS.md and GAME-CLONE-PROTOCOL.md first. Inspect the actual clone and Git state. Then rewrite AGENTS.md into the project-specific contract for [GAME TITLE]. Preserve the Admin Hub Games publisher foundation and START to BUILD to VERIFY to CHECKPOINT to CONTINUE or RECOVER workflow. Document the new game's rules, core loop, scenes, controls, assets, save model, Firebase needs, current slice and production target. Do not create a new engine or restart from Vite. Do not run a test/build ceremony before the first playable implementation. Build the actual game first. Unexpected result = STOP, inspect reality, then act.
 
 The goal is catalog throughput without foundation drift: clone a known-good base, write the new game's contract, build the real game, then feed proven reusable lessons back into the canonical base.
+
+## Systems Hall / Shared Notes Checkpoint
+
+The first meaningful landmark after the player's home is the **SYSTEMS HALL** at the center of the world. It is the crossroads for the other system villages.
+
+The Hall lists the current system villages and is the deliberate place for shared-world writing.
+
+Shared note ritual:
+- write the note;
+- enter **APPLE** to commit it to Firestore;
+- the note remains in the shared world for other players to see;
+- enter **BANANA** to open deletion of a note owned by the current player;
+- Firestore author-scoped rules remain authoritative. Do not put a secret admin delete key in browser code or weaken rules to let anonymous players delete other people's notes.
+
+If founder-wide deletion of other players' notes is wanted later, implement a real founder/admin identity and corresponding Firestore authorization. A client-side keyword alone is not security.
+
+The Systems Hall is part of the canonical lobby foundation and should survive future game cloning unless a new title deliberately replaces the world layer.

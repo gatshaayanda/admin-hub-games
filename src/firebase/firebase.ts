@@ -7,6 +7,9 @@ import {
   doc,
   getDocs,
   getFirestore,
+  limit,
+  query,
+  where,
   serverTimestamp,
   setDoc,
 } from 'firebase/firestore';
@@ -78,11 +81,14 @@ export async function createWorldNote(villageId: string, authorName: string, tex
 
 export async function loadWorldNotes(villageId: string): Promise<WorldNote[]> {
   try {
-    const snapshot = await getDocs(collection(firestore, 'worldNotes'));
+    const notesQuery = query(
+      collection(firestore, 'worldNotes'),
+      where('villageId', '==', villageId),
+      limit(30),
+    );
+    const snapshot = await getDocs(notesQuery);
     return snapshot.docs
       .map((item) => ({ id: item.id, ...item.data() }) as WorldNote)
-      .filter((note) => note.villageId === villageId)
-      .slice(-30)
       .reverse();
   } catch {
     return [];

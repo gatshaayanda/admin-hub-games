@@ -96,3 +96,7 @@ Deep indigo / midnight blue, stars, restrained teal energy, warm gold, cream/whi
 ## Clone documentation
 
 GAME-CLONE-PROTOCOL.md explains the exact clone and AGENTS rewrite procedure.
+
+## Systems Hall checkpoint
+
+The central landmark is now **SYSTEMS HALL**. It lists the system villages and is the canonical place for shared-world notes. APPLE confirms a note save to Firestore. BANANA opens deletion for notes owned by the current player. Other authors' notes remain protected by Firestore author-scoped rules. Founder-wide deletion should only be added later through real admin authorization, not a browser-only secret.

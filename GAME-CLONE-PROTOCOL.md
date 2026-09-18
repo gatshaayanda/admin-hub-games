@@ -20,6 +20,7 @@ The canonical base is the latest production checkpoint of this repository.
 - desktop keyboard controls
 - local player identity
 - optional Firebase identity/shared-world hooks
+- Systems Hall / shared-note interaction foundation
 - Gamebook foundation
 - audio foundation
 - GitHub/Vercel workflow
