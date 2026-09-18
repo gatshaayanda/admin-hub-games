@@ -252,7 +252,7 @@ export class PublisherIntroScene extends Phaser.Scene {
     this.logoMark?.setAlpha(alpha);
     this.logoTitle?.setAlpha(alpha);
     this.logoRule?.setAlpha(alpha).setScale(1, 1);
-    this.logoRule?.setScaleX(0.2 + alpha * 0.8);
+    if (this.logoRule) this.logoRule.scaleX = 0.2 + alpha * 0.8;
     this.presents?.setAlpha(alpha);
     this.logoTitle?.setScale(0.97 + alpha * 0.03);
   }
