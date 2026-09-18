@@ -1,7 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, type User } from 'firebase/auth';
 import {
-  addDoc,
   collection,
   deleteDoc,
   doc,
@@ -150,13 +149,13 @@ export async function reportWorldNote(note: WorldNote, reporterName: string, rea
   const reportId = newLocalId('report');
   try {
     const user = await ensureAnonymousPlayer();
-    await addDoc(collection(firestore, 'worldNoteReports'), {
+    await setDoc(doc(firestore, 'worldNoteReports', reportId), {
       noteId: note.id,
       reporterId: user.uid,
       reporterName,
       villageId: note.villageId,
       reason,
-      createdAt: serverTimestamp(),
+      createdAt: new Date(),
     });
     return true;
   } catch {
@@ -202,9 +201,16 @@ export async function deleteWorldNote(noteId: string): Promise<boolean> {
   }
 }
 
+let syncInFlight = false;
+
 async function syncPending() {
+  if (syncInFlight) return;
+  syncInFlight = true;
   const pending = await getOutbox().catch(() => []);
-  if (!pending.length) return;
+  if (!pending.length) {
+    syncInFlight = false;
+    return;
+  }
 
   let user: User;
   try { user = await ensureAnonymousPlayer(); } catch { syncInFlight = false; return; }
@@ -228,13 +234,13 @@ async function syncPending() {
       } else if (item.type === 'delete-note') {
         await deleteDoc(doc(firestore, 'worldNotes', item.payload.noteId));
       } else if (item.type === 'report-note') {
-        await addDoc(collection(firestore, 'worldNoteReports'), {
+        await setDoc(doc(firestore, 'worldNoteReports', item.id), {
           noteId: item.payload.noteId,
           reporterId: user.uid,
           reporterName: item.payload.reporterName,
           villageId: item.payload.villageId,
           reason: item.payload.reason,
-          createdAt: serverTimestamp(),
+          createdAt: new Date(item.createdAt),
         });
       }
       await deleteOutbox(item.id);
@@ -242,6 +248,7 @@ async function syncPending() {
       // Keep the item queued. Startup, focus, visibility and online events retry it.
     }
   }
+  syncInFlight = false;
 }
 
 void syncPending();
