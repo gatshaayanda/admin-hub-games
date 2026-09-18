@@ -1,3 +1,5 @@
+import { adminHubAudio } from './audio';
+
 type GameShell = {
   joystickVector?: { set: (x: number, y: number) => unknown };
   interact?: () => unknown;
@@ -84,6 +86,7 @@ function makeJoystick() {
 
   base.addEventListener('pointerdown', (event) => {
     event.preventDefault();
+    adminHubAudio.start();
     if (!isGameplayVisible() || isModalVisible() || getScene()?.isGamebookOpen?.()) return;
     pointerId = event.pointerId;
     base.setPointerCapture?.(event.pointerId);
@@ -106,6 +109,7 @@ function makeActionButton(label: string, action: 'interact' | 'book') {
 
   button.addEventListener('click', (event) => {
     event.preventDefault();
+    adminHubAudio.start();
     event.stopPropagation();
     if (!isGameplayVisible() || isModalVisible()) return;
 
