@@ -133,6 +133,8 @@ Required controls:
 
 - laptop: WASD / arrow keys + mouse/tap-to-walk
 - phone: dynamic left-side virtual joystick + touch action buttons
+- mobile controls are mounted only while `GameShellScene` is active; they must not appear over name entry, publisher intro, or modal scenes
+- interaction modals use a dedicated Phaser Scene, not an in-place GameShell overlay
 - phone: tap-to-walk remains available outside the joystick zone
 - phone: no keyboard is required to start, enter the world, explore, or open the Gamebook
 - controls must not make the world feel like a dashboard
@@ -207,6 +209,14 @@ The repository contains `firestore.rules` with narrow author-scoped write/delete
 **Important:** Reset Local Game Data clears the local name and private Gamebook only. It must not delete World Notes.
 
 Shared-world failures must degrade gracefully: the player should still be able to wander, use the private Gamebook, and play locally when Firebase/network access is unavailable.
+
+## Interaction Modal State Contract
+
+World interactions use `InteractionModalScene` as a dedicated Phaser overlay scene. The gameplay scene pauses while the modal is open and resumes when it closes. Phaser's scene lifecycle explicitly supports this pause/launch/resume modal pattern. citehttps://docs.phaser.io/phaser/concepts/scenes
+
+The modal must provide real pointer/touch buttons for every action. Keyboard hints (`E`, `SPACE`, `ESC`) are optional desktop shortcuts, never the only way to dismiss or act on a modal. Interactive modal objects should stop propagation so a button tap cannot also trigger a backdrop close. Phaser's unified pointer API covers both mouse and touch. citehttps://docs.phaser.io/phaser/concepts/input
+
+Doorway interactions must have an explicit proximity prompt and, where appropriate, a small automatic trigger when the player crosses the doorway threshold. Never require a physical keyboard key to advance a mobile-only flow.
 
 ## Roadmap
 
