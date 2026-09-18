@@ -36,6 +36,15 @@ export type WorldNote = {
   text: string;
 };
 
+export type WorldNoteReport = {
+  id: string;
+  noteId: string;
+  reporterId: string;
+  reporterName: string;
+  villageId: string;
+  reason: string;
+};
+
 export async function ensureAnonymousPlayer(): Promise<User> {
   if (firebaseAuth.currentUser) return firebaseAuth.currentUser;
   const credential = await signInAnonymously(firebaseAuth);
@@ -90,6 +99,33 @@ export async function loadWorldNotes(villageId: string): Promise<WorldNote[]> {
     return snapshot.docs
       .map((item) => ({ id: item.id, ...item.data() }) as WorldNote)
       .reverse();
+  } catch {
+    return [];
+  }
+}
+
+export async function reportWorldNote(note: WorldNote, reporterName: string, reason: string): Promise<boolean> {
+  try {
+    const user = await ensureAnonymousPlayer();
+    await addDoc(collection(firestore, 'worldNoteReports'), {
+      noteId: note.id,
+      reporterId: user.uid,
+      reporterName,
+      villageId: note.villageId,
+      reason,
+      createdAt: serverTimestamp(),
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function loadWorldNoteReports(): Promise<WorldNoteReport[]> {
+  try {
+    await ensureAnonymousPlayer();
+    const snapshot = await getDocs(query(collection(firestore, 'worldNoteReports'), limit(50)));
+    return snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as WorldNoteReport).reverse();
   } catch {
     return [];
   }
