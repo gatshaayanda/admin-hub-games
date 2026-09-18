@@ -845,12 +845,22 @@ export class GameShellScene extends Phaser.Scene {
   }
 
   private installAmbientAudioGesture() {
-    const start = () => {
-      adminHubAudio.start();
-      window.removeEventListener('pointerdown', start);
-      window.removeEventListener('keydown', start);
+    const resumeAudio = () => adminHubAudio.start();
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') adminHubAudio.resume();
     };
-    window.addEventListener('pointerdown', start, { once: true });
-    window.addEventListener('keydown', start, { once: true });
+
+    // Mobile browsers may suspend Web Audio after backgrounding or an OS-level
+    // interruption. Keep a cheap user-gesture recovery path instead of requiring
+    // a reload or a fresh scene.
+    window.addEventListener('pointerdown', resumeAudio);
+    window.addEventListener('keydown', resumeAudio);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      window.removeEventListener('pointerdown', resumeAudio);
+      window.removeEventListener('keydown', resumeAudio);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    });
   }
 }
