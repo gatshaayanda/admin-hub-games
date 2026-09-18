@@ -17,8 +17,8 @@ type PrivateNote = { village: string; text: string };
 const GAMEBOOK_KEY = 'admin-hub-games:gamebook';
 const WORLD_WIDTH = 2400;
 const WORLD_HEIGHT = 1400;
-const DESKTOP_DOCK = 86;
-const PORTRAIT_DOCK = 104;
+const DESKTOP_DOCK = 82;
+const PORTRAIT_DOCK = 120;
 
 export class GameShellScene extends Phaser.Scene {
   private player!: Phaser.GameObjects.Container;
@@ -158,11 +158,11 @@ export class GameShellScene extends Phaser.Scene {
 
     if (this.hintText) {
       this.hintText.setPosition(width / 2, 18);
-      this.hintText.setFontSize(portrait ? 8 : 10);
+      this.hintText.setFontSize(portrait ? 12 : 10);
     }
     if (this.statusText) {
       this.statusText.setPosition(18, 18);
-      this.statusText.setFontSize(portrait ? 8 : 10);
+      this.statusText.setFontSize(portrait ? 12 : 10);
     }
     if (this.gamebookButton) this.gamebookButton.setPosition(width - 74, 28);
   }
@@ -204,12 +204,12 @@ export class GameShellScene extends Phaser.Scene {
     this.drawTree(2280, 1180, 1.35);
     this.drawTree(160, 1160, 1);
     this.drawBuilding(1180, 1160, 190, 100, 0xeee1c2, 0x53635c, 'HOME / STUDIO');
-    this.add.text(1180, 1088, 'YOUR LITTLE PLACE', { fontFamily: 'monospace', fontSize: '13px', color: '#4b3829', stroke: '#f0dfb6', strokeThickness: 5 }).setOrigin(0.5).setDepth(6);
+    this.add.text(1180, 1088, 'YOUR LITTLE PLACE', { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '16px' : '13px', color: '#4b3829', stroke: '#f0dfb6', strokeThickness: 5 }).setOrigin(0.5).setDepth(6);
 
     this.drawBuilding(1180, 585, 150, 92, 0xe9dfc4, 0x5d5548, 'CHESS HOUSE');
     this.drawChessBoard(1180, 585);
-    this.add.text(1180, 505, 'CHESS HOUSE', { fontFamily: 'monospace', fontSize: '16px', color: '#2e241e', stroke: '#e7d6a4', strokeThickness: 5 }).setOrigin(0.5).setDepth(6);
-    this.add.text(1180, 526, 'you + the other you', { fontFamily: 'monospace', fontSize: '10px', color: '#594838' }).setOrigin(0.5).setDepth(6);
+    this.add.text(1180, 505, 'CHESS HOUSE', { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '18px' : '16px', color: '#2e241e', stroke: '#e7d6a4', strokeThickness: 5 }).setOrigin(0.5).setDepth(6);
+    this.add.text(1180, 526, 'you + the other you', { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '12px' : '10px', color: '#594838' }).setOrigin(0.5).setDepth(6);
 
     this.villages.forEach((village) => this.drawVillage(village));
   }
@@ -219,8 +219,8 @@ export class GameShellScene extends Phaser.Scene {
     g.fillStyle(village.color, 0.16).fillCircle(village.x, village.y, 105);
     g.lineStyle(3, village.color, 0.6).strokeCircle(village.x, village.y, 105);
     this.drawBuilding(village.x, village.y, 130, 78, 0xf0dfb6, village.color, village.name.replace(' VILLAGE', ''));
-    this.add.text(village.x, village.y + 64, village.name, { fontFamily: 'monospace', fontSize: '14px', color: '#342a22', stroke: '#e7d6a4', strokeThickness: 5 }).setOrigin(0.5).setDepth(7);
-    this.add.text(village.x, village.y + 86, village.subtitle, { fontFamily: 'monospace', fontSize: '9px', color: '#594838', stroke: '#e7d6a4', strokeThickness: 3 }).setOrigin(0.5).setDepth(7);
+    this.add.text(village.x, village.y + 64, village.name, { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '19px' : '14px', color: '#342a22', stroke: '#e7d6a4', strokeThickness: 5 }).setOrigin(0.5).setDepth(7);
+    this.add.text(village.x, village.y + 86, village.subtitle, { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '12px' : '9px', stroke: '#e7d6a4', strokeThickness: 3 }).setOrigin(0.5).setDepth(7);
     this.add.text(village.x + 72, village.y - 72, '✦', { fontFamily: 'sans-serif', fontSize: '24px', color: '#fff1bd', stroke: '#493526', strokeThickness: 4 }).setOrigin(0.5).setDepth(8);
   }
 
@@ -232,7 +232,7 @@ export class GameShellScene extends Phaser.Scene {
     g.beginPath(); g.moveTo(x - w / 2 - 12, y - h / 2); g.lineTo(x, y - h / 2 - 38); g.lineTo(x + w / 2 + 12, y - h / 2); g.closePath(); g.fillPath();
     g.fillStyle(0x5b4433, 1).fillRect(x - 15, y + 5, 30, h / 2 - 5);
     g.fillStyle(0x7d9a9b, 1).fillRect(x - w / 2 + 18, y - 5, 22, 20).fillRect(x + w / 2 - 40, y - 5, 22, 20);
-    this.add.text(x, y - h / 2 - 16, label, { fontFamily: 'monospace', fontSize: '8px', color: '#fff4d4', stroke: '#493526', strokeThickness: 4 }).setOrigin(0.5).setDepth(6);
+    this.add.text(x, y - h / 2 - 16, label, { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '10px' : '8px', color: '#fff4d4', stroke: '#493526', strokeThickness: 4 }).setOrigin(0.5).setDepth(6);
   }
 
   private drawChessBoard(x: number, y: number) {
@@ -277,7 +277,7 @@ export class GameShellScene extends Phaser.Scene {
     this.playerLabel = this.add.text(this.player.x, this.player.y - 48, name, { fontFamily: 'monospace', fontSize: '10px', color: '#fff4d4', stroke: '#493526', strokeThickness: 4 }).setOrigin(0.5).setDepth(30);
 
     const plate = this.add.rectangle(12, 12, 174, 38, 0x2f251e, 0.76).setOrigin(0).setScrollFactor(0).setDepth(39).setStrokeStyle(1, 0xe7d6a4, 0.35);
-    this.statusText = this.add.text(24, 20, 'FREE ROAM  ·  LEVEL 01', { fontFamily: 'monospace', fontSize: '10px', color: '#fff4d4', letterSpacing: 1 }).setScrollFactor(0).setDepth(40);
+    this.statusText = this.add.text(24, 20, 'FREE ROAM  ·  LEVEL 01', { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '12px' : '10px', color: '#fff4d4', letterSpacing: 1 }).setScrollFactor(0).setDepth(40);
     this.statusText.setData('plate', plate);
 
     const brand = this.add.text(this.scale.width - 16, 16, 'ADMIN HUB GAMES', { fontFamily: 'monospace', fontSize: '10px', color: '#fff4d4', stroke: '#493526', strokeThickness: 4, letterSpacing: 1.2 }).setOrigin(1, 0).setScrollFactor(0).setDepth(40);
@@ -292,7 +292,7 @@ export class GameShellScene extends Phaser.Scene {
   private makeHudButton(x: number, y: number, w: number, h: number, label: string) {
     const button = this.add.container(x, y).setScrollFactor(0).setDepth(50);
     const shape = this.add.rectangle(0, 0, w, h, 0x493526, 0.92).setStrokeStyle(2, 0xf0dfb6, 0.82);
-    const text = this.add.text(0, 0, label, { fontFamily: 'monospace', fontSize: '8px', color: '#fff4d4', align: 'center', letterSpacing: 1 }).setOrigin(0.5);
+    const text = this.add.text(0, 0, label, { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '11px' : '8px', color: '#fff4d4', align: 'center', letterSpacing: 1 }).setOrigin(0.5);
     button.add([shape, text]);
     button.setSize(w, h).setInteractive({ useHandCursor: false });
     return button;
@@ -413,8 +413,8 @@ export class GameShellScene extends Phaser.Scene {
 
   private makePanelButton(x: number, y: number, label: string) {
     const button = this.add.container(x, y).setScrollFactor(0).setDepth(101);
-    const shape = this.add.rectangle(0, 0, Math.min(250, this.scale.width * 0.34), 48, 0x493526, 0.95).setStrokeStyle(2, 0xf0dfb6, 0.9);
-    const text = this.add.text(0, 0, label, { fontFamily: 'monospace', fontSize: '9px', color: '#fff4d4', align: 'center' }).setOrigin(0.5);
+    const shape = this.add.rectangle(0, 0, Math.min(280, this.scale.width * 0.72), this.scale.height > this.scale.width ? 58 : 48, 0x493526, 0.95).setStrokeStyle(2, 0xf0dfb6, 0.9);
+    const text = this.add.text(0, 0, label, { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '12px' : '9px', color: '#fff4d4', align: 'center' }).setOrigin(0.5);
     button.add([shape, text]);
     button.setSize(shape.width, shape.height).setInteractive({ useHandCursor: false });
     return button;
@@ -444,7 +444,7 @@ export class GameShellScene extends Phaser.Scene {
   }
 
   private showTransientMessage(message: string) {
-    const text = this.add.text(this.scale.width / 2, this.scale.height - 128, message, { fontFamily: 'monospace', fontSize: '10px', color: '#fff4d4', backgroundColor: '#493526', padding: { left: 12, right: 12, top: 9, bottom: 9 } }).setOrigin(0.5).setScrollFactor(0).setDepth(300);
+    const text = this.add.text(this.scale.width / 2, this.scale.height - 128, message, { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '14px' : '10px', color: '#fff4d4', backgroundColor: '#493526', padding: { left: 12, right: 12, top: 9, bottom: 9 } }).setOrigin(0.5).setScrollFactor(0).setDepth(300);
     this.tweens.add({ targets: text, alpha: 0, delay: 1800, duration: 500, onComplete: () => text.destroy() });
   }
 
@@ -453,18 +453,18 @@ export class GameShellScene extends Phaser.Scene {
     this.gamebookOpen = true;
     this.target = null;
     this.gamebookOverlay = this.add.container(this.scale.width / 2, this.scale.height / 2).setScrollFactor(0).setDepth(200);
-    const w = Math.min(this.scale.width * 0.9, 760);
-    const h = Math.min(this.scale.height * 0.78, 470);
+    const w = Math.min(this.scale.width * 0.94, 760);
+    const h = Math.min(this.scale.height * (this.scale.height > this.scale.width ? 0.82 : 0.78), 500);
     const backdrop = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x17110e, 0.74);
     const book = this.add.rectangle(0, 0, w, h, 0xd8bd83, 1).setStrokeStyle(6, 0x5a402d, 1);
     const inner = this.add.rectangle(0, 0, w - 34, h - 34, 0xeee0ba, 1).setStrokeStyle(2, 0x9a744c, 1);
-    const title = this.add.text(0, -h / 2 + 38, 'MY GAMEBOOK', { fontFamily: 'monospace', fontSize: `${Math.max(18, Math.min(26, w * 0.04))}px`, color: '#493526' }).setOrigin(0.5);
-    const intro = this.add.text(0, -h / 2 + 72, 'Private discoveries and ideas. World Notes are separate.', { fontFamily: 'monospace', fontSize: '10px', color: '#73533a' }).setOrigin(0.5);
+    const title = this.add.text(0, -h / 2 + 38, 'MY GAMEBOOK', { fontFamily: 'monospace', fontSize: `${Math.max(this.scale.height > this.scale.width ? 24 : 20, Math.min(this.scale.height > this.scale.width ? 32 : 28, w * 0.045))}px`, color: '#493526' }).setOrigin(0.5);
+    const intro = this.add.text(0, -h / 2 + 72, 'Private discoveries and ideas. World Notes are separate.', { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '13px' : '10px', color: '#73533a' }).setOrigin(0.5);
     const noteLines = this.privateNotes.length ? this.privateNotes.map((note) => `✦ ${note.village.toUpperCase()}\n  ${note.text}`).join('\n\n') : 'No private notes yet.\n\nVisit a village and choose PRIVATE NOTE.';
-    const notes = this.add.text(-w / 2 + 34, -h / 2 + 112, noteLines, { fontFamily: 'monospace', fontSize: '11px', color: '#493526', wordWrap: { width: w - 68 }, lineSpacing: 6 });
+    const notes = this.add.text(-w / 2 + 34, -h / 2 + 112, noteLines, { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '14px' : '11px', color: '#493526', wordWrap: { width: w - 68 }, lineSpacing: 6 });
     const worldButton = this.makePanelButton(0, h / 2 - 54, 'VIEW WORLD NOTES');
     const deleteButton = this.makePanelButton(0, h / 2 + 2, 'DELETE MY WORLD NOTE');
-    const close = this.add.text(0, h / 2 + 36, 'B / ESC / TAP TO RETURN', { fontFamily: 'monospace', fontSize: '9px', color: '#73533a' }).setOrigin(0.5);
+    const close = this.add.text(0, h / 2 + 36, 'B / ESC / TAP TO RETURN', { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '12px' : '9px', color: '#73533a' }).setOrigin(0.5);
     this.gamebookOverlay.add([backdrop, book, inner, title, intro, notes, worldButton, deleteButton, close]);
     worldButton.on('pointerdown', () => this.viewWorldNotes());
     deleteButton.on('pointerdown', () => this.deleteOwnWorldNote());

@@ -19,8 +19,8 @@ export class InteractionModalScene extends Phaser.Scene {
   create(data: InteractionModalData) {
     const { width, height } = this.scale;
     const portrait = height > width;
-    const panelWidth = Math.min(width * (portrait ? 0.90 : 0.72), 720);
-    const panelHeight = Math.min(height * (portrait ? 0.72 : 0.68), 430);
+    const panelWidth = Math.min(width * (portrait ? 0.94 : 0.72), 720);
+    const panelHeight = Math.min(height * (portrait ? 0.78 : 0.68), 500);
 
     this.input.topOnly = true;
 
@@ -52,7 +52,7 @@ export class InteractionModalScene extends Phaser.Scene {
 
     const subtitle = this.add.text(width / 2, height / 2 - panelHeight / 2 + 67, data.subtitle, {
       fontFamily: 'monospace',
-      fontSize: portrait ? '9px' : '10px',
+      fontSize: portrait ? '13px' : '10px',
       color: '#d9bd87',
       align: 'center',
       wordWrap: { width: panelWidth * 0.78 },
@@ -60,20 +60,20 @@ export class InteractionModalScene extends Phaser.Scene {
 
     const body = this.add.text(width / 2, height / 2 - panelHeight / 2 + 108, data.body, {
       fontFamily: 'monospace',
-      fontSize: portrait ? '11px' : '12px',
+      fontSize: portrait ? '15px' : '12px',
       color: '#fff8e8',
       align: 'center',
       wordWrap: { width: panelWidth * 0.78 },
       lineSpacing: 7,
     }).setOrigin(0.5, 0).setDepth(3);
 
-    const buttonWidth = Math.min(220, panelWidth * 0.34);
-    const buttonY = height / 2 + panelHeight / 2 - (portrait ? 92 : 72);
-    const gap = Math.min(panelWidth * 0.20, 145);
+    const buttonWidth = Math.min(250, panelWidth * (portrait ? 0.38 : 0.34));
+    const buttonY = height / 2 + panelHeight / 2 - (portrait ? 104 : 72);
+    const gap = Math.min(panelWidth * (portrait ? 0.22 : 0.20), 145);
 
     const privateButton = this.makeButton(width / 2 - gap, buttonY, buttonWidth, 50, 'PRIVATE NOTE', 0xd6a84d);
     const worldButton = this.makeButton(width / 2 + gap, buttonY, buttonWidth, 50, 'LEAVE IN WORLD', 0x4d9b98);
-    const closeButton = this.makeButton(width / 2, height / 2 + panelHeight / 2 - 24, Math.min(150, panelWidth * 0.30), 34, 'CLOSE', 0x6d5947);
+    const closeButton = this.makeButton(width / 2, height / 2 + panelHeight / 2 - 24, Math.min(170, panelWidth * 0.34), portrait ? 42 : 34, 'CLOSE', 0x6d5947);
 
     privateButton.on('pointerdown', async (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
@@ -119,7 +119,7 @@ export class InteractionModalScene extends Phaser.Scene {
       .setStrokeStyle(2, accent, 0.95);
     const text = this.add.text(0, 0, label, {
       fontFamily: 'monospace',
-      fontSize: '9px',
+      fontSize: portrait ? '12px' : '9px',
       fontStyle: 'bold',
       color: '#fff4d4',
       align: 'center',

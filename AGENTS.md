@@ -314,6 +314,34 @@ As real games exist, the world can become the place where the player discovers t
 - shared/public notes become part of the community layer
 - Admin Hub Games remains the publisher identity, not a dashboard UI
 
+## System Boundaries / Surgical Changes
+
+Use this mental model when building or modifying the project:
+
+```text
+FOUNDATION
+    ↓
+INPUT / STATE / RENDER
+    ↓
+REUSABLE SYSTEMS
+    ↓
+WORLD
+    ↓
+ACTUAL GAMES
+```
+
+When changing the game:
+1. Identify the system being changed.
+2. Identify dependencies affected by that system.
+3. Change only the necessary layer(s).
+4. Do not redesign unrelated systems.
+5. Verify visual and interaction consequences.
+6. Check mobile whenever the change touches input, UI, viewport, interaction or rendering.
+
+The guiding principle is:
+
+> **Build the system; graphics and controls are representations of that system.**
+
 ## Game Architecture
 
 Keep the conceptual separation:
