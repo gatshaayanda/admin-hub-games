@@ -33,8 +33,25 @@ service cloud.firestore {
         && request.resource.data.text.size() >= 1
         && request.resource.data.text.size() <= 500;
 
+      // Authors may remove their own published notes; founder/admin moderation may remove any note.
       allow delete: if request.auth != null
         && (resource.data.authorId == request.auth.uid || request.auth.token.admin == true);
+    }
+
+    match /worldNoteReports/{reportId} {
+      // Any authenticated player may report a published note. Reports are append-only for players.
+      allow create: if request.auth != null
+        && request.resource.data.reporterId == request.auth.uid
+        && request.resource.data.noteId is string
+        && request.resource.data.villageId is string
+        && request.resource.data.reporterName is string
+        && request.resource.data.reporterName.size() >= 1
+        && request.resource.data.reporterName.size() <= 18
+        && request.resource.data.reason is string
+        && request.resource.data.reason.size() >= 1
+        && request.resource.data.reason.size() <= 300;
+      allow read: if request.auth != null && request.auth.token.admin == true;
+      allow update, delete: if request.auth != null && request.auth.token.admin == true;
     }
   }
 }
