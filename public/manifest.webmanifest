@@ -1,0 +1,17 @@
+{
+  "name": "Admin Hub Games",
+  "short_name": "AH Games",
+  "description": "Small worlds, stories, experiments and games made to be played.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070b1d",
+  "theme_color": "#070b1d",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

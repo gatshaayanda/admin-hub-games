@@ -541,3 +541,28 @@ Quality gates:
 
 Phone playthrough remains the release gate. This checkpoint removes the modal resize/restart freeze path, prevents duplicate modal actions, makes the native mobile name field visually authoritative instead of competing with Phaser text, and adds two idle/two walking procedural player poses with facing direction. Do not call the experience PWA-ready until the deployed phone flow is pleasant from name entry through first exploration and modal return.
 \n\n## Canonical Game Base Rule — September 2026\n\nThis repository is the **Admin Hub Games game base**. When starting a new Admin Hub game, clone this repository rather than creating a fresh Vite/Phaser project from scratch.\n\nThe base is responsible for the shared experience that should make every Admin Hub game immediately feel like an Admin Hub game:\n\nBOOT\n ↓\npublisher intro\n ↓\nname / player identity\n ↓\nclean transition into the title's first playable state\n ↓\nshared input / mobile / audio / save foundations\n ↓\nTHE GAME\n\n A new title should change the game layer, not casually replace the publisher identity, responsive shell, input conventions, player handoff, or foundational rules. New systems are added only when the actual game needs them.\n\n### The Admin Hub Flag\n\nThe publisher intro is the studio flag: a short, repeatable ritual that says **this is an Admin Hub Games title** before getting out of the player's way.\n\nThe intended psychology is:\n- establish place and identity before asking the player to do anything;\n- give the player a small human-scale character to follow into the world;\n- make the publisher name memorable without turning it into an advertisement;\n- hand control to the player quickly enough that anticipation becomes action;\n- make the transition from intro to first control feel like entering a game, not loading a website.\n\nThe current intro is deliberately responsive to viewport changes. Its timing is state-driven rather than dependent on pointer/keyboard input or viewport dimensions, and it must remain skippable only by finishing its intended sequence—not by incidental taps.\n\n### New Game Loop\n\nAfter cloning this base:\n\n1. inspect the repository and read AGENTS.md;\n2. identify the new game's rules, state, scenes and assets;\n3. preserve the Admin Hub publisher/hand-off contract unless there is a documented product reason to change it;\n4. build the smallest playable vertical slice;\n5. test the first control flow on desktop and phone;\n6. run tests and the production build;\n7. push the checkpoint to GitHub;\n8. verify the live Vercel deployment;\n9. continue the loop: **START → BUILD → VERIFY → CHECKPOINT → CONTINUE / RECOVER**.\n\nThe repository is therefore both a playable Admin Hub Games world and the template for the next game. The goal is not to build one generic engine first; the goal is to make the next real Admin Hub game easier to create without losing the identity established here.
+## Canonical Clone Contract
+
+THIS REPOSITORY IS THE CANONICAL ADMIN HUB GAMES GAME BASE.
+
+When starting a new catalog game, clone this repository at its latest meaningful production checkpoint. Do not start a blank Vite/Phaser project and do not clone an individual game as the base.
+
+The clone inherits the publisher intro, player/name handoff, responsive Phaser shell, mobile input conventions, optional Firebase hooks, Gamebook foundation, audio foundation and GitHub/Vercel workflow. The cloned repository is then the actual new game.
+
+### New-game clone protocol
+
+1. Clone the latest production checkpoint of this repository.
+2. Rename repository/package/app metadata and the new game's identity.
+3. Create a separate Firebase project only if the new game actually needs Firebase. Never inherit another title's Firebase project.
+4. Rewrite AGENTS.md immediately so it becomes the new game's own project contract. Preserve the Admin Hub Games foundation contract, but replace the identity, game rules, state, scenes, controls, assets, save model, Firebase needs, current vertical slice and release target with the new game's actual facts.
+5. Keep the publisher intro unless there is a deliberate product reason to change the shared publisher identity.
+6. Treat the cloned foundation as already production-proven. Do not create a test/build ceremony before starting creative implementation.
+7. Build the actual first complete playable game. Run tests/builds when a release candidate is ready, when foundation or dependencies change, or when a bug needs deterministic verification.
+8. Push through the normal GitHub to Vercel path and record the production checkpoint in the new game's AGENTS.md.
+9. If a new game proves a reusable improvement, bring that improvement back to this canonical repository deliberately.
+
+### Required starting prompt after cloning
+
+START. This repository was cloned from the Admin Hub Games canonical base. Read AGENTS.md and GAME-CLONE-PROTOCOL.md first. Inspect the actual clone and Git state. Then rewrite AGENTS.md into the project-specific contract for [GAME TITLE]. Preserve the Admin Hub Games publisher foundation and START to BUILD to VERIFY to CHECKPOINT to CONTINUE or RECOVER workflow. Document the new game's rules, core loop, scenes, controls, assets, save model, Firebase needs, current slice and production target. Do not create a new engine or restart from Vite. Do not run a test/build ceremony before the first playable implementation. Build the actual game first. Unexpected result = STOP, inspect reality, then act.
+
+The goal is catalog throughput without foundation drift: clone a known-good base, write the new game's contract, build the real game, then feed proven reusable lessons back into the canonical base.

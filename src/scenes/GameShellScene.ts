@@ -184,6 +184,8 @@ export class GameShellScene extends Phaser.Scene {
   }
 
   private isInReservedUi(_x: number, y: number) {
+    const touchDevice = window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+    if (!touchDevice) return false;
     const dock = this.scale.height > this.scale.width ? PORTRAIT_DOCK : DESKTOP_DOCK;
     return y >= this.scale.height - dock;
   }
@@ -315,7 +317,13 @@ export class GameShellScene extends Phaser.Scene {
     this.hintText = this.add.text(this.scale.width / 2, 18, 'WASD / ARROWS  ·  TAP TO WALK  ·  E EXPLORE', { fontFamily: 'monospace', fontSize: '10px', color: '#fff6dc', stroke: '#2c241d', strokeThickness: 4 }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(40).setAlpha(0.9);
 
     this.gamebookButton = this.makeHudButton(this.scale.width - 74, 28, 116, 42, 'GAMEBOOK');
-    this.gamebookButton.on('pointerdown', () => this.toggleGamebook());
+    this.gamebookButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
+      this.toggleGamebook();
+    });
+
+    const touchDevice = window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+    if (touchDevice) this.gamebookButton.setVisible(false);
   }
 
   private makeHudButton(x: number, y: number, w: number, h: number, label: string) {
@@ -328,31 +336,7 @@ export class GameShellScene extends Phaser.Scene {
   }
 
   private createWorldInteractions() {
-    this.villages.forEach((village) => {
-      const zone = this.add.zone(village.x, village.y, 190, 150).setInteractive();
-      zone.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
-        event.stopPropagation();
-        this.player.x = Phaser.Math.Clamp(village.x + 145, 42, WORLD_WIDTH - 42);
-        this.player.y = Phaser.Math.Clamp(village.y + 120, 90, WORLD_HEIGHT - 50);
-        this.interactAt(village);
-      });
-    });
-
-    const homeZone = this.add.zone(1180, 1160, 220, 150).setInteractive();
-    homeZone.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
-      event.stopPropagation();
-      this.player.x = 1180;
-      this.player.y = 1240;
-      this.interactAt(this.getHomeLocation());
-    });
-
-    const chessZone = this.add.zone(1180, 585, 220, 160).setInteractive();
-    chessZone.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
-      event.stopPropagation();
-      this.player.x = 1180;
-      this.player.y = 690;
-      this.interact();
-    });
+    // Discovery is earned by walking into the space. Tap-to-walk must not teleport the player.
   }
 
   private updateNearbyPrompt() {

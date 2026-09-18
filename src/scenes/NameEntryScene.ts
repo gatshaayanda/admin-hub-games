@@ -258,8 +258,8 @@ export class NameEntryScene extends Phaser.Scene {
       // Local storage is optional.
     }
 
-    this.status.setText('Saving your player identity…');
-    await savePlayerProfile(playerName);
+    this.status.setText('Entering your world…');
+    void savePlayerProfile(playerName);
     this.cameras.main.fadeOut(450, 22, 18, 14);
     this.time.delayedCall(450, () => this.scene.start('GameShellScene'));
   }
