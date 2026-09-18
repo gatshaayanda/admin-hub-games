@@ -1,4 +1,5 @@
 import { adminHubAudio } from './audio';
+import { isNativeLocationMenuOpen } from './ui/nativeLocationMenu';
 
 type GameShell = {
   joystickVector?: { set: (x: number, y: number) => unknown };
@@ -29,13 +30,13 @@ function isGameplayVisible() {
   return manager.isActive ? manager.isActive('GameShellScene') : Boolean(getScene());
 }
 
-function isModalVisible() {
-  return Boolean(getManager()?.isActive?.('InteractionModalScene'));
+function isOverlayVisible() {
+  return isNativeLocationMenuOpen() || Boolean(getScene()?.isGamebookOpen?.());
 }
 
 function setVector(x: number, y: number) {
   const scene = getScene();
-  if (!scene?.joystickVector || !isGameplayVisible() || isModalVisible() || scene.isGamebookOpen?.()) return;
+  if (!scene?.joystickVector || !isGameplayVisible() || isOverlayVisible()) return;
   scene.joystickVector.set(x, y);
 }
 
@@ -87,7 +88,7 @@ function makeJoystick() {
   base.addEventListener('pointerdown', (event) => {
     event.preventDefault();
     adminHubAudio.start();
-    if (!isGameplayVisible() || isModalVisible() || getScene()?.isGamebookOpen?.()) return;
+    if (!isGameplayVisible() || isOverlayVisible()) return;
     pointerId = event.pointerId;
     base.setPointerCapture?.(event.pointerId);
     update(event);
@@ -111,7 +112,7 @@ function makeActionButton(label: string, action: 'interact' | 'book') {
     event.preventDefault();
     adminHubAudio.start();
     event.stopPropagation();
-    if (!isGameplayVisible() || isModalVisible()) return;
+    if (!isGameplayVisible() || isOverlayVisible()) return;
 
     const scene = getScene();
     if (action === 'interact') scene?.interact?.();
@@ -140,6 +141,10 @@ function install() {
   back.addEventListener('click', (event) => {
     event.preventDefault();
     event.stopPropagation();
+    if (isNativeLocationMenuOpen()) {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      return;
+    }
     window.dispatchEvent(new Event('ahg:escape'));
   });
 
@@ -161,17 +166,16 @@ function syncVisibility() {
 
   const scene = getScene();
   const gameplay = isGameplayVisible();
-  const modal = isModalVisible();
+  const overlay = isOverlayVisible();
   const gamebook = Boolean(scene?.isGamebookOpen?.());
-  const overlay = modal || gamebook;
 
-  root.classList.toggle('is-hidden', !gameplay && !modal);
+  root.classList.toggle('is-hidden', !gameplay);
   root.classList.toggle('is-overlay', overlay);
 
   const back = root.querySelector<HTMLButtonElement>('.ahg-back-button');
   back?.classList.toggle('is-hidden', !overlay);
 
-  if (!gameplay || modal || gamebook) setVector(0, 0);
+  if (!gameplay || overlay) setVector(0, 0);
 }
 
 if (TOUCH_DEVICE) {
