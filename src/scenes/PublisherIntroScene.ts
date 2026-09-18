@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 
 export class PublisherIntroScene extends Phaser.Scene {
   private leaving = false;
+  private resizeHandler?: () => void;
 
   constructor() {
     super('PublisherIntroScene');
@@ -11,6 +12,7 @@ export class PublisherIntroScene extends Phaser.Scene {
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor('#d9c28f');
     this.drawWorld(width, height);
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
 
     const player = this.createPlayer(-48, height * 0.72);
     const shadow = this.add.ellipse(-48, height * 0.75, 28, 9, 0x3a2b21, 0.28);
@@ -19,10 +21,10 @@ export class PublisherIntroScene extends Phaser.Scene {
 
     const ambientBrand = this.add.text(width * 0.075, height * 0.085, 'ADMIN HUB GAMES', {
       fontFamily: 'monospace',
-      fontSize: '15px',
+      fontSize: '16px',
       fontStyle: 'bold',
       color: '#33271f',
-      letterSpacing: 2,
+      letterSpacing: 2.5,
     }).setDepth(30);
 
     const fade = this.add.rectangle(0, 0, width, height, 0x16120f, 1)
@@ -52,6 +54,15 @@ export class PublisherIntroScene extends Phaser.Scene {
         this.time.delayedCall(700, () => this.showPublisherCard(ambientBrand, width, height));
       },
     });
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
+    });
+  }
+
+  private handleResize(width: number, height: number) {
+    if (this.leaving) return;
+    this.cameras.main.setViewport(0, 0, width, height);
   }
 
   private showPublisherCard(ambientBrand: Phaser.GameObjects.Text, width: number, height: number) {
@@ -134,7 +145,8 @@ export class PublisherIntroScene extends Phaser.Scene {
     const g = this.add.graphics();
 
     // Warm Botswana-inspired morning palette: dry grass, red earth and soft sky.
-    g.fillStyle(0xe8d6a8, 1).fillRect(0, 0, width, height);
+    g.fillStyle(0xd8c18d, 1).fillRect(0, 0, width, height);
+    g.fillStyle(0xc6a66c, 0.28).fillRect(0, 0, width, height * 0.34);
     g.fillStyle(0xd7b879, 1).fillRect(0, height * 0.34, width, height * 0.66);
 
     g.fillStyle(0xb58d61, 1);

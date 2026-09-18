@@ -51,7 +51,7 @@ export class NameEntryScene extends Phaser.Scene {
     this.time.addEvent({ delay: 500, loop: true, callback: () => this.caret.setVisible(!this.caret.visible) });
 
     this.instructionText = this.add.text(width / 2, height * 0.49, 'TYPE YOUR NAME  ·  ENTER TO CONTINUE', {
-      fontFamily: 'monospace', fontSize: '10px', color: '#6a5140', letterSpacing: 1,
+      fontFamily: 'monospace', fontSize: '11px', color: '#6a5140', letterSpacing: 1,
     }).setOrigin(0.5);
 
     this.startButton = this.add.container(width / 2, height * 0.59).setDepth(10);
@@ -63,10 +63,13 @@ export class NameEntryScene extends Phaser.Scene {
     }).setOrigin(0.5);
     this.startButton.add([button, buttonText]);
     this.startButton.setSize(buttonWidth, 54).setInteractive({ useHandCursor: false });
-    this.startButton.on('pointerdown', () => this.startGame());
+    this.startButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
+      this.startGame();
+    });
 
     this.status = this.add.text(width / 2, height * 0.69, '', {
-      fontFamily: 'monospace', fontSize: '9px', color: '#6a5140', align: 'center',
+      fontFamily: 'monospace', fontSize: '10px', color: '#6a5140', align: 'center',
       wordWrap: { width: width * 0.82 },
     }).setOrigin(0.5);
 
@@ -146,7 +149,7 @@ export class NameEntryScene extends Phaser.Scene {
     document.getElementById('app')?.appendChild(input);
     this.nameInput = input;
     this.positionNativeNameInput(x, y, boxWidth);
-    this.resizeHandler = () => this.positionNativeNameInput(x, y, boxWidth);
+    this.resizeHandler = () => this.positionNativeNameInput(this.nameBox.x, this.nameBox.y, this.nameBox.width);
     window.addEventListener('resize', this.resizeHandler, { passive: true });
     window.addEventListener('orientationchange', this.resizeHandler, { passive: true });
 

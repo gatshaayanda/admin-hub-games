@@ -66,7 +66,7 @@ export class GameShellScene extends Phaser.Scene {
     this.player.setDepth(20);
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
-    this.cameras.main.setDeadzone(Math.min(width * 0.28, 320), Math.min(height * 0.22, 150));
+    this.cameras.main.setDeadzone(Math.min(width * 0.24, 280), Math.min(height * 0.20, 140));
 
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.keys = this.input.keyboard!.addKeys('W,A,S,D') as Record<string, Phaser.Input.Keyboard.Key>;
@@ -77,7 +77,6 @@ export class GameShellScene extends Phaser.Scene {
     this.createWorldInteractions();
     this.createHud();
     this.layoutViewport();
-    this.createAmbientSound();
 
     const escapeHandler = () => {
       if (this.gamebookOpen) this.closeGamebook();
@@ -94,7 +93,6 @@ export class GameShellScene extends Phaser.Scene {
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layoutViewport, this);
-      this.stopAmbientSound();
       window.removeEventListener('ahg:escape', escapeHandler);
     });
   }
@@ -340,7 +338,7 @@ export class GameShellScene extends Phaser.Scene {
     if (nearest) {
       this.hintText.setText(`${nearest.name}  ·  E / EXPLORE`);
     } else {
-      this.hintText.setText('WASD / ARROWS  ·  TAP TO WALK  ·  E EXPLORE  ·  B GAMEBOOK');
+      this.hintText.setText('WANDER  ·  TAP / DRAG TO MOVE  ·  EXPLORE  ·  BOOK');
     }
   }
 

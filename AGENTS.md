@@ -489,3 +489,49 @@ Before calling a mobile presentation change complete:
 The principle remains:
 
 > **The game should feel like a game that happens to run in a browser, not a website that happens to contain a game.**
+
+
+## First Playthrough Quality Gate — September 2026
+
+Before adding another village, actual game, or major feature, the opening player journey is the primary vertical slice:
+
+```
+BOOT
+ ↓
+publisher cinematic
+ ↓
+name entry
+ ↓
+first touch / movement
+ ↓
+world orientation
+ ↓
+first discovery
+ ↓
+first modal
+ ↓
+modal exit
+ ↓
+continued wandering
+ ↓
+Gamebook
+```
+
+The first playthrough must feel intentional from boot to first exploration. Do not move on because individual systems technically work.
+
+Quality gates:
+- no visible letterboxing or framed webpage around the game;
+- publisher reveal is cinematic, responsive and cannot be accidentally skipped;
+- first user gesture can establish the persistent audio session without breaking the opening;
+- name entry is obvious, touch-friendly and does not summon the keyboard unexpectedly;
+- ENTER THE WORLD produces a clean handoff into gameplay;
+- the first world view is immediately readable on phone and laptop;
+- movement controls feel like game controls, not website widgets;
+- first interaction is discoverable without requiring a keyboard;
+- every modal action has a large touch target and a reliable escape path;
+- orientation changes do not leave stale UI or hitboxes;
+- returning from a modal/gamebook never loses player control;
+- persistent music does not restart between Phaser scenes;
+- PWA/mobile behavior remains part of the game experience rather than an afterthought.
+
+**Do not expand the world until this loop has been exercised as one continuous playthrough.**
