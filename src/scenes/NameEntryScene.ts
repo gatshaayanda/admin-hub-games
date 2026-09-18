@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { clearGamebookNotes } from '../storage/offlineStore';
 import { savePlayerProfile } from '../firebase/firebase';
 
 const PLAYER_NAME_KEY = 'admin-hub-games:player-name';
@@ -277,6 +278,7 @@ export class NameEntryScene extends Phaser.Scene {
     } catch {
       // Ignore storage failures.
     }
+    void clearGamebookNotes();
     this.registry.remove('playerName');
     this.inputText = '';
     this.syncNativeInput();

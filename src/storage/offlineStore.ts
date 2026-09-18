@@ -1,7 +1,7 @@
 const DB_NAME = 'admin-hub-games';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
-export type LocalWorldNote = {
+export type PrivateGamebookNote = { id: string; village: string; text: string; createdAt: number };\n\nexport type LocalWorldNote = {
   id: string;
   remoteId?: string;
   authorId: string;
@@ -32,7 +32,7 @@ function openDb() {
       if (!db.objectStoreNames.contains('worldNotes')) db.createObjectStore('worldNotes', { keyPath: 'id' });
       if (!db.objectStoreNames.contains('outbox')) db.createObjectStore('outbox', { keyPath: 'id' });
       if (!db.objectStoreNames.contains('tombstones')) db.createObjectStore('tombstones', { keyPath: 'id' });
-      if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'key' });
+      if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'key' });\n      if (!db.objectStoreNames.contains('gamebookNotes')) db.createObjectStore('gamebookNotes', { keyPath: 'id' });
     };
     request.onsuccess = () => {
       const db = request.result;
@@ -120,4 +120,19 @@ export async function getMeta<T>(key: string) {
 
 export function newLocalId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+export async function putGamebookNote(note: PrivateGamebookNote) {
+  const db = await openDb();
+  await requestResult(db.transaction('gamebookNotes', 'readwrite').objectStore('gamebookNotes').put(note));
+}
+
+export async function getGamebookNotes() {
+  const db = await openDb();
+  return await requestResult(db.transaction('gamebookNotes').objectStore('gamebookNotes').getAll()) as PrivateGamebookNote[];
+}
+
+export async function clearGamebookNotes() {
+  const db = await openDb();
+  await requestResult(db.transaction('gamebookNotes', 'readwrite').objectStore('gamebookNotes').clear());
 }

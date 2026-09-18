@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { adminHubAudio } from '../audio';
 import { createWorldNote, deleteWorldNote, getAnonymousPlayerId, isFounderAdmin, loadWorldNotes, loadWorldNoteReports, reportWorldNote, type WorldNote } from '../firebase/firebase';
 import { openNativeNoteComposer } from '../ui/nativeNoteComposer';
+import { getGamebookNotes, newLocalId, putGamebookNote } from '../storage/offlineStore';
 import { openNativeLocationMenu } from '../ui/nativeLocationMenu';
 
 type Village = {
@@ -14,7 +15,7 @@ type Village = {
   note: string;
 };
 
-type PrivateNote = { village: string; text: string };
+type PrivateNote = { id: string; village: string; text: string; createdAt: number };
 
 const GAMEBOOK_KEY = 'admin-hub-games:gamebook';
 const WORLD_WIDTH = 2400;
@@ -52,6 +53,8 @@ export class GameShellScene extends Phaser.Scene {
   private lobbyManualOverlay?: Phaser.GameObjects.Container;
   private gamebookEscapeHandler?: () => void;
   private gamebookBusy = false;
+  private connectivityText?: Phaser.GameObjects.Text;
+  private connectivityHandler?: () => void;
 
   private villages: Village[] = [
     { id: 'systems-hall', name: 'SYSTEMS HALL', subtitle: 'The shared lobby of Admin Hub Games', x: 1180, y: 760, color: 0x2f7775, note: 'The first lobby. The systems once imagined as separate houses are gathered here while the foundation is being built.' },
@@ -77,11 +80,12 @@ export class GameShellScene extends Phaser.Scene {
     this.interactKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E);
     this.gamebookKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.B);
 
-    this.loadPrivateNotes();
+    void this.loadPrivateNotes();
     this.createWorldInteractions();
     window.dispatchEvent(new Event('admin-hub-games:game-ready'));
     this.installAmbientAudioGesture();
     this.createHud();
+    this.installConnectivityIndicator();
     this.layoutViewport();
 
     const escapeHandler = () => {
@@ -92,6 +96,12 @@ export class GameShellScene extends Phaser.Scene {
       }
     };
     window.addEventListener('ahg:escape', escapeHandler);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      if (this.connectivityHandler) {
+        window.removeEventListener('online', this.connectivityHandler);
+        window.removeEventListener('offline', this.connectivityHandler);
+      }
+    });
 
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layoutViewport, this);
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
@@ -511,6 +521,20 @@ export class GameShellScene extends Phaser.Scene {
     return button;
   }
 
+  private async viewPrivateNotes() {
+    const notes = [...this.privateNotes].sort((a, b) => b.createdAt - a.createdAt);
+    if (!notes.length) return 'Your Gamebook is empty. Visit a landmark and choose PRIVATE NOTE.';
+    const choices = notes.slice(0, 8).map((note) => ({
+      value: note.id,
+      label: `${note.village.toUpperCase()} · ${note.text.replace(/\\s+/g, ' ').slice(0, 58)}`,
+    }));
+    const noteId = await this.openChoicePanel('MY PRIVATE NOTES', 'Choose a note to read it in full. These notes stay on this device.', choices);
+    if (!noteId) return 'Gamebook closed.';
+    const note = notes.find((item) => item.id === noteId);
+    if (!note) return 'That note could not be found.';
+    this.showTransientMessage(`${note.village.toUpperCase()}\n\n${note.text}`.slice(0, 700));
+  }
+
   private async writePrivateNote(village: Village) {
     const text = await this.openTextComposer(
       'PRIVATE NOTE',
@@ -519,8 +543,9 @@ export class GameShellScene extends Phaser.Scene {
       500,
     );
     if (!text) return 'Private note cancelled.';
-    this.privateNotes.push({ village: village.id, text });
-    this.savePrivateNotes();
+    const note: PrivateNote = { id: newLocalId('gamebook'), village: village.name, text, createdAt: Date.now() };
+    this.privateNotes.push(note);
+    await putGamebookNote(note);
     return 'Saved privately in your Gamebook.';
   }
 
@@ -706,26 +731,27 @@ export class GameShellScene extends Phaser.Scene {
       wordWrap: { width: panelWidth - 64 },
     }).setOrigin(0.5);
 
-    const noteLines = this.privateNotes.length
-      ? this.privateNotes.slice(-3).map((note) => '✦ ' + note.village.toUpperCase() + ' — ' + note.text).join('\\n')
-      : 'No private notes yet. Visit a place and choose PRIVATE NOTE.';
+    const noteCount = this.privateNotes.length;
+    const notePreview = noteCount
+      ? this.privateNotes.slice(-2).reverse().map((note) => '✦ ' + note.text).join('\n\n')
+      : 'Your private discoveries will live here.\nWrite one at a landmark and return whenever you want to remember it.';
 
-    const notesHeight = Math.max(48, Math.min(72, panelHeight * 0.15));
-    const notes = this.add.text(-panelWidth / 2 + 34, top + 84, noteLines, {
+    const notes = this.add.text(-panelWidth / 2 + 34, top + 84, notePreview, {
       fontFamily: 'monospace',
-      fontSize: portrait ? '10px' : '11px',
+      fontSize: portrait ? '11px' : '12px',
       color: '#493526',
       wordWrap: { width: panelWidth - 68 },
-      lineSpacing: 4,
+      lineSpacing: 6,
     }).setOrigin(0, 0);
-    notes.setFixedSize(panelWidth - 68, notesHeight);
-    notes.setMaxLines(portrait ? 3 : 4);
+    notes.setFixedSize(panelWidth - 68, Math.min(112, panelHeight * 0.23));
+    notes.setMaxLines(portrait ? 6 : 7);
 
-    const buttonAreaTop = top + 172;
+    const buttonAreaTop = top + 208;
     const buttonAreaBottom = panelHeight / 2 - 38;
-    const fittedButtonHeight = Math.min(buttonHeight, Math.max(34, (buttonAreaBottom - buttonAreaTop - buttonGap * 5) / 6));
+    const fittedButtonHeight = Math.min(buttonHeight, Math.max(34, (buttonAreaBottom - buttonAreaTop - buttonGap * 6) / 7));
     const firstButtonY = buttonAreaTop + fittedButtonHeight / 2;
     const buttons = [
+      ['VIEW MY PRIVATE NOTES', () => { this.closeGamebook(); return this.viewPrivateNotes(); }],
       ['VIEW WORLD NOTES', () => { this.closeGamebook(); return this.viewWorldNotes(); }],
       ['DELETE A WORLD NOTE', () => { this.closeGamebook(); return this.deleteOwnWorldNote(); }],
       ['REPORT A WORLD NOTE', () => { this.closeGamebook(); return this.reportWorldNoteFlow(); }],
@@ -848,25 +874,50 @@ export class GameShellScene extends Phaser.Scene {
     window.setTimeout(() => overlay.destroy(), 0);
   }
 
-  private savePrivateNotes() {
-    try { window.localStorage.setItem(GAMEBOOK_KEY, JSON.stringify(this.privateNotes)); } catch { /* optional */ }
-  }
-
-  private loadPrivateNotes() {
+  private async loadPrivateNotes() {
     try {
+      const stored = await getGamebookNotes();
+      if (stored.length) {
+        this.privateNotes = stored.slice(-100).map((note) => ({ id: note.id, village: note.village, text: note.text, createdAt: note.createdAt }));
+        return;
+      }
       const raw = window.localStorage.getItem(GAMEBOOK_KEY);
       if (!raw) { this.privateNotes = []; return; }
       const parsed: unknown = JSON.parse(raw);
       if (!Array.isArray(parsed)) { this.privateNotes = []; return; }
-      this.privateNotes = parsed
+      const migrated: PrivateNote[] = parsed
         .filter((item): item is { village?: unknown; text?: unknown } => typeof item === 'object' && item !== null)
         .map((item) => ({
+          id: newLocalId('gamebook'),
           village: typeof item.village === 'string' ? item.village.slice(0, 40) : 'unknown',
           text: typeof item.text === 'string' ? item.text.trim().slice(0, 500) : '',
+          createdAt: Date.now(),
         }))
         .filter((item) => item.text.length > 0)
-        .slice(-50);
+        .slice(-100);
+      this.privateNotes = migrated;
+      await Promise.all(migrated.map((note) => putGamebookNote(note)));
+      window.localStorage.removeItem(GAMEBOOK_KEY);
     } catch { this.privateNotes = []; }
+  }
+
+  private installConnectivityIndicator() {
+    const update = () => {
+      if (!this.connectivityText) return;
+      const online = navigator.onLine;
+      this.connectivityText.setText(online ? 'WORLD SYNC · ONLINE' : 'WORLD SYNC · OFFLINE');
+      this.connectivityText.setAlpha(online ? 0.62 : 0.9);
+    };
+    this.connectivityText = this.add.text(24, 38, '', {
+      fontFamily: 'monospace',
+      fontSize: '8px',
+      color: '#fff4d4',
+      letterSpacing: 0.8,
+    }).setScrollFactor(0).setDepth(40);
+    this.connectivityHandler = update;
+    window.addEventListener('online', update);
+    window.addEventListener('offline', update);
+    update();
   }
 
   private installAmbientAudioGesture() {

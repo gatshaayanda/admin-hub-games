@@ -650,3 +650,91 @@ The service worker and local database are foundations, not proof of offline read
 install while online → launch once online → airplane mode → Publisher Intro → Hall Cinematic → Name Entry → Systems Hall → move / explore / Gamebook → write a private note → write a World Note → close → reopen offline → continue playing → restore network → verify queued World Note syncs to Firestore.
 
 Do not describe the game as fully offline-verified until that sequence has been exercised on a real Android device and the installed app has been reopened with the network disabled.
+
+
+## PWA Layering Contract — September 2026
+
+The PWA layer is infrastructure **under** the game, never a gate in front of it.
+
+```text
+PHASER / GAME EXPERIENCE
+        ↑
+local game state + IndexedDB
+        ↑
+service worker / cached assets
+        ↑
+Firebase sync when available
+```
+
+Rules:
+- `registerPwa()` must never block Phaser startup or scene routing.
+- PWA update prompts must never interrupt an active game session.
+- Installation prompts are allowed only after the player reaches the playable GameShell.
+- Offline play must not depend on Firebase being reachable.
+- Cache Storage is for application/game resources; IndexedDB is for structured player/game data; localStorage is reserved for genuinely small/simple flags and compatibility migration. This follows the browser storage model documented by MDN. https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Caching https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Client-side_APIs/Client-side_storage
+- Persistent storage is requested as an enhancement, never assumed. Browser persistence is still controlled by the user agent. https://developer.mozilla.org/en-US/docs/Web/API/Storage_API https://developer.mozilla.org/en-US/docs/Web/API/StorageManager/persist
+- `navigator.onLine` is a UX hint, not proof that Firebase is reachable.
+- Sync retries occur on startup, reconnection, focus/visibility and explicit user actions; do not make the game depend on Background Sync.
+- Service-worker cache versions are bumped only for intentional compatibility/update boundaries.
+- A service-worker update may wait until the player chooses to reload.
+
+### PWA acceptance contract
+
+The foundation is not considered complete until this real-device sequence has been exercised:
+
+```text
+online first launch
+  ↓
+Publisher Intro
+  ↓
+Hall cinematic
+  ↓
+Name Entry
+  ↓
+GameShell
+  ↓
+private Gamebook write/read
+  ↓
+shared World Note write/read
+  ↓
+close
+  ↓
+airplane mode
+  ↓
+reopen
+  ↓
+play + read/write local state
+  ↓
+restore network
+  ↓
+queued changes sync
+  ↓
+new service-worker version
+  ↓
+non-destructive update prompt
+```
+
+Do not claim this acceptance test passed from a GitHub build alone. It requires browser/device verification.
+
+## Gamebook Storage & Reading Contract
+
+Private Gamebook notes are player-owned local data.
+
+- New notes are stored in IndexedDB, not only localStorage, because notes are structured/growing data.
+- Existing localStorage Gamebook data is migrated into IndexedDB when encountered.
+- Gamebook notes remain private and are never sent to Firestore.
+- The Gamebook landing view should show an actual readable preview, not squeeze several notes into a tiny text strip.
+- **VIEW MY PRIVATE NOTES** opens a readable note selector so the player can choose a note and read it in full.
+- World Notes remain a separate shared system.
+- Reset Local Game Data clears the private Gamebook but never deletes shared World Notes.
+- Future Gamebook improvements should favor a readable notebook/list/detail interaction over dumping all notes into one Phaser text object.
+
+This separation is intentional:
+
+```text
+MY GAMEBOOK
+  local / private / durable
+        ≠
+WORLD NOTES
+  shared / synced / public
+```
