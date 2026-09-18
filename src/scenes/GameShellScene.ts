@@ -549,7 +549,10 @@ export class GameShellScene extends Phaser.Scene {
     const authorName = String(this.registry.get('playerName') || 'Player');
     this.showTransientMessage('Publishing your note to the shared world…');
     try {
-      const note = await createWorldNote(village.id, authorName, cleanText);
+      const note = await Promise.race([
+        createWorldNote(village.id, authorName, cleanText),
+        new Promise<WorldNote | null>((resolve) => window.setTimeout(() => resolve(null), 8000)),
+      ]);
       if (note) {
         this.worldNotes = [note, ...this.worldNotes];
         return 'Your note is now part of the shared world.';
