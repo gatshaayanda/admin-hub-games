@@ -48,6 +48,10 @@ export class GameShellScene extends Phaser.Scene {
   private worldNotes: WorldNote[] = [];
   private ambientOscillators: OscillatorNode[] = [];
   private ambientGain?: GainNode;
+  private ambientContext?: AudioContext;
+  private ambientTimer?: number;
+  private ambientStarted = false;
+  private gamebookInputOverlay?: Phaser.GameObjects.Container;
 
   private villages: Village[] = [
     { id: 'systems-hall', name: 'SYSTEMS HALL', subtitle: 'The shared lobby of Admin Hub Games', x: 1180, y: 760, color: 0x2f7775, note: 'The first lobby. The systems once imagined as separate houses are gathered here while the foundation is being built.' },
@@ -75,6 +79,7 @@ export class GameShellScene extends Phaser.Scene {
 
     this.loadPrivateNotes();
     this.createWorldInteractions();
+    this.installAmbientAudioGesture();
     this.createHud();
     this.layoutViewport();
 
@@ -94,6 +99,9 @@ export class GameShellScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layoutViewport, this);
       window.removeEventListener('ahg:escape', escapeHandler);
+      this.stopAmbientSound();
+      this.gamebookInputOverlay?.destroy();
+      this.gamebookInputOverlay = undefined;
     });
   }
 
@@ -469,11 +477,88 @@ export class GameShellScene extends Phaser.Scene {
   }
 
   private async writePrivateNote(village: Village) {
-    const text = window.prompt(`Private note for ${village.name}:`, '')?.trim();
+    const text = await this.openTextComposer(
+      'PRIVATE NOTE',
+      `Private note for ${village.name}. Only you can see this in your Gamebook.`,
+      'Your private note…',
+      500,
+    );
     if (!text) return 'Private note cancelled.';
-    this.privateNotes.push({ village: village.id, text: text.slice(0, 500) });
+    this.privateNotes.push({ village: village.id, text });
     this.savePrivateNotes();
     return 'Saved privately in your Gamebook.';
+  }
+
+  private openTextComposer(titleText: string, hintText: string, placeholder: string, maxLength: number): Promise<string | null> {
+    return new Promise((resolve) => {
+      const width = this.scale.width;
+      const height = this.scale.height;
+      const portrait = height > width;
+      const panelWidth = Math.min(width * 0.90, 600);
+      const panelHeight = Math.min(height * 0.64, portrait ? 430 : 360);
+      const overlay = this.add.container(width / 2, height / 2).setScrollFactor(0).setDepth(320);
+      this.gamebookInputOverlay = overlay;
+
+      const backdrop = this.add.rectangle(0, 0, width, height, 0x17110e, 0.76).setInteractive();
+      backdrop.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => event.stopPropagation());
+      const panel = this.add.rectangle(0, 0, panelWidth, panelHeight, 0xeee0ba, 1).setStrokeStyle(4, 0x5a402d, 1);
+      const title = this.add.text(0, -panelHeight / 2 + 28, titleText, { fontFamily: 'monospace', fontSize: portrait ? '18px' : '22px', fontStyle: 'bold', color: '#493526', align: 'center', wordWrap: { width: panelWidth - 44 } }).setOrigin(0.5);
+      const hint = this.add.text(0, -panelHeight / 2 + 60, hintText, { fontFamily: 'monospace', fontSize: portrait ? '10px' : '11px', color: '#73533a', align: 'center', wordWrap: { width: panelWidth - 44 } }).setOrigin(0.5);
+      const input = this.add.dom(0, 8, 'textarea', { width: Math.max(220, panelWidth - 64) + 'px', height: Math.max(105, panelHeight - 155) + 'px', background: '#fff8e8', color: '#493526', border: '2px solid #9a744c', borderRadius: '6px', padding: '10px', fontFamily: 'monospace', fontSize: portrait ? '14px' : '13px', resize: 'none', outline: 'none' }, '');
+      const node = input.node as HTMLTextAreaElement;
+      node.maxLength = maxLength;
+      node.placeholder = placeholder;
+      const save = this.makePanelButton(-Math.min(105, panelWidth * 0.18), panelHeight / 2 - 32, 'SAVE NOTE');
+      const cancel = this.makePanelButton(Math.min(105, panelWidth * 0.18), panelHeight / 2 - 32, 'CANCEL');
+      let finished = false;
+      const finish = (value: string | null) => {
+        if (finished) return;
+        finished = true;
+        input.destroy();
+        overlay.destroy();
+        if (this.gamebookInputOverlay === overlay) this.gamebookInputOverlay = undefined;
+        resolve(value);
+      };
+      save.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => { event.stopPropagation(); const value = node.value.trim().slice(0, maxLength); finish(value || null); });
+      cancel.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => { event.stopPropagation(); finish(null); });
+      node.addEventListener('pointerdown', (event) => event.stopPropagation());
+      node.addEventListener('keydown', (event) => { if (event.key === 'Escape') finish(null); });
+      overlay.add([backdrop, panel, title, hint, input, save, cancel]);
+      node.focus();
+    });
+  }
+
+  private openChoicePanel(titleText: string, hintText: string, choices: { label: string; value: string }[]): Promise<string | null> {
+    return new Promise((resolve) => {
+      const width = this.scale.width;
+      const height = this.scale.height;
+      const portrait = height > width;
+      const panelWidth = Math.min(width * 0.92, 680);
+      const panelHeight = Math.min(height * 0.82, portrait ? 600 : 500);
+      const overlay = this.add.container(width / 2, height / 2).setScrollFactor(0).setDepth(320);
+      this.gamebookInputOverlay = overlay;
+      const backdrop = this.add.rectangle(0, 0, width, height, 0x17110e, 0.78).setInteractive();
+      backdrop.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => event.stopPropagation());
+      const panel = this.add.rectangle(0, 0, panelWidth, panelHeight, 0xeee0ba, 1).setStrokeStyle(4, 0x5a402d, 1);
+      const title = this.add.text(0, -panelHeight / 2 + 28, titleText, { fontFamily: 'monospace', fontSize: portrait ? '18px' : '22px', fontStyle: 'bold', color: '#493526', align: 'center' }).setOrigin(0.5);
+      const hint = this.add.text(0, -panelHeight / 2 + 60, hintText, { fontFamily: 'monospace', fontSize: portrait ? '10px' : '11px', color: '#73533a', align: 'center', wordWrap: { width: panelWidth - 44 } }).setOrigin(0.5);
+      const visible = choices.slice(0, 8);
+      const buttonHeight = Math.min(50, Math.max(42, (panelHeight - 120) / Math.max(1, visible.length)));
+      let finished = false;
+      const finish = (value: string | null) => { if (finished) return; finished = true; overlay.destroy(); if (this.gamebookInputOverlay === overlay) this.gamebookInputOverlay = undefined; resolve(value); };
+      const buttons = visible.map((choice, index) => {
+        const button = this.makePanelButton(0, -panelHeight / 2 + 96 + index * (buttonHeight + 6), choice.label.slice(0, 72));
+        button.setSize(Math.min(520, panelWidth - 64), buttonHeight);
+        const shape = button.list[0] as Phaser.GameObjects.Rectangle;
+        shape.setSize(Math.min(520, panelWidth - 64), buttonHeight);
+        button.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => { event.stopPropagation(); finish(choice.value); });
+        return button;
+      });
+      const cancel = this.makePanelButton(0, panelHeight / 2 - 32, 'CANCEL');
+      cancel.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => { event.stopPropagation(); finish(null); });
+      overlay.add([backdrop, panel, title, hint, ...buttons, cancel]);
+      this.input.keyboard?.once('keydown-ESC', () => finish(null));
+    });
   }
 
   private async writeWorldNote(village: Village, text?: string) {
@@ -661,23 +746,16 @@ export class GameShellScene extends Phaser.Scene {
     const village = this.activeVillage || this.getSystemsHallLocation();
     const notes = await loadWorldNotes(village.id);
     if (!notes.length) return 'There are no world notes here to report.';
-
-    const choice = window.prompt(
-      notes.map((note, index) => `${index + 1}. ${note.authorName}: ${note.text}`).join('\n\n') +
-      '\n\nEnter the note number to report:',
-    );
-    if (choice === null) return 'Report cancelled.';
-    const note = notes[Number(choice) - 1];
+    const choices = notes.slice(0, 8).map((note) => ({ value: note.id, label: note.authorName + ': ' + note.text }));
+    const noteId = await this.openChoicePanel('REPORT A WORLD NOTE', 'Choose the note you want the admin system to review.', choices);
+    if (!noteId) return 'Report cancelled.';
+    const note = notes.find((item) => item.id === noteId);
     if (!note) return 'That note was not found.';
-
-    const reason = window.prompt('Why are you reporting this note? Give a reason so the admin system can understand what is happening (max 300 characters)', '')?.trim();
+    const reason = await this.openTextComposer('REPORT REASON', 'Explain what should be reviewed (max 300 characters).', 'Why are you reporting this note?', 300);
     if (!reason) return 'Report cancelled. Please give a reason so the admin system can understand what is happening.';
-
     const reporterName = String(this.registry.get('playerName') || 'Player');
-    const reported = await reportWorldNote(note, reporterName, reason.slice(0, 300));
-    return reported
-      ? 'Report submitted. The admin system has recorded it for review.'
-      : 'Could not submit the report. Please try again later.';
+    const reported = await reportWorldNote(note, reporterName, reason);
+    return reported ? 'Report submitted. The admin system has recorded it for review.' : 'Could not submit the report. Please try again later.';
   }
 
   private async viewAdminReports() {
@@ -702,26 +780,17 @@ export class GameShellScene extends Phaser.Scene {
     const village = this.activeVillage || this.getSystemsHallLocation();
     const notes = await loadWorldNotes(village.id);
     if (!notes.length) return 'There are no world notes here to remove.';
-
     const founderAdmin = await isFounderAdmin();
     const myId = founderAdmin ? null : await getAnonymousPlayerId();
     const visibleNotes = founderAdmin ? notes : notes.filter((note) => note.authorId === myId);
-
     if (!visibleNotes.length) return 'You have no world notes here to remove.';
-
-    const choice = window.prompt(
-      visibleNotes.map((note, index) => (index + 1) + '. ' + note.authorName + ': ' + note.text).join('\n\n') +
-      '\n\nEnter the note number to delete:',
-    );
-    if (choice === null) return 'Cleanup cancelled.';
-    const index = Number(choice) - 1;
-    const note = visibleNotes[index];
+    const choices = visibleNotes.slice(0, 8).map((note) => ({ value: note.id, label: note.authorName + ': ' + note.text }));
+    const noteId = await this.openChoicePanel(founderAdmin ? 'REMOVE WORLD NOTE' : 'REMOVE YOUR WORLD NOTE', 'Choose the note to remove from the shared world.', choices);
+    if (!noteId) return 'Cleanup cancelled.';
+    const note = visibleNotes.find((item) => item.id === noteId);
     if (!note) return 'That note was not found.';
-
     const deleted = await deleteWorldNote(note.id);
-    return deleted
-      ? 'The selected world note was removed from the shared world.'
-      : 'Could not delete that note.';
+    return deleted ? 'The selected world note was removed from the shared world.' : 'Could not delete that note.';
   }
 
   private closeGamebook() {
@@ -743,32 +812,69 @@ export class GameShellScene extends Phaser.Scene {
     } catch { this.privateNotes = []; }
   }
 
-  private createAmbientSound() {
+  private installAmbientAudioGesture() {
+    const start = () => {
+      this.startAmbientSound();
+      window.removeEventListener('pointerdown', start);
+      window.removeEventListener('keydown', start);
+    };
+    window.addEventListener('pointerdown', start, { once: true });
+    window.addEventListener('keydown', start, { once: true });
+  }
+
+  private startAmbientSound() {
+    if (this.ambientStarted) {
+      if (this.ambientContext?.state === 'suspended') this.ambientContext.resume().catch(() => undefined);
+      return;
+    }
     try {
       const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (!AudioContextClass) return;
       const context = new AudioContextClass();
       const gain = context.createGain();
-      gain.gain.value = 0.018;
+      gain.gain.value = 0.012;
       gain.connect(context.destination);
+      this.ambientContext = context;
       this.ambientGain = gain;
+      this.ambientStarted = true;
       const notes = [196, 246.94, 293.66, 246.94, 220, 261.63, 329.63, 261.63];
-      notes.forEach((frequency, index) => {
-        const oscillator = context.createOscillator();
-        oscillator.type = 'sine';
-        oscillator.frequency.value = frequency;
-        oscillator.connect(gain);
-        oscillator.start(context.currentTime + index * 0.55);
-        oscillator.stop(context.currentTime + 0.55 * notes.length + 0.8);
-        this.ambientOscillators.push(oscillator);
-      });
-      context.resume().catch(() => undefined);
+      const beat = 0.55;
+      const loopLength = notes.length * beat;
+      const scheduleLoop = () => {
+        if (!this.ambientContext || !this.ambientGain) return;
+        const now = this.ambientContext.currentTime + 0.03;
+        notes.forEach((frequency, index) => {
+          const oscillator = this.ambientContext!.createOscillator();
+          const noteGain = this.ambientContext!.createGain();
+          oscillator.type = 'sine';
+          oscillator.frequency.value = frequency;
+          noteGain.gain.setValueAtTime(0, now + index * beat);
+          noteGain.gain.linearRampToValueAtTime(0.55, now + index * beat + 0.05);
+          noteGain.gain.exponentialRampToValueAtTime(0.001, now + index * beat + 0.48);
+          oscillator.connect(noteGain);
+          noteGain.connect(this.ambientGain!);
+          oscillator.start(now + index * beat);
+          oscillator.stop(now + index * beat + 0.5);
+          this.ambientOscillators.push(oscillator);
+        });
+        this.ambientTimer = window.setTimeout(() => {
+          this.ambientOscillators = [];
+          scheduleLoop();
+        }, loopLength * 1000 - 120);
+      };
+      context.resume().then(scheduleLoop).catch(() => scheduleLoop());
     } catch { /* audio is optional */ }
   }
 
   private stopAmbientSound() {
-    this.ambientGain?.disconnect();
+    if (this.ambientTimer !== undefined) window.clearTimeout(this.ambientTimer);
+    this.ambientTimer = undefined;
+    this.ambientOscillators.forEach((oscillator) => { try { oscillator.stop(); } catch { /* already stopped */ } });
     this.ambientOscillators = [];
+    this.ambientGain?.disconnect();
     this.ambientGain = undefined;
+    this.ambientContext?.close().catch(() => undefined);
+    this.ambientContext = undefined;
+    this.ambientStarted = false;
   }
 }
