@@ -831,14 +831,21 @@ export class GameShellScene extends Phaser.Scene {
       this.input.keyboard?.off('keydown-ESC', this.gamebookEscapeHandler);
       this.gamebookEscapeHandler = undefined;
     }
-    overlay.destroy();
+    // Android browsers can still be inside Phaser's pointer dispatch when a
+    // Container is destroyed. Hide and disable it first, then let the browser
+    // tear it down outside the Phaser input event.
+    overlay.disableInteractive();
+    overlay.setVisible(false);
+    window.setTimeout(() => overlay.destroy(), 0);
   }
 
   private closeLobbyManual() {
     if (!this.lobbyManualOverlay) return;
     const overlay = this.lobbyManualOverlay;
     this.lobbyManualOverlay = undefined;
-    overlay.destroy();
+    overlay.disableInteractive();
+    overlay.setVisible(false);
+    window.setTimeout(() => overlay.destroy(), 0);
   }
 
   private savePrivateNotes() {
