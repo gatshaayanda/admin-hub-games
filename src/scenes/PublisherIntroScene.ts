@@ -2,149 +2,199 @@ import Phaser from 'phaser';
 
 export class PublisherIntroScene extends Phaser.Scene {
   private leaving = false;
-  private resizeHandler?: () => void;
+  private elapsed = 0;
+  private worldGraphics?: Phaser.GameObjects.Graphics;
+  private player?: Phaser.GameObjects.Container;
+  private playerShadow?: Phaser.GameObjects.Ellipse;
+  private ambientBrand?: Phaser.GameObjects.Text;
+  private veil?: Phaser.GameObjects.Rectangle;
+  private panel?: Phaser.GameObjects.Rectangle;
+  private title?: Phaser.GameObjects.Text;
+  private presents?: Phaser.GameObjects.Text;
 
   constructor() {
     super('PublisherIntroScene');
   }
 
   create() {
-    const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor('#d9c28f');
-    this.drawWorld(width, height);
+    this.buildResponsiveScene();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
-
-    const player = this.createPlayer(-48, height * 0.72);
-    const shadow = this.add.ellipse(-48, height * 0.75, 28, 9, 0x3a2b21, 0.28);
-    player.setDepth(20);
-    shadow.setDepth(19);
-
-    const ambientBrand = this.add.text(width * 0.075, height * 0.085, 'ADMIN HUB GAMES', {
-      fontFamily: 'monospace',
-      fontSize: '16px',
-      fontStyle: 'bold',
-      color: '#33271f',
-      letterSpacing: 2.5,
-    }).setDepth(30);
-
-    const fade = this.add.rectangle(0, 0, width, height, 0x16120f, 1)
-      .setOrigin(0)
-      .setDepth(100);
-
-    this.tweens.add({
-      targets: fade,
-      alpha: 0,
-      duration: 1000,
-      ease: 'Sine.easeOut',
-    });
-
-    // Keep the cinematic sequence independent of viewport dimensions and input.
-    // Opening the app always gives the publisher identity its intended moment.
-    this.tweens.add({
-      targets: [player, shadow],
-      x: `+=${width * 0.50}`,
-      duration: 4200,
-      ease: 'Sine.easeInOut',
-      onUpdate: () => {
-        const bob = Math.sin(this.time.now / 110) * 1.8;
-        player.y = height * 0.72 + bob;
-        shadow.x = player.x;
-      },
-      onComplete: () => {
-        this.time.delayedCall(700, () => this.showPublisherCard(ambientBrand, width, height));
-      },
-    });
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
     });
   }
 
-  private handleResize(width: number, height: number) {
+  update(_time: number, delta: number) {
     if (this.leaving) return;
-    this.cameras.main.setViewport(0, 0, width, height);
+
+    this.elapsed += delta;
+
+    if (this.elapsed < 850) {
+      const progress = Phaser.Math.Clamp(this.elapsed / 850, 0, 1);
+      this.setFade(1 - progress);
+      this.positionPlayer(0);
+      return;
+    }
+
+    if (this.elapsed < 4050) {
+      const progress = Phaser.Math.Clamp((this.elapsed - 850) / 3200, 0, 1);
+      this.setFade(0);
+      this.positionPlayer(progress);
+      return;
+    }
+
+    if (this.elapsed < 4650) {
+      this.setFade(0);
+      this.positionPlayer(1);
+      return;
+    }
+
+    if (this.elapsed < 5500) {
+      const progress = Phaser.Math.Clamp((this.elapsed - 4650) / 850, 0, 1);
+      this.positionPlayer(1);
+      this.setPublisherAlpha(Phaser.Math.Easing.Sine.Out(progress));
+      return;
+    }
+
+    if (this.elapsed < 7350) {
+      this.positionPlayer(1);
+      this.setPublisherAlpha(1);
+      return;
+    }
+
+    if (this.elapsed < 8150) {
+      const progress = Phaser.Math.Clamp((this.elapsed - 7350) / 800, 0, 1);
+      this.setPublisherAlpha(1 - Phaser.Math.Easing.Sine.InOut(progress));
+      this.setFade(progress);
+      return;
+    }
+
+    this.leaveIntro();
   }
 
-  private showPublisherCard(ambientBrand: Phaser.GameObjects.Text, width: number, height: number) {
-    if (this.leaving) return;
+  private buildResponsiveScene() {
+    const width = this.scale.width;
+    const height = this.scale.height;
 
-    const veil = this.add.rectangle(width / 2, height / 2, width, height, 0x16120f, 0.32)
-      .setDepth(80)
-      .setAlpha(0);
+    this.worldGraphics = this.add.graphics().setDepth(1);
+    this.drawWorld(width, height);
+
+    this.player = this.createPlayer(-Math.max(48, width * 0.06), height * 0.72);
+    this.player.setDepth(20);
+
+    this.playerShadow = this.add.ellipse(this.player.x, height * 0.75, 28, 9, 0x3a2b21, 0.28)
+      .setDepth(19);
+
+    this.ambientBrand = this.add.text(width * 0.055, height * 0.065, 'ADMIN HUB GAMES', {
+      fontFamily: 'monospace',
+      fontSize: Math.max(14, Math.min(20, width * 0.018)) + 'px',
+      fontStyle: 'bold',
+      color: '#33271f',
+      letterSpacing: 2.5,
+    }).setDepth(30).setAlpha(0.9);
+
+    this.veil = this.add.rectangle(0, 0, width, height, 0x16120f, 1)
+      .setOrigin(0)
+      .setDepth(100);
 
     const panelWidth = Math.min(width * 0.82, 720);
     const panelHeight = Math.min(height * 0.38, 210);
-    const panel = this.add.rectangle(width / 2, height * 0.48, panelWidth, panelHeight, 0x241c17, 0.92)
+
+    this.panel = this.add.rectangle(width / 2, height * 0.48, panelWidth, panelHeight, 0x241c17, 0.94)
       .setStrokeStyle(Math.max(2, Math.min(width, height) * 0.004), 0xd2bc8e, 0.95)
       .setDepth(81)
-      .setAlpha(0)
-      .setScale(0.94);
+      .setAlpha(0);
 
-    const titleSize = Math.max(30, Math.min(60, Math.min(width, height) * 0.10));
+    const titleSize = Math.max(28, Math.min(60, Math.min(width, height) * 0.10));
     const presentsSize = Math.max(15, Math.min(25, Math.min(width, height) * 0.04));
 
-    const title = this.add.text(width / 2, height * 0.455, 'ADMIN HUB GAMES', {
+    this.title = this.add.text(width / 2, height * 0.455, 'ADMIN HUB GAMES', {
       fontFamily: 'monospace',
-      fontSize: `${titleSize}px`,
+      fontSize: titleSize + 'px',
       fontStyle: 'bold',
       color: '#f5e7c4',
       letterSpacing: Math.max(2, Math.round(titleSize * 0.06)),
       align: 'center',
-    }).setOrigin(0.5).setDepth(82).setAlpha(0).setScale(0.96);
+    }).setOrigin(0.5).setDepth(82).setAlpha(0);
 
-    const presents = this.add.text(width / 2, height * 0.575, 'presents', {
+    this.presents = this.add.text(width / 2, height * 0.575, 'presents', {
       fontFamily: 'sans-serif',
-      fontSize: `${presentsSize}px`,
+      fontSize: presentsSize + 'px',
       color: '#d9c28f',
       fontStyle: 'italic',
       align: 'center',
     }).setOrigin(0.5).setDepth(82).setAlpha(0);
 
-    // Deliberate cinematic entrance: no click/keypress can accidentally skip it.
-    this.tweens.add({
-      targets: [veil, panel, title, presents],
-      alpha: 1,
-      duration: 850,
-      ease: 'Sine.easeOut',
-    });
+    this.setPublisherAlpha(0);
+    this.setFade(1);
+  }
 
-    this.tweens.add({
-      targets: [panel, title],
-      scale: 1,
-      duration: 850,
-      ease: 'Sine.easeOut',
-    });
+  private handleResize(width: number, height: number) {
+    if (this.leaving) return;
 
-    // Hold for a full, repeatable publisher beat on laptop and phone.
-    this.time.delayedCall(3400, () => {
-      this.tweens.add({
-        targets: [veil, panel, title, presents],
-        alpha: 0,
-        duration: 1000,
-        ease: 'Sine.easeInOut',
-        onComplete: () => {
-          veil.destroy();
-          panel.destroy();
-          title.destroy();
-          presents.destroy();
-          ambientBrand.setAlpha(1);
-          this.time.delayedCall(300, () => this.leaveIntro());
-        },
-      });
-    });
+    this.cameras.main.setViewport(0, 0, width, height);
+    this.worldGraphics?.clear();
+    if (this.worldGraphics) this.drawWorld(width, height);
+
+    const progress = Phaser.Math.Clamp((this.elapsed - 850) / 3200, 0, 1);
+    if (this.player) {
+      this.player.x = Phaser.Math.Linear(-Math.max(48, width * 0.06), width * 0.50, Phaser.Math.Easing.Sine.InOut(progress));
+      this.player.y = height * 0.72;
+      this.playerShadow?.setPosition(this.player.x, height * 0.75);
+    }
+
+    this.ambientBrand?.setPosition(width * 0.055, height * 0.065)
+      .setFontSize(Math.max(14, Math.min(20, width * 0.018)));
+
+    const panelWidth = Math.min(width * 0.82, 720);
+    const panelHeight = Math.min(height * 0.38, 210);
+    this.panel?.setPosition(width / 2, height * 0.48).setSize(panelWidth, panelHeight);
+
+    const titleSize = Math.max(28, Math.min(60, Math.min(width, height) * 0.10));
+    const presentsSize = Math.max(15, Math.min(25, Math.min(width, height) * 0.04));
+    this.title?.setPosition(width / 2, height * 0.455).setFontSize(titleSize);
+    this.presents?.setPosition(width / 2, height * 0.575).setFontSize(presentsSize);
+    this.veil?.setSize(width, height);
+  }
+
+  private positionPlayer(progress: number) {
+    if (!this.player) return;
+
+    const width = this.scale.width;
+    const height = this.scale.height;
+    const eased = Phaser.Math.Easing.Sine.InOut(Phaser.Math.Clamp(progress, 0, 1));
+
+    this.player.x = Phaser.Math.Linear(-Math.max(48, width * 0.06), width * 0.50, eased);
+    this.player.y = height * 0.72 + Math.sin(this.elapsed / 110) * 1.5;
+    this.playerShadow?.setPosition(this.player.x, height * 0.75);
+  }
+
+  private setPublisherAlpha(alpha: number) {
+    this.panel?.setAlpha(alpha);
+    this.title?.setAlpha(alpha);
+    this.presents?.setAlpha(alpha);
+    this.panel?.setScale(0.94 + alpha * 0.06);
+    this.title?.setScale(0.96 + alpha * 0.04);
+    this.ambientBrand?.setAlpha(alpha >= 0.98 ? 0.9 : 0);
+  }
+
+  private setFade(alpha: number) {
+    this.veil?.setAlpha(Phaser.Math.Clamp(alpha, 0, 1));
   }
 
   private leaveIntro() {
     if (this.leaving) return;
     this.leaving = true;
-    this.cameras.main.fadeOut(700, 22, 18, 14);
-    this.time.delayedCall(700, () => this.scene.start('NameEntryScene'));
+    this.cameras.main.fadeOut(500, 22, 18, 14);
+    this.time.delayedCall(500, () => this.scene.start('NameEntryScene'));
   }
 
   private drawWorld(width: number, height: number) {
-    const g = this.add.graphics();
+    const g = this.worldGraphics;
+    if (!g) return;
 
-    // Warm Botswana-inspired morning palette: dry grass, red earth and soft sky.
     g.fillStyle(0xd8c18d, 1).fillRect(0, 0, width, height);
     g.fillStyle(0xc6a66c, 0.28).fillRect(0, 0, width, height * 0.34);
     g.fillStyle(0xd7b879, 1).fillRect(0, height * 0.34, width, height * 0.66);
@@ -162,8 +212,8 @@ export class PublisherIntroScene extends Phaser.Scene {
     g.closePath();
     g.fillPath();
 
-    for (let x = 18; x < width; x += 42) {
-      const y = height * 0.47 + ((x * 13) % 105);
+    for (let x = 18; x < width; x += Math.max(30, width * 0.044)) {
+      const y = height * 0.47 + ((x * 13) % Math.max(70, height * 0.20));
       g.fillStyle(0x71804a, 0.72).fillRect(x, y, 13, 5);
       g.fillStyle(0x899153, 0.65).fillRect(x + 4, y - 5, 5, 5);
     }
@@ -183,6 +233,7 @@ export class PublisherIntroScene extends Phaser.Scene {
     g.fillStyle(0x8d7254, 1).fillRect(width * 0.59, height * 0.35, width * 0.33, 11);
     g.fillStyle(0x705b48, 1).fillRect(width * 0.59, height * 0.35 + 11, width * 0.33, 4);
     g.fillStyle(0xe7dfc8, 1).fillRect(width * 0.64, height * 0.20, width * 0.19, height * 0.16);
+
     g.fillStyle(0x58635d, 1);
     g.beginPath();
     g.moveTo(width * 0.61, height * 0.20);
@@ -190,6 +241,7 @@ export class PublisherIntroScene extends Phaser.Scene {
     g.lineTo(width * 0.86, height * 0.20);
     g.closePath();
     g.fillPath();
+
     g.fillStyle(0x9a704e, 1).fillRect(width * 0.72, height * 0.275, 22, 42);
     g.fillStyle(0x7693a0, 1).fillRect(width * 0.66, height * 0.25, 22, 19);
     g.fillStyle(0x7693a0, 1).fillRect(width * 0.79, height * 0.25, 22, 19);
@@ -225,11 +277,12 @@ export class PublisherIntroScene extends Phaser.Scene {
       if (i % 4 === 0) g.fillStyle(0x687648, 0.9).fillRect(x + 8, y - 4, 4, 8);
     }
 
-    g.fillStyle(0xf5df9c, 0.72).fillCircle(width * 0.87, height * 0.14, 34);
+    g.fillStyle(0xf5df9c, 0.72).fillCircle(width * 0.87, height * 0.14, Math.max(24, Math.min(42, width * 0.035)));
   }
 
   private drawTree(x: number, y: number, scale: number) {
-    const g = this.add.graphics();
+    const g = this.worldGraphics;
+    if (!g) return;
     g.fillStyle(0x684a34, 1).fillRect(x - 5 * scale, y + 18 * scale, 10 * scale, 52 * scale);
     g.fillStyle(0x445a37, 1);
     g.fillRect(x - 46 * scale, y, 92 * scale, 17 * scale);
@@ -240,16 +293,25 @@ export class PublisherIntroScene extends Phaser.Scene {
 
   private createPlayer(x: number, y: number) {
     const container = this.add.container(x, y);
-    const g = this.add.graphics();
-    g.fillStyle(0x241d1a, 1).fillRect(-10, -22, 20, 10);
-    g.fillStyle(0x70452e, 1).fillRect(-9, -14, 18, 14);
-    g.fillStyle(0x236b68, 1).fillRect(-11, 0, 22, 19);
-    g.fillStyle(0xd5a45d, 1).fillRect(-9, 19, 7, 13);
-    g.fillStyle(0xd5a45d, 1).fillRect(2, 19, 7, 13);
-    g.fillStyle(0x253a38, 1).fillRect(-12, 30, 10, 5);
-    g.fillStyle(0x253a38, 1).fillRect(2, 30, 10, 5);
-    g.fillStyle(0x5b3d2a, 1).fillRect(10, 3, 6, 16);
-    container.add(g);
+    const shadow = this.add.ellipse(0, 33, 24, 9, 0x4a3524, 0.28);
+
+    const poseA = this.add.graphics();
+    poseA.fillStyle(0x241d1a, 1).fillRect(-10, -22, 20, 10);
+    poseA.fillStyle(0x70452e, 1).fillRect(-9, -14, 18, 14);
+    poseA.fillStyle(0x236b68, 1).fillRect(-11, 0, 22, 19);
+    poseA.fillStyle(0xd5a45d, 1).fillRect(-9, 19, 7, 13).fillRect(2, 19, 7, 13);
+    poseA.fillStyle(0x253a38, 1).fillRect(-12, 30, 10, 5).fillRect(2, 30, 10, 5);
+    poseA.fillStyle(0x5b3d2a, 1).fillRect(10, 3, 6, 16);
+
+    const poseB = this.add.graphics();
+    poseB.fillStyle(0x241d1a, 1).fillRect(-10, -22, 20, 10);
+    poseB.fillStyle(0x70452e, 1).fillRect(-9, -14, 18, 14);
+    poseB.fillStyle(0x236b68, 1).fillRect(-11, 1, 22, 19);
+    poseB.fillStyle(0xd5a45d, 1).fillRect(-7, 20, 7, 13).fillRect(0, 18, 7, 13);
+    poseB.fillStyle(0x253a38, 1).fillRect(-10, 31, 10, 5).fillRect(0, 29, 10, 5);
+    poseB.fillStyle(0x5b3d2a, 1).fillRect(10, 4, 6, 16);
+
+    container.add([shadow, poseA, poseB]);
     return container;
   }
 }
