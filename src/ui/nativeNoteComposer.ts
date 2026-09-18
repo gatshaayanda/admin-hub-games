@@ -119,7 +119,5 @@ export function openNativeNoteComposer(options: NativeNoteComposerOptions): Prom
     });
     cancel.addEventListener('click', () => finish(null));
     window.addEventListener('keydown', onKeyDown);
-
-    window.setTimeout(() => textarea.focus({ preventScroll: true }), 50);
-  });
+\n  });
 }
