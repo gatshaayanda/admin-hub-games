@@ -19,16 +19,17 @@ export class InteractionModalScene extends Phaser.Scene {
   create(data: InteractionModalData) {
     const { width, height } = this.scale;
     const portrait = height > width;
-    const panelWidth = Math.min(width * (portrait ? 0.94 : 0.72), 720);
-    const panelHeight = Math.min(height * (portrait ? 0.78 : 0.68), 500);
+    const compact = height < 430;
+    const panelWidth = Math.min(width * 0.94, 720);
+    const panelHeight = Math.min(height * (compact ? 0.92 : 0.88), portrait ? 640 : 560);
 
     this.input.topOnly = true;
 
-    const backdrop = this.add.rectangle(width / 2, height / 2, width, height, 0x100c09, 0.72)
+    const backdrop = this.add.rectangle(width / 2, height / 2, width, height, 0x100c09, 0.78)
       .setDepth(1)
       .setInteractive();
 
-    backdrop.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
+    backdrop.on('pointerdown', (_pointer, _localX, _localY, event) => {
       event.stopPropagation();
       this.close();
     });
@@ -38,66 +39,68 @@ export class InteractionModalScene extends Phaser.Scene {
       .setDepth(2)
       .setInteractive();
 
-    panel.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
+    panel.on('pointerdown', (_pointer, _localX, _localY, event) => {
       event.stopPropagation();
     });
 
-    const title = this.add.text(width / 2, height / 2 - panelHeight / 2 + 32, data.title, {
+    const top = height / 2 - panelHeight / 2;
+    const title = this.add.text(width / 2, top + 28, data.title, {
       fontFamily: 'monospace',
-      fontSize: `${Math.max(18, Math.min(28, panelWidth * 0.045))}px`,
+      fontSize: portrait ? '22px' : '28px',
       fontStyle: 'bold',
       color: '#fff4d4',
       align: 'center',
+      wordWrap: { width: panelWidth * 0.82 },
     }).setOrigin(0.5).setDepth(3);
 
-    const subtitle = this.add.text(width / 2, height / 2 - panelHeight / 2 + 67, data.subtitle, {
+    const subtitle = this.add.text(width / 2, top + 62, data.subtitle, {
       fontFamily: 'monospace',
-      fontSize: portrait ? '13px' : '10px',
+      fontSize: compact ? '10px' : (portrait ? '12px' : '10px'),
       color: '#d9bd87',
       align: 'center',
       wordWrap: { width: panelWidth * 0.78 },
     }).setOrigin(0.5).setDepth(3);
 
-    const body = this.add.text(width / 2, height / 2 - panelHeight / 2 + 108, data.body, {
+    const buttonY = height / 2 + panelHeight / 2 - (portrait ? 104 : 86);
+    const bodyTop = top + 94;
+    const bodyHeight = Math.max(92, buttonY - bodyTop - 34);
+
+    const body = this.add.text(width / 2, bodyTop, data.body, {
       fontFamily: 'monospace',
-      fontSize: portrait ? '15px' : '12px',
+      fontSize: compact ? '12px' : (portrait ? '14px' : '12px'),
       color: '#fff8e8',
       align: 'center',
       wordWrap: { width: panelWidth * 0.78 },
-      lineSpacing: portrait ? 8 : 7,
+      lineSpacing: compact ? 5 : 7,
     }).setOrigin(0.5, 0).setDepth(3);
 
-    const actionTop = height / 2 + panelHeight / 2 - (portrait ? 132 : 104);
-    const bodyHeight = Math.max(92, actionTop - (height / 2 - panelHeight / 2 + 112) - 18);
     body.setFixedSize(panelWidth * 0.78, bodyHeight);
-    body.setMaxLines(portrait ? 7 : 6);
+    body.setMaxLines(compact ? 5 : (portrait ? 9 : 8));
 
     const buttonWidth = Math.min(250, panelWidth * (portrait ? 0.38 : 0.34));
-    const buttonY = height / 2 + panelHeight / 2 - (portrait ? 104 : 72);
-    const gap = Math.min(panelWidth * (portrait ? 0.22 : 0.20), 145);
-
+    const gap = Math.min(panelWidth * (portrait ? 0.18 : 0.20), 120);
     const privateButton = this.makeButton(width / 2 - gap, buttonY, buttonWidth, 50, 'PRIVATE NOTE', 0xd6a84d);
     const worldButton = this.makeButton(width / 2 + gap, buttonY, buttonWidth, 50, 'LEAVE IN WORLD', 0x4d9b98);
     const closeButton = this.makeButton(
       width / 2,
       height / 2 + panelHeight / 2 - 28,
       Math.min(180, panelWidth * 0.38),
-      50,
+      44,
       'CLOSE',
       0x6d5947,
     );
 
-    privateButton.on('pointerdown', async (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
+    privateButton.on('pointerdown', async (_pointer, _localX, _localY, event) => {
       event.stopPropagation();
       await this.runAction(data.onPrivateNote);
     });
 
-    worldButton.on('pointerdown', async (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
+    worldButton.on('pointerdown', async (_pointer, _localX, _localY, event) => {
       event.stopPropagation();
       await this.runAction(data.onWorldNote);
     });
 
-    closeButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
+    closeButton.on('pointerdown', (_pointer, _localX, _localY, event) => {
       event.stopPropagation();
       this.close();
     });
@@ -130,7 +133,6 @@ export class InteractionModalScene extends Phaser.Scene {
       },
     });
   }
-
   private makeButton(x: number, y: number, width: number, height: number, label: string, accent: number) {
     const portrait = this.scale.height > this.scale.width;
     const button = this.add.container(x, y).setDepth(4);
