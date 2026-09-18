@@ -36,7 +36,7 @@ export class InteractionModalScene extends Phaser.Scene {
       event: Phaser.Types.Input.EventData,
     ) => {
       event.stopPropagation();
-      this.close();
+      this.time.delayedCall(0, () => this.close());
     };
 
     backdrop.on('pointerdown', pointerHandler);
@@ -109,7 +109,7 @@ export class InteractionModalScene extends Phaser.Scene {
       event: Phaser.Types.Input.EventData,
     ) => {
       event.stopPropagation();
-      await this.runAction(data.onPrivateNote);
+      this.time.delayedCall(0, () => { void this.runAction(data.onPrivateNote); });
     });
 
     worldButton.on('pointerdown', async (
@@ -119,7 +119,7 @@ export class InteractionModalScene extends Phaser.Scene {
       event: Phaser.Types.Input.EventData,
     ) => {
       event.stopPropagation();
-      this.openWorldNoteComposer(data.onWorldNote);
+      this.time.delayedCall(0, () => this.openWorldNoteComposer(data.onWorldNote));
     });
 
     closeButton.on('pointerdown', (
@@ -236,13 +236,15 @@ export class InteractionModalScene extends Phaser.Scene {
       event.stopPropagation();
       const text = (input.node as HTMLTextAreaElement).value.trim();
       if (!text) return;
-      finish();
-      await this.runAction(action ? () => action(text) : undefined);
+      this.time.delayedCall(0, async () => {
+        finish();
+        await this.runAction(action ? () => action(text) : undefined);
+      });
     });
 
     cancel.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
-      finish();
+      this.time.delayedCall(0, finish);
     });
 
     overlay.add([backdrop, panel, title, hint, input, publish, cancel]);
