@@ -551,7 +551,7 @@ export class GameShellScene extends Phaser.Scene {
     body.setFixedSize(panelWidth - 60, panelHeight - 128);
     body.setMaxLines(portrait ? 28 : 24);
 
-    const close = this.makePanelButton(0, panelHeight / 2 - 34, Math.min(190, panelWidth * 0.48), 42, 'BACK TO GAMEBOOK');
+    const close = this.makePanelButton(0, panelHeight / 2 - 34, 'BACK TO GAMEBOOK');
     close.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
       overlay.destroy();
