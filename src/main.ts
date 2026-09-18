@@ -28,5 +28,6 @@ const config: Phaser.Types.Core.GameConfig = {
   scene: [BootScene, PublisherIntroScene, NameEntryScene, GameShellScene, InteractionModalScene],
 };
 
+// Keep the publisher shell configuration centralized for every Admin Hub Games title.
 const game = new Phaser.Game(config);
 (window as Window & { __AHG_GAME__?: unknown }).__AHG_GAME__ = game;
