@@ -35,6 +35,7 @@ export class GameShellScene extends Phaser.Scene {
   private statusText!: Phaser.GameObjects.Text;
   private gamebookOpen = false;
   private interactionModalOpen = false;
+  private homeTriggerArmed = false;
   private gamebookOverlay?: Phaser.GameObjects.Container;
   private activeVillage?: Village;
   private privateNotes: PrivateNote[] = [];
@@ -132,6 +133,14 @@ export class GameShellScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.gamebookKey)) this.toggleGamebook();
 
     this.updateNearbyPrompt();
+
+    const homeDistance = Phaser.Math.Distance.Between(this.player.x, this.player.y, 1180, 1160);
+    if (homeDistance > 125) this.homeTriggerArmed = true;
+    if (this.homeTriggerArmed && homeDistance < 52 && !this.interactionModalOpen && !this.gamebookOpen) {
+      this.homeTriggerArmed = false;
+      this.interactAt(this.getHomeLocation());
+    }
+
     this.playerLabel.setPosition(this.player.x, this.player.y - 48);
   }
 
