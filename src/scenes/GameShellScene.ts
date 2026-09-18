@@ -564,7 +564,7 @@ export class GameShellScene extends Phaser.Scene {
         return button;
       });
       const cancel = this.makePanelButton(0, panelHeight / 2 - 32, 'CANCEL');
-      cancel.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => { event.stopPropagation(); finish(null); });
+      cancel.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => { event.stopPropagation(); this.time.delayedCall(0, () => finish(null)); });
       overlay.add([backdrop, panel, title, hint, ...buttons, cancel]);
       this.input.keyboard?.once('keydown-ESC', () => finish(null));
     });
