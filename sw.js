@@ -1,4 +1,4 @@
-const CACHE_NAME = 'admin-hub-games-v2';
+const CACHE_NAME = 'admin-hub-games-v3';
 const CORE_ASSETS = [
   '/',
   '/manifest.webmanifest',
