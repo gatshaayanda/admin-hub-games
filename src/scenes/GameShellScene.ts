@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { createWorldNote, deleteWorldNote, getAnonymousPlayerId, loadWorldNotes, type WorldNote } from '../firebase/firebase';
+import { createWorldNote, deleteWorldNote, getAnonymousPlayerId, isFounderAdmin, loadWorldNotes, type WorldNote } from '../firebase/firebase';
 import { type InteractionModalData } from './InteractionModalScene';
 
 type Village = {
@@ -538,10 +538,37 @@ export class GameShellScene extends Phaser.Scene {
 
   private async deleteOwnWorldNote() {
     const village = this.activeVillage || this.getSystemsHallLocation();
-    const keyword = window.prompt('Type BANANA to open your world-note cleanup:', '')?.trim().toLowerCase();
+    const keyword = window.prompt('Type BANANA to open world-note cleanup:', '')?.trim().toLowerCase();
     if (keyword !== 'banana') return 'Cleanup cancelled. Nothing was deleted.';
 
     const notes = await loadWorldNotes(village.id);
+    const founderAdmin = await isFounderAdmin();
+
+    if (founderAdmin) {
+      if (!notes.length) return 'BANANA accepted. There are no world notes here to clean up.';
+
+      const choice = window.prompt(
+        notes.map((note, index) => (index + 1) + '. ' + note.authorName + ': ' + note.text).join('\n\n') +
+        '\n\nEnter the note number to delete:',
+      );
+      if (choice === null) return 'Cleanup cancelled.';
+      const index = Number(choice) - 1;
+      const note = notes[index];
+      if (!note) return 'That note was not found.';
+
+      const confirmation = window.prompt(
+        'Delete this world note?\n\n' +
+        note.authorName + ': ' + note.text +
+        '\n\nType BANANA again to confirm founder cleanup:',
+      );
+      if (confirmation?.trim().toLowerCase() !== 'banana') return 'Cleanup cancelled. Nothing was deleted.';
+
+      const deleted = await deleteWorldNote(note.id);
+      return deleted
+        ? 'BANANA accepted. The selected world note was removed from the shared world.'
+        : 'Could not delete that note.';
+    }
+
     const myId = await getAnonymousPlayerId();
     const mine = notes.filter((note) => note.authorId === myId);
     if (!mine.length) return 'BANANA accepted. You have no world notes here.';
