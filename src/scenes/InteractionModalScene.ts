@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { openNativeNoteComposer } from '../ui/nativeNoteComposer';
 
 export type InteractionModalData = {
   title: string;
@@ -24,6 +25,7 @@ export class InteractionModalScene extends Phaser.Scene {
     const panelHeight = Math.min(height * (compact ? 0.92 : 0.88), portrait ? 640 : 560);
 
     this.input.topOnly = true;
+    this.input.enabled = true;
 
     const backdrop = this.add.rectangle(width / 2, height / 2, width, height, 0x100c09, 0.78)
       .setDepth(1)
@@ -183,73 +185,19 @@ export class InteractionModalScene extends Phaser.Scene {
 
   private actionRunning = false;
 
-  private openWorldNoteComposer(action?: (text?: string) => Promise<string | void> | string | void) {
+  private async openWorldNoteComposer(action?: (text?: string) => Promise<string | void> | string | void) {
     if (this.closing) return;
 
-    const { width, height } = this.scale;
-    const portrait = height > width;
-    const composerWidth = Math.min(width * 0.88, 560);
-    const composerHeight = Math.min(height * 0.62, portrait ? 420 : 360);
-
-    const overlay = this.add.container(width / 2, height / 2).setDepth(20);
-    const backdrop = this.add.rectangle(0, 0, width, height, 0x100c09, 0.72).setInteractive();
-    backdrop.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => event.stopPropagation());
-
-    const panel = this.add.rectangle(0, 0, composerWidth, composerHeight, 0xeee0ba, 1)
-      .setStrokeStyle(4, 0x4d9b98, 1);
-
-    const title = this.add.text(0, -composerHeight / 2 + 28, 'LEAVE IN WORLD', {
-      fontFamily: 'monospace', fontSize: portrait ? '17px' : '20px', fontStyle: 'bold',
-      color: '#493526', align: 'center'
-    }).setOrigin(0.5);
-
-    const hint = this.add.text(0, -composerHeight / 2 + 58, 'Write something other players can see.', {
-      fontFamily: 'monospace', fontSize: '10px', color: '#73533a',
-      align: 'center', wordWrap: { width: composerWidth - 44 }
-    }).setOrigin(0.5);
-
-    const input = this.add.dom(0, -8, 'textarea', {
-      width: Math.max(220, composerWidth - 64) + 'px',
-      height: Math.max(110, composerHeight - 150) + 'px',
-      background: '#fff8e8',
-      color: '#493526',
-      border: '2px solid #9a744c',
-      borderRadius: '6px',
-      padding: '10px',
-      fontFamily: 'monospace',
-      fontSize: portrait ? '14px' : '13px',
-      resize: 'none',
-      outline: 'none'
-    }, '');
-    (input.node as HTMLTextAreaElement).maxLength = 500;
-    (input.node as HTMLTextAreaElement).placeholder = 'Your note…';
-
-    const publish = this.makeButton(-Math.min(100, composerWidth * 0.18), composerHeight / 2 - 34, Math.min(190, composerWidth * 0.34), 46, 'PUBLISH', 0x4d9b98);
-    const cancel = this.makeButton(Math.min(100, composerWidth * 0.18), composerHeight / 2 - 34, Math.min(190, composerWidth * 0.34), 46, 'CANCEL', 0x6d5947);
-
-    const finish = () => {
-      input.destroy();
-      overlay.destroy();
-    };
-
-    publish.on('pointerdown', async (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
-      event.stopPropagation();
-      const text = (input.node as HTMLTextAreaElement).value.trim();
-      if (!text) return;
-      window.setTimeout(async () => {
-        finish();
-        await this.runAction(action ? () => action(text) : undefined);
-      }, 0);
+    const text = await openNativeNoteComposer({
+      title: 'LEAVE IN WORLD',
+      hint: 'Write something other players can see.',
+      placeholder: 'Your note…',
+      maxLength: 500,
+      actionLabel: 'PUBLISH',
     });
 
-    cancel.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
-      event.stopPropagation();
-      window.setTimeout(finish, 0);
-    });
-
-    overlay.add([backdrop, panel, title, hint, input, publish, cancel]);
-    input.node.addEventListener('pointerdown', (event) => event.stopPropagation());
-    (input.node as HTMLTextAreaElement).focus();
+    if (this.closing) return;
+    await this.runAction(action ? () => action(text || undefined) : undefined);
   }
 
   private async runAction(action?: () => Promise<string | void> | string | void) {
@@ -271,13 +219,13 @@ export class InteractionModalScene extends Phaser.Scene {
     if (this.closing) return;
     this.closing = true;
 
-    // Android WebView/Chrome can be unstable when a Scene is stopped/resumed
-    // from Phaser's own pointer/timer dispatch. Move the Scene-manager mutation
-    // onto the browser task queue so Phaser has completely finished the touch.
+    // GameShellScene intentionally stays RUNNING while this modal is open.
+    // Do not call resume() on a scene that was never paused: on touch devices
+    // that creates an unnecessary SceneManager mutation during modal teardown.
     window.setTimeout(() => {
+      this.input.enabled = false;
       this.registry.remove('activeInteractionModal');
       this.scene.stop('InteractionModalScene');
-      this.scene.resume('GameShellScene');
     }, 0);
   }
 }
