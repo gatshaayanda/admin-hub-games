@@ -441,18 +441,21 @@ export class GameShellScene extends Phaser.Scene {
     const text = window.prompt('Write a note for ' + village.name + '. Other players will see it:', '')?.trim();
     if (!text) return 'World note cancelled.';
 
-    const keyword = window.prompt('Type APPLE to save this note in the shared world:', '')?.trim().toLowerCase();
+    const keyword = window.prompt('Type APPLE to confirm this note should be published to the shared world:', '')?.trim().toLowerCase();
     if (keyword !== 'apple') return 'Note discarded. Nothing was saved.';
 
     const authorName = String(this.registry.get('playerName') || 'Player');
-    const note = await createWorldNote(village.id, authorName, text.slice(0, 500));
-
-    if (note) {
-      this.worldNotes = [note, ...this.worldNotes];
-      return 'APPLE accepted. Your note is now part of the world.';
+    this.showTransientMessage('Publishing your note to the shared world…');
+    try {
+      const note = await createWorldNote(village.id, authorName, text.slice(0, 500));
+      if (note) {
+        this.worldNotes = [note, ...this.worldNotes];
+        return 'APPLE accepted. Your note is now part of the world.';
+      }
+      return 'Could not reach the shared world. Nothing was saved.';
+    } catch {
+      return 'Could not reach the shared world. Nothing was saved.';
     }
-
-    return 'Could not reach the shared world. Nothing was saved.';
   }
 
   private showTransientMessage(message: string) {
