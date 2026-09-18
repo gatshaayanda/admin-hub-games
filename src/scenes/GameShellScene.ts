@@ -450,7 +450,7 @@ export class GameShellScene extends Phaser.Scene {
 
   private buildSystemsHallText() {
     const villages = this.villages.map((village) => '• ' + village.name + ' — ' + village.subtitle).join('\n');
-    return 'THE SYSTEMS OF ADMIN HUB GAMES\n\n' + villages + '\n\nLeave a thought for this world. Apple saves it to the shared world. Banana is the cleanup command for notes you own.';
+    return 'THE SYSTEMS OF ADMIN HUB GAMES\n\n' + villages + '\n\nLeave a thought for this world. APPLE publishes it to the shared world. BANANA lets you remove your own note, while founder/admin moderation can remove bad notes. Any player can report a note.';
   }
 
   private makePanelButton(x: number, y: number, label: string) {
@@ -507,11 +507,12 @@ export class GameShellScene extends Phaser.Scene {
     const intro = this.add.text(0, -h / 2 + 72, 'Private discoveries and ideas. World Notes are separate.', { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '13px' : '10px', color: '#73533a' }).setOrigin(0.5);
     const noteLines = this.privateNotes.length ? this.privateNotes.map((note) => `✦ ${note.village.toUpperCase()}\n  ${note.text}`).join('\n\n') : 'No private notes yet.\n\nVisit a village and choose PRIVATE NOTE.';
     const notes = this.add.text(-w / 2 + 34, -h / 2 + 112, noteLines, { fontFamily: 'monospace', fontSize: this.scale.height > this.scale.width ? '14px' : '11px', color: '#493526', wordWrap: { width: w - 68 }, lineSpacing: 6 });
-    const worldButton = this.makePanelButton(0, h / 2 - 54, 'VIEW WORLD NOTES');
-    const deleteButton = this.makePanelButton(0, h / 2 + 2, 'BANANA · DELETE A NOTE');
-    const reportButton = this.makePanelButton(0, h / 2 + 58, 'REPORT A WORLD NOTE');
-    const close = this.makePanelButton(0, h / 2 + 114, 'CLOSE GAMEBOOK');
-    this.gamebookOverlay.add([backdrop, book, inner, title, intro, notes, worldButton, deleteButton, reportButton, close]);
+    const worldButton = this.makePanelButton(0, h / 2 - 110, 'VIEW WORLD NOTES');
+    const deleteButton = this.makePanelButton(0, h / 2 - 55, 'BANANA · DELETE A NOTE');
+    const reportButton = this.makePanelButton(0, h / 2, 'REPORT A WORLD NOTE');
+    const adminButton = this.makePanelButton(0, h / 2 + 55, 'ADMIN · VIEW REPORTS');
+    const close = this.makePanelButton(0, h / 2 + 110, 'CLOSE GAMEBOOK');
+    this.gamebookOverlay.add([backdrop, book, inner, title, intro, notes, worldButton, deleteButton, reportButton, adminButton, close]);
     worldButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
       this.viewWorldNotes();
@@ -523,6 +524,10 @@ export class GameShellScene extends Phaser.Scene {
     reportButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
       this.reportWorldNoteFlow().then((message) => this.showTransientMessage(message));
+    });
+    adminButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
+      this.viewAdminReports().then((message) => this.showTransientMessage(message));
     });
     close.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
