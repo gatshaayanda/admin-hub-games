@@ -1,4 +1,4 @@
-const CACHE_NAME = 'admin-hub-games-v1';
+const CACHE_NAME = 'admin-hub-games-v2';
 const CORE_ASSETS = [
   '/',
   '/manifest.webmanifest',
@@ -10,8 +10,7 @@ const CORE_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(CORE_ASSETS))
-      .then(() => self.skipWaiting()),
+      .then((cache) => cache.addAll(CORE_ASSETS)),
   );
 });
 
@@ -27,6 +26,10 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
+});
+
 self.addEventListener('fetch', (event) => {
   const request = event.request;
 
@@ -36,11 +39,13 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const copy = response.clone();
-          void caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          if (response.ok) {
+            const copy = response.clone();
+            void caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          }
           return response;
         })
-        .catch(() => caches.match('/')),
+        .catch(() => caches.match(request).then((cached) => cached || caches.match('/'))),
     );
     return;
   }

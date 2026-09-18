@@ -1,5 +1,5 @@
 const DB_NAME = 'admin-hub-games';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export type LocalWorldNote = {
   id: string;
@@ -34,8 +34,18 @@ function openDb() {
       if (!db.objectStoreNames.contains('tombstones')) db.createObjectStore('tombstones', { keyPath: 'id' });
       if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'key' });
     };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const db = request.result;
+      db.onversionchange = () => {
+        db.close();
+        dbPromise = undefined;
+      };
+      resolve(db);
+    };
+    request.onerror = () => {
+      dbPromise = undefined;
+      reject(request.error);
+    };
   });
   return dbPromise;
 }

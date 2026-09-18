@@ -79,6 +79,7 @@ export class GameShellScene extends Phaser.Scene {
 
     this.loadPrivateNotes();
     this.createWorldInteractions();
+    window.dispatchEvent(new Event('admin-hub-games:game-ready'));
     this.installAmbientAudioGesture();
     this.createHud();
     this.layoutViewport();

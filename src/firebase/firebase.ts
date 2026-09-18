@@ -207,7 +207,7 @@ async function syncPending() {
   if (!pending.length) return;
 
   let user: User;
-  try { user = await ensureAnonymousPlayer(); } catch { return; }
+  try { user = await ensureAnonymousPlayer(); } catch { syncInFlight = false; return; }
 
   for (const item of pending) {
     try {

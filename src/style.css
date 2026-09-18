@@ -207,3 +207,52 @@ canvas {
 
 /* Native name input is the single visual text field on touch devices. */
 #ahg-name-input { font-family: monospace; }
+
+
+.ahg-pwa-notice {
+  position: fixed;
+  z-index: 900;
+  top: max(12px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(92vw, 560px);
+  padding: 8px 10px 8px 14px;
+  border: 1px solid rgba(240,223,182,.5);
+  border-radius: 999px;
+  background: rgba(55,43,34,.94);
+  box-shadow: 0 5px 18px rgba(30,23,18,.3);
+  color: #fff4d4;
+  font: 700 9px/1 monospace;
+  letter-spacing: .7px;
+  pointer-events: auto;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.ahg-pwa-notice button {
+  min-width: 48px;
+  min-height: 40px;
+  padding: 7px 11px;
+  border: 1px solid rgba(240,223,182,.65);
+  border-radius: 999px;
+  background: #2f7775;
+  color: #fff4d4;
+  font: 700 9px/1 monospace;
+  letter-spacing: .6px;
+  touch-action: manipulation;
+}
+.ahg-pwa-notice button:last-child {
+  min-width: 40px;
+  padding-inline: 8px;
+  background: transparent;
+  border-color: transparent;
+  font-size: 18px;
+}
+.ahg-pwa-notice button:disabled { opacity: .65; }
+.ahg-pwa-install { top: auto; bottom: max(16px, env(safe-area-inset-bottom)); }
+@media (max-width: 520px) {
+  .ahg-pwa-notice { max-width: calc(100vw - 24px); font-size: 8px; }
+  .ahg-pwa-notice span { max-width: 52vw; }
+}
