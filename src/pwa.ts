@@ -151,9 +151,7 @@ export function registerPwa() {
 
   void requestPersistentStorage();
 
-  window.addEventListener('load', () => {
-    void registerServiceWorker();
-  }, { once: true });
+  void registerServiceWorker();
 
   if (navigator.serviceWorker.controller) {
     void navigator.serviceWorker.ready.then(wireServiceWorkerUpdate);
