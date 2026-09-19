@@ -67,6 +67,9 @@ export function renderCatalog(onPlay: () => void) {
   const playButton = menu?.querySelector<HTMLButtonElement>('#play-hall');
   playButton?.addEventListener('click', () => {
     menu?.remove();
-    onPlay();
+    app.className = '';
+    // Let the menu's click gesture fully finish before Phaser receives input again.
+    // This prevents the same touch from immediately skipping the Hall cinematic.
+    window.setTimeout(onPlay, 0);
   }, { once: true });
 }
