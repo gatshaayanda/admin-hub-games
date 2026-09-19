@@ -231,6 +231,21 @@ For a meaningful checkpoint:
 
 Never confuse “build passed” with “player flow verified.”
 
+### Production promotion gate
+
+A game is not considered promoted merely because a branch, PR, or Vercel preview was promoted. Before telling the product owner that a new game is live on the normal Admin Hub Games URL:
+- verify the game is actually present in `main`;
+- verify the shared Game Library source on `main` contains the new game's real playable entry;
+- verify `main` also contains every scene/registration file required to launch that entry;
+- verify the production deployment is built from the expected `main` commit (or explicitly verify the promoted deployment contains that commit);
+- open the normal production URL and confirm the Game Library visibly shows the new game;
+- click the new card and verify the game's Intro → Setup → Gameplay handoff;
+- only then call the game live.
+
+**Do not assume promotion, merge, or deployment means the production menu updated.** A source-of-truth check and one real production smoke test are mandatory after every new-game promotion.
+
+If the production menu is missing a newly promoted game, STOP. Inspect `main`, the deployed commit, and the catalog before changing Firebase, routing, caching, or unrelated game code.
+
 ## Architecture Principle
 
 ```
