@@ -867,6 +867,17 @@ export class GameShellScene extends Phaser.Scene {
     return reported ? 'Report submitted for admin review.' : 'Could not submit the report. Please try again later.';
   }
 
+  private async viewAdminReports() {
+    const founderAdmin = await isFounderAdmin();
+    if (!founderAdmin) return 'Admin reports are only available to the founder/admin identity.';
+    const reports = await loadWorldNoteReports();
+    if (!reports.length) return 'ADMIN REPORTS · No reports have been recorded yet.';
+    const lines = reports.slice(0, 12).map((report, index) =>
+      `${index + 1}. ${report.reporterName} reported note ${report.noteId}\n  Village: ${report.villageId}\n  Reason: ${report.reason}`,
+    ).join('\n\n');
+    return `ADMIN REPORTS · ${reports.length} recorded\n\n${lines}`.slice(0, 1800);
+  }
+
   private async manageWorldNotes() {
     const village = this.activeVillage || this.getSystemsHallLocation();
     const notes = await loadWorldNotes(village.id);
