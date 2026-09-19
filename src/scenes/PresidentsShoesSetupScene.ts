@@ -104,7 +104,7 @@ export class PresidentsShoesSetupScene extends Phaser.Scene {
       letterSpacing: 1,
     }).setOrigin(0.5);
 
-    button.on('pointerdown', (pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+    button.on('pointerdown', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
       this.startStory(false);
     });
@@ -116,7 +116,7 @@ export class PresidentsShoesSetupScene extends Phaser.Scene {
       const continueText = this.add.text(continueButton.x, continueButton.y, 'CONTINUE STORY', {
         fontFamily: 'monospace', fontSize: '10px', fontStyle: 'bold', color: '#f4f7ff', letterSpacing: 1,
       }).setOrigin(0.5);
-      continueButton.on('pointerdown', (pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+      continueButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
         event.stopPropagation();
         this.startStory(true);
       });
