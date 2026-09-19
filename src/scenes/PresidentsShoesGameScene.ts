@@ -16,6 +16,7 @@ export class PresidentsShoesGameScene extends Phaser.Scene {
   private leaving = false;
   private contentObjects: Phaser.GameObjects.GameObject[] = [];
   private resizeHandler?: () => void;
+  private historyRecorded = false;
 
   constructor() {
     super('PresidentsShoesGameScene');
@@ -226,8 +227,11 @@ export class PresidentsShoesGameScene extends Phaser.Scene {
 
     this.contentObjects.push(title, summary, replay, replayText, menu, menuText);
 
-    this.recordHistory(ending.title);
-    this.clearSavedState();
+    if (!this.historyRecorded) {
+      this.recordHistory(ending.title);
+      this.clearSavedState();
+      this.historyRecorded = true;
+    }
 
     const finalStats = this.add.text(width / 2, height * 0.78, 'DECISIONS ' + this.state.decisions + '   TRUST ' + this.state.trust + '   SERVICE ' + this.state.service + '   RESERVE ' + this.state.budget, {
       fontFamily: 'monospace',
@@ -241,6 +245,7 @@ export class PresidentsShoesGameScene extends Phaser.Scene {
 
   private resetStory() {
     this.state = createInitialStoryState();
+    this.historyRecorded = false;
     this.clearSavedState();
     this.renderScene();
   }
