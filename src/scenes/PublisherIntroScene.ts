@@ -178,8 +178,9 @@ export class PublisherIntroScene extends Phaser.Scene {
     this.cameras.main.fadeOut(450, 22, 18, 14);
     this.time.delayedCall(450, () => {
       renderCatalog(() => {
-        this.cameras.main.fadeOut(300, 7, 11, 29);
-        this.time.delayedCall(300, () => this.scene.start('HallIntroScene'));
+        // The menu is an HTML overlay only. Once it is dismissed, return to the
+        // exact Hall handoff: start the Hall cinematic immediately.
+        this.scene.start('HallIntroScene');
       });
     });
   }
