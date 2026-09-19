@@ -269,6 +269,10 @@ canvas {
 /* Game library entry screen */
 .game-menu {
   position: fixed;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
   inset: 0;
   z-index: 200;
   min-height: 100svh;
