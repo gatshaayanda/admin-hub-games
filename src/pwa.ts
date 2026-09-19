@@ -20,7 +20,7 @@ function showUpdateNotice(waiting: ServiceWorker) {
   const notice = document.createElement('div');
   notice.id = 'ahg-pwa-update';
   notice.className = 'ahg-pwa-notice';
-  notice.innerHTML = '<span>NEW HALL VERSION READY</span><button type="button">RELOAD</button>';
+  notice.innerHTML = '<span>NEW VERSION READY</span><button type="button">RELOAD</button>';
 
   const button = notice.querySelector('button');
   button?.addEventListener('click', () => {
