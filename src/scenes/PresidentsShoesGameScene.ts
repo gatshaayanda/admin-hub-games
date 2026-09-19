@@ -150,7 +150,7 @@ export class PresidentsShoesGameScene extends Phaser.Scene {
       wordWrap: { width: buttonWidth - 36 },
     }).setOrigin(0, 0.5);
 
-    button.on('pointerdown', (pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+    button.on('pointerdown', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
       this.choose(choice);
     });
@@ -217,11 +217,11 @@ export class PresidentsShoesGameScene extends Phaser.Scene {
       letterSpacing: 1,
     }).setOrigin(0.5);
 
-    replay.on('pointerdown', (pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+    replay.on('pointerdown', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
       this.resetStory();
     });
-    menu.on('pointerdown', (pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+    menu.on('pointerdown', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
       this.returnToLibrary();
     });
