@@ -9,6 +9,7 @@ export class PresidentsShoesSetupScene extends Phaser.Scene {
   private status!: Phaser.GameObjects.Text;
   private leaving = false;
   private hasSavedStory = false;
+  private resizeHandler?: () => void;
 
   constructor() {
     super('PresidentsShoesSetupScene');
@@ -130,7 +131,8 @@ export class PresidentsShoesSetupScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     this.positionInput(box.x, box.y, boxWidth);
-    this.scale.on(Phaser.Scale.Events.RESIZE, () => this.positionInput(box.x, box.y, boxWidth), this);
+    this.resizeHandler = () => this.positionInput(box.x, box.y, boxWidth);
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.resizeHandler, this);
 
     this.time.delayedCall(250, () => {
       this.input?.focus({ preventScroll: true });
@@ -138,7 +140,8 @@ export class PresidentsShoesSetupScene extends Phaser.Scene {
     });
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.scale.off(Phaser.Scale.Events.RESIZE, this.positionInput, this);
+      if (this.resizeHandler) this.scale.off(Phaser.Scale.Events.RESIZE, this.resizeHandler, this);
+      this.resizeHandler = undefined;
       this.input?.remove();
       this.input = undefined;
     });
