@@ -10,6 +10,9 @@ function startHall() {
       { NameEntryScene },
       { HallIntroScene },
       { GameShellScene },
+      { PresidentsShoesIntroScene },
+      { PresidentsShoesSetupScene },
+      { PresidentsShoesGameScene },
     ] = await Promise.all([
       import('phaser'),
       import('./pwa'),
@@ -39,7 +42,7 @@ function startHall() {
         min: { width: 320, height: 180 },
         max: { width: 0, height: 0 },
       },
-      scene: [BootScene, PublisherIntroScene, NameEntryScene, HallIntroScene, GameShellScene],
+      scene: [BootScene, PublisherIntroScene, NameEntryScene, HallIntroScene, GameShellScene, PresidentsShoesIntroScene, PresidentsShoesSetupScene, PresidentsShoesGameScene],
     };
 
     const game = new Phaser.Game(config);
