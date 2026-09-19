@@ -24,7 +24,8 @@ export class PresidentsShoesGameScene extends Phaser.Scene {
 
   create() {
     this.playerName = String(this.registry.get('presidentsShoesPlayer') || this.readName() || 'President');
-    this.loadState();
+    if (this.registry.get('presidentsShoesResume') === true) this.loadState();
+    else this.clearSavedState();
 
     this.cameras.main.setBackgroundColor('#071018');
     this.renderScene();
