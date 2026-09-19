@@ -9,13 +9,9 @@ import { PublisherIntroScene } from './scenes/PublisherIntroScene';
 import { NameEntryScene } from './scenes/NameEntryScene';
 import { HallIntroScene } from './scenes/HallIntroScene';
 import { GameShellScene } from './scenes/GameShellScene';
-import { renderCatalog } from './catalog';
 
 registerPwa();
 
-const shouldEnterWorld = new URLSearchParams(window.location.search).get('world') === '1';
-
-if (shouldEnterWorld) {
   const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
     parent: 'app',
@@ -38,6 +34,3 @@ if (shouldEnterWorld) {
 
   const game = new Phaser.Game(config);
   (window as Window & { __AHG_GAME__?: unknown }).__AHG_GAME__ = game;
-} else {
-  renderCatalog();
-}
