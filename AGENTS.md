@@ -365,24 +365,128 @@ replay / return
 
 Also verify Hall still follows its existing proven path unchanged.
 
+
+## President's Shoes — Development Boundary & Revision Contract
+
+President's Shoes is now an integrated, playable game in the shared library. From this point forward, treat it as an **independent game product inside the Admin Hub Games platform**, not as a reason to refactor the platform or Hall.
+
+### What President's Shoes currently is
+
+- Library id: `presidents-shoes`
+- Genre: fictional branching decision/narrative game
+- Setting: fictional Botswana first week in office
+- Current story: **The Water Week**
+- Current story model: static, typed data in `src/games/presidents-shoes/story.ts`
+- Current state variables: `trust`, `service`, `budget`, `decisions`
+- Current flow: Intro → Setup → Story → choices/consequences → outcome → replay/history
+- Current persistence: local player identity and local save/history; no Firebase requirement
+- Current story is deliberately fictional. It must not attribute invented actions, statements or events to real politicians, parties, governments, institutions or citizens.
+
+The current story uses a fictional water-service crisis as the first scenario. It is a small decision tree with several choices that reconverge before the final outcome. The ending is calculated from accumulated state rather than from a single fixed “correct” choice.
+
+### President's Shoes change boundary
+
+For revisions and updates, default to changing **only** files under:
+
+```
+src/games/presidents-shoes/**
+src/scenes/PresidentsShoesIntroScene.ts
+src/scenes/PresidentsShoesSetupScene.ts
+src/scenes/PresidentsShoesGameScene.ts
+```
+
+A change outside that boundary requires an explicit reason because it may affect the shared platform or another game.
+
+Shared files that may be touched only when genuinely required:
+
+- `src/catalog.ts` — only for the President's Shoes library entry/routing.
+- `src/main.ts` — only for President's Shoes scene registration/bootstrapping.
+- `src/style.css` — only for a demonstrated shared styling problem or a clearly scoped President's Shoes UI need that cannot stay game-local.
+- `public/sw.js` / PWA files — only when a release actually introduces assets or caching requirements that need a platform-level update.
+- Firebase/security/config — only when a demonstrated product requirement needs server persistence or shared multiplayer/social functionality.
+
+**Never modify Hall to improve President's Shoes.** If President's Shoes needs something Hall does not, implement it inside the President's Shoes boundary first. If it later proves reusable, extract the smallest shared improvement as a separate, reviewed foundation change.
+
+### President's Shoes branch rule
+
+Future President's Shoes work should normally begin from the latest known-good `main` on a dedicated branch named with the game, for example:
+
+```
+presidents-shoes/<short-task-name>
+```
+
+Do not develop President's Shoes directly on `main` for multi-file gameplay/story changes.
+
+A President's Shoes checkpoint should contain only:
+- the intended President's Shoes changes;
+- any explicitly justified shared integration change;
+- verification that Hall still follows its existing path;
+- a production build;
+- the relevant President's Shoes flow test.
+
+### Revision order
+
+When revising President's Shoes, use this order:
+
+1. **Story first** — inspect `story.ts` and decide what narrative/state actually needs changing.
+2. **Game engine second** — change `PresidentsShoesGameScene.ts` only if the story model cannot express the revision.
+3. **Game-specific presentation third** — change Intro/Setup/game UI only where the player experience requires it.
+4. **Shared shell last** — touch catalog/main/style/PWA only if the game genuinely requires a platform change.
+5. **Verify isolation** — confirm Hall and the Game Library still work before checkpointing.
+
+Do not solve a story problem by changing shared routing. Do not solve a game-specific visual problem by rewriting the global shell.
+
+### President's Shoes content rules
+
+The game may explore civic decisions, trade-offs, public administration and consequences. It must remain clearly fictional.
+
+Online research can be used as **background/reference material** for understanding institutions, terminology, civic systems, historical context or game mechanics. Research must not be used to make real people appear to have taken fictional actions.
+
+For any current political claim, real office-holder, party, election, legislation or live event, use current reliable sources and keep the presentation factual and attributed. Do not turn research into political persuasion, candidate ranking, endorsement, election prediction or a claim that the fictional game outcome represents real-world political truth.
+
+### President's Shoes acceptance gate for every meaningful revision
+
+Before merging a President's Shoes change:
+
+```
+President's Shoes branch
+        ↓
+story / game-specific change
+        ↓
+typecheck + production build
+        ↓
+play Intro
+        ↓
+Setup
+        ↓
+make a choice
+        ↓
+verify consequence/state change
+        ↓
+reach outcome
+        ↓
+verify replay/save behavior
+        ↓
+verify Hall path remains intact
+        ↓
+checkpoint
+```
+
+If a revision unexpectedly changes Hall, the shared library, routing, Firebase behavior or PWA behavior, **STOP** and inspect the diff before continuing.
+
+### Current President's Shoes reference point
+
+As of this contract update, the authoritative baseline is the version of President's Shoes already present on `main`. Future changes should be compared against that baseline rather than against old feature branches or screenshots.
+
+The current live library description is:
+
+> A fictional Botswana decision story. Choose, respond to consequences and see where your first week leads.
+
+
 ## Current Foundation Status — September 2026
 
-Hall is currently the working production game.
+Hall is currently the working production game and President's Shoes is the second real playable game in the library.
 
-The intended next development task is to add another **actual** game to the library without disturbing Hall:
+The platform remains shared, but each game is independently owned after library selection. President's Shoes revisions should stay inside its development boundary unless a demonstrated shared-platform requirement exists.
 
-```
-existing Publisher Intro
-        ↓
-existing Game Library
-        ↓
-new game entry
-        ↓
-new game's Intro
-        ↓
-new game's Setup
-        ↓
-new game's Gameplay
-```
-
-The current repository also contains the service-worker foundation required for the PWA. Full offline readiness remains a device-verification gate, not an assumption.
+Full offline readiness remains a device-verification gate, not an assumption.
