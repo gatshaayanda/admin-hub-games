@@ -111,7 +111,7 @@ Required foundation:
 - The service worker precaches the application shell.
 - Same-origin scripts, styles, images, fonts, audio, JSON and manifest resources are runtime-cacheable.
 - Offline navigation falls back to the cached `/` shell.
-- Cache versions change when a deliberate compatibility/update boundary requires it.
+- Cache versions change at every production app release/update boundary. For this repository, bump the `CACHE_NAME` version in `public/sw.js` when shipping a new app version so installed PWAs get a fresh service worker and the existing update notice can offer the user a reload.
 - The service worker accepts `SKIP_WAITING` from the existing update notice.
 - `registerPwa()` must never block Phaser startup or scene routing.
 - PWA installation/update UI must not become a game-flow gate.
