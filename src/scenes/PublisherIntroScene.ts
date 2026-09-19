@@ -1,10 +1,10 @@
 import Phaser from 'phaser';
 import { adminHubAudio } from '../audio';
+import { renderCatalog } from '../catalog';
 
 export class PublisherIntroScene extends Phaser.Scene {
   private leaving = false;
   private introReady = false;
-  private resizeHandler?: () => void;
 
   constructor() {
     super('PublisherIntroScene');
@@ -176,11 +176,12 @@ export class PublisherIntroScene extends Phaser.Scene {
     if (this.leaving) return;
     this.leaving = true;
     this.cameras.main.fadeOut(450, 22, 18, 14);
-    this.time.delayedCall(450, () => this.scene.start(this.shouldShowHallIntro() ? 'HallIntroScene' : 'GameShellScene'));
-  }
-
-  private shouldShowHallIntro() {
-    try { return window.localStorage.getItem('admin-hub-games:hall-intro-v2-seen') !== 'seen'; } catch { return true; }
+    this.time.delayedCall(450, () => {
+      renderCatalog(() => {
+        this.cameras.main.fadeOut(300, 7, 11, 29);
+        this.time.delayedCall(300, () => this.scene.start('HallIntroScene'));
+      });
+    });
   }
 
   private drawWorld(width: number, height: number) {
