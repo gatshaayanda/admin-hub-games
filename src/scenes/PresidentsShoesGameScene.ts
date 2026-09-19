@@ -28,7 +28,7 @@ export class PresidentsShoesGameScene extends Phaser.Scene {
     if (this.registry.get('presidentsShoesResume') === true) this.loadState();
     else this.clearSavedState();
 
-    this.cameras.main.setBackgroundColor('#071018');
+    this.cameras.main.setBackgroundColor('#f6efe2');
     this.renderScene();
     this.resizeHandler = () => this.renderScene();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.resizeHandler, this);
@@ -45,9 +45,9 @@ export class PresidentsShoesGameScene extends Phaser.Scene {
 
     const { width, height } = this.scale;
     const background = this.add.graphics();
-    background.fillStyle(0x071018, 1).fillRect(0, 0, width, height);
-    background.fillStyle(0x0d2b31, 1).fillRect(0, height * 0.72, width, height * 0.28);
-    background.fillStyle(0x123c3b, 0.7).fillRect(0, height * 0.58, width, height * 0.14);
+    background.fillStyle(0xf6efe2, 1).fillRect(0, 0, width, height);
+    background.fillStyle(0x0f5a60, 1).fillRect(0, height * 0.78, width, height * 0.22);
+    background.fillStyle(0xd7a93d, 0.25).fillRect(0, height * 0.58, width, height * 0.20);
     this.contentObjects.push(background);
 
     const scene = PRESIDENTS_SHOES_STORY.scenes[this.state.sceneId as keyof typeof PRESIDENTS_SHOES_STORY.scenes] as StoryScene | undefined;
@@ -60,46 +60,46 @@ export class PresidentsShoesGameScene extends Phaser.Scene {
     const bodySize = Math.max(14, Math.min(19, Math.min(width, height) * 0.032));
 
     const header = this.add.text(width * 0.06, height * 0.065, "PRESIDENT'S SHOES", {
-      fontFamily: 'monospace',
+      fontFamily: 'Arial, Helvetica, sans-serif',
       fontSize: '11px',
       fontStyle: 'bold',
-      color: '#55d6c2',
+      color: '#0f5a60',
       letterSpacing: 1.5,
     }).setOrigin(0, 0.5);
     this.contentObjects.push(header);
 
     const player = this.add.text(width * 0.94, height * 0.065, this.playerName.toUpperCase(), {
-      fontFamily: 'monospace',
-      fontSize: '10px',
+      fontFamily: 'Arial, Helvetica, sans-serif',
+      fontSize: '12px',
       fontStyle: 'bold',
-      color: '#e0b65a',
+      color: '#a36f08',
       letterSpacing: 1,
     }).setOrigin(1, 0.5);
     this.contentObjects.push(player);
 
     const location = this.add.text(width / 2, height * 0.14, scene.location, {
-      fontFamily: 'monospace',
-      fontSize: '9px',
-      color: '#6f8fa1',
+      fontFamily: 'Arial, Helvetica, sans-serif',
+      fontSize: '11px',
+      color: '#58716f',
       letterSpacing: 1,
       align: 'center',
     }).setOrigin(0.5);
     this.contentObjects.push(location);
 
     const title = this.add.text(width / 2, height * 0.23, scene.title, {
-      fontFamily: 'monospace',
+      fontFamily: 'Arial, Helvetica, sans-serif',
       fontSize: titleSize + 'px',
       fontStyle: 'bold',
-      color: '#f4f7ff',
+      color: '#173d39',
       align: 'center',
       wordWrap: { width: width * 0.84 },
     }).setOrigin(0.5);
     this.contentObjects.push(title);
 
     const body = this.add.text(width / 2, height * 0.37, scene.body, {
-      fontFamily: 'sans-serif',
+      fontFamily: 'Arial, Helvetica, sans-serif',
       fontSize: bodySize + 'px',
-      color: '#c7d4df',
+      color: '#405b58',
       align: 'center',
       lineSpacing: 7,
       wordWrap: { width: Math.min(width * 0.82, 760) },
@@ -120,9 +120,9 @@ export class PresidentsShoesGameScene extends Phaser.Scene {
     });
 
     const stats = this.add.text(width / 2, height * 0.95,
-      'TRUST ' + this.state.trust + '   SERVICE ' + this.state.service + '   RESERVE ' + this.state.budget,
+      'TRUST ' + this.state.trust + '   SERVICE ' + this.state.service + '   RESERVE ' + this.state.budget + '   DECISIONS ' + this.state.decisions,
       {
-        fontFamily: 'monospace',
+        fontFamily: 'Arial, Helvetica, sans-serif',
         fontSize: '9px',
         color: '#6f8fa1',
         letterSpacing: 1,
@@ -133,19 +133,19 @@ export class PresidentsShoesGameScene extends Phaser.Scene {
 
   private renderChoice(choice: StoryChoice, index: number, y: number, width: number) {
     const buttonWidth = Math.min(760, width * 0.84);
-    const buttonHeight = 58;
-    const button = this.add.rectangle(width / 2, y, buttonWidth, buttonHeight, 0x101b2d, 1)
-      .setStrokeStyle(2, 0x55d6c2, 0.62)
+    const buttonHeight = 72;
+    const button = this.add.rectangle(width / 2, y, buttonWidth, buttonHeight, 0xfffbf3, 1)
+      .setStrokeStyle(2, 0x0f5a60, 0.62)
       .setInteractive({ useHandCursor: false });
     const label = this.add.text(button.x - buttonWidth / 2 + 18, y - 9, (index + 1) + '. ' + choice.label, {
-      fontFamily: 'monospace',
-      fontSize: Math.max(10, Math.min(13, width * 0.013)) + 'px',
+      fontFamily: 'Arial, Helvetica, sans-serif',
+      fontSize: Math.max(14, Math.min(18, width * 0.017)) + 'px',
       fontStyle: 'bold',
       color: '#f4f7ff',
       wordWrap: { width: buttonWidth - 36 },
     }).setOrigin(0, 0.5);
     const hint = this.add.text(button.x - buttonWidth / 2 + 18, y + 14, choice.hint, {
-      fontFamily: 'sans-serif',
+      fontFamily: 'Arial, Helvetica, sans-serif',
       fontSize: '9px',
       color: '#6f8fa1',
       wordWrap: { width: buttonWidth - 36 },
@@ -180,7 +180,7 @@ export class PresidentsShoesGameScene extends Phaser.Scene {
 
     const ending = getEnding(this.state);
     const title = this.add.text(width / 2, height * 0.57, ending.title, {
-      fontFamily: 'monospace',
+      fontFamily: 'Arial, Helvetica, sans-serif',
       fontSize: Math.max(20, Math.min(30, Math.min(width, height) * 0.052)) + 'px',
       fontStyle: 'bold',
       color: '#e0b65a',
@@ -189,7 +189,7 @@ export class PresidentsShoesGameScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     const summary = this.add.text(width / 2, height * 0.68, ending.summary, {
-      fontFamily: 'sans-serif',
+      fontFamily: 'Arial, Helvetica, sans-serif',
       fontSize: '14px',
       color: '#c7d4df',
       align: 'center',
@@ -200,7 +200,7 @@ export class PresidentsShoesGameScene extends Phaser.Scene {
     const replay = this.add.rectangle(width * 0.35, height * 0.86, Math.min(240, width * 0.38), 54, 0x55d6c2, 1)
       .setInteractive({ useHandCursor: false });
     const replayText = this.add.text(replay.x, replay.y, 'PLAY AGAIN', {
-      fontFamily: 'monospace',
+      fontFamily: 'Arial, Helvetica, sans-serif',
       fontSize: '10px',
       fontStyle: 'bold',
       color: '#071018',
@@ -211,7 +211,7 @@ export class PresidentsShoesGameScene extends Phaser.Scene {
       .setStrokeStyle(2, 0x55d6c2, 0.7)
       .setInteractive({ useHandCursor: false });
     const menuText = this.add.text(menu.x, menu.y, 'GAME LIBRARY', {
-      fontFamily: 'monospace',
+      fontFamily: 'Arial, Helvetica, sans-serif',
       fontSize: '10px',
       fontStyle: 'bold',
       color: '#f4f7ff',
@@ -236,8 +236,8 @@ export class PresidentsShoesGameScene extends Phaser.Scene {
     }
 
     const finalStats = this.add.text(width / 2, height * 0.78, 'DECISIONS ' + this.state.decisions + '   TRUST ' + this.state.trust + '   SERVICE ' + this.state.service + '   RESERVE ' + this.state.budget, {
-      fontFamily: 'monospace',
-      fontSize: '8px',
+      fontFamily: 'Arial, Helvetica, sans-serif',
+      fontSize: '10px',
       color: '#6f8fa1',
       letterSpacing: 0.8,
       align: 'center',
