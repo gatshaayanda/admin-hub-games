@@ -1,6 +1,7 @@
-const CACHE_NAME = 'admin-hub-games-v4';
+const CACHE_NAME = 'admin-hub-games-v5';
 const CORE_ASSETS = [
   '/',
+  '/index.html',
   '/manifest.webmanifest',
   '/favicon.svg',
   '/icons/icon-192.svg',
@@ -10,7 +11,8 @@ const CORE_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(CORE_ASSETS)),
+      .then((cache) => cache.addAll(CORE_ASSETS))
+      .then(() => self.skipWaiting()),
   );
 });
 
