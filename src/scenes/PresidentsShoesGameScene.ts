@@ -5,6 +5,7 @@ import {
   PRESIDENTS_SHOES_STORY,
   type StoryChoice,
   type StoryState,
+  type StoryScene,
 } from '../games/presidents-shoes/story';
 
 const SAVE_KEY = 'admin-hub-games:presidents-shoes-save-v1';
@@ -49,7 +50,7 @@ export class PresidentsShoesGameScene extends Phaser.Scene {
     background.fillStyle(0x123c3b, 0.7).fillRect(0, height * 0.58, width, height * 0.14);
     this.contentObjects.push(background);
 
-    const scene = PRESIDENTS_SHOES_STORY.scenes[this.state.sceneId as keyof typeof PRESIDENTS_SHOES_STORY.scenes];
+    const scene = PRESIDENTS_SHOES_STORY.scenes[this.state.sceneId as keyof typeof PRESIDENTS_SHOES_STORY.scenes] as StoryScene | undefined;
     if (!scene) {
       this.finishStory();
       return;
@@ -114,7 +115,7 @@ export class PresidentsShoesGameScene extends Phaser.Scene {
     const startY = height * (choices.length === 3 ? 0.60 : 0.58);
     const gap = Math.min(76, height * 0.13);
 
-    choices.forEach((choice, index) => {
+    choices.forEach((choice: StoryChoice, index: number) => {
       this.renderChoice(choice, index, startY + index * gap, width);
     });
 
@@ -174,7 +175,7 @@ export class PresidentsShoesGameScene extends Phaser.Scene {
     this.renderScene();
   }
 
-  private renderEnding(width: number, height: number, scene: { ending?: { title: string; summary: string } }) {
+  private renderEnding(width: number, height: number, scene: StoryScene) {
     if (!scene.ending) return;
 
     const ending = getEnding(this.state);
