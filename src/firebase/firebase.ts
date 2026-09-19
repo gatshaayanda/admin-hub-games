@@ -15,6 +15,7 @@ import {
 import {
   deleteOutbox,
   deleteWorldNoteLocal,
+  updateWorldNoteLocal,
   getAllWorldNotes,
   getOutbox,
   getWorldNotes,
@@ -145,6 +146,34 @@ export async function loadWorldNotes(villageId: string): Promise<WorldNote[]> {
   }
 }
 
+export async function editWorldNote(noteId: string, text: string): Promise<boolean> {
+  const cleanText = text.trim().slice(0, 500);
+  if (!cleanText) return false;
+  const notes = await getAllWorldNotes().catch(() => []);
+  const existing = notes.find((item) => item.id === noteId);
+  if (!existing) return false;
+
+  try { await updateWorldNoteLocal(noteId, cleanText); } catch { return false; }
+
+  try {
+    const user = await ensureAnonymousPlayer();
+    if (existing.authorId !== user.uid) return false;
+    await setDoc(doc(firestore, 'worldNotes', noteId), {
+      authorId: user.uid,
+      authorName: existing.authorName,
+      villageId: existing.villageId,
+      text: cleanText,
+      createdAt: new Date(existing.createdAt),
+    });
+    await putWorldNote({ ...existing, text: cleanText, authorId: user.uid, remoteId: noteId, synced: true });
+    return true;
+  } catch {
+    await queue({ id: `edit:${noteId}`, type: 'edit-note', payload: { noteId, text: cleanText }, createdAt: Date.now() });
+    void syncPending();
+    return true;
+  }
+}
+
 export async function reportWorldNote(note: WorldNote, reporterName: string, reason: string): Promise<boolean> {
   const reportId = newLocalId('report');
   try {
@@ -231,6 +260,18 @@ async function syncPending() {
           createdAt: new Date(note.createdAt),
         });
         await putWorldNote({ ...note, authorId: user.uid, remoteId: note.id, synced: true });
+      } else if (item.type === 'edit-note') {
+        const notes = await getAllWorldNotes();
+        const note = notes.find((candidate) => candidate.id === item.payload.noteId);
+        if (!note) { await deleteOutbox(item.id); continue; }
+        await setDoc(doc(firestore, 'worldNotes', note.id), {
+          authorId: user.uid,
+          authorName: note.authorName,
+          villageId: note.villageId,
+          text: item.payload.text,
+          createdAt: new Date(note.createdAt),
+        });
+        await putWorldNote({ ...note, text: item.payload.text, authorId: user.uid, remoteId: note.id, synced: true });
       } else if (item.type === 'delete-note') {
         await deleteDoc(doc(firestore, 'worldNotes', item.payload.noteId));
       } else if (item.type === 'report-note') {
