@@ -25,7 +25,7 @@ export type StoryScene = {
   };
 };
 
-export const PRESIDENTS_SHOES_STORY = {
+export const PRESIDENTS_SHOES_STORY: { id: string; title: string; subtitle: string; note: string; start: string; scenes: Record<string, StoryScene> } = {
   id: 'botswana-water-week',
   title: 'The Water Week',
   subtitle: 'A fictional first week in office',
@@ -177,8 +177,8 @@ export const PRESIDENTS_SHOES_STORY = {
       body: 'The immediate crisis is not magically solved. What matters now is what your decisions have produced: service progress, public trust and the room left in the budget.',
       ending: { title: 'Outcome', summary: 'The week closes with the consequences of your decisions now visible.' },
     },
-  } satisfies Record<string, StoryScene>,
-} as const;
+  },
+};
 
 export function createInitialStoryState(): StoryState {
   return {
