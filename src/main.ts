@@ -1,6 +1,4 @@
 import './style.css';
-import { renderCatalog } from './catalog';
-
 function startHall() {
   const boot = async () => {
     const [
@@ -57,11 +55,4 @@ function startHall() {
   });
 }
 
-if (window.location.pathname === '/hall' || window.location.pathname === '/hall/') {
-  startHall();
-} else {
-  renderCatalog(() => {
-    window.history.pushState({}, '', '/hall');
-    startHall();
-  });
-}
+startHall();
