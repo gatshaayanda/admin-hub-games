@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { adminHubAudio } from '../audio';
-import { createWorldNote, deleteWorldNote, getAnonymousPlayerId, isFounderAdmin, loadWorldNotes, loadWorldNoteReports, reportWorldNote, type WorldNote } from '../firebase/firebase';
+import { createWorldNote, deleteWorldNote, editWorldNote, getAnonymousPlayerId, isFounderAdmin, loadWorldNotes, loadWorldNoteReports, reportWorldNote, type WorldNote } from '../firebase/firebase';
 import { openNativeNoteComposer } from '../ui/nativeNoteComposer';
 import { getGamebookNotes, newLocalId, putGamebookNote } from '../storage/offlineStore';
 import { openNativeLocationMenu } from '../ui/nativeLocationMenu';
@@ -799,9 +799,7 @@ export class GameShellScene extends Phaser.Scene {
     const firstButtonY = buttonAreaTop + fittedButtonHeight / 2;
     const buttons = [
       ['VIEW MY PRIVATE NOTES', () => { this.closeGamebook(); return this.viewPrivateNotes(); }],
-      ['VIEW WORLD NOTES', () => { this.closeGamebook(); return this.viewWorldNotes(); }],
-      ['DELETE A WORLD NOTE', () => { this.closeGamebook(); return this.deleteOwnWorldNote(); }],
-      ['REPORT A WORLD NOTE', () => { this.closeGamebook(); return this.reportWorldNoteFlow(); }],
+      ['WORLD NOTES', () => { this.closeGamebook(); return this.manageWorldNotes(); }],
       ['WORLD NOTE REPORTS', () => { this.closeGamebook(); return this.viewAdminReports(); }],
       ['HOW TO PLAY THE LOBBY', () => { this.closeGamebook(); this.showLobbyManual(); return undefined; }],
       ['CLOSE GAMEBOOK', () => { this.closeGamebook(); return undefined; }],
@@ -843,55 +841,136 @@ export class GameShellScene extends Phaser.Scene {
     }
   }
 
-  private async reportWorldNoteFlow() {
+  private async reportWorldNoteFlow(noteId?: string) {
     const village = this.activeVillage || this.getSystemsHallLocation();
     const notes = await loadWorldNotes(village.id);
     if (!notes.length) return 'There are no world notes here to report.';
-    const choices = notes.slice(0, 8).map((note) => ({ value: note.id, label: note.authorName + ': ' + note.text }));
-    const noteId = await this.openChoicePanel('REPORT A WORLD NOTE', 'Choose the note you want the admin system to review.', choices);
-    if (!noteId) return 'Report cancelled.';
-    const note = notes.find((item) => item.id === noteId);
+
+    const selectedId = noteId || await this.openChoicePanel(
+      'REPORT A WORLD NOTE',
+      'Choose the note you want the admin system to review.',
+      notes.slice(0, 8).map((note) => ({ value: note.id, label: note.authorName + ': ' + note.text })),
+    );
+    if (!selectedId) return 'Report cancelled.';
+    const note = notes.find((item) => item.id === selectedId);
     if (!note) return 'That note was not found.';
-    const reason = await this.openTextComposer('REPORT REASON', 'Explain what should be reviewed (max 300 characters).', 'Why are you reporting this note?', 300);
+
+    const reason = await this.openTextComposer(
+      'REPORT REASON',
+      'Explain what should be reviewed (max 300 characters).',
+      'Why are you reporting this note?',
+      300,
+    );
     if (!reason) return 'Report cancelled. Please give a reason so the admin system can understand what is happening.';
     const reporterName = String(this.registry.get('playerName') || 'Player');
     const reported = await reportWorldNote(note, reporterName, reason);
-    return reported ? 'Report submitted. The admin system has recorded it for review.' : 'Could not submit the report. Please try again later.';
+    return reported ? 'Report submitted for admin review.' : 'Could not submit the report. Please try again later.';
   }
 
-  private async viewAdminReports() {
-    const founderAdmin = await isFounderAdmin();
-    if (!founderAdmin) return 'Admin reports are only available to the founder/admin identity.';
-    const reports = await loadWorldNoteReports();
-    if (!reports.length) return 'ADMIN REPORTS · No reports have been recorded yet.';
-    const lines = reports.slice(0, 12).map((report, index) =>
-      `${index + 1}. ${report.reporterName} reported note ${report.noteId}\n  Village: ${report.villageId}\n  Reason: ${report.reason}`,
-    ).join('\n\n');
-    return `ADMIN REPORTS · ${reports.length} recorded\n\n${lines}`.slice(0, 1800);
-  }
-
-  private async viewWorldNotes() {
-    const village = this.activeVillage || this.getSystemsHallLocation();
-    this.worldNotes = await loadWorldNotes(village.id);
-    const lines = this.worldNotes.length ? this.worldNotes.map((note) => `✦ ${note.authorName}\n  ${note.text}`).join('\n\n') : 'No shared notes here yet.\n\nBe the first person to leave one.';
-    this.showTransientMessage(lines.slice(0, 180));
-  }
-
-  private async deleteOwnWorldNote() {
+  private async manageWorldNotes() {
     const village = this.activeVillage || this.getSystemsHallLocation();
     const notes = await loadWorldNotes(village.id);
-    if (!notes.length) return 'There are no world notes here to remove.';
+    if (!notes.length) return 'No world notes here yet. Leave one from a landmark.';
+
     const founderAdmin = await isFounderAdmin();
-    const myId = founderAdmin ? null : await getAnonymousPlayerId();
-    const visibleNotes = founderAdmin ? notes : notes.filter((note) => note.authorId === myId);
-    if (!visibleNotes.length) return 'You have no world notes here to remove.';
-    const choices = visibleNotes.slice(0, 8).map((note) => ({ value: note.id, label: note.authorName + ': ' + note.text }));
-    const noteId = await this.openChoicePanel(founderAdmin ? 'REMOVE WORLD NOTE' : 'REMOVE YOUR WORLD NOTE', 'Choose the note to remove from the shared world.', choices);
-    if (!noteId) return 'Cleanup cancelled.';
-    const note = visibleNotes.find((item) => item.id === noteId);
+    const myId = await getAnonymousPlayerId();
+    const choices = notes.slice(0, 8).map((note) => {
+      const mine = !!myId && note.authorId === myId;
+      const admin = founderAdmin;
+      return {
+        value: note.id,
+        label: admin ? (mine ? 'YOUR NOTE · ' : '') + note.authorName + ': ' + note.text : (mine ? 'YOUR NOTE · ' : note.authorName + ': ') + note.text,
+      };
+    });
+
+    const noteId = await this.openChoicePanel(
+      'WORLD NOTES',
+      founderAdmin ? 'Choose a note. You can edit or remove any note as founder/admin.' : 'Your notes can be edited or removed. Other notes can be reported.',
+      choices,
+    );
+    if (!noteId) return 'World notes closed.';
+
+    const note = notes.find((item) => item.id === noteId);
     if (!note) return 'That note was not found.';
-    const deleted = await deleteWorldNote(note.id);
-    return deleted ? 'The selected world note was removed from the shared world.' : 'Could not delete that note.';
+    const mine = !!myId && note.authorId === myId;
+
+    if (mine) {
+      const action = await this.openChoicePanel(
+        'YOUR WORLD NOTE',
+        'Choose what you want to do with your note.',
+        [
+          { value: 'edit', label: 'EDIT NOTE' },
+          { value: 'delete', label: 'DELETE NOTE' },
+          { value: 'cancel', label: 'BACK' },
+        ],
+      );
+      if (action === 'edit') {
+        const edited = await this.openTextComposer(
+          'EDIT WORLD NOTE',
+          'Update the note other players can see.',
+          note.text,
+          500,
+        );
+        if (!edited) return 'Edit cancelled.';
+        const ok = await editWorldNote(note.id, edited);
+        if (ok) {
+          this.worldNotes = this.worldNotes.map((item) => item.id === note.id ? { ...item, text: edited } : item);
+          return 'Your world note was updated.';
+        }
+        return 'Could not update that note.';
+      }
+      if (action === 'delete') {
+        const confirm = await this.openChoicePanel(
+          'DELETE WORLD NOTE',
+          'This removes your note from the shared world.',
+          [
+            { value: 'delete', label: 'CONFIRM DELETE' },
+            { value: 'cancel', label: 'CANCEL' },
+          ],
+        );
+        if (confirm !== 'delete') return 'Delete cancelled.';
+        const deleted = await deleteWorldNote(note.id);
+        if (deleted) {
+          this.worldNotes = this.worldNotes.filter((item) => item.id !== note.id);
+          return 'Your world note was removed.';
+        }
+        return 'Could not delete that note.';
+      }
+      return 'No change made.';
+    }
+
+    if (founderAdmin) {
+      const action = await this.openChoicePanel(
+        'ADMIN NOTE MODERATION',
+        'Founder/admin controls for this published note.',
+        [
+          { value: 'delete', label: 'REMOVE NOTE' },
+          { value: 'report', label: 'VIEW / REPORT' },
+          { value: 'cancel', label: 'BACK' },
+        ],
+      );
+      if (action === 'delete') {
+        const confirm = await this.openChoicePanel(
+          'REMOVE WORLD NOTE',
+          'Founder/admin moderation will remove this note from the shared world.',
+          [
+            { value: 'delete', label: 'CONFIRM REMOVE' },
+            { value: 'cancel', label: 'CANCEL' },
+          ],
+        );
+        if (confirm !== 'delete') return 'Removal cancelled.';
+        const deleted = await deleteWorldNote(note.id);
+        if (deleted) {
+          this.worldNotes = this.worldNotes.filter((item) => item.id !== note.id);
+          return 'The selected world note was removed.';
+        }
+        return 'Could not remove that note.';
+      }
+      if (action === 'report') return this.reportWorldNoteFlow(note.id);
+      return 'No moderation change made.';
+    }
+
+    return this.reportWorldNoteFlow(note.id);
   }
 
   private closeGamebook() {
