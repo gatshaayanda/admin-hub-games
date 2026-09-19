@@ -10,6 +10,9 @@ function startHall() {
       { NameEntryScene },
       { HallIntroScene },
       { GameShellScene },
+      { PresidentsShoesIntroScene },
+      { PresidentsShoesSetupScene },
+      { PresidentsShoesGameScene },
     ] = await Promise.all([
       import('phaser'),
       import('./pwa'),
@@ -18,6 +21,9 @@ function startHall() {
       import('./scenes/NameEntryScene'),
       import('./scenes/HallIntroScene'),
       import('./scenes/GameShellScene'),
+      import('./scenes/PresidentsShoesIntroScene'),
+      import('./scenes/PresidentsShoesSetupScene'),
+      import('./scenes/PresidentsShoesGameScene'),
     ]);
 
     registerPwa();
@@ -39,7 +45,7 @@ function startHall() {
         min: { width: 320, height: 180 },
         max: { width: 0, height: 0 },
       },
-      scene: [BootScene, PublisherIntroScene, NameEntryScene, HallIntroScene, GameShellScene],
+      scene: [BootScene, PublisherIntroScene, NameEntryScene, HallIntroScene, GameShellScene, PresidentsShoesIntroScene, PresidentsShoesSetupScene, PresidentsShoesGameScene],
     };
 
     const game = new Phaser.Game(config);
@@ -49,7 +55,7 @@ function startHall() {
   void boot().catch(() => {
     const app = document.getElementById('app');
     if (!app) return;
-    app.innerHTML = '<main class="ahg-fallback"><p>HALL COULD NOT START.</p><button type="button" id="ahg-return-menu">BACK TO GAMES</button></main>';
+    app.innerHTML = '<main class="ahg-fallback"><p>ADMIN HUB GAMES COULD NOT START.</p><button type="button" id="ahg-return-menu">BACK TO GAMES</button></main>';
     document.getElementById('ahg-return-menu')?.addEventListener('click', () => {
       window.location.href = '/';
     });

@@ -1,28 +1,37 @@
 type GameMenuItem = {
+  id: 'hall' | 'presidents-shoes';
   title: string;
   description: string;
-  status: 'PLAY NOW' | 'COMING SOON';
-  playable: boolean;
+  status: 'PLAY NOW';
+  playable: true;
 };
 
 const games: GameMenuItem[] = [
   {
+    id: 'hall',
     title: 'HALL',
     description: 'The Admin Hub Games world. Explore, read, leave something behind and return.',
     status: 'PLAY NOW',
     playable: true,
   },
+  {
+    id: 'presidents-shoes',
+    title: "PRESIDENT'S SHOES",
+    description: 'A fictional Botswana decision story. Choose, respond to consequences and see where your first week leads.',
+    status: 'PLAY NOW',
+    playable: true,
+  },
 ];
 
-export function renderCatalog(onPlay: () => void) {
+export function renderCatalog(onPlay: (gameId: GameMenuItem['id']) => void) {
   const app = document.getElementById('app');
   if (!app) return;
 
   app.className = 'ahg-catalog';
 
   // Keep Phaser's canvas mounted. Replacing #app.innerHTML would detach the
-  // live game canvas, so the Hall scene could start successfully but become
-  // invisible behind this menu. The library is an overlay on top of Phaser.
+  // live game canvas, so the selected game's scene can start cleanly underneath
+  // this menu. The library is an overlay on top of Phaser.
   app.querySelector('.game-menu')?.remove();
   app.insertAdjacentHTML('beforeend', `
     <main class="game-menu" aria-labelledby="game-menu-title">
@@ -49,7 +58,7 @@ export function renderCatalog(onPlay: () => void) {
                 <div class="menu-card-meta"><span>${game.status}</span><span>WORLD</span></div>
                 <h2>${game.title}</h2>
                 <p>${game.description}</p>
-                ${game.playable ? '<button class="menu-play" id="play-hall" type="button">PLAY HALL <span>→</span></button>' : '<span class="menu-disabled">COMING SOON</span>'}
+                <button class="menu-play" data-game-id="${game.id}" type="button">PLAY ${game.title} <span>→</span></button>
               </div>
             </article>
           `).join('')}
@@ -58,33 +67,39 @@ export function renderCatalog(onPlay: () => void) {
 
       <footer class="game-menu-footer">
         <span>ADMIN HUB × PHASER</span>
-        <span>HALL IS READY TO PLAY</span>
+        <span>2 GAMES READY</span>
       </footer>
     </main>
   `);
 
   const menu = app.querySelector<HTMLElement>('.game-menu');
-  const playButton = menu?.querySelector<HTMLButtonElement>('#play-hall');
+  const playButtons = Array.from(menu?.querySelectorAll<HTMLButtonElement>('.menu-play') ?? []);
+
   const startSelectedGame = (event: Event) => {
     event.preventDefault();
     event.stopPropagation();
-    if (!menu?.isConnected) return;
+
+    const button = event.currentTarget as HTMLButtonElement | null;
+    const gameId = button?.dataset.gameId as GameMenuItem['id'] | undefined;
+    if (!menu?.isConnected || !gameId) return;
+
     menu.remove();
     app.className = '';
 
     // The library is a separate layer from Phaser. Wait for the browser's
     // pointer/click gesture to finish before starting the selected game's intro.
-    // HallIntroScene owns its own input and must see a clean first frame.
-    window.setTimeout(() => onPlay(), 120);
+    window.setTimeout(() => onPlay(gameId), 120);
   };
 
-  playButton?.addEventListener('click', startSelectedGame, { once: true });
-  playButton?.addEventListener('pointerdown', (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-  });
-  playButton?.addEventListener('pointerup', (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-  });
+  for (const button of playButtons) {
+    button.addEventListener('click', startSelectedGame, { once: true });
+    button.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+    button.addEventListener('pointerup', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+  }
 }

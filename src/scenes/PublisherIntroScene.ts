@@ -177,10 +177,11 @@ export class PublisherIntroScene extends Phaser.Scene {
     this.leaving = true;
     this.cameras.main.fadeOut(450, 22, 18, 14);
     this.time.delayedCall(450, () => {
-      renderCatalog(() => {
-        // The menu is an HTML overlay only. Once it is dismissed, return to the
-        // exact Hall handoff: start the Hall cinematic immediately.
-        this.scene.start('HallIntroScene');
+      renderCatalog((gameId) => {
+        // The menu is an HTML overlay only. Once it is dismissed, hand control
+        // directly to the selected game's own intro. Hall keeps its proven path.
+        if (gameId === 'hall') this.scene.start('HallIntroScene');
+        if (gameId === 'presidents-shoes') this.scene.start('PresidentsShoesIntroScene');
       });
     });
   }
