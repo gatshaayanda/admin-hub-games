@@ -19,7 +19,12 @@ export function renderCatalog(onPlay: () => void) {
   if (!app) return;
 
   app.className = 'ahg-catalog';
-  app.innerHTML = `
+
+  // Keep Phaser's canvas mounted. Replacing #app.innerHTML would detach the
+  // live game canvas, so the Hall scene could start successfully but become
+  // invisible behind this menu. The library is an overlay on top of Phaser.
+  app.querySelector('.game-menu')?.remove();
+  app.insertAdjacentHTML('beforeend', `
     <main class="game-menu" aria-labelledby="game-menu-title">
       <header class="game-menu-header">
         <div class="brand">
@@ -56,7 +61,12 @@ export function renderCatalog(onPlay: () => void) {
         <span>HALL IS READY TO PLAY</span>
       </footer>
     </main>
-  `;
+  `);
 
-  document.getElementById('play-hall')?.addEventListener('click', onPlay);
+  const menu = app.querySelector<HTMLElement>('.game-menu');
+  const playButton = menu?.querySelector<HTMLButtonElement>('#play-hall');
+  playButton?.addEventListener('click', () => {
+    menu?.remove();
+    onPlay();
+  }, { once: true });
 }
