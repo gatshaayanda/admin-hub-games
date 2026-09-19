@@ -8,6 +8,7 @@ export class HallIntroScene extends Phaser.Scene {
   private ready = false;
   private resizeHandler?: () => void;
   private introStartedAt = 0;
+  private inputReadyAt = 0;
 
   constructor() {
     super('HallIntroScene');
@@ -16,6 +17,8 @@ export class HallIntroScene extends Phaser.Scene {
   create() {
     const { width, height } = this.scale;
     this.introStartedAt = this.time.now;
+    // The Hall cinematic must not consume the menu button's opening gesture.
+    this.inputReadyAt = this.time.now + 350;
     this.cameras.main.setBackgroundColor('#d9c28f');
     this.drawBackdrop(width, height);
     this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
@@ -51,7 +54,10 @@ export class HallIntroScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(40).setAlpha(0);
 
     // The cinematic is presentation only. Input never depends on a timer having fired.
-    const skip = () => this.enterHall();
+    const skip = () => {
+      if (this.time.now < this.inputReadyAt) return;
+      this.enterHall();
+    };
     this.input.on('pointerdown', skip);
     this.input.keyboard?.on('keydown', skip);
 
