@@ -247,6 +247,109 @@ The shell should make adding the next real game easier without making every game
 
 **Smallest foundation that makes the next real game easier.**
 
+## Safety Checkpoint
+
+**Known rollback / safety anchor:** commit `7bb573eeb115b3d77561db13239f8a0d3c39e146` — `fix: use the Hall intro completion key consistently`.
+
+This commit is an explicit recovery reference. Do not force-reset or rewrite `main` casually. The commits after this anchor add the current foundation improvements (the final Hall setup handoff fix, the project contract, the PWA service worker and generic PWA update wording). If a future change unexpectedly damages the platform, stop and compare against this anchor before attempting further fixes.
+
+**Current development rule:** new games are developed from the current known-good `main` foundation, preferably on a dedicated branch first. Hall remains protected. Do not roll back the foundation merely to add a game.
+
+## President's Shoes — First New Game
+
+President's Shoes is the next actual game to integrate. It is a fictional, branching narrative game set in Botswana. It is not presidential training, political advocacy, a news simulator, or a representation of real politicians' actions.
+
+Target flow:
+
+```
+Publisher Intro
+      ↓
+Game Library
+      ↓
+President's Shoes Intro
+      ↓
+President's Shoes Setup
+      ↓
+President's Shoes Gameplay
+```
+
+### President's Shoes Intro
+
+Own the game's identity and premise. Establish the Botswana setting, the fictional nature of the story, the responsibility of making decisions, and the game's tone. It must hand directly to President's Shoes Setup.
+
+### President's Shoes Setup
+
+Initial V1 setup is deliberately small:
+
+```
+Choose fictional presidential name
+      ↓
+Confirm
+      ↓
+Start story
+```
+
+The setup stores the fictional player identity locally and starts gameplay directly. It must not route back through the intro automatically.
+
+### President's Shoes Gameplay
+
+Use a data-driven story model rather than embedding the whole story inside one giant Phaser scene. The first playable story should be small but complete: roughly 5–8 scenes/nodes, 3 meaningful decision points, visible consequences, multiple endings, completion state, replay and local history/save state.
+
+Use fictional names and fictional scenarios. Real-world news or public discussion may inspire a story, but fictional actions and reactions must not be presented as facts about real people, parties, governments or citizens. Gameplay should remain playable offline and should not require live news retrieval.
+
+The story engine should support:
+- scene/node progression;
+- choices;
+- state/consequences;
+- branching and useful reconvergence;
+- multiple endings;
+- replay;
+- local save/resume;
+- local completion history.
+
+Keep story content separate from rendering and platform infrastructure. A lightweight static data structure under `src/games/presidents-shoes/` is sufficient for V1; do not create Firebase persistence just for this game.
+
+### President's Shoes Integration Rules
+
+- Add one real, playable library card. No placeholder or Coming Soon card.
+- Do not modify Hall's scene logic to launch President's Shoes.
+- Shared shell changes should be limited to the library selection and Phaser scene registration needed to launch the new game.
+- President's Shoes owns its Intro, Setup, Gameplay, story state and game UI after selection.
+- Do not create a separate Firebase project.
+- Do not add live-news APIs or server dependencies to the first playable story.
+- Keep the game compatible with the existing PWA/service-worker caching strategy.
+- Before claiming offline play, ensure the game's requested static resources have been cached by a prior online launch.
+
+### New Game Acceptance Gate
+
+Before calling President's Shoes integrated, verify the complete path:
+
+```
+Publisher Intro
+ ↓
+Game Library
+ ↓
+President's Shoes card
+ ↓
+President's Shoes Intro
+ ↓
+Setup
+ ↓
+Story
+ ↓
+choice
+ ↓
+consequence
+ ↓
+next scene
+ ↓
+ending
+ ↓
+replay / return
+```
+
+Also verify Hall still follows its existing proven path unchanged.
+
 ## Current Foundation Status — September 2026
 
 Hall is currently the working production game.
