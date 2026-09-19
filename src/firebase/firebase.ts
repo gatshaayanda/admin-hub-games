@@ -88,7 +88,7 @@ export async function ensureAnonymousPlayer(): Promise<User> {
 }
 
 export async function getAnonymousPlayerId(): Promise<string | null> {
-  try { return (await ensureAnonymousPlayer()).uid; } catch { return null; }
+  try { return (await ensureAnonymousPlayer()).uid; } catch { return getOfflinePlayerId(); }
 }
 
 export async function savePlayerProfile(displayName: string): Promise<void> {
@@ -153,11 +153,11 @@ export async function editWorldNote(noteId: string, text: string): Promise<boole
   const existing = notes.find((item) => item.id === noteId);
   if (!existing) return false;
 
-  try { await updateWorldNoteLocal(noteId, cleanText); } catch { return false; }
-
   try {
     const user = await ensureAnonymousPlayer();
-    if (existing.authorId !== user.uid) return false;
+    const ownsNote = existing.authorId === user.uid || existing.authorId === getOfflinePlayerId();
+    if (!ownsNote) return false;
+    await updateWorldNoteLocal(noteId, cleanText);
     await setDoc(doc(firestore, 'worldNotes', noteId), {
       authorId: user.uid,
       authorName: existing.authorName,
