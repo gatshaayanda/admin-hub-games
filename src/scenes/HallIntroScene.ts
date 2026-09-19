@@ -1,14 +1,11 @@
 import Phaser from 'phaser';
 
 const HALL_INTRO_KEY = 'admin-hub-games:hall-intro-v2-seen';
-const HALL_INTRO_DURATION = 5400;
 
 export class HallIntroScene extends Phaser.Scene {
   private leaving = false;
   private ready = false;
   private resizeHandler?: () => void;
-  private introStartedAt = 0;
-  private inputReadyAt = 0;
 
   constructor() {
     super('HallIntroScene');
@@ -16,9 +13,6 @@ export class HallIntroScene extends Phaser.Scene {
 
   create() {
     const { width, height } = this.scale;
-    this.introStartedAt = this.time.now;
-    // The Hall cinematic must not consume the menu button's opening gesture.
-    this.inputReadyAt = this.time.now + 350;
     this.cameras.main.setBackgroundColor('#d9c28f');
     this.drawBackdrop(width, height);
     this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
@@ -53,11 +47,7 @@ export class HallIntroScene extends Phaser.Scene {
       fontFamily: 'monospace', fontSize: '10px', color: '#493526', letterSpacing: 1, align: 'center',
     }).setOrigin(0.5).setDepth(40).setAlpha(0);
 
-    // The cinematic is presentation only. Input never depends on a timer having fired.
-    const skip = () => {
-      if (this.time.now < this.inputReadyAt) return;
-      this.enterHall();
-    };
+    const skip = () => { if (this.ready) this.enterHall(); };
     this.input.on('pointerdown', skip);
     this.input.keyboard?.on('keydown', skip);
 
@@ -84,6 +74,7 @@ export class HallIntroScene extends Phaser.Scene {
       this.ready = true;
       skipHint.setAlpha(0.75);
       this.tweens.add({ targets: skipHint, alpha: 0.30, duration: 850, yoyo: true, repeat: -1 });
+      this.time.delayedCall(1600, () => this.enterHall());
     });
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -91,14 +82,6 @@ export class HallIntroScene extends Phaser.Scene {
       this.input.off('pointerdown', skip);
       this.input.keyboard?.off('keydown', skip);
     });
-  }
-
-  update() {
-    // Recover if the browser/PWA suspended the scene and delayed callbacks.
-    if (!this.leaving && this.time.now - this.introStartedAt >= HALL_INTRO_DURATION) {
-      this.ready = true;
-      this.enterHall();
-    }
   }
 
   private handleResize(width: number, height: number) {
