@@ -1,7 +1,5 @@
 import Phaser from 'phaser';
 
-const INTRO_SEEN_KEY = 'admin-hub-games:presidents-shoes-intro-v1-seen';
-
 export class PresidentsShoesIntroScene extends Phaser.Scene {
   private leaving = false;
   private ready = false;
@@ -95,17 +93,11 @@ export class PresidentsShoesIntroScene extends Phaser.Scene {
       this.input.keyboard?.off('keydown', continueGame);
     });
 
-    void INTRO_SEEN_KEY;
   }
 
   private enterSetup() {
     if (this.leaving) return;
     this.leaving = true;
-    try {
-      window.localStorage.setItem(INTRO_SEEN_KEY, 'seen');
-    } catch {
-      // Optional local storage.
-    }
     this.cameras.main.fadeOut(400, 7, 16, 24);
     this.time.delayedCall(400, () => this.scene.start('PresidentsShoesSetupScene'));
   }
