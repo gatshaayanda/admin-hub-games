@@ -65,11 +65,26 @@ export function renderCatalog(onPlay: () => void) {
 
   const menu = app.querySelector<HTMLElement>('.game-menu');
   const playButton = menu?.querySelector<HTMLButtonElement>('#play-hall');
-  playButton?.addEventListener('click', () => {
-    menu?.remove();
+  const startSelectedGame = (event: Event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!menu?.isConnected) return;
+    menu.remove();
     app.className = '';
-    // Let the menu's click gesture fully finish before Phaser receives input again.
-    // This prevents the same touch from immediately skipping the Hall cinematic.
-    window.setTimeout(onPlay, 0);
-  }, { once: true });
+
+    // The library is a separate layer from Phaser. Wait for the browser's
+    // pointer/click gesture to finish before starting the selected game's intro.
+    // HallIntroScene owns its own input and must see a clean first frame.
+    window.setTimeout(() => onPlay(), 120);
+  };
+
+  playButton?.addEventListener('click', startSelectedGame, { once: true });
+  playButton?.addEventListener('pointerdown', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  });
+  playButton?.addEventListener('pointerup', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  });
 }
