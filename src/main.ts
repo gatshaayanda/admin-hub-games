@@ -21,6 +21,9 @@ function startHall() {
       import('./scenes/NameEntryScene'),
       import('./scenes/HallIntroScene'),
       import('./scenes/GameShellScene'),
+      import('./scenes/PresidentsShoesIntroScene'),
+      import('./scenes/PresidentsShoesSetupScene'),
+      import('./scenes/PresidentsShoesGameScene'),
     ]);
 
     registerPwa();
