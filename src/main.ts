@@ -55,7 +55,7 @@ function startHall() {
   void boot().catch(() => {
     const app = document.getElementById('app');
     if (!app) return;
-    app.innerHTML = '<main class="ahg-fallback"><p>HALL COULD NOT START.</p><button type="button" id="ahg-return-menu">BACK TO GAMES</button></main>';
+    app.innerHTML = '<main class="ahg-fallback"><p>ADMIN HUB GAMES COULD NOT START.</p><button type="button" id="ahg-return-menu">BACK TO GAMES</button></main>';
     document.getElementById('ahg-return-menu')?.addEventListener('click', () => {
       window.location.href = '/';
     });
