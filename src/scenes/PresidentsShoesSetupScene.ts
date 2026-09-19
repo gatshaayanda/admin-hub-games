@@ -1,12 +1,14 @@
 import Phaser from 'phaser';
 
 const PLAYER_KEY = 'admin-hub-games:presidents-shoes-player';
+const SAVE_KEY = 'admin-hub-games:presidents-shoes-save-v1';
 
 export class PresidentsShoesSetupScene extends Phaser.Scene {
   private name = '';
   private input?: HTMLInputElement;
   private status!: Phaser.GameObjects.Text;
   private leaving = false;
+  private hasSavedStory = false;
 
   constructor() {
     super('PresidentsShoesSetupScene');
@@ -42,6 +44,7 @@ export class PresidentsShoesSetupScene extends Phaser.Scene {
 
     const saved = this.readSavedName();
     if (saved) this.name = saved;
+    this.hasSavedStory = this.hasSavedProgress();
 
     this.input = document.createElement('input');
     this.input.type = 'text';
@@ -92,7 +95,7 @@ export class PresidentsShoesSetupScene extends Phaser.Scene {
     const button = this.add.rectangle(width / 2, height * 0.67, buttonWidth, 58, 0x55d6c2, 1)
       .setStrokeStyle(2, 0xdffbf6, 0.75)
       .setInteractive({ useHandCursor: false });
-    const buttonText = this.add.text(button.x, button.y, 'START THE STORY', {
+    const buttonText = this.add.text(button.x, button.y, this.hasSavedStory ? 'NEW STORY' : 'START THE STORY', {
       fontFamily: 'monospace',
       fontSize: '12px',
       fontStyle: 'bold',
@@ -102,10 +105,24 @@ export class PresidentsShoesSetupScene extends Phaser.Scene {
 
     button.on('pointerdown', (pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
-      this.startStory();
+      this.startStory(false);
     });
 
-    this.add.text(width / 2, height * 0.82, 'Your name and story progress stay on this device for V1.', {
+    if (this.hasSavedStory) {
+      const continueButton = this.add.rectangle(width / 2, height * 0.76, buttonWidth, 50, 0x101b2d, 1)
+        .setStrokeStyle(2, 0x55d6c2, 0.7)
+        .setInteractive({ useHandCursor: false });
+      const continueText = this.add.text(continueButton.x, continueButton.y, 'CONTINUE STORY', {
+        fontFamily: 'monospace', fontSize: '10px', fontStyle: 'bold', color: '#f4f7ff', letterSpacing: 1,
+      }).setOrigin(0.5);
+      continueButton.on('pointerdown', (pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+        event.stopPropagation();
+        this.startStory(true);
+      });
+      void continueText;
+    }
+
+    this.add.text(width / 2, height * 0.88, 'Your name and story progress stay on this device for V1.', {
       fontFamily: 'monospace',
       fontSize: '9px',
       color: '#6f8fa1',
@@ -150,7 +167,18 @@ export class PresidentsShoesSetupScene extends Phaser.Scene {
     }
   }
 
-  private startStory() {
+  private hasSavedProgress() {
+    try {
+      const raw = window.localStorage.getItem(SAVE_KEY);
+      if (!raw) return false;
+      const saved = JSON.parse(raw) as { sceneId?: unknown };
+      return typeof saved.sceneId === 'string' && saved.sceneId !== 'ending-check';
+    } catch {
+      return false;
+    }
+  }
+
+  private startStory(resume: boolean) {
     if (this.leaving) return;
     const value = this.name.trim();
     if (!value) {
@@ -167,6 +195,7 @@ export class PresidentsShoesSetupScene extends Phaser.Scene {
     }
 
     this.registry.set('presidentsShoesPlayer', value);
+    this.registry.set('presidentsShoesResume', resume);
     this.input?.blur();
     this.cameras.main.fadeOut(400, 7, 16, 24);
     this.time.delayedCall(400, () => this.scene.start('PresidentsShoesGameScene'));
