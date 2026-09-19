@@ -17,7 +17,7 @@ export type LocalWorldNote = {
 
 export type OutboxItem = {
   id: string;
-  type: 'profile' | 'create-note' | 'delete-note' | 'report-note';
+  type: 'profile' | 'create-note' | 'edit-note' | 'delete-note' | 'report-note';
   payload: Record<string, string>;
   createdAt: number;
 };
@@ -83,6 +83,14 @@ export async function getAllWorldNotes() {
 export async function deleteWorldNoteLocal(id: string) {
   const db = await openDb();
   await requestResult(db.transaction('worldNotes', 'readwrite').objectStore('worldNotes').delete(id));
+}
+
+export async function updateWorldNoteLocal(id: string, text: string) {
+  const db = await openDb();
+  const store = db.transaction('worldNotes', 'readwrite').objectStore('worldNotes');
+  const existing = await requestResult(store.get(id)) as LocalWorldNote | undefined;
+  if (!existing) return;
+  await requestResult(store.put({ ...existing, text, synced: false }));
 }
 
 export async function putOutbox(item: OutboxItem) {
