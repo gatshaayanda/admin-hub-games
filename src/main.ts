@@ -1,4 +1,5 @@
 import './style.css';
+import './mobile-controls';
 function startHall() {
   const boot = async () => {
     const [
