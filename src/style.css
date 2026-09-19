@@ -124,6 +124,8 @@ button { font: inherit; }
 
 /* Game library entry screen */
 .game-menu {
+  position: relative;
+  z-index: 200;
   min-height: 100svh;
   display: flex;
   flex-direction: column;
