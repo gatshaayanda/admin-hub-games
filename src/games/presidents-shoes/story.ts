@@ -175,6 +175,7 @@ export const PRESIDENTS_SHOES_STORY = {
       title: 'A Week Begins',
       location: 'President\'s Office · Wednesday, 17:00',
       body: 'The immediate crisis is not magically solved. What matters now is what your decisions have produced: service progress, public trust and the room left in the budget.',
+      ending: { title: 'Outcome', summary: 'The week closes with the consequences of your decisions now visible.' },
     },
   } satisfies Record<string, StoryScene>,
 } as const;
