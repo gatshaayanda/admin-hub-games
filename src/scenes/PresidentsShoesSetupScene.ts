@@ -5,7 +5,7 @@ const SAVE_KEY = 'admin-hub-games:presidents-shoes-save-v1';
 
 export class PresidentsShoesSetupScene extends Phaser.Scene {
   private name = '';
-  private input?: HTMLInputElement;
+  private nameInput?: HTMLInputElement;
   private status!: Phaser.GameObjects.Text;
   private leaving = false;
   private hasSavedStory = false;
@@ -47,40 +47,40 @@ export class PresidentsShoesSetupScene extends Phaser.Scene {
     if (saved) this.name = saved;
     this.hasSavedStory = this.hasSavedProgress();
 
-    this.input = document.createElement('input');
-    this.input.type = 'text';
-    this.input.maxLength = 24;
-    this.input.autocomplete = 'nickname';
-    this.input.autocapitalize = 'words';
-    this.input.spellcheck = false;
-    this.input.placeholder = 'Your fictional presidential name';
-    this.input.value = this.name;
-    this.input.setAttribute('aria-label', 'Fictional presidential name');
-    this.input.style.position = 'fixed';
-    this.input.style.zIndex = '1200';
-    this.input.style.boxSizing = 'border-box';
-    this.input.style.padding = '0 16px';
-    this.input.style.border = '0';
-    this.input.style.outline = 'none';
-    this.input.style.borderRadius = '4px';
-    this.input.style.background = '#101b2d';
-    this.input.style.color = '#f4f7ff';
-    this.input.style.font = '700 18px monospace';
-    this.input.style.caretColor = '#55d6c2';
-    this.input.style.userSelect = 'text';
-    this.input.style.touchAction = 'manipulation';
-    document.getElementById('app')?.appendChild(this.input);
+    this.nameInput = document.createElement('input');
+    this.nameInput.type = 'text';
+    this.nameInput.maxLength = 24;
+    this.nameInput.autocomplete = 'off';
+    this.nameInput.autocapitalize = 'words';
+    this.nameInput.spellcheck = false;
+    this.nameInput.placeholder = 'Your fictional presidential name';
+    this.nameInput.value = this.name;
+    this.nameInput.setAttribute('aria-label', 'Fictional presidential name');
+    this.nameInput.style.position = 'fixed';
+    this.nameInput.style.zIndex = '1200';
+    this.nameInput.style.boxSizing = 'border-box';
+    this.nameInput.style.padding = '0 16px';
+    this.nameInput.style.border = '0';
+    this.nameInput.style.outline = 'none';
+    this.nameInput.style.borderRadius = '4px';
+    this.nameInput.style.background = '#101b2d';
+    this.nameInput.style.color = '#f4f7ff';
+    this.nameInput.style.font = '700 18px monospace';
+    this.nameInput.style.caretColor = '#55d6c2';
+    this.nameInput.style.userSelect = 'text';
+    this.nameInput.style.touchAction = 'manipulation';
+    document.getElementById('app')?.appendChild(this.nameInput);
 
-    this.input.addEventListener('input', () => {
-      this.name = this.input?.value.replace(/[^a-zA-Z0-9 .'-]/g, '').slice(0, 24) ?? '';
-      if (this.input && this.input.value !== this.name) this.input.value = this.name;
+    this.nameInput.addEventListener('input', () => {
+      this.name = this.nameInput?.value.replace(/[^a-zA-Z0-9 .'-]/g, '').slice(0, 24) ?? '';
+      if (this.nameInput && this.nameInput.value !== this.name) this.nameInput.value = this.name;
       this.status.setText('');
     });
 
-    this.input.addEventListener('keydown', (event) => {
+    this.nameInput.addEventListener('keydown', (event) => {
       if (event.key === 'Enter') {
         event.preventDefault();
-        this.startStory();
+        this.startStory(false);
       }
     });
 
@@ -135,15 +135,15 @@ export class PresidentsShoesSetupScene extends Phaser.Scene {
     this.scale.on(Phaser.Scale.Events.RESIZE, this.resizeHandler, this);
 
     this.time.delayedCall(250, () => {
-      this.input?.focus({ preventScroll: true });
-      this.input?.select();
+      this.nameInput?.focus({ preventScroll: true });
+      this.nameInput?.select();
     });
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       if (this.resizeHandler) this.scale.off(Phaser.Scale.Events.RESIZE, this.resizeHandler, this);
       this.resizeHandler = undefined;
-      this.input?.remove();
-      this.input = undefined;
+      this.nameInput?.remove();
+      this.nameInput = undefined;
     });
 
     void buttonText;
@@ -151,15 +151,15 @@ export class PresidentsShoesSetupScene extends Phaser.Scene {
 
   private positionInput(x: number, y: number, boxWidth: number) {
     const canvas = document.querySelector<HTMLCanvasElement>('#app canvas');
-    if (!this.input || !canvas) return;
+    if (!this.nameInput || !canvas) return;
     const rect = canvas.getBoundingClientRect();
     const scaleX = rect.width / this.scale.width;
     const scaleY = rect.height / this.scale.height;
-    this.input.style.left = rect.left + (x - boxWidth / 2) * scaleX + 'px';
-    this.input.style.top = rect.top + (y - 28) * scaleY + 'px';
-    this.input.style.width = boxWidth * scaleX + 'px';
-    this.input.style.height = Math.max(52, 56 * scaleY) + 'px';
-    this.input.style.fontSize = Math.max(16, Math.min(20, 18 * scaleY)) + 'px';
+    this.nameInput.style.left = rect.left + (x - boxWidth / 2) * scaleX + 'px';
+    this.nameInput.style.top = rect.top + (y - 28) * scaleY + 'px';
+    this.nameInput.style.width = boxWidth * scaleX + 'px';
+    this.nameInput.style.height = Math.max(52, 56 * scaleY) + 'px';
+    this.nameInput.style.fontSize = Math.max(16, Math.min(20, 18 * scaleY)) + 'px';
   }
 
   private readSavedName() {
@@ -186,7 +186,7 @@ export class PresidentsShoesSetupScene extends Phaser.Scene {
     const value = this.name.trim();
     if (!value) {
       this.status.setText('Choose a name first.');
-      this.input?.focus({ preventScroll: true });
+      this.nameInput?.focus({ preventScroll: true });
       return;
     }
 
@@ -199,7 +199,7 @@ export class PresidentsShoesSetupScene extends Phaser.Scene {
 
     this.registry.set('presidentsShoesPlayer', value);
     this.registry.set('presidentsShoesResume', resume);
-    this.input?.blur();
+    this.nameInput?.blur();
     this.cameras.main.fadeOut(400, 7, 16, 24);
     this.time.delayedCall(400, () => this.scene.start('PresidentsShoesGameScene'));
   }
