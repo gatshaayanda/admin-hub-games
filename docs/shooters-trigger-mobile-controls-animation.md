@@ -100,4 +100,4 @@ Test both:
 - Phaser Pointer API: https://docs.phaser.io/api-documentation/class/input-pointer
 - Apple touch-game design guidance: https://developer.apple.com/videos/play/wwdc2024/10085/
 - Apple 2026 touch guidance: https://developer.apple.com/videos/play/wwdc2026/358/
-- Rockstar Red Dead Redemption mobile touch layout support: https://support.rockstargames.com/articles/CwtYAazPxaxyxtxtxtxtxt
+- Rockstar Red Dead Redemption mobile touch layout support: https://support.rockstargames.com/articles/CwtYAazPxaxyxtxy868jO/changing-touch-controls-layout-for-red-dead-redemption-on-android-and-ios
