@@ -548,3 +548,197 @@ replay / library
 ```
 
 The September 20 revision is a product-quality checkpoint, not permission to add infrastructure for its own sake. Future story expansion should add meaningful situations and consequences through JSON before changing the engine.
+
+
+## Game Catalog Direction — September 20, 2026
+
+This section defines the current design briefs for the next three planned Admin Hub Games titles. These are product-development briefs, not claims that the games are already implemented. Do not add placeholder library entries simply because a title appears here.
+
+The three concepts share the same studio principle:
+
+**PREP → PRESSURE → PERFORMANCE → CONSEQUENCE → RETURN**
+
+A game should make the player's preparation meaningful, put them under pressure, reward practiced skill, produce understandable consequences, and give them a reason to play again.
+
+### President's Shoes
+
+**Core fantasy**  
+Run a fictional presidency in a Botswana-inspired setting and experience the consequences of difficult decisions without controlling or representing real politicians.
+
+**Why someone wants to play**  
+To see whether they can manage competing priorities, limited resources, incomplete information and unexpected situations while building their own fictional presidential story.
+
+**Core mechanic**  
+Choose among competing responses to situations; choices alter tracked state such as trust, service and budget/reserve, leading to branching or reconverging situations and different outcomes.
+
+**What they actually do**  
+Read a situation, inspect the available options, choose a response, review the concrete consequence and state change, then decide what to do next.
+
+**Skill — what gets better with practice**  
+Decision-making under trade-offs: understanding consequences, protecting scarce resources, recognising patterns and planning several decisions ahead.
+
+**Pressure — what makes it exciting**  
+Limited resources, competing priorities, escalating situations, uncertain consequences and the possibility that an apparently helpful decision creates a later problem.
+
+**Training — what prepares the player**  
+Short onboarding decisions, readable explanations of state variables, low-stakes opening situations and replay/history that lets the player learn from previous runs.
+
+**Progression — why they return**  
+New story packs, new situations, different starting conditions, alternate outcomes, personal history and increasingly complex decision chains.
+
+**Multiplayer — whether/how people compete**  
+V1 should remain single-player. A later competitive layer could compare runs using transparent scenario scores or asynchronous challenges without requiring players to control the same fictional government simultaneously.
+
+**Story engine — how new situations are generated**  
+Data-driven local story packs: nodes, choices, state deltas, consequence text, conditions, reconvergence and endings. New scenarios should be content additions before engine rewrites.
+
+**Educational angle — whether it can teach**  
+Yes. It can teach trade-offs, budgeting, civic systems, resource allocation, consequences and structured decision-making when presented as fictional simulation rather than factual political instruction.
+
+**B2B angle — whether a company could buy/customise it**  
+Potentially. The same decision engine could support fictional leadership simulations, organisational decision scenarios, classroom exercises or branded scenario packs. Any real-world adaptation would require carefully verified content and clear separation between simulation and factual claims.
+
+**Content engine — whether it produces shareable moments**  
+Strong. Unexpected outcomes, dramatic final records, difficult choices and alternate endings can become screenshots, short clips, challenge scenarios and “what would you do?” content.
+
+**Technical difficulty — what it actually requires**  
+Medium. The hard part is a clean reusable story/state engine, save/resume, consequence presentation and content authoring structure rather than rendering complexity.
+
+**Prototype — smallest playable version**  
+One country pack, one fictional identity setup, one compact story, 5–8 meaningful decisions, visible state changes, at least two distinct outcomes, local save/resume and replay.
+
+**Expansion — what comes after**  
+More story packs, additional systems, scenario modifiers, challenge runs, richer characters, optional asynchronous competition, analytics and carefully scoped educational/B2B packs.
+
+**Monetisation — potential business model**  
+Free browser entry with optional premium story packs; paid standalone editions; sponsored/commissioned scenario packs; educational licensing; B2B custom simulation work.
+
+### Shooters Trigger
+
+**Core fantasy**  
+Experience a tense, competitive paintball match where movement, aim, tactics, pressure and teamwork determine whether the player completes the objective.
+
+**Why someone wants to play**  
+For the adrenaline of being under fire, the satisfaction of accurate shooting and movement, tactical decision-making, and the desire to beat another player or team.
+
+**Core mechanic**  
+Move, aim, shoot, take cover, manage equipment and pursue an objective such as capture-the-flag while hit detection and match rules determine the result.
+
+**What they actually do**  
+Control a character in a landscape arena, move deliberately, aim and fire, react to incoming shots, use terrain, collect or recover equipment where appropriate, and complete the objective.
+
+**Skill — what gets better with practice**  
+Aim control, movement, positioning, reaction time, target tracking, tactical awareness and controlling panic under pressure.
+
+**Pressure — what makes it exciting**  
+Incoming fire, limited visibility, objective timers, exposed movement, uncertain enemy positions and the fear of losing a life or objective.
+
+**Training — what prepares the player**  
+A safe shooting range, movement drills, aim targets, cover practice, reload/equipment practice and short AI scenarios before competitive matches.
+
+**Progression — why they return**  
+Improved player skill, character specialisations, tactical roles, new arenas, match records, tournament progression, seasonal challenges and personal statistics.
+
+**Multiplayer — whether/how people compete**  
+Core long-term opportunity. Start with local/single-device or simple online 1v1/AI-assisted testing as technically appropriate, then expand toward team matches, capture-the-flag, tournaments and shared standings.
+
+**Story engine — how new situations are generated**  
+Match scenarios, team compositions, arena conditions, objectives, character roles and tournament brackets. A future event system can introduce rotating challenges without requiring a new game build for every match.
+
+**Educational angle — whether it can teach**  
+Potentially. It can teach spatial reasoning, teamwork, communication, reaction control and tactical planning. Training should emphasise game skills rather than real-world weapon use.
+
+**B2B angle — whether a company could buy/customise it**  
+Very strong potential. A neutral base product could be branded for paintball operators with their logo, arena layouts, match modes, customer tournaments, event specials and promotional experiences.
+
+**Content engine — whether it produces shareable moments**  
+Very strong. Clutch captures, last-second flags, improbable shots, eliminations, comebacks, tournament brackets and player highlights naturally generate clips and competitive stories.
+
+**Technical difficulty — what it actually requires**  
+High. Responsive aiming and movement, hit detection, camera/landscape presentation, AI, animation, multiplayer networking, latency handling, match state, anti-cheat considerations and robust mobile controls are all significant.
+
+**Prototype — smallest playable version**  
+One landscape arena, one player, simple AI opponents, movement, aiming, shooting, hit detection, respawn, one objective and a complete short match loop. Prove that movement and shooting feel good before expanding characters or online multiplayer.
+
+**Expansion — what comes after**  
+Better animation, multiple character roles, capture-the-flag, 1v1, team modes, tournaments, online matchmaking, spectator/highlight systems, branded arenas and configurable operator experiences.
+
+**Monetisation — potential business model**  
+Free browser prototype; paid/custom branded operator versions; tournament/event packages; B2B licensing or revenue-share arrangements; optional premium competitive content.
+
+### F1 Pedals
+
+**Core fantasy**  
+Become the driver and decision-maker inside a fictional elite open-wheel racing championship where driver skill, preparation, car development, money and race strategy all matter.
+
+**Why someone wants to play**  
+For the feeling of driving fast, improving lap times, beating rivals, building a competitive car/team and watching a season-long story develop around their performance.
+
+**Core mechanic**  
+Real-time driving control is combined with pre-race preparation: driver training, car setup/development, budget allocation, qualifying and race execution.
+
+**What they actually do**  
+Train the driver, spend limited money, configure/develop the car, qualify, drive races, react to conditions and rivals, manage the season and review the consequences.
+
+**Skill — what gets better with practice**  
+Driving lines, braking, throttle control, cornering, racecraft, consistency, situational awareness and eventually strategy.
+
+**Pressure — what makes it exciting**  
+Limited budgets, qualifying position, rival behaviour, mechanical trade-offs, race conditions, championship points and the possibility of wasting a season through poor preparation.
+
+**Training — what prepares the player**  
+Driving school, braking/corner drills, cornering practice, reaction exercises, setup tutorials and controlled test sessions before championship races.
+
+**Progression — why they return**  
+Driver development, car development, team finances, championship standings, qualifying progression, rival relationships, tournaments/seasons and unlockable scenarios.
+
+**Multiplayer — whether/how people compete**  
+Major long-term feature. Players can compete through time trials, asynchronous ghost racing, direct races, leagues, tournaments and eventually full online championship formats.
+
+**Story engine — how new situations are generated**  
+A fictional motorsport news/event system can turn changing team fortunes, weather, upgrades, rivalries, budget events and race-weekend developments into scenarios. Real motorsport can inspire generic themes, but the game should use fictional teams, drivers and events unless licensed.
+
+**Educational angle — whether it can teach**  
+Yes. It can introduce basic vehicle dynamics, physics concepts, budgeting, engineering trade-offs, probability, strategy and data interpretation.
+
+**B2B angle — whether a company could buy/customise it**  
+Potentially. Motorsport schools, karting operators, racing events, sponsors and educational programmes could use customised training/challenge versions. Commercial licensing would be required for third-party protected brands/assets.
+
+**Content engine — whether it produces shareable moments**  
+Extremely strong. Lap records, last-corner passes, crashes, qualifying surprises, budget gambles, championship comebacks and rival stories can become clips and season narratives.
+
+**Technical difficulty — what it actually requires**  
+Very high compared with the other concepts. The critical risk is driving feel: responsive controls, believable vehicle physics, camera behaviour, collision handling, track design, AI/rival behaviour, performance on mobile and eventually networked racing.
+
+**Prototype — smallest playable version**  
+One fictional car, one track, one driving camera, responsive acceleration/braking/steering, basic collision boundaries, lap timing, restart and a simple time-trial result. Do not start with the full championship economy.
+
+**Expansion — what comes after**  
+Driver training, car setup, upgrades, AI rivals, qualifying, race weekends, budgets, championship standings, fictional media/events, save checkpoints, tournaments, online time trials and eventually live multiplayer.
+
+**Monetisation — potential business model**  
+Free browser time trial; premium career/championship edition; cosmetic/content expansion; tournaments; branded motorsport/event experiences; educational or commercial licensing.
+
+### Shared Studio Rule for These Three Games
+
+Do not build all three simultaneously.
+
+Each game must first prove its **core fun** before adding the surrounding systems.
+
+PREP / CORE CONTROL OR DECISION
+→ FEEDBACK
+→ SMALL COMPLETE LOOP
+→ SAVE / RETURN
+→ PROGRESSION
+→ MULTIPLAYER / SOCIAL
+→ CONTENT ENGINE
+→ B2B / MONETISATION
+→ VISUAL EXPANSION
+
+The shared Admin Hub Games platform should provide the shell, library, PWA foundation, shared identity/persistence capabilities where genuinely needed, and reusable infrastructure. Each game should own its gameplay, rules, content and presentation.
+
+Do not create a separate Firebase project for any of these concepts merely because it is a separate game.
+
+Do not add a game to the production library until its first playable prototype exists and passes the same Intro → Setup → Gameplay acceptance discipline used by existing games.
+
+The immediate product question after these briefs are committed is **which one to prototype first**. That decision belongs to the product owner; this document records the options and their requirements rather than choosing for them.
