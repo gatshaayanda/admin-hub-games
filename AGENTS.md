@@ -822,6 +822,23 @@ Animation communicates state rather than simple whole-body bobbing:
 
 Operator/Runner are lighter/faster; Heavy/Anchor are broader/slower. Do not build character customisation or inventory before mobile combat feel is accepted.
 
+### Character refinement checkpoint — September 20, 2026
+
+The previous procedural pass was visually too mechanical and was rejected as the final character read.
+
+The authoritative character rule is now:
+- **Paintball soldier first:** normal human-proportioned top-down figure, not a robot, aircraft, swimming pose or rotating emblem.
+- **Marker is carried normally:** held in front of the torso with both hands/forearms reading around the marker. It must never originate from or visually attach to the helmet/head.
+- **Feet are the ground anchor:** the torso stays planted while walking; legs and boots alternate their placement underneath the body.
+- **Walking is restrained:** no whole-body rocking, exaggerated pitch, airplane-like banking or swimming motion.
+- **Aim changes the facing direction**, while the weapon remains correctly mounted to the chest/arms.
+- **Idle is subtle:** breathing/equipment movement only.
+- **Fire feedback is separate:** recoil and muzzle flash may move the marker briefly, but must not break the carry pose.
+- **Hall remains the movement-input reference**, not a character-animation reference.
+- **Arena ground follows Hall's visual language:** broad, quiet colour fields with simple readable decoration; Shooter Trigger owns its own trees, bunkers, concrete blocks and paintball-field details.
+
+Phaser's current animation model supports frame-based directional character animation and sprite/atlas workflows; this project can move from the procedural template to authored directional sprite sheets without changing the gameplay-facing Actor role contract. See the official Phaser animation guidance: https://docs.phaser.io/phaser/concepts/animations
+
 ### Character template checkpoint — September 20, 2026
 
 The Shooter Trigger character pass is now its own explicit contract.
