@@ -162,3 +162,17 @@ A character pass is accepted when:
 - the character remains readable at phone scale;
 - Hall's analog joystick remains the movement interaction reference;
 - no character pass changes Hall behaviour.
+
+## Refinement checkpoint — September 20, 2026
+
+The first procedural character pass was too mechanical. The accepted direction is now explicitly human paintball-soldier presentation:
+
+- The marker is carried from the chest with both hands; it must not appear attached to the helmet/head.
+- The figure has readable head, torso, arms, legs and boots with a stable ground anchor.
+- Walking uses alternating leg/boot placement under a planted torso. Avoid swimming, airplane, banking or whole-body rocking.
+- Aim rotates the character toward the aim vector, while the carry pose remains coherent.
+- Idle breathing is restrained.
+- Fire recoil/muzzle feedback is short and local to the marker.
+- Hall's broad, simple ground treatment is the visual reference for the grass; Shooter Trigger uses different field decoration on top of that language.
+
+Phaser's standard path for a later authored version is directional frame animation via sprite sheets/texture atlases. The current procedural actor API should remain the stable gameplay-facing contract while the art implementation can later move to authored directional walk/idle/fire/hit frames.
