@@ -15,6 +15,13 @@ const games: GameMenuItem[] = [
     playable: true,
   },
   {
+    id: 'shooters-trigger',
+    title: 'SHOOTERS TRIGGER',
+    description: 'Paintball team training in development. Enter the field, play with your team and learn the arena.',
+    status: 'IN DEVELOPMENT',
+    playable: true,
+  },
+  {
     id: 'presidents-shoes',
     title: "PRESIDENT'S SHOES",
     description: 'A fictional Botswana decision story. Choose, respond to consequences and see where your first week leads.',
