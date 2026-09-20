@@ -1,0 +1,102 @@
+{
+  "id": "botswana-water-week",
+  "countryId": "botswana",
+  "title": "The Water Week",
+  "subtitle": "A fictional first week in office",
+  "note": "Fictional scenario. Characters, institutions and events are invented for the game.",
+  "start": "briefing",
+  "scenes": {
+    "briefing": {
+      "id": "briefing",
+      "title": "The First Briefing",
+      "location": "Office of the President · Monday, 07:10",
+      "body": "A storm has damaged a fictional district's main water line. Several villages have already reported interruptions. Your cabinet team has three options on the table, and the morning is moving quickly.",
+      "choices": [
+        {"label":"Send the water bowsers now. Sort the bill later.","hint":"People get water today, but the reserve takes a knock.","effects":{"service":2,"trust":1,"budget":-2},"consequence":"Water reaches people faster, but your reserve takes an immediate hit.","next":"tanker"},
+        {"label":"Get the engineers on the ground before spending.","hint":"The numbers will be better, but neighbourhoods still have to wait.","effects":{"service":0,"trust":-1,"budget":1},"consequence":"You protect the reserve, but people now have to wait for a slower response.","next":"assessment"},
+        {"label":"Open the reserve, call the community meeting and explain the plan.","hint":"You act now and let people see the trade-off.","effects":{"service":1,"trust":2,"budget":-1},"consequence":"People see action and the reasoning behind it, while the reserve shrinks.","next":"reserve"}
+      ]
+    },
+    "tanker": {
+      "id": "tanker",
+      "title": "Relief on the Road",
+      "location": "Operations Room · Monday, 13:40",
+      "body": "The first bowsers are moving. Then the phone rings again: a school needs water before lunch, a clinic needs more, and the same crew was booked to fix a road. Everybody has a reason their problem is urgent.",
+      "choices": [
+        {"label":"Send the second convoy to the school and clinic first.","hint":"Kids, patients and staff cannot simply wait for tomorrow.","effects":{"service":1,"trust":1,"budget":-1},"consequence":"The most vulnerable sites get priority, but the road repair slips further.","next":"public-briefing"},
+        {"label":"Split the load between the neighbourhoods.","hint":"Nobody gets everything, but nobody is forgotten.","effects":{"service":0,"trust":1,"budget":-1},"consequence":"Coverage feels fairer, but no location gets as much relief as it wanted.","next":"public-briefing"}
+      ]
+    },
+    "assessment": {
+      "id": "assessment",
+      "title": "Waiting for the Numbers",
+      "location": "Engineering Desk · Monday, 15:20",
+      "body": "The engineering report arrives late. The repair is possible, but not overnight. Meanwhile the message groups are doing what message groups do: everybody has a different version of what happened.",
+      "choices": [
+        {"label":"Tell people exactly when the next update is coming.","hint":"If the answer changes, people know when to check again.","effects":{"trust":2,"service":1,"budget":0},"consequence":"You give people a timetable they can hold you to, even if the answer is still incomplete.","next":"public-briefing"},
+        {"label":"Keep quiet until the whole plan is bulletproof.","hint":"No wrong headline today, but rumours get the microphone.","effects":{"trust":-1,"service":1,"budget":1},"consequence":"You protect the announcement, but silence gives rumours room to grow.","next":"public-briefing"}
+      ]
+    },
+    "reserve": {
+      "id": "reserve",
+      "title": "The Reserve Decision",
+      "location": "Cabinet Room · Monday, 16:05",
+      "body": "Your finance adviser points at the reserve. Your community liaison points at the queue outside the clinic. Neither is wrong. You have to choose which pain to carry.",
+      "choices": [
+        {"label":"Spend some of the reserve and explain exactly what it buys.","hint":"More help now, less breathing room later.","effects":{"service":2,"trust":1,"budget":-1},"consequence":"Relief improves immediately, but you have less financial room for the next surprise.","next":"public-briefing"},
+        {"label":"Protect the reserve and make the slower plan work.","hint":"You keep options for tomorrow, but today's frustration stays real.","effects":{"service":0,"trust":1,"budget":1},"consequence":"You preserve future options, while today's disruption lasts longer.","next":"public-briefing"}
+      ]
+    },
+    "public-briefing": {
+      "id": "public-briefing",
+      "title": "The Evening Briefing",
+      "location": "Public Information Room · Tuesday, 18:30",
+      "body": "At the evening briefing, someone asks the question everybody has been asking: “So when will my tap work again?” You can answer honestly, bluff confidently, or turn the briefing into a practical plan.",
+      "choices": [
+        {"label":"Say what you know — and admit what you don't.","hint":"No magic answer. Just a straight one.","effects":{"trust":2,"service":0,"budget":0},"consequence":"People get a less comforting answer, but they know what is certain and what is not.","next":"community"},
+        {"label":"Promise the taps will be back tomorrow.","hint":"It sounds great. If it fails, everybody remembers.","effects":{"trust":-2,"service":1,"budget":0},"consequence":"The promise raises expectations immediately. Missing it will cost you later.","next":"community"},
+        {"label":"Keep it short, then publish the full plan for everyone to check.","hint":"Fast answer now, useful detail afterwards.","effects":{"trust":1,"service":1,"budget":0},"consequence":"You turn a short briefing into a public timetable people can inspect.","next":"community"}
+      ]
+    },
+    "community": {
+      "id": "community",
+      "title": "The People Push Back",
+      "location": "Community Hall · Tuesday, 20:10",
+      "body": "The room is not hostile, but it is impatient. One group wants faster repairs. Another wants the reserve protected. A third wants every promise written down. Your team asks what you will do with the pressure.",
+      "choices": [
+        {"label":"Open the floor and change the plan where the evidence supports it.","hint":"Listening can improve the plan, but it can also expose weak assumptions.","effects":{"trust":2,"service":1,"budget":-1},"consequence":"People see their concerns enter the process, but changing course costs time and money.","next":"council"},
+        {"label":"Keep the plan and explain why it cannot change tonight.","hint":"Consistency matters when everyone is pulling in a different direction.","effects":{"trust":0,"service":1,"budget":1},"consequence":"The plan stays stable and cheaper, but some people leave feeling unheard.","next":"council"},
+        {"label":"Promise to fix every problem raised in the room.","hint":"It feels good now. Your team knows the list is impossible.","effects":{"trust":-1,"service":1,"budget":-2},"consequence":"You win a moment of enthusiasm but create promises your budget may not carry.","next":"council"}
+      ]
+    },
+    "council": {
+      "id": "council",
+      "title": "The Second-Morning Review",
+      "location": "Cabinet Room · Wednesday, 08:00",
+      "body": "Wednesday morning brings the last big call of the week. The repair crew can finish faster if you spend more. Your finance team wants the reserve protected. Outside, people mostly want one thing: for this to be over.",
+      "choices": [
+        {"label":"Pay for the faster repair.","hint":"More money now. Less waiting for everyone.","effects":{"service":2,"trust":1,"budget":-2},"consequence":"The crisis moves toward resolution faster, at a real financial cost.","next":"accountability"},
+        {"label":"Keep the slower repair and protect the reserve.","hint":"You save money now, but people live with the delay.","effects":{"service":0,"trust":1,"budget":2},"consequence":"The reserve survives, but the public carries the delay for longer.","next":"accountability"},
+        {"label":"Keep the plan and put every milestone on the wall.","hint":"No grand promise — just dates people can hold you to.","effects":{"service":1,"trust":2,"budget":0},"consequence":"You make progress measurable, giving people a way to judge the administration later.","next":"accountability"}
+      ]
+    },
+    "accountability": {
+      "id": "accountability",
+      "title": "The Record",
+      "location": "President's Office · Wednesday, 16:30",
+      "body": "Your advisers prepare the first public scorecard. Every promise, delay and compromise is now visible. One final choice remains: how much of the record will you publish?",
+      "choices": [
+        {"label":"Publish the full scorecard, including what went wrong.","hint":"The public sees the good and the uncomfortable parts.","effects":{"trust":2,"service":0,"budget":0},"consequence":"Transparency strengthens trust, but every weakness is now part of the public record.","next":"ending-check"},
+        {"label":"Publish only the completed work.","hint":"A cleaner story now, with less context around the setbacks.","effects":{"trust":-1,"service":1,"budget":0},"consequence":"The result looks cleaner, but people have less information about the setbacks.","next":"ending-check"},
+        {"label":"Publish the scorecard and invite the public to judge the next priorities.","hint":"You give people a voice in what happens after this week.","effects":{"trust":2,"service":1,"budget":-1},"consequence":"The administration gains trust and a clearer next step, but commits to more public accountability.","next":"ending-check"}
+      ]
+    },
+    "ending-check": {
+      "id": "ending-check",
+      "title": "The First Week Result",
+      "location": "President's Office · Wednesday, 17:00",
+      "body": "The crisis is not magically solved. Your choices have produced a record: service delivered, trust gained or lost, and financial room preserved or spent.",
+      "ending": {"title":"Outcome","summary":"The result below is calculated from the decisions you made — not from one 'correct' answer."}
+    }
+  }
+}
