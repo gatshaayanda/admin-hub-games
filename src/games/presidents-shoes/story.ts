@@ -8,6 +8,7 @@ export type StoryState = {
   budget: number;
   decisions: number;
   pendingConsequence?: string;
+  lastEffects?: Partial<Pick<StoryState, 'trust' | 'service' | 'budget'>>;
 };
 
 export type StoryChoice = {
@@ -83,16 +84,16 @@ export function getEnding(state: StoryState) {
   if (score >= 8 && state.budget >= -4) {
     return {
       title: 'A Strong First Week',
-      result: 'MANDATE STRENGTHENED',
-      summary: 'Your response leaves a clear public record: people saw action, trade-offs and accountability. The fictional administration finishes its first week with a stronger mandate to continue.',
+      result: 'PRESIDENCY CONTINUES · MANDATE STRENGTHENED',
+      summary: 'You finish the fictional first week as president. Your public record shows action, trade-offs and accountability, leaving the administration with a stronger mandate for week two.',
     };
   }
 
   if (state.service >= 5 && state.trust < 3) {
     return {
       title: 'Results, With Questions',
-      result: 'MANDATE UNDER PRESSURE',
-      summary: 'Visible relief arrived quickly, but the public record leaves unanswered questions. You delivered results, but the next week begins with trust to rebuild.',
+      result: 'PRESIDENCY CONTINUES · MANDATE UNDER PRESSURE',
+      summary: 'You finish the fictional first week as president, but the public record leaves unanswered questions. You delivered results, while week two begins with trust to rebuild.',
     };
   }
 
@@ -100,21 +101,21 @@ export function getEnding(state: StoryState) {
     return {
       title: 'Trust on a Slow Road',
       result: 'MANDATE UNDER PRESSURE',
-      summary: 'People can follow the reasoning behind the decisions, but the pace of service recovery remains frustrating. Your credibility survives, but the administration must turn its plan into visible results.',
+      summary: 'You finish the fictional first week as president, but the pace of service recovery remains frustrating. Your credibility survives; the administration must turn its plan into visible results.',
     };
   }
 
   if (state.budget >= 2) {
     return {
       title: 'The Reserve Survives',
-      result: 'MANDATE AT RISK',
-      summary: 'The reserve remains healthier, but the slower response has a human cost. Your administration enters the next week with financial room and political pressure.',
+      result: 'PRESIDENCY CONTINUES · MANDATE AT RISK',
+      summary: 'You finish the fictional first week as president with financial room, but the slower response has a human cost. Week two starts with political pressure.',
     };
   }
 
   return {
     title: 'The Hard Middle',
     result: 'MANDATE AT RISK',
-    summary: 'No single decision solved everything. The week ends with trade-offs still visible: service, trust and money all pulled in different directions.',
+    summary: 'You finish the fictional first week as president, but no single decision solved everything. Week two begins with service, trust and money still pulling in different directions.',
   };
 }
