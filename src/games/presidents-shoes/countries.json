@@ -1,0 +1,16 @@
+[
+  {
+    "id": "botswana",
+    "name": "Botswana",
+    "shortName": "BOTSWANA",
+    "packId": "botswana-water-week",
+    "tagline": "A fictional presidential decision story",
+    "primary": "#75AADB",
+    "secondary": "#111111",
+    "surface": "#F7FAFC",
+    "ink": "#10212F",
+    "muted": "#465A68",
+    "accent": "#75AADB",
+    "available": true
+  }
+]
