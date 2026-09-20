@@ -162,6 +162,7 @@ export class PresidentsShoesGameScene extends Phaser.Scene {
       decisions: this.state.decisions + 1,
       sceneId: choice.next,
       pendingConsequence: choice.consequence,
+      lastEffects: choice.effects,
     };
 
     this.saveState();
@@ -199,7 +200,7 @@ export class PresidentsShoesGameScene extends Phaser.Scene {
 
     next.on('pointerdown', (_pointer, _x, _y, event) => {
       event.stopPropagation();
-      this.state = { ...this.state, pendingConsequence: undefined };
+      this.state = { ...this.state, pendingConsequence: undefined, lastEffects: undefined };
       this.saveState();
       this.renderScene();
     });
@@ -209,12 +210,16 @@ export class PresidentsShoesGameScene extends Phaser.Scene {
   }
 
   private describeLatestChanges() {
-    const values = [
-      'TRUST ' + this.state.trust,
-      'SERVICE ' + this.state.service,
-      'RESERVE ' + this.state.budget,
+    const effect = (label: string, value: number | undefined) => {
+      if (!value) return label + ' 0';
+      return label + ' ' + (value > 0 ? '+' : '') + value;
+    };
+    const changes = [
+      effect('TRUST', this.state.lastEffects?.trust),
+      effect('SERVICE', this.state.lastEffects?.service),
+      effect('RESERVE', this.state.lastEffects?.budget),
     ];
-    return values.join('   ·   ');
+    return changes.join('   ·   ') + '\nCURRENT: TRUST ' + this.state.trust + '   ·   SERVICE ' + this.state.service + '   ·   RESERVE ' + this.state.budget;
   }
 
   private renderEnding(width: number, height: number, country: ReturnType<typeof getCountryPack>, scene: StoryScene) {
