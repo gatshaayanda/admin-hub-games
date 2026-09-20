@@ -22,14 +22,6 @@ type Paintball = {
   ttl: number;
 };
 
-type TouchState = {
-  id: number;
-  startX: number;
-  startY: number;
-  x: number;
-  y: number;
-};
-
 export class ShootersTriggerTrainingScene extends Phaser.Scene {
   private player!: Actor;
   private teammates: Actor[] = [];
@@ -44,8 +36,14 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     fire: Phaser.Input.Keyboard.Key;
   };
   private aim = { x: 1, y: 0 };
-  private moveTouch?: TouchState;
-  private aimTouch?: { id: number; x: number; y: number };
+  private moveInput = { x: 0, y: 0 };
+  private movePointerId?: number;
+  private firePointerId?: number;
+  private fireHeld = false;
+  private mobileUi!: Phaser.GameObjects.Graphics;
+  private fireBounds = new Phaser.Geom.Rectangle();
+  private dpadBounds = new Phaser.Geom.Rectangle();
+  private aimMarker = { x: 0, y: 0, visible: false };
   private lastShot = 0;
   private teamScore = 0;
   private opponentScore = 0;
@@ -73,6 +71,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     this.drawArena();
     this.createUi();
     this.touchUi = this.add.graphics().setDepth(200).setScrollFactor(0);
+    this.mobileUi = this.add.graphics().setDepth(220).setScrollFactor(0);
 
     this.keys = {
       up: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.W),
@@ -98,6 +97,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     this.cameras.main.setDeadzone(this.isPhoneLayout ? this.scale.width * 0.18 : this.scale.width * 0.30, this.isPhoneLayout ? this.scale.height * 0.18 : this.scale.height * 0.28);
     this.cameras.main.setZoom(this.isPhoneLayout ? 1.12 : 1);
 
+    this.input.addPointer(2);
     this.input.addPointer(2);
     this.input.on('pointerdown', this.handlePointerDown, this);
     this.input.on('pointermove', this.handlePointerMove, this);
@@ -152,6 +152,10 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.keys.fire)) {
       this.fire(this.player, this.aim.x, this.aim.y);
     }
+    if (this.fireHeld && this.time.now - this.lastShot > 280) {
+      this.fire(this.player, this.aim.x, this.aim.y);
+    }
+    this.animateActor(this.player, delta, Math.hypot(this.moveInput.x, this.moveInput.y));
 
     if (this.time.now - this.startedAt > 300000) this.finish('TIME');
   }
@@ -309,7 +313,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(180);
 
     this.hintText = this.add.text(this.scale.width * 0.50, this.scale.height - (this.isPhoneLayout ? 32 : 20),
-      this.isPhoneLayout ? 'TOUCH LEFT TO MOVE  ·  TOUCH RIGHT TO AIM + FIRE' : 'DESKTOP: WASD + MOUSE CLICK/SPACE',
+      this.isPhoneLayout ? 'D-PAD MOVE  ·  TAP FIELD TO AIM  ·  HOLD FIRE' : 'DESKTOP: WASD + MOUSE CLICK/SPACE',
       {
         fontFamily: 'monospace', fontSize: this.uiFont(8), color: '#f4f1df',
         backgroundColor: '#17261b', padding: { left: 9, right: 9, top: 6, bottom: 6 },
@@ -322,7 +326,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     if (!this.scoreText) return;
     this.scoreText.setPosition(this.scale.width * 0.50, 12);
     this.statusText.setPosition(this.scale.width * 0.50, this.isPhoneLayout ? 56 : 20);
-    this.hintText.setPosition(this.scale.width * 0.50, this.scale.height - (this.isPhoneLayout ? 32 : 20));
+    this.hintText.setPosition(this.scale.width * 0.50, this.scale.height - (this.isPhoneLayout ? 28 : 20));
   }
 
   private makeActor(x: number, y: number, team: Actor['team'], role: Actor['role'], name: string, hp: number): Actor {
@@ -394,10 +398,9 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     const pointer = this.input.activePointer;
     let moveX = (this.keys.right.isDown ? 1 : 0) - (this.keys.left.isDown ? 1 : 0);
     let moveY = (this.keys.down.isDown ? 1 : 0) - (this.keys.up.isDown ? 1 : 0);
-
-    if (this.moveTouch) {
-      moveX = Phaser.Math.Clamp((this.moveTouch.x - this.moveTouch.startX) / this.touchRadius(), -1, 1);
-      moveY = Phaser.Math.Clamp((this.moveTouch.y - this.moveTouch.startY) / this.touchRadius(), -1, 1);
+    if (this.isPhoneLayout) {
+      moveX = this.moveInput.x;
+      moveY = this.moveInput.y;
     }
 
     const len = Math.hypot(moveX, moveY);
@@ -407,21 +410,14 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       this.moveActor(this.player, moveX * this.player.speed * delta / 1000, moveY * this.player.speed * delta / 1000);
     }
 
-    const aimPoint = this.aimTouch
-      ? this.cameraWorldPoint(this.aimTouch.x, this.aimTouch.y)
-      : (pointer.isDown && pointer.x > this.scale.width * 0.50
-        ? this.cameraWorldPoint(pointer.x, pointer.y)
-        : undefined);
-
-    if (aimPoint) {
+    if (!this.isPhoneLayout && pointer.isDown && pointer.x > this.scale.width * 0.50) {
+      const aimPoint = this.cameraWorldPoint(pointer.x, pointer.y);
       const dx = aimPoint.x - this.player.body.x;
       const dy = aimPoint.y - this.player.body.y;
       const length = Math.hypot(dx, dy) || 1;
       this.aim = { x: dx / length, y: dy / length };
-
-      if (this.time.now - this.lastShot > 280) {
-        this.fire(this.player, this.aim.x, this.aim.y);
-      }
+      this.player.body.rotation = Math.atan2(this.aim.y, this.aim.x) + Math.PI / 2;
+      if (this.time.now - this.lastShot > 280) this.fire(this.player, this.aim.x, this.aim.y);
     }
   }
 
@@ -442,7 +438,9 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
       if (len > 36) {
         this.moveActor(mate, dx / len * mate.speed * 0.55 * delta / 1000, dy / len * mate.speed * 0.55 * delta / 1000);
+        mate.body.rotation = Math.atan2(dy, dx) + Math.PI / 2;
       }
+      this.animateActor(mate, delta, len > 36 ? 1 : 0);
 
       mate.cooldown -= delta;
       const enemy = this.nearestEnemy(mate);
@@ -468,7 +466,9 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
       if (index === 0 || enemy.role === 'runner') {
         this.moveActor(enemy, dx / len * enemy.speed * advance * delta / 1000, dy / len * enemy.speed * advance * delta / 1000);
+        enemy.body.rotation = Math.atan2(dy, dx) + Math.PI / 2;
       }
+      this.animateActor(enemy, delta, (index === 0 || enemy.role === 'runner') ? 1 : 0);
 
       if (enemy.cooldown <= 0 && len < this.worldWidth * 0.44) {
         this.fire(enemy, dx, dy);
@@ -520,6 +520,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     }
 
     if (target === this.player) {
+      this.player.body.setScale(1.12, 0.88);
+      this.tweens.add({ targets: this.player.body, scaleX: 1, scaleY: 1, duration: 180, ease: 'Back.Out' });
       this.opponentScore += 1;
       this.respawnPlayer();
     } else {
@@ -538,8 +540,11 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     this.player.alive = false;
     this.player.body.setVisible(false);
     this.player.label.setVisible(false);
-    this.moveTouch = undefined;
-    this.aimTouch = undefined;
+    this.moveInput.x = 0;
+    this.moveInput.y = 0;
+    this.movePointerId = undefined;
+    this.firePointerId = undefined;
+    this.fireHeld = false;
 
     this.respawnText?.destroy();
     this.respawnText = this.add.text(this.scale.width / 2, this.scale.height * 0.50, 'HIT · RESETTING TO START', {
@@ -646,29 +651,52 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   }
 
   private renderTouchUi() {
-    if (!this.touchUi) return;
+    if (!this.touchUi || !this.mobileUi) return;
     this.touchUi.clear();
-
+    this.mobileUi.clear();
     if (!this.isPhoneLayout) return;
 
-    const radius = this.touchRadius();
+    const w = this.scale.width;
+    const h = this.scale.height;
+    const pad = Phaser.Math.Clamp(Math.min(w, h) * 0.18, 74, 108);
+    const cx = pad + 22;
+    const cy = h - pad - 16;
+    this.dpadBounds.setTo(cx - pad, cy - pad, pad * 2, pad * 2);
 
-    // The game follows Hall's mobile-first principle: controls appear where the thumbs are,
-    // rather than permanently covering the arena.
-    if (this.moveTouch) {
-      this.touchUi.lineStyle(3, 0xf4f1df, 0.65).strokeCircle(this.moveTouch.startX, this.moveTouch.startY, radius);
-      this.touchUi.fillStyle(0x176b4b, 0.85).fillCircle(this.moveTouch.x, this.moveTouch.y, radius * 0.38);
-      this.touchUi.lineStyle(2, 0xf4f1df, 0.90).strokeCircle(this.moveTouch.x, this.moveTouch.y, radius * 0.38);
-    }
+    const fireR = Phaser.Math.Clamp(Math.min(w, h) * 0.115, 48, 72);
+    const fireX = w - fireR - 28;
+    const fireY = h - fireR - 34;
+    this.fireBounds.setTo(fireX - fireR, fireY - fireR, fireR * 2, fireR * 2);
 
-    if (this.aimTouch) {
-      this.touchUi.lineStyle(3, 0xe8c95c, 0.85).strokeCircle(this.aimTouch.x, this.aimTouch.y, radius * 0.32);
-      this.touchUi.lineStyle(2, 0xe8c95c, 0.25).lineBetween(
-        this.scale.width * 0.52,
-        this.scale.height * 0.50,
-        this.aimTouch.x,
-        this.aimTouch.y
-      );
+    // Fixed, pressable controls: no thumb-dragging around the battlefield.
+    this.mobileUi.fillStyle(0x102018, 0.42).fillCircle(cx, cy, pad);
+    this.mobileUi.lineStyle(3, 0xf4f1df, 0.55).strokeCircle(cx, cy, pad);
+    const arm = pad * 0.38;
+    const cell = pad * 0.62;
+    const pressed = this.movePointerId !== undefined;
+    this.mobileUi.fillStyle(pressed ? 0x55a878 : 0x214e3f, 0.88);
+    this.mobileUi.fillRect(cx - cell / 2, cy - pad * 0.80, cell, arm);
+    this.mobileUi.fillRect(cx - cell / 2, cy + pad * 0.42, cell, arm);
+    this.mobileUi.fillRect(cx - pad * 0.80, cy - cell / 2, arm, cell);
+    this.mobileUi.fillRect(cx + pad * 0.42, cy - cell / 2, arm, cell);
+    this.mobileUi.lineStyle(2, 0xf4f1df, 0.30).strokeCircle(cx, cy, pad * 0.32);
+    this.mobileUi.fillStyle(this.fireHeld ? 0xffd36a : 0xe8c95c, 0.92).fillCircle(fireX, fireY, fireR);
+    this.mobileUi.lineStyle(3, 0xffffff, 0.70).strokeCircle(fireX, fireY, fireR);
+    this.mobileUi.fillStyle(0x102018, 1).fillCircle(fireX, fireY, fireR * 0.64);
+    this.mobileUi.fillStyle(0xf4f1df, 1).fillCircle(fireX, fireY, fireR * 0.22);
+    this.mobileUi.lineStyle(3, 0xe8c95c, 0.35).strokeCircle(fireX, fireY, fireR * 0.42);
+
+    const aimX = this.scale.width * 0.68;
+    const aimY = this.scale.height * 0.18;
+    this.mobileUi.fillStyle(0x102018, 0.50).fillCircle(aimX, aimY, 30);
+    this.mobileUi.lineStyle(2, 0xf4f1df, 0.55).strokeCircle(aimX, aimY, 30);
+    this.mobileUi.lineBetween(aimX - 13, aimY, aimX + 13, aimY);
+    this.mobileUi.lineBetween(aimX, aimY - 13, aimX, aimY + 13);
+    this.mobileUi.fillStyle(0xe8c95c, 0.95).fillCircle(aimX, aimY, 4);
+
+    if (this.aimMarker.visible) {
+      this.touchUi.lineStyle(3, 0xe8c95c, 0.72).strokeCircle(this.aimMarker.x, this.aimMarker.y, 18);
+      this.touchUi.lineStyle(2, 0xe8c95c, 0.24).lineBetween(this.scale.width * 0.50, this.scale.height * 0.50, this.aimMarker.x, this.aimMarker.y);
     }
   }
 
@@ -681,6 +709,13 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     return Phaser.Math.Clamp(base * (this.scale.width / 360), 8, 14).toFixed(1) + 'px';
   }
 
+  private updateMobileAim(pointer: Phaser.Input.Pointer) {
+    const world = this.cameraWorldPoint(pointer.x, pointer.y);
+    this.aim = this.directionTo(this.player.body.x, this.player.body.y, world.x, world.y);
+    this.aimMarker = { x: pointer.x, y: pointer.y, visible: true };
+    this.player.body.rotation = Math.atan2(this.aim.y, this.aim.x) + Math.PI / 2;
+  }
+
   private handlePointerDown(pointer: Phaser.Input.Pointer) {
     if (!this.isPhoneLayout) {
       if (pointer.x > this.scale.width * 0.50) {
@@ -691,36 +726,78 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       return;
     }
 
-    if (pointer.x < this.scale.width * 0.48 && !this.moveTouch) {
-      this.moveTouch = { id: pointer.id, startX: pointer.x, startY: pointer.y, x: pointer.x, y: pointer.y };
+    const w = this.scale.width;
+    const h = this.scale.height;
+    const pad = Phaser.Math.Clamp(Math.min(w, h) * 0.18, 74, 108);
+    const cx = pad + 22;
+    const cy = h - pad - 16;
+    const fireR = Phaser.Math.Clamp(Math.min(w, h) * 0.115, 48, 72);
+    const fireX = w - fireR - 28;
+    const fireY = h - fireR - 34;
+
+    if (Phaser.Math.Distance.Between(pointer.x, pointer.y, fireX, fireY) <= fireR && this.firePointerId === undefined) {
+      this.firePointerId = pointer.id;
+      this.fireHeld = true;
+      this.fire(this.player, this.aim.x, this.aim.y);
       return;
     }
 
-    if (pointer.x >= this.scale.width * 0.48 && !this.aimTouch) {
-      this.aimTouch = { id: pointer.id, x: pointer.x, y: pointer.y };
-      const world = this.cameraWorldPoint(pointer.x, pointer.y);
-      this.aim = this.directionTo(this.player.body.x, this.player.body.y, world.x, world.y);
-      this.fire(this.player, this.aim.x, this.aim.y);
+    if (Phaser.Math.Distance.Between(pointer.x, pointer.y, cx, cy) <= pad && this.movePointerId === undefined) {
+      this.movePointerId = pointer.id;
+      this.setMoveFromDpad(pointer.x - cx, pointer.y - cy, pad);
+      return;
+    }
+
+    // Anywhere in the playfield on the right is an aim tap. The player does not need to drag a virtual stick.
+    if (pointer.x > w * 0.42 && pointer.y < h - 120) {
+      this.updateMobileAim(pointer);
+      return;
     }
   }
 
   private handlePointerMove(pointer: Phaser.Input.Pointer) {
     if (!this.isPhoneLayout) return;
-
-    if (this.moveTouch?.id === pointer.id) {
-      this.moveTouch.x = pointer.x;
-      this.moveTouch.y = pointer.y;
-    }
-
-    if (this.aimTouch?.id === pointer.id) {
-      this.aimTouch.x = pointer.x;
-      this.aimTouch.y = pointer.y;
+    if (this.movePointerId === pointer.id) {
+      const w = this.scale.width;
+      const h = this.scale.height;
+      const pad = Phaser.Math.Clamp(Math.min(w, h) * 0.18, 74, 108);
+      this.setMoveFromDpad(pointer.x - (pad + 22), pointer.y - (h - pad - 16), pad);
     }
   }
 
   private handlePointerUp(pointer: Phaser.Input.Pointer) {
-    if (this.moveTouch?.id === pointer.id) this.moveTouch = undefined;
-    if (this.aimTouch?.id === pointer.id) this.aimTouch = undefined;
+    if (this.movePointerId === pointer.id) {
+      this.movePointerId = undefined;
+      this.moveInput.x = 0;
+      this.moveInput.y = 0;
+    }
+    if (this.firePointerId === pointer.id) {
+      this.firePointerId = undefined;
+      this.fireHeld = false;
+    }
+  }
+
+  private setMoveFromDpad(dx: number, dy: number, radius: number) {
+    const distance = Math.hypot(dx, dy);
+    if (distance < radius * 0.18) {
+      this.moveInput.x = 0;
+      this.moveInput.y = 0;
+      return;
+    }
+    const x = Phaser.Math.Clamp(dx / radius, -1, 1);
+    const y = Phaser.Math.Clamp(dy / radius, -1, 1);
+    // Quantize to eight directions so the button-style pad feels intentional and predictable.
+    const angle = Math.atan2(y, x);
+    const octant = Math.round(angle / (Math.PI / 4));
+    this.moveInput.x = Math.cos(octant * Math.PI / 4);
+    this.moveInput.y = Math.sin(octant * Math.PI / 4);
+  }
+
+  private animateActor(actor: Actor, delta: number, movement: number) {
+    if (!actor.alive) return;
+    const speed = movement > 0.05 ? 0.012 : 0.004;
+    const amplitude = movement > 0.05 ? 1.8 : 0.45;
+    actor.body.y += Math.sin(this.time.now * speed) * amplitude * delta / 16.67;
   }
 
   private directionTo(x1: number, y1: number, x2: number, y2: number) {
