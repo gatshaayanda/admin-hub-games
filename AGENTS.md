@@ -822,6 +822,46 @@ Animation communicates state rather than simple whole-body bobbing:
 
 Operator/Runner are lighter/faster; Heavy/Anchor are broader/slower. Do not build character customisation or inventory before mobile combat feel is accepted.
 
+### Character template checkpoint — September 20, 2026
+
+The Shooter Trigger character pass is now its own explicit contract.
+
+Hall remains the reference for **analog movement input**, but Shooter Trigger characters must look and move as action-game characters rather than reusing Hall's two-pose flip.
+
+Current character template:
+- procedural pixel-style hard-edged silhouette;
+- helmet + paintball mask/visor;
+- torso/vest + belt/pouches;
+- role-sized backpack/equipment;
+- independently animated arms, shoulders, legs and boots;
+- paintball marker + grip + muzzle flash;
+- team accent;
+- ground shadow;
+- separate nameplate.
+
+Role templates must remain visibly distinct:
+- Player/Ayanda — balanced baseline;
+- Operator 12 — compact/light tactical teammate;
+- The Heavy — broad/heavy equipment and slower gait;
+- Runner — lean/light opponent and faster gait;
+- Anchor — broad defensive opponent and steadier gait.
+
+Animation must communicate:
+- idle breathing;
+- alternating walk stride;
+- arm counter-swing;
+- role-specific gait;
+- aim/facing direction;
+- fire recoil/muzzle feedback;
+- hit reaction/paint feedback;
+- existing respawn return.
+
+Do not replace this with a simple whole-body scale bob or a two-frame visibility flip.
+
+Detailed character contract: `docs/shooters-trigger-character-template.md`.
+
+The character system is intentionally procedural for this phase. Authored pixel sprite sheets are a later visual phase and must preserve the same gameplay-facing role contract.
+
 ### Arena / Phase E game feel
 The arena must make positioning matter.
 
