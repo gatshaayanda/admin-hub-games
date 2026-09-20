@@ -875,3 +875,30 @@ This follows the established Hall-style mobile principle of adapting controls to
 On the Samsung Android phone, the product owner should now judge the game by whether it feels like moving a suited paintball player through an actual outdoor field: the player should be able to move with one thumb, aim/fire with the other, see teammates in recognizable gear, use physical cover, move through a larger field, get hit and reset to the base.
 
 Do not treat a desktop screenshot stretched onto a phone as acceptance. The phone composition is the primary target for this pass.
+
+
+## Shooters Trigger — Mobile Controls Rework — September 20, 2026
+
+The earlier dynamic drag-anywhere touch model is no longer the target. It was technically valid multi-touch, but the product owner wants a deliberate mobile game control language closer to pressable game controls.
+
+### Current phone control contract
+
+- Fixed left D-pad: hold one of eight directions to move.
+- Fixed right FIRE button: press/hold to fire the current aim direction.
+- Tap the playable field to set aim direction; aim persists after the tap.
+- Movement and FIRE use separate pointer IDs so two-thumb play works simultaneously.
+- Controls are screen-fixed and translucent while the arena/camera moves underneath.
+- No dragging a virtual thumb around the battlefield is required.
+- Desktop remains WASD + mouse/Space.
+
+This follows the broader mobile principle that touch should be designed as its own input surface, with deliberate press states and broad touch targets, rather than treating the phone as a mouse replacement. Rockstar's Red Dead Redemption mobile implementation is also a useful reference for treating touch controls as a real editable HUD layer with button position, size and opacity rather than invisible input plumbing.
+
+### Character motion contract
+
+Characters must communicate direction and role through their silhouette and motion. Current pass includes fictional protective paintball gear, role silhouettes, aim-facing rotation, idle bob, movement bob, hit flash/reaction and projectile feedback. Phase 2 is directional sprite animation, walk/run cycles, aiming pose, recoil and role-specific movement; do not build a large asset/customisation system before phone combat feel is accepted.
+
+### Mobile product loop
+
+**D-pad move → tap field to aim → hold FIRE → use cover → release/re-aim → react → reposition → get tagged → respawn → try a different route.**
+
+The phone is the primary acceptance device for this pass.
