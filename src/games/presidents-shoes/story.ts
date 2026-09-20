@@ -7,6 +7,7 @@ export type StoryState = {
   service: number;
   budget: number;
   decisions: number;
+  pendingConsequence?: string;
 };
 
 export type StoryChoice = {
