@@ -203,16 +203,14 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     const w = this.worldWidth;
     const h = this.worldHeight;
 
-    g.fillStyle(0x6f9e4d, 1).fillRect(0, 0, w, h);
-    g.fillStyle(0x83ad5d, 0.56).fillRect(0, 0, w * 0.50, h);
-    g.fillStyle(0x5c8b42, 0.42).fillRect(w * 0.50, 0, w * 0.50, h);
+    // Hall's ground language: broad, quiet colour fields first; gameplay decoration sits on top.
+    // Keep the grass readable at phone scale instead of filling it with noisy texture marks.
+    g.fillStyle(0x78a653, 1).fillRect(0, 0, w, h);
+    g.fillStyle(0x86ad5e, 0.92).fillRect(0, 0, w * 0.50, h);
+    g.fillStyle(0x679346, 0.78).fillRect(w * 0.50, 0, w * 0.50, h);
 
-    for (let i = 0; i < (this.isPhoneLayout ? 150 : 190); i += 1) {
-      const x = (i * 131.7) % w;
-      const y = (i * 89.4) % h;
-      g.lineStyle(i % 3 === 0 ? 2 : 1, i % 2 ? 0x4f7b3c : 0x9abe70, 0.22);
-      g.lineBetween(x, y, x + 4, y - 7);
-    }
+    g.fillStyle(0x5f8d43, 0.24).fillRect(w * 0.08, h * 0.10, w * 0.24, h * 0.72);
+    g.fillStyle(0x9abd70, 0.16).fillRect(w * 0.66, h * 0.08, w * 0.23, h * 0.78);
 
     const left = this.isPhoneLayout ? 48 : 70;
     const right = w - left;
@@ -434,6 +432,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     const packScale = isHeavy ? 1.12 : isAnchor ? 1.02 : isRunner ? 0.72 : isOperator ? 0.88 : 0.96;
     const limbWidth = size * (isHeavy || isAnchor ? 0.19 : isRunner ? 0.145 : 0.16);
 
+    // The feet are the character's ground anchor. Everything else reads as equipment
+    // carried by a person, not as a single rotating "spaceship" silhouette.
     const shadow = this.add.ellipse(0, size * 0.55, size * 1.42 * roleScale, size * 0.42, 0x102018, 0.30).setOrigin(0.5);
     const backpack = this.add.rectangle(0, size * 0.12, size * 0.72 * packScale, size * (isHeavy || isAnchor ? 0.48 : isRunner ? 0.30 : 0.36), teamDark, 1).setOrigin(0.5);
     const packTop = this.add.rectangle(0, -size * 0.02, size * 0.48 * packScale, size * 0.18, fabricLight, 0.92).setOrigin(0.5);
@@ -447,10 +447,19 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     const vest = this.add.rectangle(0, -size * 0.01, size * 0.64 * roleScale, size * (isHeavy ? 0.35 : isRunner ? 0.29 : 0.32), teamMain, 1).setOrigin(0.5);
     const belt = this.add.rectangle(0, size * 0.16, size * 0.66 * roleScale, size * 0.075, 0x1b2924, 1).setOrigin(0.5);
 
-    const leftArm = this.add.rectangle(-size * 0.46, 0, limbWidth * 0.82, size * 0.33, skin, 1).setOrigin(0.5).setRotation(-0.18);
-    const rightArm = this.add.rectangle(size * 0.46, 0, limbWidth * 0.82, size * 0.33, skin, 1).setOrigin(0.5).setRotation(0.18);
-    const leftShoulder = this.add.rectangle(-size * 0.40 * shoulderScale, -size * 0.10, size * 0.19 * shoulderScale, size * 0.18, fabricLight, 1).setOrigin(0.5);
-    const rightShoulder = this.add.rectangle(size * 0.40 * shoulderScale, -size * 0.10, size * 0.19 * shoulderScale, size * 0.18, fabricLight, 1).setOrigin(0.5);
+    const leftShoulder = this.add.rectangle(-size * 0.39 * shoulderScale, -size * 0.11, size * 0.19 * shoulderScale, size * 0.18, fabricLight, 1).setOrigin(0.5);
+    const rightShoulder = this.add.rectangle(size * 0.39 * shoulderScale, -size * 0.11, size * 0.19 * shoulderScale, size * 0.18, fabricLight, 1).setOrigin(0.5);
+
+    // A normal paintball-ready carry: both hands are forward on the marker.
+    // The marker begins at the chest, crosses the forearms, and extends ahead of the mask.
+    const leftArm = this.add.rectangle(-size * 0.27, -size * 0.18, limbWidth * 0.78, size * 0.34, skin, 1)
+      .setOrigin(0.5).setRotation(-0.58);
+    const rightArm = this.add.rectangle(size * 0.27, -size * 0.18, limbWidth * 0.78, size * 0.34, skin, 1)
+      .setOrigin(0.5).setRotation(0.58);
+
+    const weapon = this.add.rectangle(0, -size * 0.48, size * (isHeavy ? 0.14 : isRunner ? 0.12 : 0.13), size * (isRunner ? 0.48 : 0.54), weaponColor, 1).setOrigin(0.5);
+    const weaponGrip = this.add.rectangle(0, -size * 0.24, size * 0.18, size * 0.13, 0x111715, 1).setOrigin(0.5);
+    const muzzle = this.add.circle(0, -size * 0.77, size * 0.075, 0xe8c95c, 1).setVisible(false);
 
     const helmet = this.add.circle(0, -size * 0.43, size * 0.29, helmetColor, 1);
     const helmetBrim = this.add.rectangle(0, -size * 0.32, size * 0.50, size * 0.08, helmetHighlight, 1).setOrigin(0.5);
@@ -463,10 +472,6 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       this.add.rectangle(size * 0.22, size * 0.10, size * 0.13, size * 0.13, teamDark, 1).setOrigin(0.5),
       this.add.rectangle(0, size * 0.11, size * 0.13, size * 0.13, teamLight, 0.82).setOrigin(0.5),
     ];
-
-    const weapon = this.add.rectangle(0, -size * 0.68, size * (isHeavy ? 0.15 : isRunner ? 0.13 : 0.14), size * (isRunner ? 0.36 : 0.42), weaponColor, 1).setOrigin(0.5);
-    const weaponGrip = this.add.rectangle(0, -size * 0.48, size * 0.18, size * 0.12, 0x111715, 1).setOrigin(0.5);
-    const muzzle = this.add.circle(0, -size * 0.94, size * 0.075, 0xe8c95c, 1).setVisible(false);
 
     container.add([
       shadow, backpack, packTop, leftLeg, rightLeg, leftBoot, rightBoot,
@@ -783,29 +788,32 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     const strideSpeed = moving ? (heavy ? 0.0105 : 0.0145) : 0.0042;
     actor.walkCycle += delta * strideSpeed;
 
-    const stride = moving ? Math.sin(actor.walkCycle) : Math.sin(actor.walkCycle) * 0.10;
-    const gait = heavy ? 0.78 : 1;
+    const stride = moving ? Math.sin(actor.walkCycle) : Math.sin(actor.walkCycle) * 0.08;
+    const gait = heavy ? 0.68 : actor.role === 'runner' ? 1.10 : 1;
 
-    actor.parts.leftLeg.y = size * 0.27 + stride * size * 0.055 * gait;
-    actor.parts.rightLeg.y = size * 0.27 - stride * size * 0.055 * gait;
-    actor.parts.leftBoot.y = size * 0.49 + stride * size * 0.085 * gait;
-    actor.parts.rightBoot.y = size * 0.49 - stride * size * 0.085 * gait;
+    // Real walking read: alternating leg placement and boot travel, with the torso
+    // staying planted. No whole-body bob, pitch or "swimming" motion.
+    actor.parts.leftLeg.y = size * 0.27 + stride * size * 0.075 * gait;
+    actor.parts.rightLeg.y = size * 0.27 - stride * size * 0.075 * gait;
+    actor.parts.leftBoot.y = size * 0.49 + stride * size * 0.11 * gait;
+    actor.parts.rightBoot.y = size * 0.49 - stride * size * 0.11 * gait;
+    actor.parts.leftBoot.x = -size * 0.19 + stride * size * 0.035 * gait;
+    actor.parts.rightBoot.x = size * 0.19 - stride * size * 0.035 * gait;
 
-    actor.parts.leftLeg.rotation = stride * 0.16 * gait;
-    actor.parts.rightLeg.rotation = -stride * 0.16 * gait;
-    actor.parts.leftBoot.rotation = stride * 0.12 * gait;
-    actor.parts.rightBoot.rotation = -stride * 0.12 * gait;
+    // Hands stay on the marker while moving. Shoulders and elbows absorb only
+    // a small amount of stride so the weapon remains readable and steady.
+    actor.parts.leftArm.rotation = -0.58 - stride * 0.045 * gait;
+    actor.parts.rightArm.rotation = 0.58 + stride * 0.045 * gait;
+    actor.parts.leftShoulder.rotation = -stride * 0.035;
+    actor.parts.rightShoulder.rotation = stride * 0.035;
 
-    actor.parts.leftArm.rotation = -0.18 - stride * 0.20 * gait;
-    actor.parts.rightArm.rotation = 0.18 + stride * 0.20 * gait;
-    actor.parts.leftShoulder.rotation = -stride * 0.10;
-    actor.parts.rightShoulder.rotation = stride * 0.10;
-
-    const breath = moving ? Math.sin(actor.animTime * 0.007) * 0.008 : Math.sin(actor.animTime * 0.0035) * 0.014;
+    const breath = moving
+      ? Math.sin(actor.animTime * 0.006) * 0.004
+      : Math.sin(actor.animTime * 0.0032) * 0.009;
     actor.parts.torso.scaleY = 1 + breath;
     actor.parts.vest.scaleY = 1 + breath;
-    actor.parts.helmet.scaleY = 1 + breath * 0.7;
-    actor.parts.backpack.y = size * 0.12 + breath * size * 0.6;
+    actor.parts.helmet.scaleY = 1 + breath * 0.55;
+    actor.parts.backpack.y = size * 0.12 + breath * size * 0.35;
 
     actor.firePulse = Math.max(0, actor.firePulse - delta / 120);
     if (actor.firePulse <= 0 && actor.parts.muzzle.visible) actor.parts.muzzle.setVisible(false);
@@ -832,6 +840,10 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     const len = Math.hypot(dx, dy) || 1;
     actor.facingX = dx / len;
     actor.facingY = dy / len;
+
+    // Character art is authored facing north. Rotate the complete figure toward
+    // the aim/movement vector, but keep the weapon mounted to the chest rather
+    // than the helmet.
     actor.body.rotation = Math.atan2(actor.facingY, actor.facingX) + Math.PI / 2;
   }
 
