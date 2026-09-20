@@ -35,6 +35,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   private keys!: { up: Phaser.Input.Keyboard.Key; down: Phaser.Input.Keyboard.Key; left: Phaser.Input.Keyboard.Key; right: Phaser.Input.Keyboard.Key; fire: Phaser.Input.Keyboard.Key };
   private aim = { x: 1, y: 0 };
   private moveTouch?: { id: number; x: number; y: number };
+  private aimTouch?: { id: number; x: number; y: number };
   private lastShot = 0;
   private teamScore = 0;
   private opponentScore = 0;
@@ -185,8 +186,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     let moveY = keyboardY;
 
     if (this.moveTouch) {
-      moveX = Phaser.Math.Clamp((pointer.x - this.moveTouch.x) / 65, -1, 1);
-      moveY = Phaser.Math.Clamp((pointer.y - this.moveTouch.y) / 65, -1, 1);
+      moveX = Phaser.Math.Clamp((this.moveTouch.x - this.player.body.x) / 65, -1, 1);
+      moveY = Phaser.Math.Clamp((this.moveTouch.y - this.player.body.y) / 65, -1, 1);
     }
 
     const len = Math.hypot(moveX, moveY);
@@ -196,9 +197,10 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       this.moveActor(this.player, moveX * this.player.speed * delta / 1000, moveY * this.player.speed * delta / 1000);
     }
 
-    if (pointer.isDown && pointer.x > this.scale.width * 0.48) {
-      const dx = pointer.x - this.player.body.x;
-      const dy = pointer.y - this.player.body.y;
+    const aimPoint = this.aimTouch ?? (pointer.isDown && pointer.x > this.scale.width * 0.48 ? { id: pointer.id, x: pointer.x, y: pointer.y } : undefined);
+    if (aimPoint) {
+      const dx = aimPoint.x - this.player.body.x;
+      const dy = aimPoint.y - this.player.body.y;
       const length = Math.hypot(dx, dy) || 1;
       this.aim = { x: dx / length, y: dy / length };
       if (this.time.now - this.lastShot > 360) this.fire(this.player, this.aim.x, this.aim.y);
@@ -391,24 +393,30 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   private handlePointerDown(pointer: Phaser.Input.Pointer) {
     if (pointer.x < this.scale.width * 0.48) {
       this.moveTouch = { id: pointer.id, x: pointer.x, y: pointer.y };
-    } else {
-      const dx = pointer.x - this.player.body.x;
-      const dy = pointer.y - this.player.body.y;
-      const len = Math.hypot(dx, dy) || 1;
-      this.aim = { x: dx / len, y: dy / len };
-      this.fire(this.player, this.aim.x, this.aim.y);
+      return;
     }
-  }
 
-  private handlePointerMove(pointer: Phaser.Input.Pointer) {
-    if (!this.moveTouch || pointer.id !== this.moveTouch.id) return;
+    this.aimTouch = { id: pointer.id, x: pointer.x, y: pointer.y };
     const dx = pointer.x - this.player.body.x;
     const dy = pointer.y - this.player.body.y;
     const len = Math.hypot(dx, dy) || 1;
-    if (pointer.x > this.scale.width * 0.48) this.aim = { x: dx / len, y: dy / len };
+    this.aim = { x: dx / len, y: dy / len };
+    this.fire(this.player, this.aim.x, this.aim.y);
+  }
+
+  private handlePointerMove(pointer: Phaser.Input.Pointer) {
+    if (this.moveTouch?.id === pointer.id) {
+      this.moveTouch.x = pointer.x;
+      this.moveTouch.y = pointer.y;
+    }
+    if (this.aimTouch?.id === pointer.id) {
+      this.aimTouch.x = pointer.x;
+      this.aimTouch.y = pointer.y;
+    }
   }
 
   private handlePointerUp(pointer: Phaser.Input.Pointer) {
     if (this.moveTouch?.id === pointer.id) this.moveTouch = undefined;
+    if (this.aimTouch?.id === pointer.id) this.aimTouch = undefined;
   }
 }
