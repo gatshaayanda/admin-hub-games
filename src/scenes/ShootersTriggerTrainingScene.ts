@@ -793,11 +793,11 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     this.moveInput.y = Math.sin(octant * Math.PI / 4);
   }
 
-  private animateActor(actor: Actor, delta: number, movement: number) {
+  private animateActor(actor: Actor, _delta: number, movement: number) {
     if (!actor.alive) return;
-    const speed = movement > 0.05 ? 0.012 : 0.004;
-    const amplitude = movement > 0.05 ? 1.8 : 0.45;
-    actor.body.y += Math.sin(this.time.now * speed) * amplitude * delta / 16.67;
+    const walking = movement > 0.05;
+    const bob = Math.sin(this.time.now * (walking ? 0.018 : 0.006)) * (walking ? 0.035 : 0.012);
+    actor.body.setScale(1 + bob, 1 - bob);
   }
 
   private directionTo(x1: number, y1: number, x2: number, y2: number) {
