@@ -102,7 +102,7 @@ export class PresidentsShoesSetupScene extends Phaser.Scene {
       color: '#071018', letterSpacing: 1,
     }).setOrigin(0.5);
 
-    button.on('pointerdown', (_pointer, _x, _y, event) => {
+    button.on('pointerdown', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
       this.startStory(false);
     });
@@ -115,7 +115,7 @@ export class PresidentsShoesSetupScene extends Phaser.Scene {
         fontFamily: 'monospace', fontSize: '10px', fontStyle: 'bold',
         color: '#f4f7ff', letterSpacing: 1,
       }).setOrigin(0.5);
-      continueButton.on('pointerdown', (_pointer, _x, _y, event) => {
+      continueButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
         event.stopPropagation();
         this.startStory(true);
       });
@@ -167,7 +167,7 @@ export class PresidentsShoesSetupScene extends Phaser.Scene {
         fontFamily: 'monospace', fontSize: '8px', fontStyle: 'bold',
         color: selected ? '#071018' : pack.primary, letterSpacing: 1,
       }).setOrigin(0.5);
-      card.on('pointerdown', (_pointer, _x, _y, event) => {
+      card.on('pointerdown', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
         event.stopPropagation();
         this.selectCountry(pack.id);
       });
