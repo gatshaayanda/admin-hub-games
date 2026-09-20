@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 
 type Actor = {
-  body: Phaser.GameObjects.Rectangle;
+  body: Phaser.GameObjects.Container;
   label: Phaser.GameObjects.Text;
   team: 'green' | 'orange';
   role: 'player' | 'operator' | 'heavy' | 'runner' | 'anchor';
@@ -36,7 +36,13 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   private enemies: Actor[] = [];
   private paintballs: Paintball[] = [];
   private covers: Phaser.Geom.Rectangle[] = [];
-  private keys!: { up: Phaser.Input.Keyboard.Key; down: Phaser.Input.Keyboard.Key; left: Phaser.Input.Keyboard.Key; right: Phaser.Input.Keyboard.Key; fire: Phaser.Input.Keyboard.Key };
+  private keys!: {
+    up: Phaser.Input.Keyboard.Key;
+    down: Phaser.Input.Keyboard.Key;
+    left: Phaser.Input.Keyboard.Key;
+    right: Phaser.Input.Keyboard.Key;
+    fire: Phaser.Input.Keyboard.Key;
+  };
   private aim = { x: 1, y: 0 };
   private moveTouch?: TouchState;
   private aimTouch?: { id: number; x: number; y: number };
@@ -50,23 +56,23 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   private touchUi!: Phaser.GameObjects.Graphics;
   private playerName = 'Player';
   private startedAt = 0;
-  private fieldWidth = 960;
-  private fieldHeight = 540;
+  private worldWidth = 1800;
+  private worldHeight = 1000;
   private isPhoneLayout = false;
-  private readonly start = { x: 90, y: 270 };
+  private readonly start = { x: 150, y: 500 };
 
   constructor() {
     super('ShootersTriggerTrainingScene');
   }
 
   create() {
-    this.configureField();
+    this.configureWorld();
     this.playerName = String(this.registry.get('shootersTriggerPlayer') || 'Player');
     this.startedAt = this.time.now;
 
     this.drawArena();
     this.createUi();
-    this.touchUi = this.add.graphics().setDepth(60).setScrollFactor(0);
+    this.touchUi = this.add.graphics().setDepth(200).setScrollFactor(0);
 
     this.keys = {
       up: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.W),
@@ -78,14 +84,19 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
     this.player = this.makeActor(this.start.x, this.start.y, 'green', 'player', this.playerName, 120);
     this.teammates = [
-      this.makeActor(this.start.x + this.actorSize(), this.start.y - this.teamSpacing(), 'green', 'operator', 'Operator 12', 150),
-      this.makeActor(this.start.x + this.actorSize(), this.start.y + this.teamSpacing(), 'green', 'heavy', 'The Heavy', 105),
+      this.makeActor(this.start.x + 65, this.start.y - this.teamSpacing(), 'green', 'operator', 'Operator 12', 150),
+      this.makeActor(this.start.x + 65, this.start.y + this.teamSpacing(), 'green', 'heavy', 'The Heavy', 105),
     ];
 
     this.enemies = [
-      this.makeActor(this.fieldWidth - this.fieldWidth * 0.18, this.fieldHeight * 0.34, 'orange', 'runner', 'Runner', 145),
-      this.makeActor(this.fieldWidth - this.fieldWidth * 0.18, this.fieldHeight * 0.66, 'orange', 'anchor', 'Anchor', 95),
+      this.makeActor(this.worldWidth - 270, this.worldHeight * 0.40, 'orange', 'runner', 'Runner', 145),
+      this.makeActor(this.worldWidth - 270, this.worldHeight * 0.60, 'orange', 'anchor', 'Anchor', 95),
     ];
+
+    this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
+    this.cameras.main.startFollow(this.player.body, true, 0.12, 0.12);
+    this.cameras.main.setDeadzone(this.isPhoneLayout ? this.scale.width * 0.18 : this.scale.width * 0.30, this.isPhoneLayout ? this.scale.height * 0.18 : this.scale.height * 0.28);
+    this.cameras.main.setZoom(this.isPhoneLayout ? 1.12 : 1);
 
     this.input.addPointer(2);
     this.input.on('pointerdown', this.handlePointerDown, this);
@@ -102,34 +113,30 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       this.input.off('pointercancel', this.handlePointerUp, this);
     });
 
-    this.statusText.setText('TRAINING SCRIMMAGE · STAY WITH YOUR TEAM');
+    this.statusText.setText('TEAM TRAINING · MOVE WITH YOUR TEAM');
+    this.updateUi();
     this.renderTouchUi();
   }
 
-  private configureField() {
-    // RESIZE gives us the actual playable viewport. The arena follows it instead
-    // of drawing a fixed 960x540 world into a portrait phone viewport.
-    this.fieldWidth = Math.max(320, this.scale.width);
-    this.fieldHeight = Math.max(180, this.scale.height);
-    this.isPhoneLayout = this.fieldHeight > this.fieldWidth * 1.12;
-
-    this.start.x = this.isPhoneLayout ? this.fieldWidth * 0.14 : this.fieldWidth * 0.095;
-    this.start.y = this.fieldHeight * 0.50;
+  private configureWorld() {
+    this.isPhoneLayout = this.scale.height > this.scale.width * 1.12;
+    this.worldWidth = this.isPhoneLayout ? 1450 : 1900;
+    this.worldHeight = this.isPhoneLayout ? 2300 : 1080;
+    this.start.x = this.worldWidth * 0.12;
+    this.start.y = this.worldHeight * 0.50;
   }
 
   private handleResize(width: number, height: number) {
-    if (!this.player) return;
     const wasPhone = this.isPhoneLayout;
-    this.fieldWidth = Math.max(320, width);
-    this.fieldHeight = Math.max(480, height);
-    this.isPhoneLayout = this.fieldHeight > this.fieldWidth * 1.12;
-
-    if (wasPhone !== this.isPhoneLayout) {
+    const nextPhone = height > width * 1.12;
+    if (wasPhone !== nextPhone) {
       this.scene.restart();
       return;
     }
 
-    this.cameras.main.setViewport(0, 0, width, height);
+    this.cameras.main.setDeadzone(nextPhone ? width * 0.18 : width * 0.30, nextPhone ? height * 0.18 : height * 0.28);
+    this.cameras.main.setZoom(nextPhone ? 1.12 : 1);
+    this.updateUiPositions();
   }
 
   update(_time: number, delta: number) {
@@ -151,150 +158,236 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
   private drawArena() {
     const g = this.add.graphics();
-    const w = this.fieldWidth;
-    const h = this.fieldHeight;
+    const w = this.worldWidth;
+    const h = this.worldHeight;
 
-    g.fillStyle(0x6b9b4c, 1).fillRect(0, 0, w, h);
-    g.fillStyle(0x75a957, 0.55).fillRect(0, 0, w, h * 0.50);
-    g.fillStyle(0x56883f, 0.48).fillRect(0, h * 0.50, w, h * 0.50);
+    g.fillStyle(0x6f9e4d, 1).fillRect(0, 0, w, h);
+    g.fillStyle(0x83ad5d, 0.45).fillRect(0, 0, w, h * 0.50);
+    g.fillStyle(0x5d8d43, 0.45).fillRect(0, h * 0.50, w, h * 0.50);
 
-    for (let i = 0; i < (this.isPhoneLayout ? 34 : 24); i += 1) {
-      const x = (i * 173) % w;
-      const y = 42 + ((i * 97) % Math.max(80, h - 84));
-      g.fillStyle(i % 2 ? 0x47733a : 0x86b765, 0.38).fillCircle(x, y, 2 + (i % 3));
+    // Grass variation makes the field read as an outdoor place rather than a flat green board.
+    for (let i = 0; i < 180; i += 1) {
+      const x = (i * 173.7) % w;
+      const y = (i * 97.3) % h;
+      g.lineStyle(i % 3 === 0 ? 2 : 1, i % 2 ? 0x47763a : 0x9abe70, 0.28);
+      g.lineBetween(x, y, x + 4, y - 7);
     }
 
-    const coverDefs = this.isPhoneLayout
-      ? [
-          [0.22, 0.15, 0.56, 0.035],
-          [0.08, 0.30, 0.44, 0.040],
-          [0.48, 0.39, 0.44, 0.040],
-          [0.10, 0.53, 0.45, 0.040],
-          [0.46, 0.67, 0.44, 0.040],
-          [0.18, 0.82, 0.55, 0.035],
-        ]
-      : [
-          [0.23, 0.22, 0.12, 0.06],
-          [0.40, 0.43, 0.16, 0.065],
-          [0.63, 0.22, 0.12, 0.06],
-          [0.24, 0.70, 0.13, 0.065],
-          [0.52, 0.73, 0.15, 0.065],
-          [0.73, 0.53, 0.13, 0.065],
-        ];
-
-    for (const [nx, ny, nw, nh] of coverDefs) {
-      const x = nx * w;
-      const y = ny * h;
-      const cw = nw * w;
-      const ch = Math.max(18, nh * h);
-      g.fillStyle(0xc6b47b, 1).fillRect(x, y, cw, ch);
-      g.fillStyle(0x9b8a5d, 1).fillRect(x, y + ch - 6, cw, 6);
-      this.covers.push(new Phaser.Geom.Rectangle(x, y, cw, ch));
+    // White boundary posts and a simple rope/fence line, matching the field language from the real session.
+    for (let i = 0; i < 12; i += 1) {
+      const x = 80 + i * ((w - 160) / 11);
+      this.drawPost(g, x, 55);
+      this.drawPost(g, x, h - 55);
     }
+    g.lineStyle(3, 0xf4f1df, 0.45);
+    g.lineBetween(80, 55, w - 80, 55);
+    g.lineBetween(80, h - 55, w - 80, h - 55);
 
-    if (this.isPhoneLayout) {
-      this.drawTree(g, w * 0.83, h * 0.13, 0.72);
-      this.drawTree(g, w * 0.14, h * 0.76, 0.62);
-      this.drawTree(g, w * 0.82, h * 0.87, 0.70);
-    } else {
-      this.drawTree(g, w * 0.16, h * 0.28, 0.90);
-      this.drawTree(g, w * 0.42, h * 0.24, 0.66);
-      this.drawTree(g, w * 0.92, h * 0.42, 0.64);
-    }
+    // Green and orange starting areas.
+    g.fillStyle(0x175c43, 0.24).fillRect(50, h * 0.34, w * 0.17, h * 0.32);
+    g.lineStyle(3, 0xcde7bd, 0.55).strokeRect(50, h * 0.34, w * 0.17, h * 0.32);
+    g.fillStyle(0x9b4b29, 0.18).fillRect(w - 50 - w * 0.17, h * 0.34, w * 0.17, h * 0.32);
+    g.lineStyle(3, 0xffd4b7, 0.45).strokeRect(w - 50 - w * 0.17, h * 0.34, w * 0.17, h * 0.32);
 
-    g.fillStyle(0x315a37, 0.8).fillCircle(w * 0.50, h * 0.50, Math.min(w, h) * 0.095);
-    g.lineStyle(Math.max(2, Math.min(w, h) * 0.005), 0xe8c95c, 0.8)
-      .strokeCircle(w * 0.50, h * 0.50, Math.min(w, h) * 0.095);
+    this.add.text(78, h * 0.34 + 18, 'GREEN BASE', {
+      fontFamily: 'monospace', fontSize: '13px', fontStyle: 'bold', color: '#ecf8e8'
+    }).setDepth(3);
+    this.add.text(w - 78, h * 0.34 + 18, 'ORANGE BASE', {
+      fontFamily: 'monospace', fontSize: '13px', fontStyle: 'bold', color: '#fff0df'
+    }).setOrigin(1, 0).setDepth(3);
 
-    this.add.text(w * 0.50, h * 0.50, 'TACTIC\nZONE', {
-      fontFamily: 'monospace',
-      fontSize: this.isPhoneLayout ? '8px' : '9px',
-      fontStyle: 'bold',
-      color: '#f4f1df',
-      align: 'center',
-    }).setOrigin(0.5);
-
-    this.add.text(18, 18, 'GREEN BASE', {
-      fontFamily: 'monospace',
-      fontSize: this.uiFont(9),
-      fontStyle: 'bold',
-      color: '#eff6e8',
-    });
-
-    this.add.text(w - 18, 18, 'ORANGE SIDE', {
-      fontFamily: 'monospace',
-      fontSize: this.uiFont(9),
-      fontStyle: 'bold',
-      color: '#fff0dc',
-    }).setOrigin(1, 0);
+    this.drawBunkers();
+    this.drawTrees();
+    this.drawCylinders();
+    this.drawTacticZone();
   }
 
-  private drawTree(g: Phaser.GameObjects.Graphics, x: number, y: number, scale: number) {
-    g.fillStyle(0x315a37, 0.9).fillCircle(x, y, 22 * scale);
-    g.fillStyle(0x47733a, 0.95).fillCircle(x - 15 * scale, y + 7 * scale, 17 * scale);
-    g.fillStyle(0x56883f, 0.95).fillCircle(x + 14 * scale, y + 7 * scale, 18 * scale);
-    g.fillStyle(0x765b3d, 1).fillRect(x - 4 * scale, y + 14 * scale, 8 * scale, 24 * scale);
+  private drawPost(g: Phaser.GameObjects.Graphics, x: number, y: number) {
+    g.fillStyle(0x7b6d58, 1).fillRect(x - 3, y, 6, 26);
+    g.fillStyle(0xf4f1df, 1).fillRect(x - 5, y - 10, 10, 13);
+  }
+
+  private drawBunkers() {
+    const defs = this.isPhoneLayout
+      ? [
+          [0.22, 0.16, 0.46, 0.035, 0x9d754d],
+          [0.08, 0.27, 0.58, 0.045, 0x6e8190],
+          [0.48, 0.36, 0.40, 0.042, 0xb58c58],
+          [0.10, 0.48, 0.46, 0.045, 0x6e8190],
+          [0.44, 0.59, 0.48, 0.040, 0xb58c58],
+          [0.08, 0.72, 0.56, 0.045, 0x6e8190],
+          [0.24, 0.84, 0.52, 0.035, 0x9d754d],
+        ]
+      : [
+          [0.21, 0.23, 0.12, 0.09, 0x9d754d],
+          [0.35, 0.42, 0.16, 0.10, 0x6e8190],
+          [0.52, 0.22, 0.13, 0.08, 0xb58c58],
+          [0.65, 0.62, 0.15, 0.09, 0x6e8190],
+          [0.79, 0.40, 0.12, 0.08, 0xb58c58],
+          [0.51, 0.76, 0.16, 0.09, 0x6e8190],
+        ];
+
+    for (const [nx, ny, nw, nh, color] of defs) {
+      const x = Number(nx) * this.worldWidth;
+      const y = Number(ny) * this.worldHeight;
+      const cw = Number(nw) * this.worldWidth;
+      const ch = Math.max(28, Number(nh) * this.worldHeight);
+      const g = this.add.graphics();
+      g.fillStyle(Number(color), 1).fillRect(x, y, cw, ch);
+      g.fillStyle(0x554a3e, 0.40).fillRect(x, y + ch - 7, cw, 7);
+      g.lineStyle(2, 0xf0d7aa, 0.45).strokeRect(x, y, cw, ch);
+      this.covers.push(new Phaser.Geom.Rectangle(x, y, cw, ch));
+    }
+  }
+
+  private drawTrees() {
+    const positions = this.isPhoneLayout
+      ? [
+          [0.12, 0.12, 1.1], [0.82, 0.12, 0.9], [0.90, 0.31, 0.75],
+          [0.14, 0.43, 0.9], [0.86, 0.52, 1.05], [0.13, 0.67, 0.8],
+          [0.88, 0.77, 0.9], [0.12, 0.90, 1.0],
+        ]
+      : [
+          [0.15, 0.20, 1.1], [0.39, 0.16, 0.75], [0.60, 0.86, 0.85],
+          [0.88, 0.27, 0.9], [0.92, 0.78, 1.0], [0.08, 0.78, 0.8],
+        ];
+
+    for (const [nx, ny, scale] of positions) {
+      this.drawTree(Number(nx) * this.worldWidth, Number(ny) * this.worldHeight, Number(scale));
+    }
+  }
+
+  private drawTree(x: number, y: number, scale: number) {
+    const g = this.add.graphics();
+    g.fillStyle(0x715437, 1).fillRect(x - 6 * scale, y + 17 * scale, 12 * scale, 45 * scale);
+    g.fillStyle(0x315f39, 1).fillCircle(x, y, 31 * scale);
+    g.fillStyle(0x47733a, 1).fillCircle(x - 22 * scale, y + 9 * scale, 23 * scale);
+    g.fillStyle(0x56883f, 1).fillCircle(x + 23 * scale, y + 8 * scale, 25 * scale);
+    g.fillStyle(0x7ba95a, 0.65).fillCircle(x + 5 * scale, y - 10 * scale, 12 * scale);
+  }
+
+  private drawCylinders() {
+    const points = this.isPhoneLayout
+      ? [[0.77, 0.22], [0.27, 0.35], [0.77, 0.47], [0.26, 0.63], [0.73, 0.78]]
+      : [[0.28, 0.68], [0.45, 0.30], [0.70, 0.72], [0.77, 0.28]];
+
+    for (const [nx, ny] of points) {
+      const x = Number(nx) * this.worldWidth;
+      const y = Number(ny) * this.worldHeight;
+      const g = this.add.graphics();
+      g.fillStyle(0x7d5d40, 1).fillEllipse(x, y, 34, 24);
+      g.fillStyle(0xb58a58, 1).fillEllipse(x, y - 10, 34, 24);
+      g.lineStyle(2, 0x4d3b2b, 0.7).strokeEllipse(x, y - 10, 34, 24);
+      this.covers.push(new Phaser.Geom.Rectangle(x - 17, y - 20, 34, 30));
+    }
+  }
+
+  private drawTacticZone() {
+    const x = this.worldWidth * 0.50;
+    const y = this.worldHeight * 0.50;
+    const r = Math.min(this.worldWidth, this.worldHeight) * 0.10;
+    const g = this.add.graphics();
+    g.fillStyle(0x315a37, 0.72).fillCircle(x, y, r);
+    g.lineStyle(4, 0xe8c95c, 0.8).strokeCircle(x, y, r);
+    this.add.text(x, y, 'TACTIC\nZONE', {
+      fontFamily: 'monospace', fontSize: this.isPhoneLayout ? '15px' : '18px',
+      fontStyle: 'bold', color: '#f4f1df', align: 'center'
+    }).setOrigin(0.5).setDepth(4);
   }
 
   private createUi() {
-    this.scoreText = this.add.text(this.fieldWidth * 0.50, 14, '', {
-      fontFamily: 'monospace',
-      fontSize: this.uiFont(12),
-      fontStyle: 'bold',
-      color: '#ffffff',
-      backgroundColor: '#1a2c1e',
-      padding: { left: 9, right: 9, top: 7, bottom: 7 },
-    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(50);
-
-    this.statusText = this.add.text(this.fieldWidth * 0.50, this.isPhoneLayout ? 58 : 20, '', {
-      fontFamily: 'monospace',
-      fontSize: this.uiFont(10),
-      fontStyle: 'bold',
-      color: '#ffffff',
-      backgroundColor: '#1a2c1e',
+    this.scoreText = this.add.text(this.scale.width * 0.50, 12, '', {
+      fontFamily: 'monospace', fontSize: this.uiFont(12), fontStyle: 'bold',
+      color: '#ffffff', backgroundColor: '#17261b',
       padding: { left: 10, right: 10, top: 7, bottom: 7 },
-    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(50);
+    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(180);
 
-    this.hintText = this.add.text(this.fieldWidth * 0.50, this.fieldHeight - (this.isPhoneLayout ? 38 : 22),
-      this.isPhoneLayout ? 'LEFT THUMB MOVE  ·  RIGHT THUMB AIM + FIRE' : 'DESKTOP: WASD + MOUSE CLICK/SPACE',
+    this.statusText = this.add.text(this.scale.width * 0.50, this.isPhoneLayout ? 56 : 20, '', {
+      fontFamily: 'monospace', fontSize: this.uiFont(10), fontStyle: 'bold',
+      color: '#ffffff', backgroundColor: '#17261b',
+      padding: { left: 10, right: 10, top: 7, bottom: 7 },
+    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(180);
+
+    this.hintText = this.add.text(this.scale.width * 0.50, this.scale.height - (this.isPhoneLayout ? 32 : 20),
+      this.isPhoneLayout ? 'TOUCH LEFT TO MOVE  ·  TOUCH RIGHT TO AIM + FIRE' : 'DESKTOP: WASD + MOUSE CLICK/SPACE',
       {
-        fontFamily: 'monospace',
-        fontSize: this.uiFont(8),
-        color: '#f4f1df',
-        backgroundColor: '#1a2c1e',
-        padding: { left: 9, right: 9, top: 6, bottom: 6 },
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(50);
+        fontFamily: 'monospace', fontSize: this.uiFont(8), color: '#f4f1df',
+        backgroundColor: '#17261b', padding: { left: 9, right: 9, top: 6, bottom: 6 },
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(180);
+
+    this.updateUiPositions();
+  }
+
+  private updateUiPositions() {
+    if (!this.scoreText) return;
+    this.scoreText.setPosition(this.scale.width * 0.50, 12);
+    this.statusText.setPosition(this.scale.width * 0.50, this.isPhoneLayout ? 56 : 20);
+    this.hintText.setPosition(this.scale.width * 0.50, this.scale.height - (this.isPhoneLayout ? 32 : 20));
   }
 
   private makeActor(x: number, y: number, team: Actor['team'], role: Actor['role'], name: string, hp: number): Actor {
     const size = this.actorSize(role);
-    const body = this.add.rectangle(x, y, size, size, team === 'green' ? 0x176b4b : 0xd66b32, 1)
-      .setStrokeStyle(Math.max(2, size * 0.09), team === 'green' ? 0xdff6d4 : 0xffe2bf, 0.95)
-      .setDepth(20);
+    const body = this.add.container(x, y).setDepth(30);
+    this.drawSuit(body, team, role, size);
 
-    const label = this.add.text(x, y - size * 0.9, name, {
+    const label = this.add.text(x, y - size * 0.95, name, {
       fontFamily: 'monospace',
-      fontSize: this.isPhoneLayout ? '7px' : '8px',
-      fontStyle: 'bold',
-      color: '#ffffff',
-      backgroundColor: '#203423',
-      padding: { left: 4, right: 4, top: 2, bottom: 2 },
-    }).setOrigin(0.5, 1).setDepth(21);
+      fontSize: this.isPhoneLayout ? '10px' : '11px',
+      fontStyle: 'bold', color: '#ffffff', backgroundColor: '#203423',
+      padding: { left: 5, right: 5, top: 3, bottom: 3 },
+    }).setOrigin(0.5, 1).setDepth(31);
 
     return {
       body, label, team, role, hp, maxHp: hp,
-      speed: role === 'heavy' ? 82 : role === 'operator' ? 125 : 108,
+      speed: role === 'heavy' ? 78 : role === 'operator' ? 118 : 104,
       startX: x, startY: y, alive: true, cooldown: 0,
     };
   }
 
+  private drawSuit(container: Phaser.GameObjects.Container, team: Actor['team'], role: Actor['role'], size: number) {
+    const g = this.add.graphics();
+    const teamMain = team === 'green' ? 0x176b4b : 0xc85d2e;
+    const teamLight = team === 'green' ? 0x55a878 : 0xe58a52;
+    const vest = team === 'green' ? 0x214e3f : 0x71402f;
+    const skin = 0xc99262;
+    const mask = 0x17201e;
+
+    // Shadow, boots, trousers, protective vest, arms, helmet and paintball mask.
+    g.fillStyle(0x243323, 0.30).fillEllipse(0, size * 0.54, size * 1.35, size * 0.45);
+    g.fillStyle(0x20282a, 1).fillRect(-size * 0.38, size * 0.25, size * 0.28, size * 0.38);
+    g.fillStyle(0x20282a, 1).fillRect(size * 0.10, size * 0.25, size * 0.28, size * 0.38);
+    g.fillStyle(0x3c4b43, 1).fillRect(-size * 0.36, size * 0.02, size * 0.30, size * 0.30);
+    g.fillStyle(0x3c4b43, 1).fillRect(size * 0.06, size * 0.02, size * 0.30, size * 0.30);
+    g.fillStyle(vest, 1).fillRect(-size * 0.46, -size * 0.12, size * 0.92, size * 0.48);
+    g.fillStyle(teamMain, 1).fillRect(-size * 0.40, -size * 0.08, size * 0.80, size * 0.35);
+    g.fillStyle(teamLight, 0.8).fillRect(-size * 0.08, -size * 0.08, size * 0.16, size * 0.35);
+    g.fillStyle(skin, 1).fillRect(-size * 0.64, -size * 0.03, size * 0.18, size * 0.35);
+    g.fillStyle(skin, 1).fillRect(size * 0.46, -size * 0.03, size * 0.18, size * 0.35);
+    g.fillStyle(0x111715, 1).fillRect(-size * 0.56, -size * 0.42, size * 1.12, size * 0.18);
+    g.fillStyle(0x37433f, 1).fillCircle(0, -size * 0.42, size * 0.31);
+    g.fillStyle(mask, 1).fillRect(-size * 0.34, -size * 0.43, size * 0.68, size * 0.23);
+    g.fillStyle(0x9bc4bd, 0.65).fillRect(-size * 0.27, -size * 0.39, size * 0.54, size * 0.10);
+    g.fillStyle(teamLight, 0.95).fillRect(-size * 0.47, -size * 0.17, size * 0.18, size * 0.09);
+
+    // Role silhouettes: Heavy has a broader vest/shoulder profile; Operator is slimmer.
+    if (role === 'heavy' || role === 'anchor') {
+      g.fillStyle(vest, 1).fillRect(-size * 0.58, -size * 0.16, size * 1.16, size * 0.15);
+    }
+    if (role === 'operator' || role === 'runner') {
+      g.fillStyle(teamLight, 0.75).fillRect(-size * 0.52, -size * 0.08, size * 0.12, size * 0.28);
+      g.fillStyle(teamLight, 0.75).fillRect(size * 0.40, -size * 0.08, size * 0.12, size * 0.28);
+    }
+
+    container.add(g);
+  }
+
   private actorSize(role?: Actor['role']) {
-    const base = Phaser.Math.Clamp(Math.min(this.fieldWidth, this.fieldHeight) * 0.048, 20, 30);
-    return role === 'heavy' || role === 'anchor' ? base * 1.18 : base;
+    const base = Phaser.Math.Clamp(Math.min(this.scale.width, this.scale.height) * (this.isPhoneLayout ? 0.105 : 0.055), 30, 48);
+    return role === 'heavy' || role === 'anchor' ? base * 1.16 : base;
   }
 
   private teamSpacing() {
-    return Phaser.Math.Clamp(this.fieldHeight * 0.11, 48, 74);
+    return Phaser.Math.Clamp(this.worldHeight * 0.055, 62, 100);
   }
 
   private updatePlayer(delta: number) {
@@ -314,9 +407,11 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       this.moveActor(this.player, moveX * this.player.speed * delta / 1000, moveY * this.player.speed * delta / 1000);
     }
 
-    const aimPoint = this.aimTouch ?? (pointer.isDown && pointer.x > this.fieldWidth * 0.50
-      ? { id: pointer.id, x: pointer.x, y: pointer.y }
-      : undefined);
+    const aimPoint = this.aimTouch
+      ? this.cameraWorldPoint(this.aimTouch.x, this.aimTouch.y)
+      : (pointer.isDown && pointer.x > this.scale.width * 0.50
+        ? this.cameraWorldPoint(pointer.x, pointer.y)
+        : undefined);
 
     if (aimPoint) {
       const dx = aimPoint.x - this.player.body.x;
@@ -330,18 +425,22 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     }
   }
 
+  private cameraWorldPoint(x: number, y: number) {
+    return this.cameras.main.getWorldPoint(x, y);
+  }
+
   private updateTeammates(delta: number) {
     this.teammates.forEach((mate, index) => {
       if (!mate.alive) return;
 
-      const followDistance = this.isPhoneLayout ? 42 : 58;
-      const targetX = this.player.body.x - this.actorSize() * 1.8;
+      const followDistance = this.isPhoneLayout ? 80 : 105;
+      const targetX = this.player.body.x - 85;
       const targetY = this.player.body.y + (index === 0 ? -followDistance : followDistance);
       const dx = targetX - mate.body.x;
       const dy = targetY - mate.body.y;
       const len = Math.hypot(dx, dy) || 1;
 
-      if (len > 28) {
+      if (len > 36) {
         this.moveActor(mate, dx / len * mate.speed * 0.55 * delta / 1000, dy / len * mate.speed * 0.55 * delta / 1000);
       }
 
@@ -365,16 +464,13 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       const dx = target.body.x - enemy.body.x;
       const dy = target.body.y - enemy.body.y;
       const len = Math.hypot(dx, dy) || 1;
+      const advance = this.isPhoneLayout ? 0.22 : 0.28;
 
-      const advance = this.isPhoneLayout ? 0.24 : 0.30;
       if (index === 0 || enemy.role === 'runner') {
         this.moveActor(enemy, dx / len * enemy.speed * advance * delta / 1000, dy / len * enemy.speed * advance * delta / 1000);
-        if (enemy.body.x < this.fieldWidth * 0.68) {
-          this.moveActor(enemy, enemy.speed * 0.18 * delta / 1000, 0);
-        }
       }
 
-      if (enemy.cooldown <= 0 && len < this.fieldWidth * 0.52) {
+      if (enemy.cooldown <= 0 && len < this.worldWidth * 0.44) {
         this.fire(enemy, dx, dy);
         enemy.cooldown = enemy.role === 'anchor' ? 1350 : 950;
       }
@@ -390,8 +486,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
       if (
         ball.ttl <= 0 ||
-        ball.body.x < -20 || ball.body.x > this.fieldWidth + 20 ||
-        ball.body.y < -20 || ball.body.y > this.fieldHeight + 20 ||
+        ball.body.x < -20 || ball.body.x > this.worldWidth + 20 ||
+        ball.body.y < -20 || ball.body.y > this.worldHeight + 20 ||
         this.hitCover(ball.body.x, ball.body.y)
       ) {
         ball.body.destroy();
@@ -414,10 +510,12 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
   private hitActor(target: Actor, shooter: Actor) {
     target.hp -= 40;
-    this.flashActor(target);
+
+    this.tweens.add({ targets: target.body, alpha: 0.35, duration: 80, yoyo: true, repeat: 2 });
+    if (target === this.player) this.cameras.main.shake(120, 0.004);
 
     if (target.hp > 0) {
-      this.statusText.setText(target === this.player ? 'PAINT HIT · KEEP MOVING' : target.label.text + ' HIT');
+      this.statusText.setText(target === this.player ? 'PAINT HIT · BREAK LINE' : target.label.text + ' HIT');
       return;
     }
 
@@ -430,7 +528,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     }
 
     if (this.teamScore >= 5 || this.opponentScore >= 5) {
-      this.finish(this.teamScore >= 5 ? 'TEAM GREEN' : 'TEAM ORANGE');
+      this.finish(this.teamScore >= 5 ? 'GREEN TEAM' : 'ORANGE TEAM');
     }
 
     this.statusText.setText(shooter.label.text + ' TAGGED ' + target.label.text);
@@ -444,27 +542,25 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     this.aimTouch = undefined;
 
     this.respawnText?.destroy();
-    this.respawnText = this.add.text(this.fieldWidth / 2, this.fieldHeight * 0.50, 'HIT · RESETTING TO START', {
-      fontFamily: 'monospace',
-      fontSize: this.isPhoneLayout ? '13px' : '18px',
-      fontStyle: 'bold',
-      color: '#ffffff',
-      backgroundColor: '#9d3e2b',
+    this.respawnText = this.add.text(this.scale.width / 2, this.scale.height * 0.50, 'HIT · RESETTING TO START', {
+      fontFamily: 'monospace', fontSize: this.isPhoneLayout ? '15px' : '19px',
+      fontStyle: 'bold', color: '#ffffff', backgroundColor: '#9d3e2b',
       padding: { left: 14, right: 14, top: 10, bottom: 10 },
-    }).setOrigin(0.5).setDepth(100);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(250);
 
-    this.time.delayedCall(this.isPhoneLayout ? 650 : 850, () => {
+    this.time.delayedCall(this.isPhoneLayout ? 700 : 850, () => {
       if (this.teamScore >= 5 || this.opponentScore >= 5) return;
 
       this.player.body.setPosition(this.start.x, this.start.y);
-      this.player.label.setPosition(this.start.x, this.start.y - this.player.body.height * 0.9);
+      this.player.label.setPosition(this.start.x, this.start.y - this.actorSize('player') * 0.95);
       this.player.hp = this.player.maxHp;
       this.player.alive = true;
       this.player.body.setVisible(true);
       this.player.label.setVisible(true);
+      this.cameras.main.startFollow(this.player.body, true, 0.12, 0.12);
       this.respawnText?.destroy();
       this.respawnText = undefined;
-      this.statusText.setText('BACK IN · WATCH YOUR ANGLE');
+      this.statusText.setText('BACK IN · TAKE A NEW ROUTE');
     });
   }
 
@@ -477,7 +573,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       actor.hp = actor.maxHp;
       actor.alive = true;
       actor.body.setPosition(x, y);
-      actor.label.setPosition(x, y - actor.body.height * 0.9);
+      actor.label.setPosition(x, y - this.actorSize(actor.role) * 0.95);
       actor.body.setVisible(true);
       actor.label.setVisible(true);
     });
@@ -493,27 +589,31 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
   private fire(owner: Actor, dx: number, dy: number) {
     const len = Math.hypot(dx, dy) || 1;
-    const speed = this.isPhoneLayout ? 330 : 410;
-    const vx = dx / len * speed;
-    const vy = dy / len * speed;
-    const radius = this.isPhoneLayout ? 3.5 : 4;
+    const speed = this.isPhoneLayout ? 430 : 500;
+    const radius = this.isPhoneLayout ? 5 : 5;
 
     const ball = this.add.circle(owner.body.x, owner.body.y, radius,
-      owner.team === 'green' ? 0xdff6d4 : 0xffc58d, 1
-    ).setDepth(15);
+      owner.team === 'green' ? 0xe6f5d9 : 0xffbd86, 1
+    ).setDepth(25);
 
-    this.paintballs.push({ body: ball, vx, vy, owner, ttl: 1250 });
+    this.paintballs.push({
+      body: ball,
+      vx: dx / len * speed,
+      vy: dy / len * speed,
+      owner,
+      ttl: 1250,
+    });
     this.lastShot = this.time.now;
   }
 
   private moveActor(actor: Actor, dx: number, dy: number) {
     const margin = this.actorSize(actor.role) * 0.60;
-    const nextX = Phaser.Math.Clamp(actor.body.x + dx, margin, this.fieldWidth - margin);
-    const nextY = Phaser.Math.Clamp(actor.body.y + dy, margin + 8, this.fieldHeight - margin - 8);
+    const nextX = Phaser.Math.Clamp(actor.body.x + dx, margin, this.worldWidth - margin);
+    const nextY = Phaser.Math.Clamp(actor.body.y + dy, margin + 8, this.worldHeight - margin - 8);
 
     if (!this.hitCover(nextX, nextY, margin)) {
       actor.body.setPosition(nextX, nextY);
-      actor.label.setPosition(nextX, nextY - actor.body.height * 0.9);
+      actor.label.setPosition(nextX, nextY - this.actorSize(actor.role) * 0.95);
     }
   }
 
@@ -540,37 +640,32 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     )[0];
   }
 
-  private flashActor(actor: Actor) {
-    actor.body.setFillStyle(0xffffff, 1);
-    this.time.delayedCall(90, () => {
-      if (!actor.body.active) return;
-      actor.body.setFillStyle(actor.team === 'green' ? 0x176b4b : 0xd66b32, 1);
-    });
-  }
-
   private updateUi() {
+    if (!this.scoreText) return;
     this.scoreText.setText('GREEN ' + this.teamScore + ' · ORANGE ' + this.opponentScore + ' · ' + this.playerName);
   }
 
   private renderTouchUi() {
     if (!this.touchUi) return;
-
     this.touchUi.clear();
 
     if (!this.isPhoneLayout) return;
 
+    const radius = this.touchRadius();
+
+    // The game follows Hall's mobile-first principle: controls appear where the thumbs are,
+    // rather than permanently covering the arena.
     if (this.moveTouch) {
-      const radius = this.touchRadius();
-      this.touchUi.lineStyle(2, 0xf4f1df, 0.60).strokeCircle(this.moveTouch.startX, this.moveTouch.startY, radius);
-      this.touchUi.fillStyle(0x1f6b68, 0.78).fillCircle(this.moveTouch.x, this.moveTouch.y, radius * 0.34);
-      this.touchUi.lineStyle(2, 0xf4f1df, 0.85).strokeCircle(this.moveTouch.x, this.moveTouch.y, radius * 0.34);
+      this.touchUi.lineStyle(3, 0xf4f1df, 0.65).strokeCircle(this.moveTouch.startX, this.moveTouch.startY, radius);
+      this.touchUi.fillStyle(0x176b4b, 0.85).fillCircle(this.moveTouch.x, this.moveTouch.y, radius * 0.38);
+      this.touchUi.lineStyle(2, 0xf4f1df, 0.90).strokeCircle(this.moveTouch.x, this.moveTouch.y, radius * 0.38);
     }
 
     if (this.aimTouch) {
-      this.touchUi.lineStyle(2, 0xe8c95c, 0.78).strokeCircle(this.aimTouch.x, this.aimTouch.y, this.touchRadius() * 0.28);
-      this.touchUi.lineStyle(2, 0xe8c95c, 0.35).lineBetween(
-        this.player.body.x,
-        this.player.body.y,
+      this.touchUi.lineStyle(3, 0xe8c95c, 0.85).strokeCircle(this.aimTouch.x, this.aimTouch.y, radius * 0.32);
+      this.touchUi.lineStyle(2, 0xe8c95c, 0.25).lineBetween(
+        this.scale.width * 0.52,
+        this.scale.height * 0.50,
         this.aimTouch.x,
         this.aimTouch.y
       );
@@ -578,11 +673,60 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   }
 
   private touchRadius() {
-    return Phaser.Math.Clamp(Math.min(this.fieldWidth, this.fieldHeight) * 0.12, 48, 70);
+    return Phaser.Math.Clamp(Math.min(this.scale.width, this.scale.height) * 0.15, 56, 84);
   }
 
   private uiFont(base: number) {
     if (!this.isPhoneLayout) return base + 'px';
-    return Phaser.Math.Clamp(base * (this.fieldWidth / 360), 8, 13).toFixed(1) + 'px';
+    return Phaser.Math.Clamp(base * (this.scale.width / 360), 8, 14).toFixed(1) + 'px';
+  }
+
+  private handlePointerDown(pointer: Phaser.Input.Pointer) {
+    if (!this.isPhoneLayout) {
+      if (pointer.x > this.scale.width * 0.50) {
+        const world = this.cameraWorldPoint(pointer.x, pointer.y);
+        this.aim = this.directionTo(this.player.body.x, this.player.body.y, world.x, world.y);
+        this.fire(this.player, this.aim.x, this.aim.y);
+      }
+      return;
+    }
+
+    if (pointer.x < this.scale.width * 0.48 && !this.moveTouch) {
+      this.moveTouch = { id: pointer.id, startX: pointer.x, startY: pointer.y, x: pointer.x, y: pointer.y };
+      return;
+    }
+
+    if (pointer.x >= this.scale.width * 0.48 && !this.aimTouch) {
+      this.aimTouch = { id: pointer.id, x: pointer.x, y: pointer.y };
+      const world = this.cameraWorldPoint(pointer.x, pointer.y);
+      this.aim = this.directionTo(this.player.body.x, this.player.body.y, world.x, world.y);
+      this.fire(this.player, this.aim.x, this.aim.y);
+    }
+  }
+
+  private handlePointerMove(pointer: Phaser.Input.Pointer) {
+    if (!this.isPhoneLayout) return;
+
+    if (this.moveTouch?.id === pointer.id) {
+      this.moveTouch.x = pointer.x;
+      this.moveTouch.y = pointer.y;
+    }
+
+    if (this.aimTouch?.id === pointer.id) {
+      this.aimTouch.x = pointer.x;
+      this.aimTouch.y = pointer.y;
+    }
+  }
+
+  private handlePointerUp(pointer: Phaser.Input.Pointer) {
+    if (this.moveTouch?.id === pointer.id) this.moveTouch = undefined;
+    if (this.aimTouch?.id === pointer.id) this.aimTouch = undefined;
+  }
+
+  private directionTo(x1: number, y1: number, x2: number, y2: number) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const len = Math.hypot(dx, dy) || 1;
+    return { x: dx / len, y: dy / len };
   }
 }
