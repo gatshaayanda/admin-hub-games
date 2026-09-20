@@ -421,31 +421,41 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     const skin = 0xb97e55;
     const boot = 0x171d1b;
     const weaponColor = 0x222925;
-    const roleScale = role === 'heavy' || role === 'anchor' ? 1.13 : role === 'operator' || role === 'runner' ? 0.94 : 1;
-    const limbWidth = size * (role === 'heavy' || role === 'anchor' ? 0.19 : 0.16);
+    const isHeavy = role === 'heavy';
+    const isAnchor = role === 'anchor';
+    const isRunner = role === 'runner';
+    const isOperator = role === 'operator';
+    const roleScale =
+      isHeavy ? 1.16 :
+      isAnchor ? 1.09 :
+      isRunner ? 0.88 :
+      isOperator ? 0.95 : 1;
+    const shoulderScale = isHeavy ? 1.16 : isAnchor ? 1.08 : isRunner ? 0.90 : 1;
+    const packScale = isHeavy ? 1.12 : isAnchor ? 1.02 : isRunner ? 0.72 : isOperator ? 0.88 : 0.96;
+    const limbWidth = size * (isHeavy || isAnchor ? 0.19 : isRunner ? 0.145 : 0.16);
 
     const shadow = this.add.ellipse(0, size * 0.55, size * 1.42 * roleScale, size * 0.42, 0x102018, 0.30).setOrigin(0.5);
-    const backpack = this.add.rectangle(0, size * 0.12, size * 0.72 * roleScale, size * (role === 'heavy' || role === 'anchor' ? 0.48 : 0.36), teamDark, 1).setOrigin(0.5);
-    const packTop = this.add.rectangle(0, -size * 0.02, size * 0.48 * roleScale, size * 0.18, fabricLight, 0.92).setOrigin(0.5);
+    const backpack = this.add.rectangle(0, size * 0.12, size * 0.72 * packScale, size * (isHeavy || isAnchor ? 0.48 : isRunner ? 0.30 : 0.36), teamDark, 1).setOrigin(0.5);
+    const packTop = this.add.rectangle(0, -size * 0.02, size * 0.48 * packScale, size * 0.18, fabricLight, 0.92).setOrigin(0.5);
 
     const leftLeg = this.add.rectangle(-size * 0.19, size * 0.27, limbWidth, size * 0.38, fabric, 1).setOrigin(0.5);
     const rightLeg = this.add.rectangle(size * 0.19, size * 0.27, limbWidth, size * 0.38, fabric, 1).setOrigin(0.5);
     const leftBoot = this.add.rectangle(-size * 0.19, size * 0.49, size * 0.25, size * 0.13, boot, 1).setOrigin(0.5);
     const rightBoot = this.add.rectangle(size * 0.19, size * 0.49, size * 0.25, size * 0.13, boot, 1).setOrigin(0.5);
 
-    const torso = this.add.rectangle(0, 0, size * 0.78 * roleScale, size * 0.44, teamDark, 1).setOrigin(0.5);
-    const vest = this.add.rectangle(0, -size * 0.01, size * 0.64 * roleScale, size * 0.32, teamMain, 1).setOrigin(0.5);
+    const torso = this.add.rectangle(0, 0, size * 0.78 * roleScale, size * (isHeavy ? 0.47 : isRunner ? 0.40 : 0.44), teamDark, 1).setOrigin(0.5);
+    const vest = this.add.rectangle(0, -size * 0.01, size * 0.64 * roleScale, size * (isHeavy ? 0.35 : isRunner ? 0.29 : 0.32), teamMain, 1).setOrigin(0.5);
     const belt = this.add.rectangle(0, size * 0.16, size * 0.66 * roleScale, size * 0.075, 0x1b2924, 1).setOrigin(0.5);
 
     const leftArm = this.add.rectangle(-size * 0.46, 0, limbWidth * 0.82, size * 0.33, skin, 1).setOrigin(0.5).setRotation(-0.18);
     const rightArm = this.add.rectangle(size * 0.46, 0, limbWidth * 0.82, size * 0.33, skin, 1).setOrigin(0.5).setRotation(0.18);
-    const leftShoulder = this.add.rectangle(-size * 0.40, -size * 0.10, size * 0.19, size * 0.18, fabricLight, 1).setOrigin(0.5);
-    const rightShoulder = this.add.rectangle(size * 0.40, -size * 0.10, size * 0.19, size * 0.18, fabricLight, 1).setOrigin(0.5);
+    const leftShoulder = this.add.rectangle(-size * 0.40 * shoulderScale, -size * 0.10, size * 0.19 * shoulderScale, size * 0.18, fabricLight, 1).setOrigin(0.5);
+    const rightShoulder = this.add.rectangle(size * 0.40 * shoulderScale, -size * 0.10, size * 0.19 * shoulderScale, size * 0.18, fabricLight, 1).setOrigin(0.5);
 
     const helmet = this.add.circle(0, -size * 0.43, size * 0.29, helmetColor, 1);
     const helmetBrim = this.add.rectangle(0, -size * 0.32, size * 0.50, size * 0.08, helmetHighlight, 1).setOrigin(0.5);
     const maskRect = this.add.rectangle(0, -size * 0.37, size * 0.63, size * 0.18, 0x17211e, 1).setOrigin(0.5);
-    const visor = this.add.rectangle(0, -size * 0.395, size * 0.42, size * 0.055, visorColor, 0.82).setOrigin(0.5);
+    const visor = this.add.rectangle(0, -size * 0.395, size * (isRunner ? 0.36 : 0.42), size * 0.055, visorColor, 0.82).setOrigin(0.5);
 
     const accent = this.add.rectangle(0, -size * 0.035, size * 0.10, size * 0.28, teamLight, 0.94).setOrigin(0.5);
     const pouches = [
@@ -454,7 +464,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       this.add.rectangle(0, size * 0.11, size * 0.13, size * 0.13, teamLight, 0.82).setOrigin(0.5),
     ];
 
-    const weapon = this.add.rectangle(0, -size * 0.68, size * 0.14, size * 0.42, weaponColor, 1).setOrigin(0.5);
+    const weapon = this.add.rectangle(0, -size * 0.68, size * (isHeavy ? 0.15 : isRunner ? 0.13 : 0.14), size * (isRunner ? 0.36 : 0.42), weaponColor, 1).setOrigin(0.5);
     const weaponGrip = this.add.rectangle(0, -size * 0.48, size * 0.18, size * 0.12, 0x111715, 1).setOrigin(0.5);
     const muzzle = this.add.circle(0, -size * 0.94, size * 0.075, 0xe8c95c, 1).setVisible(false);
 
