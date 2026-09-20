@@ -100,7 +100,7 @@ export function getEnding(state: StoryState) {
   if (state.trust >= 5 && state.service < 4) {
     return {
       title: 'Trust on a Slow Road',
-      result: 'MANDATE UNDER PRESSURE',
+      result: 'PRESIDENCY CONTINUES · MANDATE UNDER PRESSURE',
       summary: 'You finish the fictional first week as president, but the pace of service recovery remains frustrating. Your credibility survives; the administration must turn its plan into visible results.',
     };
   }
@@ -115,7 +115,7 @@ export function getEnding(state: StoryState) {
 
   return {
     title: 'The Hard Middle',
-    result: 'MANDATE AT RISK',
+    result: 'PRESIDENCY CONTINUES · MANDATE AT RISK',
     summary: 'You finish the fictional first week as president, but no single decision solved everything. Week two begins with service, trust and money still pulling in different directions.',
   };
 }
