@@ -842,3 +842,36 @@ The goal is not to copy a specific existing shooter. The goal is to make the sma
 **move → find cover → peek → aim → fire → react → reposition → support the team → get tagged → reset → try a different route.**
 
 Do not add weapons, inventories, progression, online multiplayer or complex abilities until this loop works comfortably on a real phone.
+
+
+## Shooters Trigger — Mobile Field + Character Pass — September 20, 2026
+
+The next implementation pass is explicitly **mobile-first**, with the Android phone experience treated as the primary visual and control target.
+
+### Field direction
+
+Shooters Trigger now uses a real scrolling outdoor arena rather than fitting a small fixed desktop board into the phone viewport. Portrait phones get a taller field and camera-follow composition; landscape/desktop keeps a wider field. The world includes grassy variation, white field posts/boundary lines, trees, wooden/concrete-style bunkers, cylindrical obstacles and distinct green/orange bases.
+
+The camera follows the player with bounded world movement. This keeps the playable area readable on a phone while still giving the player routes to move through rather than displaying the entire field as a tiny board.
+
+### Character direction
+
+The simple coloured rectangles are replaced by readable fictional paintball players wearing protective field gear: helmet, paintball mask/goggles, vest, trousers, boots and gloves/arms, with team colour accents. Heavy/Anchor silhouettes are broader; Operator/Runner silhouettes are lighter. This is intentionally fictional arcade presentation, not real-world tactical equipment training.
+
+### Mobile control direction
+
+Phone controls remain simultaneous multi-touch:
+
+- left half = dynamic movement stick that appears where the thumb starts;
+- right half = aim/fire touch area;
+- hold and drag on the right to keep aiming/firing;
+- controls are screen-fixed while the camera moves underneath them;
+- the control feedback is visible only while being used so the field is not permanently covered.
+
+This follows the established Hall-style mobile principle of adapting controls to the player's actual viewport and touch position. Phaser's RESIZE/camera systems support the responsive viewport and camera-follow model, while current mobile-game guidance supports large touch regions, left-side movement and right-side camera/aim interaction.
+
+### Acceptance target
+
+On the Samsung Android phone, the product owner should now judge the game by whether it feels like moving a suited paintball player through an actual outdoor field: the player should be able to move with one thumb, aim/fire with the other, see teammates in recognizable gear, use physical cover, move through a larger field, get hit and reset to the base.
+
+Do not treat a desktop screenshot stretched onto a phone as acceptance. The phone composition is the primary target for this pass.
