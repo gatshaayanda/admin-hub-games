@@ -308,7 +308,7 @@ The setup stores the fictional player identity locally and starts gameplay direc
 
 ### President's Shoes Gameplay
 
-Use a data-driven story model rather than embedding the whole story inside one giant Phaser scene. The first playable story should be small but complete: roughly 5–8 scenes/nodes, 3 meaningful decision points, visible consequences, multiple endings, completion state, replay and local history/save state.
+Use a data-driven story model rather than embedding the whole story inside one giant Phaser scene. The first playable story should be small but complete: a compact but replayable story pack with multiple decision points, visible consequences after each choice, multiple endings/outcomes, completion state, replay and local history/save state.
 
 Use fictional names and fictional scenarios. Real-world news or public discussion may inspire a story, but fictional actions and reactions must not be presented as facts about real people, parties, governments or citizens. Gameplay should remain playable offline and should not require live news retrieval.
 
@@ -376,11 +376,13 @@ President's Shoes is now an integrated, playable game in the shared library. Fro
 - Genre: fictional branching decision/narrative game
 - Setting: fictional Botswana first week in office
 - Current story: **The Water Week**
-- Current story model: static, typed data in `src/games/presidents-shoes/story.ts`
-- Current state variables: `trust`, `service`, `budget`, `decisions`
+- Current story model: data-driven JSON story pack in `src/games/presidents-shoes/botswana-water-week.json`, typed/loaded by `src/games/presidents-shoes/story.ts`
+- Current state variables: `trust`, `service`, `budget`, `decisions`, plus a pending consequence handoff so choices do not instantly skip to the next scene
 - Current flow: Intro → Setup → Story → choices/consequences → outcome → replay/history
 - Current persistence: local player identity and local save/history; no Firebase requirement
 - Current story is deliberately fictional. It must not attribute invented actions, statements or events to real politicians, parties, governments, institutions or citizens.
+- Country identity is data-driven through `src/games/presidents-shoes/countries.json`. The current available pack is Botswana. New countries should arrive as their own verified story/content packs, not by relabelling the Botswana story.
+- Country branding uses country metadata (name and palette) rather than hard-coding one country's identity into the game engine. Official national emblems/flags should not be copied into the game without checking the applicable use requirements.
 
 The current story uses a fictional water-service crisis as the first scenario. It is a small decision tree with several choices that reconverge before the final outcome. The ending is calculated from accumulated state rather than from a single fixed “correct” choice.
 
@@ -490,3 +492,20 @@ Hall is currently the working production game and President's Shoes is the secon
 The platform remains shared, but each game is independently owned after library selection. President's Shoes revisions should stay inside its development boundary unless a demonstrated shared-platform requirement exists.
 
 Full offline readiness remains a device-verification gate, not an assumption.
+
+
+### President's Shoes — Content Pack Contract
+
+President's Shoes is intentionally being prepared as a content-driven game rather than a hard-coded one-off story.
+
+country selector → country metadata → story pack JSON → shared President's Shoes engine
+
+A future pack should provide its own country identity and story data while the engine continues to handle choices, state, consequence feedback, endings, save/resume and history.
+
+For V1:
+- `countries.json` is the country registry.
+- `botswana-water-week.json` is the first real story pack.
+- The engine must never silently show the Botswana story under another country's branding.
+- Adding another country requires a real story pack or a clearly compatible content pack; do not create a fake country option just to populate the selector.
+- Country branding should prefer verified colours/typography/content over copying official government marks.
+- Story JSON is static/local and must remain offline-capable.
