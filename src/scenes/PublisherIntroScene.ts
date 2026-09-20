@@ -181,7 +181,7 @@ export class PublisherIntroScene extends Phaser.Scene {
         // The menu is an HTML overlay only. Once it is dismissed, hand control
         // directly to the selected game's own intro. Hall keeps its proven path.
         if (gameId === 'hall') this.scene.start('HallIntroScene');
-        if (gameId === 'presidents-shoes') this.scene.start('PresidentsShoesIntroScene');
+        if (gameId === 'presidents-shoes') this.scene.start('PresidentsShoesIntroScene');\n        if (gameId === 'shooters-trigger') this.scene.start('ShootersTriggerIntroScene');
       });
     });
   }
