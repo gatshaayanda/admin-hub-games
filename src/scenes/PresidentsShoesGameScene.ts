@@ -219,7 +219,7 @@ export class PresidentsShoesGameScene extends Phaser.Scene {
       effect('SERVICE', this.state.lastEffects?.service),
       effect('RESERVE', this.state.lastEffects?.budget),
     ];
-    return changes.join('   ·   ') + '\\nCURRENT: TRUST ' + this.state.trust + '   ·   SERVICE ' + this.state.service + '   ·   RESERVE ' + this.state.budget;
+    return changes.join('   ·   ') + '\nCURRENT: TRUST ' + this.state.trust + '   ·   SERVICE ' + this.state.service + '   ·   RESERVE ' + this.state.budget;
   }
 
   private renderEnding(width: number, height: number, country: ReturnType<typeof getCountryPack>, scene: StoryScene) {
