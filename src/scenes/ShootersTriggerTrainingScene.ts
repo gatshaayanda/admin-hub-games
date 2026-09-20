@@ -34,7 +34,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   private covers: Phaser.Geom.Rectangle[] = [];
   private keys!: { up: Phaser.Input.Keyboard.Key; down: Phaser.Input.Keyboard.Key; left: Phaser.Input.Keyboard.Key; right: Phaser.Input.Keyboard.Key; fire: Phaser.Input.Keyboard.Key };
   private aim = { x: 1, y: 0 };
-  private moveTouch?: { id: number; x: number; y: number };
+  private moveTouch?: { id: number; startX: number; startY: number; x: number; y: number };
   private aimTouch?: { id: number; x: number; y: number };
   private lastShot = 0;
   private teamScore = 0;
@@ -186,8 +186,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     let moveY = keyboardY;
 
     if (this.moveTouch) {
-      moveX = Phaser.Math.Clamp((this.moveTouch.x - this.player.body.x) / 65, -1, 1);
-      moveY = Phaser.Math.Clamp((this.moveTouch.y - this.player.body.y) / 65, -1, 1);
+      moveX = Phaser.Math.Clamp((this.moveTouch.x - this.moveTouch.startX) / 65, -1, 1);
+      moveY = Phaser.Math.Clamp((this.moveTouch.y - this.moveTouch.startY) / 65, -1, 1);
     }
 
     const len = Math.hypot(moveX, moveY);
@@ -392,7 +392,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
   private handlePointerDown(pointer: Phaser.Input.Pointer) {
     if (pointer.x < this.scale.width * 0.48) {
-      this.moveTouch = { id: pointer.id, x: pointer.x, y: pointer.y };
+      this.moveTouch = { id: pointer.id, startX: pointer.x, startY: pointer.y, x: pointer.x, y: pointer.y };
       return;
     }
 
