@@ -552,7 +552,7 @@ The September 20 revision is a product-quality checkpoint, not permission to add
 
 ## Game Catalog Direction — September 20, 2026
 
-This section defines the current design briefs for the next three planned Admin Hub Games titles. These are product-development briefs, not claims that the games are already implemented. Do not add placeholder library entries simply because a title appears here.
+This section defines the current design briefs for the next three planned Admin Hub Games titles. These are product-development briefs layered onto the existing Admin Hub Games platform. Hall and the existing President's Shoes work are evidence of reusable foundations; inspect and reuse those foundations rather than treating these games as greenfield projects.
 
 The three concepts share the same studio principle:
 
@@ -604,8 +604,8 @@ Strong. Unexpected outcomes, dramatic final records, difficult choices and alter
 **Technical difficulty — what it actually requires**  
 Medium. The hard part is a clean reusable story/state engine, save/resume, consequence presentation and content authoring structure rather than rendering complexity.
 
-**Prototype — smallest playable version**  
-One country pack, one fictional identity setup, one compact story, 5–8 meaningful decisions, visible state changes, at least two distinct outcomes, local save/resume and replay.
+**Build target — next increment from the existing platform**  
+Inspect the current President's Shoes implementation first. Preserve the existing PWA shell, localStorage/save model, JSON content/state patterns, Phaser/game architecture and shared Firebase/online-space architecture where already present. Extend the actual game from its current state toward a deeper complete decision loop; do not throw away working foundations to make a separate prototype.
 
 **Expansion — what comes after**  
 More story packs, additional systems, scenario modifiers, challenge runs, richer characters, optional asynchronous competition, analytics and carefully scoped educational/B2B packs.
@@ -657,8 +657,8 @@ Very strong. Clutch captures, last-second flags, improbable shots, eliminations,
 **Technical difficulty — what it actually requires**  
 High. Responsive aiming and movement, hit detection, camera/landscape presentation, AI, animation, multiplayer networking, latency handling, match state, anti-cheat considerations and robust mobile controls are all significant.
 
-**Prototype — smallest playable version**  
-One landscape arena, one player, simple AI opponents, movement, aiming, shooting, hit detection, respawn, one objective and a complete short match loop. Prove that movement and shooting feel good before expanding characters or online multiplayer.
+**Build target — first playable from the existing platform**  
+Use the existing PWA shell, localStorage/save model, JSON systems, Phaser architecture and shared Firebase/online-space architecture already established by Admin Hub Games. Build the smallest complete Shooters Trigger match loop inside that system, then expand controls, animation, AI and online play in controlled increments.
 
 **Expansion — what comes after**  
 Better animation, multiple character roles, capture-the-flag, 1v1, team modes, tournaments, online matchmaking, spectator/highlight systems, branded arenas and configurable operator experiences.
@@ -710,8 +710,8 @@ Extremely strong. Lap records, last-corner passes, crashes, qualifying surprises
 **Technical difficulty — what it actually requires**  
 Very high compared with the other concepts. The critical risk is driving feel: responsive controls, believable vehicle physics, camera behaviour, collision handling, track design, AI/rival behaviour, performance on mobile and eventually networked racing.
 
-**Prototype — smallest playable version**  
-One fictional car, one track, one driving camera, responsive acceleration/braking/steering, basic collision boundaries, lap timing, restart and a simple time-trial result. Do not start with the full championship economy.
+**Build target — first playable from the existing platform**  
+Use the existing PWA shell, localStorage/save model, JSON systems, Phaser architecture and shared Firebase/online-space architecture already established by Admin Hub Games. Build driving feel as the first F1 Pedals gameplay slice, then layer training, car setup, budgets, qualifying, season progression and online competition.
 
 **Expansion — what comes after**  
 Driver training, car setup, upgrades, AI rivals, qualifying, race weekends, budgets, championship standings, fictional media/events, save checkpoints, tournaments, online time trials and eventually live multiplayer.
@@ -741,4 +741,4 @@ Do not create a separate Firebase project for any of these concepts merely becau
 
 Do not add a game to the production library until its first playable prototype exists and passes the same Intro → Setup → Gameplay acceptance discipline used by existing games.
 
-The immediate product question after these briefs are committed is **which one to prototype first**. That decision belongs to the product owner; this document records the options and their requirements rather than choosing for them.
+The immediate product question after these briefs are committed is **which existing game foundation to extend first**. This is not a greenfield prototype exercise. The product owner chooses the next game; agents must inspect the current implementation before changing architecture, and reuse the existing PWA, local persistence, JSON content systems, Phaser patterns and Firebase/shared-space patterns where they fit.
