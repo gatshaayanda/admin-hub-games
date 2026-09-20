@@ -509,3 +509,42 @@ For V1:
 - Adding another country requires a real story pack or a clearly compatible content pack; do not create a fake country option just to populate the selector.
 - Country branding should prefer verified colours/typography/content over copying official government marks.
 - Story JSON is static/local and must remain offline-capable.
+
+
+### President's Shoes — September 20, 2026 Revision Checkpoint
+
+The current direction is intentionally player-facing and content-driven:
+
+- **Country choice is real data, not decoration.** The selected country controls the country identity and selects a matching story pack. Never show the Botswana story under another country's identity.
+- **Story content is JSON.** New countries/stories should be added as local static packs that the same engine can load offline. Do not create fake country options just to populate the selector.
+- **Every choice must have a visible consequence beat.** Choice → consequence screen → Continue → next situation. Do not collapse this back into instant scene-to-scene progression.
+- **Consequences must be concrete.** Show the written consequence plus the actual state deltas (Trust / Service / Reserve) so the player can understand what their decision changed.
+- **The ending must feel like an ending.** It should clearly state the player's fictional presidential status/mandate and explain how the accumulated record produced that outcome. Do not leave the player to infer whether the run succeeded.
+- **Pacing is player-controlled.** No automatic rapid slide progression after a decision. The player explicitly advances from the consequence screen.
+- **Readability beats density.** Use strong text/background contrast, clear hierarchy, generous spacing and large touch targets. These choices follow established game-accessibility guidance on readable text, contrast, player-controlled text progression and touch targets.
+- **Fiction boundary remains firm.** President's Shoes is a fictional civic decision game. Do not use current real politicians, parties, elections or live events as fictional characters/events.
+- **Do not solve this game's UX by changing Hall.** Keep the revision boundary inside President's Shoes unless a demonstrated shared-platform requirement exists.
+
+#### Revision acceptance path
+
+```
+Country selection
+  ↓
+fictional name
+  ↓
+story scene
+  ↓
+choice
+  ↓
+visible consequence + state delta
+  ↓
+player-controlled Continue
+  ↓
+next situation
+  ↓
+explicit presidential outcome
+  ↓
+replay / library
+```
+
+The September 20 revision is a product-quality checkpoint, not permission to add infrastructure for its own sake. Future story expansion should add meaningful situations and consequences through JSON before changing the engine.
