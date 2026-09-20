@@ -37,30 +37,30 @@ export class ShootersTriggerSetupScene extends Phaser.Scene {
       .setStrokeStyle(2, 0x8ab56a, 0.85);
 
     this.name = this.readName();
-    this.input = document.createElement('input');
-    this.input.type = 'text';
-    this.input.maxLength = 24;
-    this.input.autocomplete = 'off';
-    this.input.autocapitalize = 'words';
-    this.input.spellcheck = false;
-    this.input.placeholder = 'Your player name';
-    this.input.value = this.name;
-    this.input.setAttribute('aria-label', 'Shooters Trigger player name');
-    Object.assign(this.input.style, {
+    this.nameInput = document.createElement('input');
+    this.nameInput.type = 'text';
+    this.nameInput.maxLength = 24;
+    this.nameInput.autocomplete = 'off';
+    this.nameInput.autocapitalize = 'words';
+    this.nameInput.spellcheck = false;
+    this.nameInput.placeholder = 'Your player name';
+    this.nameInput.value = this.name;
+    this.nameInput.setAttribute('aria-label', 'Shooters Trigger player name');
+    Object.assign(this.nameInput.style, {
       position: 'fixed', zIndex: '1200', boxSizing: 'border-box',
       padding: '0 16px', border: '0', outline: 'none', borderRadius: '4px',
       background: '#182d21', color: '#f4f1df', font: '700 18px monospace',
       caretColor: '#e8c95c', userSelect: 'text', touchAction: 'manipulation',
     });
-    document.getElementById('app')?.appendChild(this.input);
+    document.getElementById('app')?.appendChild(this.nameInput);
 
-    this.input.addEventListener('input', () => {
-      this.name = this.input?.value.replace(/[^a-zA-Z0-9 .'-]/g, '').slice(0, 24) ?? '';
-      if (this.input && this.input.value !== this.name) this.input.value = this.name;
+    this.nameInput.addEventListener('input', () => {
+      this.name = this.nameInput?.value.replace(/[^a-zA-Z0-9 .'-]/g, '').slice(0, 24) ?? '';
+      if (this.nameInput && this.nameInput.value !== this.name) this.nameInput.value = this.name;
       this.status?.setText('');
     });
 
-    this.input.addEventListener('keydown', (event) => {
+    this.nameInput.addEventListener('keydown', (event) => {
       if (event.key === 'Enter') {
         event.preventDefault();
         this.startTraining();
@@ -97,13 +97,13 @@ export class ShootersTriggerSetupScene extends Phaser.Scene {
     this.positionInput(box.x, box.y, boxWidth);
     this.resizeHandler = () => this.positionInput(box.x, box.y, boxWidth);
     this.scale.on(Phaser.Scale.Events.RESIZE, this.resizeHandler, this);
-    this.time.delayedCall(250, () => this.input?.focus({ preventScroll: true }));
+    this.time.delayedCall(250, () => this.nameInput?.focus({ preventScroll: true }));
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       if (this.resizeHandler) this.scale.off(Phaser.Scale.Events.RESIZE, this.resizeHandler, this);
       this.resizeHandler = undefined;
-      this.input?.remove();
-      this.input = undefined;
+      this.nameInput?.remove();
+      this.nameInput = undefined;
     });
   }
 
@@ -112,14 +112,14 @@ export class ShootersTriggerSetupScene extends Phaser.Scene {
     const value = this.name.trim();
     if (!value) {
       this.status?.setText('Enter your name first.');
-      this.input?.focus({ preventScroll: true });
+      this.nameInput?.focus({ preventScroll: true });
       return;
     }
 
     this.leaving = true;
     try { window.localStorage.setItem(PLAYER_KEY, value); } catch {}
     this.registry.set('shootersTriggerPlayer', value);
-    this.input?.blur();
+    this.nameInput?.blur();
     this.cameras.main.fadeOut(350, 16, 26, 19);
     this.time.delayedCall(350, () => this.scene.start('ShootersTriggerTrainingScene'));
   }
@@ -130,14 +130,14 @@ export class ShootersTriggerSetupScene extends Phaser.Scene {
 
   private positionInput(x: number, y: number, boxWidth: number) {
     const canvas = document.querySelector<HTMLCanvasElement>('#app canvas');
-    if (!this.input || !canvas) return;
+    if (!this.nameInput || !canvas) return;
     const rect = canvas.getBoundingClientRect();
     const scaleX = rect.width / this.scale.width;
     const scaleY = rect.height / this.scale.height;
-    this.input.style.left = rect.left + (x - boxWidth / 2) * scaleX + 'px';
-    this.input.style.top = rect.top + (y - 30) * scaleY + 'px';
-    this.input.style.width = boxWidth * scaleX + 'px';
-    this.input.style.height = Math.max(52, 60 * scaleY) + 'px';
-    this.input.style.fontSize = Math.max(16, Math.min(20, 18 * scaleY)) + 'px';
+    this.nameInput.style.left = rect.left + (x - boxWidth / 2) * scaleX + 'px';
+    this.nameInput.style.top = rect.top + (y - 30) * scaleY + 'px';
+    this.nameInput.style.width = boxWidth * scaleX + 'px';
+    this.nameInput.style.height = Math.max(52, 60 * scaleY) + 'px';
+    this.nameInput.style.fontSize = Math.max(16, Math.min(20, 18 * scaleY)) + 'px';
   }
 }
