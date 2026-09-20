@@ -97,9 +97,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     this.cameras.main.setDeadzone(this.isPhoneLayout ? this.scale.width * 0.18 : this.scale.width * 0.30, this.isPhoneLayout ? this.scale.height * 0.18 : this.scale.height * 0.28);
     this.cameras.main.setZoom(this.isPhoneLayout ? 1.12 : 1);
 
-    this.input.addPointer(2);
-    this.input.addPointer(2);
-    this.input.on('pointerdown', this.handlePointerDown, this);
+this.input.on('pointerdown', this.handlePointerDown, this);
     this.input.on('pointermove', this.handlePointerMove, this);
     this.input.on('pointerup', this.handlePointerUp, this);
     this.input.on('pointercancel', this.handlePointerUp, this);
