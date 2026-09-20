@@ -808,3 +808,37 @@ These observations drive the next controlled gameplay increment. Do not add mult
 ### Current checkpoint boundary
 
 This checkpoint changes only the Shooters Trigger phone-input behaviour and the PWA release cache version, while documenting the acceptance test. Hall and President's Shoes remain protected.
+
+
+## Shooters Trigger — Responsive Arena Improvement — September 20, 2026
+
+The first phone playtest exposed the correct direction: keep the simple readable top-down foundation, but make the arena itself responsive instead of treating a 960×540 desktop field as the game's only composition.
+
+### Research-informed decisions
+
+Current Phaser documentation confirms that RESIZE gives a scene the actual available canvas dimensions, and Phaser supports multiple active pointers for simultaneous touch input. Apple's current game-control guidance describes the familiar mobile pattern of movement on the left and camera/aim interaction on the right, with visible press feedback and sufficiently large touch targets. Current browser-shooter examples also commonly use left-stick movement + right-side aim/fire, while tutorial → bot/training → match is an established browser-shooter progression pattern.
+
+These sources inform implementation; they do not dictate the game's final design. Shooters Trigger remains a fictional paintball game and its arena/tactics are product-owner decisions.
+
+### Current improvement
+
+The training arena now follows the actual viewport:
+
+- landscape/laptop keeps a wide arena composition;
+- portrait phone gets a taller field rather than a cropped desktop field;
+- cover is repositioned for portrait play so routes and sightlines still exist;
+- teammate/enemy positions adapt to the field;
+- actor sizing and UI scale adapt to the phone;
+- phone movement and aim are simultaneous multi-touch inputs;
+- the movement touch shows its own dynamic thumb feedback;
+- the aim touch shows a visible aim marker/line while held;
+- phone firing remains hold-to-fire, so the player can concentrate on movement and positioning rather than repeatedly tapping a tiny button;
+- hit → reset remains fast enough for repeated tactical experiments.
+
+### Product principle
+
+The goal is not to copy a specific existing shooter. The goal is to make the smallest Shooters Trigger field feel good enough that a player naturally learns:
+
+**move → find cover → peek → aim → fire → react → reposition → support the team → get tagged → reset → try a different route.**
+
+Do not add weapons, inventories, progression, online multiplayer or complex abilities until this loop works comfortably on a real phone.
