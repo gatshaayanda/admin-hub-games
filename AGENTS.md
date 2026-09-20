@@ -743,3 +743,68 @@ Do not add a game to the production library until its first playable prototype e
 
 The immediate product question after these briefs are committed is **which existing game foundation to extend first**. This is not a greenfield prototype exercise. The product owner chooses the next game; agents must inspect the current implementation before changing architecture, and reuse the existing PWA, local persistence, JSON content systems, Phaser patterns and Firebase/shared-space patterns where they fit.
 \n## Shooters Trigger — Foundation Checkpoint — September 20, 2026\n\nShooters Trigger is now present in the Admin Hub Games library as an IN DEVELOPMENT playable foundation. It is intentionally not presented as a finished release.\n\n### Product correction\n\nDo not use a character-selection setup such as “Choose your player”. The player enters their own name and then joins a team whose fictional roles include Operator 12 (mobile teammate) and The Heavy (slower, stronger teammate).\n\nThe current foundation is a fictional paintball team-training scrimmage. It grows from the actual field experience that inspired it: outdoor movement, grassy terrain, wooden/concrete-style barriers, natural cover, teammates, opponents, getting tagged, and returning to the starting point after a hit.\n\nThe supplied session description could not be located as an accessible uploaded session.mp4 file in the File Library during this checkpoint. The available description is therefore treated as product-owner evidence, not as a claim that the video itself was inspected.\n\n### Current playable foundation\n\nGame Library → Shooters Trigger Intro → enter player name → Team Training → Green Team: player + Operator 12 + The Heavy → Orange Team: training opponents → move / use cover / aim / fire → paint hit feedback → player hit resets to starting position → short training result → restart training.\n\nThe first build is deliberately offline/local. It does not create a second Firebase project and does not require network access for the core training loop.\n\n### Current control contract\n\nDesktop: WASD to move; mouse/pointer on the field to aim and fire; Space also fires.\n\nPhone: touch on the left side is the movement area; touch on the right side aims/fires; no physical keyboard is required.\n\n### Current design boundary\n\nThis foundation is not yet the final Shooters Trigger match system. Do not prematurely add real-time multiplayer, matchmaking, complex inventories, large character rosters, tournament infrastructure, or server-authoritative networking.\n\nNext product-owner test: movement feel, team readability, phone aiming/firing, whether cover changes positioning, whether hit → reset feels correct, and whether the field creates the intended arena-tactics feeling.\n\n### Catalog status rule\n\nShooters Trigger remains marked IN DEVELOPMENT until the product owner confirms that the training foundation and subsequent match loop are ready for normal release treatment. It is expected that players can enter while development continues so real playtesting guides the next increment.\n\n### Checkpoint acceptance\n\nPreserve Hall and President’s Shoes paths, preserve shared PWA/Firebase architecture, verify the production build, verify Intro → Setup → Training, verify name persistence, verify player-hit reset behaviour, and keep the core training path offline/local.\n\nUnexpected shared-platform changes remain a STOP → inspect → act condition.\n
+
+## Shooters Trigger — Phone + Offline Playtest Checkpoint — September 20, 2026
+
+The immediate acceptance priority is **phone-first offline play**, using the same discipline that made Hall and President's Shoes useful on mobile.
+
+### Product-owner test target
+
+Shooters Trigger is deliberately being tested as a real in-development game on:
+
+- laptop / desktop browser;
+- Android phone browser / installed PWA;
+- phone with network disabled after a successful online launch.
+
+The purpose of this pass is not to prove a finished game. It is to find the actual feel of movement, aiming, firing, cover, team behaviour and hit → respawn on a real phone.
+
+### Phone control contract
+
+The gameplay canvas must support simultaneous touch input:
+
+- **left-side touch:** movement stick/finger direction;
+- **right-side touch:** aim direction and firing;
+- both can be held at the same time;
+- releasing the movement touch stops movement;
+- releasing the aim touch stops automatic firing;
+- no physical keyboard is required.
+
+Do not regress this back to a single active pointer model. Phaser is configured for multiple active pointers because the intended phone experience needs movement and firing concurrently.
+
+### Offline acceptance contract
+
+Shooters Trigger's core training match must not depend on Firebase or a network request. Before a true offline test:
+
+1. open the normal Admin Hub Games URL while online;
+2. enter Shooters Trigger and reach training at least once;
+3. allow the current service worker to install/update;
+4. close the PWA/browser;
+5. disable network / use airplane mode;
+6. reopen the installed PWA or cached site;
+7. enter Shooters Trigger again;
+8. enter the saved player name and play training;
+9. verify movement, touch aiming/firing, teammates, opponents, hits and respawn still work;
+10. restore network and verify the normal site remains healthy.
+
+The service-worker cache version is bumped when this release ships so an installed PWA can receive the new build rather than silently retaining the previous game bundle.
+
+### What the product owner should report
+
+After live play, report concrete observations rather than a score, for example:
+
+- "left movement feels too slow / too sensitive";
+- "I cannot aim while moving";
+- "the right side fires but aiming feels backwards";
+- "cover actually changes my route";
+- "I get hit too often / not often enough";
+- "respawn feels good / annoying / too long";
+- "I understand which people are my teammates";
+- "I naturally moved through the field this way";
+- "I ignored the cover because it did not matter";
+- "the match ended before I understood what I was doing."
+
+These observations drive the next controlled gameplay increment. Do not add multiplayer, matchmaking, complex inventory or tournament systems merely because the foundation is playable.
+
+### Current checkpoint boundary
+
+This checkpoint changes only the Shooters Trigger phone-input behaviour and the PWA release cache version, while documenting the acceptance test. Hall and President's Shoes remain protected.
