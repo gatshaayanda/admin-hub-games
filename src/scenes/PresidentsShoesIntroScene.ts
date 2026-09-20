@@ -27,7 +27,7 @@ export class PresidentsShoesIntroScene extends Phaser.Scene {
       lineSpacing: -6,
     }).setOrigin(0.5);
 
-    this.add.text(width / 2, height * 0.34, 'BOTSWANA · FICTIONAL · CHOICES', {
+    this.add.text(width / 2, height * 0.34, 'COUNTRY STORIES · FICTIONAL · CHOICES', {
       fontFamily: 'Arial, Helvetica, sans-serif',
       fontSize: Math.max(12, Math.min(17, Math.min(width, height) * 0.028)) + 'px',
       fontStyle: 'bold',
