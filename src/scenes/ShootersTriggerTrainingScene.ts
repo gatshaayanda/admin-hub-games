@@ -107,14 +107,11 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   }
 
   private configureField() {
+    // RESIZE gives us the actual playable viewport. The arena follows it instead
+    // of drawing a fixed 960x540 world into a portrait phone viewport.
     this.fieldWidth = Math.max(320, this.scale.width);
-    this.fieldHeight = Math.max(480, this.scale.height);
+    this.fieldHeight = Math.max(180, this.scale.height);
     this.isPhoneLayout = this.fieldHeight > this.fieldWidth * 1.12;
-
-    if (!this.isPhoneLayout) {
-      this.fieldWidth = Math.max(760, this.scale.width);
-      this.fieldHeight = Math.max(480, Math.min(620, this.scale.height));
-    }
 
     this.start.x = this.isPhoneLayout ? this.fieldWidth * 0.14 : this.fieldWidth * 0.095;
     this.start.y = this.fieldHeight * 0.50;
