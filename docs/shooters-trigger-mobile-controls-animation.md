@@ -1,103 +1,155 @@
-# Shooters Trigger — Mobile Controls & Character Animation Direction
+# Shooters Trigger — Mobile Controls, Character Animation & Phase E
 
-## Why the control model changed
+## Authoritative control direction
 
-The first phone pass used a dynamic drag-anywhere movement/aim model. It worked technically, but it did not feel like a deliberate game control scheme.
+Shooters Trigger now uses **Hall's analog movement model**.
 
-The new mobile foundation uses **fixed, pressable controls plus contextual aiming**:
+The left side is a fixed analog joystick with:
+- a generous touch region;
+- a centered knob;
+- a dead zone;
+- normalized X/Y vector output;
+- pointer capture;
+- reset on pointer release/cancel.
 
-- **Left D-pad:** hold one of eight directions to move.
-- **Right FIRE button:** press/hold to fire the current aim direction.
-- **Field tap:** tap the arena to change the player's aim direction.
-- **Simultaneous input:** the movement pointer and fire pointer are independent.
-- **Aim persists:** the player does not have to keep a thumb on the arena after choosing a direction.
-- **Desktop remains:** WASD + mouse/Space continue to work.
+The right side is a **fixed FIRE button**.
 
-This is intentionally closer to the control language of a mobile game with a persistent action layout than to a mouse-control surface.
+Mobile combat is therefore:
 
-Rockstar's current Red Dead Redemption mobile support exposes editable touch-control presets, including position, size and opacity changes. The lesson for Shooters Trigger is not to copy its 3D controls; it is to treat touch controls as a real HUD layer that is deliberately placed, pressable and configurable rather than as invisible mouse emulation.
+**MOVE with the left analog stick → tap the arena to aim → hold FIRE to shoot → release either control independently.**
 
-## Mobile acceptance target
+This is intentionally simpler than a full twin-stick shooter. The player is not required to drag a second virtual stick around the screen just to keep a firing angle.
 
-A Samsung Android player should be able to:
+## Why this is the current V1 model
 
-1. Hold a direction on the left D-pad.
-2. Tap somewhere in the field to face that direction.
-3. Hold FIRE with the other thumb.
-4. Continue moving while firing.
-5. Release either control independently.
-6. Tap a different point in the field to change aim.
-7. Use cover without losing control of movement or firing.
+The Hall control was already proven in the shared game platform. Reusing its analog interaction removes an unnecessary new control language.
 
-The arena must remain readable behind the controls. Controls are intentionally translucent and screen-fixed while the camera follows the player.
+Phaser's input system supports unified mouse/touch events and multiple active pointers, allowing the movement pointer and FIRE pointer to remain independent. https://docs.phaser.io/phaser/concepts/input
 
-## Character animation phase
+Current mobile-shooter usability research also supports broad left-side movement input, right-side action input and keeping the number of simultaneous actions manageable. https://www.gamedeveloper.com/design/a-guide-to-ios-twin-stick-shooter-usability
 
-### Phase 1 — implemented
+Rockstar's Red Dead Redemption mobile controls are useful as a HUD reference because the controls are treated as explicit touch buttons with deliberate size, position and opacity rather than as invisible desktop-mouse replacements. https://support.rockstargames.com/articles/CwtYAazPxaxyxtxy868jO/changing-touch-controls-layout-for-red-dead-redemption-on-android-and-ios
 
-- Fictional suited paintball player silhouette.
-- Helmet/cap.
-- Paintball mask/goggles.
-- Protective vest.
-- Trousers and boots.
-- Team-colour accents.
-- Role silhouette differences.
-- Aim-facing rotation.
-- Idle breathing/bob.
-- Movement bob/scale rhythm.
-- Hit flash and player hit reaction.
-- Paintball muzzle/projectile feedback.
+## Phase A — Foundation cleanup
 
-### Phase 2 — next
+Implemented in this checkpoint:
+- stale D-pad code removed;
+- obsolete Phaser-rendered mobile button graphics removed;
+- game-specific mobile controls moved into a dedicated module;
+- stale `updateUiPositions()`/resize dependency removed and replaced by a real responsive HUD layout path;
+- Hall remains untouched.
 
-Build a proper small sprite/animation system without introducing a heavy asset pipeline prematurely:
+## Phase B — Arena composition
 
-- 4-direction or 8-direction movement poses.
-- Idle, walk and run states.
-- Separate arm/weapon pose for aiming.
-- Distinct Heavy walk cycle.
-- Operator/Runner faster movement cycle.
-- Hit/stagger pose.
-- Respawn entrance pose.
-- Short fire/recoil pose.
-- Team-colour variants from the same base sprite construction.
+The opening view is deliberately readable:
+- vertically split green grass tones;
+- white field boundaries;
+- dark `GREEN BASE` / training banner;
+- radar in the upper-right;
+- tree near the team;
+- grey platform immediately to the team's right;
+- secondary wooden/concrete cover deeper in the field;
+- small white field markers;
+- orange team starts farther away.
 
-### Phase 3 — later
+The arena remains larger than the phone viewport so the player can move into pressure and discover additional cover, but the first camera view is composed as a small training vignette rather than a giant empty field.
 
-Only after the phone combat loop feels good:
+## Phase C — Character presentation
 
-- Proper authored pixel-art sprite sheets.
-- Directional animation frames.
-- Equipment silhouettes that communicate role without becoming inventory simulation.
-- Paint splatter/contact effects.
-- Cover interaction poses.
-- Better animation transitions.
-- Optional cosmetic character packs for B2B/operator branding.
+Actors are built from small, aligned procedural pixel-style parts so the presentation stays lightweight while still reading as authored arcade characters.
 
-## Product boundary
+The character system now separates:
+- legs/boots;
+- torso/vest;
+- arms;
+- helmet/mask/visor;
+- backpack;
+- paintball marker;
+- muzzle flash.
 
-Do not turn this into a character-customisation or inventory project yet. Characters exist to make movement, teamwork, pressure and tactical choices readable.
+Animation includes:
+- idle breathing;
+- alternating walk movement;
+- role-specific rhythm;
+- directional facing;
+- marker/arm movement;
+- fire recoil;
+- muzzle flash;
+- hit flash;
+- paint contact burst;
+- respawn entrance.
 
-The priority remains:
+The Heavy and Anchor are intentionally broader and slower. Operator and Runner use a lighter/faster silhouette.
 
-**move → cover → aim → fire → react → reposition → support team → get tagged → reset → try a different route.**
+This is the intermediate Phase C solution. A true authored sprite-sheet pipeline is still a later visual phase, not a prerequisite for testing combat feel.
 
-## Verification
+## Phase D — Mobile controls
 
-The product owner must test this pass on the Samsung Android phone, because desktop emulation cannot establish whether the control hit areas and thumb reach feel correct on the actual device.
+The game-specific DOM control layer has:
+- Hall-style analog movement on the left;
+- fixed FIRE button on the right;
+- visible pressed state;
+- large touch targets;
+- separate pointer capture for movement and firing;
+- safe-area spacing;
+- portrait/landscape responsive sizing.
 
-Test both:
-- portrait;
-- landscape;
-- two-finger simultaneous movement + fire;
-- aim tap followed by movement;
-- hit → respawn;
-- offline after the PWA has installed the new cache.
+Canvas taps in the playable area set aim.
 
-## Research references
+The camera/world does not move the controls.
 
-- Phaser input/multi-touch: https://docs.phaser.io/phaser/concepts/input
+## Phase E — Game feel
+
+The current local training loop now tunes the actual gameplay experience rather than only the control plumbing:
+
+**move → aim → fire → hit feedback → cover → enemy pressure → respawn → continue.**
+
+Specific Phase E behaviour:
+- movement remains analog on mobile;
+- desktop keeps WASD + pointer/Space;
+- player and AI use the same paintball projectile system;
+- cover blocks movement and paintballs;
+- projectiles travel visibly;
+- firing has recoil/muzzle feedback;
+- hits produce paint bursts;
+- player hits briefly flash/shake the screen and return the player to Green Base;
+- teammates follow and contribute fire;
+- Runner advances while Anchor pressures from a held lane;
+- five team points ends the short training match.
+
+## Acceptance
+
+This branch is ready for the next real device test, not a claim of final release quality.
+
+On Samsung Android test:
+1. enter Shooter Trigger;
+2. enter player name;
+3. reach Team Training;
+4. hold the left analog stick and move;
+5. tap the arena to change aim;
+6. hold FIRE with the other thumb;
+7. release movement while continuing FIRE, then release FIRE;
+8. use cover;
+9. get hit;
+10. confirm fast respawn at Green Base;
+11. play until a five-point result;
+12. repeat in portrait and landscape;
+13. after an online launch/update, disable the network and confirm the training loop still loads.
+
+## Later visual phase
+
+After phone combat is accepted:
+- authored pixel sprite sheets;
+- true directional frame sets;
+- stronger impact/paint splat effects;
+- cover interaction poses;
+- optional B2B cosmetic variants.
+
+Do not create multiplayer, matchmaking, complex inventory or large character customisation before the Phase E phone feel is accepted.
+
+## References
+
+- Phaser Input: https://docs.phaser.io/phaser/concepts/input
 - Phaser Pointer API: https://docs.phaser.io/api-documentation/class/input-pointer
-- Apple touch-game design guidance: https://developer.apple.com/videos/play/wwdc2024/10085/
-- Apple 2026 touch guidance: https://developer.apple.com/videos/play/wwdc2026/358/
-- Rockstar Red Dead Redemption mobile touch layout support: https://support.rockstargames.com/articles/CwtYAazPxaxyxtxy868jO/changing-touch-controls-layout-for-red-dead-redemption-on-android-and-ios
+- Rockstar Red Dead Redemption mobile touch controls: https://support.rockstargames.com/articles/CwtYAazPxaxyxtxy868jO/changing-touch-controls-layout-for-red-dead-redemption-on-android-and-ios
+- Twin-stick shooter usability: https://www.gamedeveloper.com/design/a-guide-to-ios-twin-stick-shooter-usability

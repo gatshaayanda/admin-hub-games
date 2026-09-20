@@ -742,163 +742,177 @@ Do not create a separate Firebase project for any of these concepts merely becau
 Do not add a game to the production library until its first playable prototype exists and passes the same Intro → Setup → Gameplay acceptance discipline used by existing games.
 
 The immediate product question after these briefs are committed is **which existing game foundation to extend first**. This is not a greenfield prototype exercise. The product owner chooses the next game; agents must inspect the current implementation before changing architecture, and reuse the existing PWA, local persistence, JSON content systems, Phaser patterns and Firebase/shared-space patterns where they fit.
-\n## Shooters Trigger — Foundation Checkpoint — September 20, 2026\n\nShooters Trigger is now present in the Admin Hub Games library as an IN DEVELOPMENT playable foundation. It is intentionally not presented as a finished release.\n\n### Product correction\n\nDo not use a character-selection setup such as “Choose your player”. The player enters their own name and then joins a team whose fictional roles include Operator 12 (mobile teammate) and The Heavy (slower, stronger teammate).\n\nThe current foundation is a fictional paintball team-training scrimmage. It grows from the actual field experience that inspired it: outdoor movement, grassy terrain, wooden/concrete-style barriers, natural cover, teammates, opponents, getting tagged, and returning to the starting point after a hit.\n\nThe supplied session description could not be located as an accessible uploaded session.mp4 file in the File Library during this checkpoint. The available description is therefore treated as product-owner evidence, not as a claim that the video itself was inspected.\n\n### Current playable foundation\n\nGame Library → Shooters Trigger Intro → enter player name → Team Training → Green Team: player + Operator 12 + The Heavy → Orange Team: training opponents → move / use cover / aim / fire → paint hit feedback → player hit resets to starting position → short training result → restart training.\n\nThe first build is deliberately offline/local. It does not create a second Firebase project and does not require network access for the core training loop.\n\n### Current control contract\n\nDesktop: WASD to move; mouse/pointer on the field to aim and fire; Space also fires.\n\nPhone: touch on the left side is the movement area; touch on the right side aims/fires; no physical keyboard is required.\n\n### Current design boundary\n\nThis foundation is not yet the final Shooters Trigger match system. Do not prematurely add real-time multiplayer, matchmaking, complex inventories, large character rosters, tournament infrastructure, or server-authoritative networking.\n\nNext product-owner test: movement feel, team readability, phone aiming/firing, whether cover changes positioning, whether hit → reset feels correct, and whether the field creates the intended arena-tactics feeling.\n\n### Catalog status rule\n\nShooters Trigger remains marked IN DEVELOPMENT until the product owner confirms that the training foundation and subsequent match loop are ready for normal release treatment. It is expected that players can enter while development continues so real playtesting guides the next increment.\n\n### Checkpoint acceptance\n\nPreserve Hall and President’s Shoes paths, preserve shared PWA/Firebase architecture, verify the production build, verify Intro → Setup → Training, verify name persistence, verify player-hit reset behaviour, and keep the core training path offline/local.\n\nUnexpected shared-platform changes remain a STOP → inspect → act condition.\n
+\n## Shooters Trigger — Phase A–E Mobile Combat Checkpoint — September 20, 2026
 
-## Shooters Trigger — Phone + Offline Playtest Checkpoint — September 20, 2026
+Shooters Trigger is an **IN DEVELOPMENT** game inside the shared Admin Hub Games platform.
 
-The immediate acceptance priority is **phone-first offline play**, using the same discipline that made Hall and President's Shoes useful on mobile.
+### Product correction
+The player enters their own name and joins the fixed fictional Green team:
+- Player
+- Operator 12
+- The Heavy
 
-### Product-owner test target
+The first real slice is a fictional paintball team-training scrimmage inspired by outdoor field movement, cover, teammates, opponents, getting tagged and returning to the starting point after a hit. It is arcade gameplay, not real-world weapons training.
 
-Shooters Trigger is deliberately being tested as a real in-development game on:
+### Authoritative mobile controls
+Shooters Trigger uses **the same analog movement interaction model as Hall**.
 
-- laptop / desktop browser;
-- Android phone browser / installed PWA;
-- phone with network disabled after a successful online launch.
+Phone:
+- fixed left analog joystick;
+- generous touch region;
+- centered knob with Hall-style drag feedback;
+- dead zone and normalized X/Y vector;
+- pointer capture;
+- clean reset on release/cancel;
+- fixed right FIRE action button;
+- obvious FIRE pressed state;
+- movement and FIRE can be held simultaneously with independent touch pointers;
+- tap the playable field to establish or change aim;
+- aim persists until the next aim tap;
+- no second virtual aim stick;
+- controls remain screen-fixed while the world/camera moves underneath;
+- no keyboard is required.
 
-The purpose of this pass is not to prove a finished game. It is to find the actual feel of movement, aiming, firing, cover, team behaviour and hit → respawn on a real phone.
+Do not replace Hall-style analog movement with a D-pad or 4/8-direction button cluster.
 
-### Phone control contract
+### Mobile game loop
+**Analog move → tap field to aim → hold FIRE → use cover → re-aim → reposition → react → get tagged → respawn → try a different route.**
 
-The gameplay canvas must support simultaneous touch input:
+The player should understand the interaction by playing, not by reading a manual.
 
-- **left-side touch:** movement stick/finger direction;
-- **right-side touch:** aim direction and firing;
-- both can be held at the same time;
-- releasing the movement touch stops movement;
-- releasing the aim touch stops automatic firing;
-- no physical keyboard is required.
+### Visual composition
+The phone is the primary design target. The opening view must read as a deliberate top-down pixel/arcade scene:
+- two green field tones;
+- thin white field boundaries;
+- dark top banner;
+- `GREEN BASE`;
+- `TEAM TRAINING · MOVE WITH YOUR TEAM`;
+- small radar upper-right;
+- tree near/above the opening team;
+- grey platform/cover to the team's right;
+- small white field markers;
+- three readable Green-team characters;
+- Orange opponents deeper in the arena;
+- players, cover and projectiles visually outrank decoration.
 
-Do not regress this back to a single active pointer model. Phaser is configured for multiple active pointers because the intended phone experience needs movement and firing concurrently.
+Do not fill the phone with competing status boxes or giant tactical labels.
 
-### Offline acceptance contract
+### Character presentation
+The current intermediate sprite system is procedural pixel-style arcade art with separate parts for:
+- helmet and paintball mask/visor;
+- vest/body silhouette;
+- backpack/equipment where appropriate;
+- arms;
+- paintball marker;
+- legs/boots;
+- team accent;
+- role silhouette;
+- nameplate separate from the rotating body.
 
-Shooters Trigger's core training match must not depend on Firebase or a network request. Before a true offline test:
+Animation communicates state rather than simple whole-body bobbing:
+- idle breathing;
+- alternating walk movement;
+- role-specific rhythm;
+- aim/facing rotation;
+- fire recoil;
+- muzzle flash;
+- hit flash/stagger;
+- paint contact burst;
+- respawn return.
 
-1. open the normal Admin Hub Games URL while online;
-2. enter Shooters Trigger and reach training at least once;
-3. allow the current service worker to install/update;
-4. close the PWA/browser;
-5. disable network / use airplane mode;
-6. reopen the installed PWA or cached site;
-7. enter Shooters Trigger again;
-8. enter the saved player name and play training;
-9. verify movement, touch aiming/firing, teammates, opponents, hits and respawn still work;
-10. restore network and verify the normal site remains healthy.
+Operator/Runner are lighter/faster; Heavy/Anchor are broader/slower. Do not build character customisation or inventory before mobile combat feel is accepted.
 
-The service-worker cache version is bumped when this release ships so an installed PWA can receive the new build rather than silently retaining the previous game bundle.
+### Arena / Phase E game feel
+The arena must make positioning matter.
 
-### What the product owner should report
+Required:
+- field boundaries;
+- tree/natural cover;
+- grey concrete-like platform;
+- secondary wooden/concrete bunkers;
+- cylindrical obstacles;
+- Green starting area;
+- Orange opponent area;
+- visible paintball travel;
+- cover collision;
+- teammate support;
+- enemy pressure;
+- hit → Green Base respawn;
+- short five-point training result.
 
-After live play, report concrete observations rather than a score, for example:
+Tune in this order:
+**movement → aim → fire → hit feedback → cover readability → enemy pressure → respawn timing → match duration.**
 
-- "left movement feels too slow / too sensitive";
-- "I cannot aim while moving";
-- "the right side fires but aiming feels backwards";
-- "cover actually changes my route";
-- "I get hit too often / not often enough";
-- "respawn feels good / annoying / too long";
-- "I understand which people are my teammates";
-- "I naturally moved through the field this way";
-- "I ignored the cover because it did not matter";
-- "the match ended before I understood what I was doing."
+### Phase A — foundation cleanup
+- removed the stale Shooter D-pad implementation;
+- moved Shooter-specific mobile controls into a dedicated game module;
+- left Hall's shared controls untouched;
+- replaced the stale resize/UI path with a real responsive layout path;
+- retained Intro → Setup → Training.
 
-These observations drive the next controlled gameplay increment. Do not add multiplayer, matchmaking, complex inventory or tournament systems merely because the foundation is playable.
+### Phase B — arena composition
+The phone opening is now a readable training vignette: team cluster, tree and grey platform are placed together in the first camera composition. Additional cover, markers and the Orange side appear deeper in the arena. The field remains larger than the viewport so movement still discovers new routes.
 
-### Current checkpoint boundary
+### Phase C — character presentation
+The character is assembled from independent body parts so legs, arms and marker animate separately. This is the lightweight intermediate art solution; authored sprite sheets remain a later visual phase.
 
-This checkpoint changes only the Shooters Trigger phone-input behaviour and the PWA release cache version, while documenting the acceptance test. Hall and President's Shoes remain protected.
+### Phase D — mobile controls
+The game-specific DOM layer provides:
+- Hall-style analog movement on the left;
+- fixed FIRE on the right;
+- simultaneous multitouch;
+- safe-area spacing;
+- visible pressed feedback;
+- tap-to-aim;
+- responsive portrait/landscape sizing.
 
+### Phase E — game feel
+The local training slice now includes:
+- analog player movement;
+- aim-facing;
+- visible paintball projectiles;
+- cover collision;
+- marker recoil/muzzle feedback;
+- hit flashes and paint bursts;
+- teammate support fire;
+- Runner pressure;
+- Anchor lane pressure;
+- fast Green Base respawn;
+- five-point training result.
 
-## Shooters Trigger — Responsive Arena Improvement — September 20, 2026
+### Boundaries
+Do not add realtime multiplayer, matchmaking, complex inventory, large character rosters, server-authoritative networking or tournament infrastructure until this phone loop is accepted.
 
-The first phone playtest exposed the correct direction: keep the simple readable top-down foundation, but make the arena itself responsive instead of treating a 960×540 desktop field as the game's only composition.
+### Offline / PWA
+This Phase A–E bundle changes the game code and its game-specific mobile-control module, so bump the service-worker cache at the release boundary.
 
-### Research-informed decisions
+True offline acceptance remains:
+online launch → cached/installed app → disable network → reopen → enter Shooter Trigger → play training → restore network.
 
-Current Phaser documentation confirms that RESIZE gives a scene the actual available canvas dimensions, and Phaser supports multiple active pointers for simultaneous touch input. Apple's current game-control guidance describes the familiar mobile pattern of movement on the left and camera/aim interaction on the right, with visible press feedback and sufficiently large touch targets. Current browser-shooter examples also commonly use left-stick movement + right-side aim/fire, while tutorial → bot/training → match is an established browser-shooter progression pattern.
+A GitHub checkpoint or build pass is not proof of device offline acceptance.
 
-These sources inform implementation; they do not dictate the game's final design. Shooters Trigger remains a fictional paintball game and its arena/tactics are product-owner decisions.
+### Verification
+Before production promotion:
+1. inspect the branch and changed files;
+2. production build passes;
+3. Intro → Setup → Training works;
+4. desktop WASD + pointer/Space works;
+5. Samsung Android portrait works;
+6. Samsung Android landscape works;
+7. two-finger analog-move + FIRE works;
+8. aim tap → movement → FIRE works;
+9. cover blocks movement and paintballs;
+10. hit → Green Base respawn works;
+11. five-point result works;
+12. offline PWA path works after a prior online launch;
+13. Hall and President's Shoes remain unchanged in behaviour.
 
-### Current improvement
+### Branch rule
+Develop this pass on `shooters-trigger-phone-offline`. Do not merge or modify `main` unless the product owner explicitly asks for promotion.
 
-The training arena now follows the actual viewport:
-
-- landscape/laptop keeps a wide arena composition;
-- portrait phone gets a taller field rather than a cropped desktop field;
-- cover is repositioned for portrait play so routes and sightlines still exist;
-- teammate/enemy positions adapt to the field;
-- actor sizing and UI scale adapt to the phone;
-- phone movement and aim are simultaneous multi-touch inputs;
-- the movement touch shows its own dynamic thumb feedback;
-- the aim touch shows a visible aim marker/line while held;
-- phone firing remains hold-to-fire, so the player can concentrate on movement and positioning rather than repeatedly tapping a tiny button;
-- hit → reset remains fast enough for repeated tactical experiments.
-
-### Product principle
-
-The goal is not to copy a specific existing shooter. The goal is to make the smallest Shooters Trigger field feel good enough that a player naturally learns:
-
-**move → find cover → peek → aim → fire → react → reposition → support the team → get tagged → reset → try a different route.**
-
-Do not add weapons, inventories, progression, online multiplayer or complex abilities until this loop works comfortably on a real phone.
-
-
-## Shooters Trigger — Mobile Field + Character Pass — September 20, 2026
-
-The next implementation pass is explicitly **mobile-first**, with the Android phone experience treated as the primary visual and control target.
-
-### Field direction
-
-Shooters Trigger now uses a real scrolling outdoor arena rather than fitting a small fixed desktop board into the phone viewport. Portrait phones get a taller field and camera-follow composition; landscape/desktop keeps a wider field. The world includes grassy variation, white field posts/boundary lines, trees, wooden/concrete-style bunkers, cylindrical obstacles and distinct green/orange bases.
-
-The camera follows the player with bounded world movement. This keeps the playable area readable on a phone while still giving the player routes to move through rather than displaying the entire field as a tiny board.
-
-### Character direction
-
-The simple coloured rectangles are replaced by readable fictional paintball players wearing protective field gear: helmet, paintball mask/goggles, vest, trousers, boots and gloves/arms, with team colour accents. Heavy/Anchor silhouettes are broader; Operator/Runner silhouettes are lighter. This is intentionally fictional arcade presentation, not real-world tactical equipment training.
-
-### Mobile control direction
-
-Phone controls remain simultaneous multi-touch:
-
-- left half = dynamic movement stick that appears where the thumb starts;
-- right half = aim/fire touch area;
-- hold and drag on the right to keep aiming/firing;
-- controls are screen-fixed while the camera moves underneath them;
-- the control feedback is visible only while being used so the field is not permanently covered.
-
-This follows the established Hall-style mobile principle of adapting controls to the player's actual viewport and touch position. Phaser's RESIZE/camera systems support the responsive viewport and camera-follow model, while current mobile-game guidance supports large touch regions, left-side movement and right-side camera/aim interaction.
-
-### Acceptance target
-
-On the Samsung Android phone, the product owner should now judge the game by whether it feels like moving a suited paintball player through an actual outdoor field: the player should be able to move with one thumb, aim/fire with the other, see teammates in recognizable gear, use physical cover, move through a larger field, get hit and reset to the base.
-
-Do not treat a desktop screenshot stretched onto a phone as acceptance. The phone composition is the primary target for this pass.
-
-
-## Shooters Trigger — Mobile Controls Rework — September 20, 2026
-
-The earlier dynamic drag-anywhere touch model is no longer the target. It was technically valid multi-touch, but the product owner wants a deliberate mobile game control language closer to pressable game controls.
-
-### Current phone control contract
-
-- Fixed left D-pad: hold one of eight directions to move.
-- Fixed right FIRE button: press/hold to fire the current aim direction.
-- Tap the playable field to set aim direction; aim persists after the tap.
-- Movement and FIRE use separate pointer IDs so two-thumb play works simultaneously.
-- Controls are screen-fixed and translucent while the arena/camera moves underneath.
-- No dragging a virtual thumb around the battlefield is required.
-- Desktop remains WASD + mouse/Space.
-
-This follows the broader mobile principle that touch should be designed as its own input surface, with deliberate press states and broad touch targets, rather than treating the phone as a mouse replacement. Rockstar's Red Dead Redemption mobile implementation is also a useful reference for treating touch controls as a real editable HUD layer with button position, size and opacity rather than invisible input plumbing.
-
-### Character motion contract
-
-Characters must communicate direction and role through their silhouette and motion. Current pass includes fictional protective paintball gear, role silhouettes, aim-facing rotation, idle bob, movement bob, hit flash/reaction and projectile feedback. Phase 2 is directional sprite animation, walk/run cycles, aiming pose, recoil and role-specific movement; do not build a large asset/customisation system before phone combat feel is accepted.
-
-### Mobile product loop
-
-**D-pad move → tap field to aim → hold FIRE → use cover → release/re-aim → react → reposition → get tagged → respawn → try a different route.**
-
-The phone is the primary acceptance device for this pass.
+### Research references
+- Phaser Input: https://docs.phaser.io/phaser/concepts/input
+- Phaser Pointer API: https://docs.phaser.io/api-documentation/class/input-pointer
+- Rockstar Red Dead Redemption mobile touch layout: https://support.rockstargames.com/articles/CwtYAazPxaxyxtxy868jO/changing-touch-controls-layout-for-red-dead-redemption-on-android-and-ios
+- Twin-stick / touch shooter usability: https://www.gamedeveloper.com/design/a-guide-to-ios-twin-stick-shooter-usability
+- Mobile touch controls case study: https://www.gamedeveloper.com/design/the-challenges-of-developing-for-pc-and-mobile-part-1-controls

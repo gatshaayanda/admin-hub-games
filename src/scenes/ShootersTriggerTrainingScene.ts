@@ -1,10 +1,32 @@
 import Phaser from 'phaser';
+import { installShootersTriggerMobileControls } from '../shooters-trigger-mobile-controls';
+
+type ActorRole = 'player' | 'operator' | 'heavy' | 'runner' | 'anchor';
+
+type ActorParts = {
+  shadow: Phaser.GameObjects.Ellipse;
+  backpack?: Phaser.GameObjects.Rectangle;
+  leftLeg: Phaser.GameObjects.Rectangle;
+  rightLeg: Phaser.GameObjects.Rectangle;
+  leftBoot: Phaser.GameObjects.Rectangle;
+  rightBoot: Phaser.GameObjects.Rectangle;
+  torso: Phaser.GameObjects.Rectangle;
+  vest: Phaser.GameObjects.Rectangle;
+  leftArm: Phaser.GameObjects.Rectangle;
+  rightArm: Phaser.GameObjects.Rectangle;
+  helmet: Phaser.GameObjects.Arc;
+  mask: Phaser.GameObjects.Rectangle;
+  accent: Phaser.GameObjects.Rectangle;
+  weapon: Phaser.GameObjects.Rectangle;
+  muzzle: Phaser.GameObjects.Arc;
+};
 
 type Actor = {
   body: Phaser.GameObjects.Container;
   label: Phaser.GameObjects.Text;
+  parts: ActorParts;
   team: 'green' | 'orange';
-  role: 'player' | 'operator' | 'heavy' | 'runner' | 'anchor';
+  role: ActorRole;
   hp: number;
   maxHp: number;
   speed: number;
@@ -12,6 +34,8 @@ type Actor = {
   startY: number;
   alive: boolean;
   cooldown: number;
+  animTime: number;
+  firePulse: number;
 };
 
 type Paintball = {
@@ -35,29 +59,30 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     right: Phaser.Input.Keyboard.Key;
     fire: Phaser.Input.Keyboard.Key;
   };
+
   private aim = { x: 1, y: 0 };
+  private aimPoint?: { x: number; y: number };
   private moveInput = { x: 0, y: 0 };
-  private movePointerId?: number;
-  private firePointerId?: number;
   private fireHeld = false;
-  private mobileUi!: Phaser.GameObjects.Graphics;
-  private fireBounds = new Phaser.Geom.Rectangle();
-  private dpadBounds = new Phaser.Geom.Rectangle();
-  private aimMarker = { x: 0, y: 0, visible: false };
-  private lastShot = 0;
+  private lastHitAt = 0;
   private teamScore = 0;
   private opponentScore = 0;
-  private statusText!: Phaser.GameObjects.Text;
+
+  private headerBg!: Phaser.GameObjects.Rectangle;
+  private baseText!: Phaser.GameObjects.Text;
+  private instructionText!: Phaser.GameObjects.Text;
   private scoreText!: Phaser.GameObjects.Text;
-  private hintText!: Phaser.GameObjects.Text;
-  private respawnText?: Phaser.GameObjects.Text;
+  private radar!: Phaser.GameObjects.Graphics;
   private touchUi!: Phaser.GameObjects.Graphics;
-  private playerName = 'Player';
+  private respawnText?: Phaser.GameObjects.Text;
+  private hitOverlay!: Phaser.GameObjects.Rectangle;
   private startedAt = 0;
-  private worldWidth = 1800;
-  private worldHeight = 1000;
+  private worldWidth = 1600;
+  private worldHeight = 900;
   private isPhoneLayout = false;
-  private readonly start = { x: 150, y: 500 };
+  private controlsCleanup?: () => void;
+
+  private readonly start = { x: 400, y: 400 };
 
   constructor() {
     super('ShootersTriggerTrainingScene');
@@ -69,9 +94,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     this.startedAt = this.time.now;
 
     this.drawArena();
+    this.createActors();
     this.createUi();
-    this.touchUi = this.add.graphics().setDepth(200).setScrollFactor(0);
-    this.mobileUi = this.add.graphics().setDepth(220).setScrollFactor(0);
 
     this.keys = {
       up: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.W),
@@ -81,81 +105,87 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       fire: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
     };
 
-    this.player = this.makeActor(this.start.x, this.start.y, 'green', 'player', this.playerName, 120);
-    this.teammates = [
-      this.makeActor(this.start.x + 65, this.start.y - this.teamSpacing(), 'green', 'operator', 'Operator 12', 150),
-      this.makeActor(this.start.x + 65, this.start.y + this.teamSpacing(), 'green', 'heavy', 'The Heavy', 105),
-    ];
-
-    this.enemies = [
-      this.makeActor(this.worldWidth - 270, this.worldHeight * 0.40, 'orange', 'runner', 'Runner', 145),
-      this.makeActor(this.worldWidth - 270, this.worldHeight * 0.60, 'orange', 'anchor', 'Anchor', 95),
-    ];
-
     this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
     this.cameras.main.startFollow(this.player.body, true, 0.12, 0.12);
-    this.cameras.main.setDeadzone(this.isPhoneLayout ? this.scale.width * 0.18 : this.scale.width * 0.30, this.isPhoneLayout ? this.scale.height * 0.18 : this.scale.height * 0.28);
-    this.cameras.main.setZoom(this.isPhoneLayout ? 1.12 : 1);
+    this.applyCamera();
 
-this.input.on('pointerdown', this.handlePointerDown, this);
-    this.input.on('pointermove', this.handlePointerMove, this);
+    this.touchUi = this.add.graphics().setScrollFactor(0).setDepth(240);
+    this.controlsCleanup = installShootersTriggerMobileControls();
+
+    this.input.on('pointerdown', this.handlePointerDown, this);
     this.input.on('pointerup', this.handlePointerUp, this);
     this.input.on('pointercancel', this.handlePointerUp, this);
-
     this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
+
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
       this.input.off('pointerdown', this.handlePointerDown, this);
-      this.input.off('pointermove', this.handlePointerMove, this);
       this.input.off('pointerup', this.handlePointerUp, this);
       this.input.off('pointercancel', this.handlePointerUp, this);
+      this.controlsCleanup?.();
+      this.controlsCleanup = undefined;
     });
 
-    this.statusText.setText('TEAM TRAINING · MOVE WITH YOUR TEAM');
+    this.statusText = this.add.text(0, 0, '', { fontFamily: 'monospace', fontSize: '10px' }).setVisible(false);
     this.updateUi();
-    this.renderTouchUi();
+  }
+
+  private playerName = 'Player';
+  private statusText!: Phaser.GameObjects.Text;
+
+  public isPhoneSession() {
+    return this.isPhoneLayout;
+  }
+
+  public setMoveVector(x: number, y: number) {
+    if (!this.isPhoneLayout) return;
+    this.moveInput.x = Phaser.Math.Clamp(x, -1, 1);
+    this.moveInput.y = Phaser.Math.Clamp(y, -1, 1);
+  }
+
+  public setFireHeld(held: boolean) {
+    if (!this.isPhoneLayout) return;
+    this.fireHeld = held;
   }
 
   private configureWorld() {
-    this.isPhoneLayout = this.scale.height > this.scale.width * 1.12;
-    this.worldWidth = this.isPhoneLayout ? 1450 : 1900;
-    this.worldHeight = this.isPhoneLayout ? 2300 : 1080;
-    this.start.x = this.worldWidth * 0.12;
-    this.start.y = this.worldHeight * 0.50;
+    this.isPhoneLayout = this.scale.height > this.scale.width * 1.05;
+    this.worldWidth = this.isPhoneLayout ? 980 : 1600;
+    this.worldHeight = this.isPhoneLayout ? 1850 : 900;
+    this.start.x = this.isPhoneLayout ? this.worldWidth * 0.44 : this.worldWidth * 0.25;
+    this.start.y = this.isPhoneLayout ? this.worldHeight * 0.24 : this.worldHeight * 0.50;
   }
 
   private handleResize(width: number, height: number) {
     const wasPhone = this.isPhoneLayout;
-    const nextPhone = height > width * 1.12;
+    const nextPhone = height > width * 1.05;
     if (wasPhone !== nextPhone) {
       this.scene.restart();
       return;
     }
-
-    this.cameras.main.setDeadzone(nextPhone ? width * 0.18 : width * 0.30, nextPhone ? height * 0.18 : height * 0.28);
-    this.cameras.main.setZoom(nextPhone ? 1.12 : 1);
-    this.updateUiPositions();
+    this.applyCamera();
+    this.layoutUi(width, height);
   }
 
-  update(_time: number, delta: number) {
-    if (!this.player?.alive) return;
+  private applyCamera() {
+    const width = this.scale.width;
+    const height = this.scale.height;
+    this.cameras.main.setDeadzone(this.isPhoneLayout ? width * 0.12 : width * 0.24, this.isPhoneLayout ? height * 0.12 : height * 0.20);
+    this.cameras.main.setZoom(this.isPhoneLayout ? 1.22 : 1);
+  }
 
-    this.updatePlayer(delta);
-    this.updateTeammates(delta);
-    this.updateEnemies(delta);
-    this.updatePaintballs(delta);
-    this.updateUi();
-    this.renderTouchUi();
+  private createActors() {
+    this.player = this.makeActor(this.start.x, this.start.y, 'green', 'player', this.playerName, 100);
 
-    if (Phaser.Input.Keyboard.JustDown(this.keys.fire)) {
-      this.fire(this.player, this.aim.x, this.aim.y);
-    }
-    if (this.fireHeld && this.time.now - this.lastShot > 280) {
-      this.fire(this.player, this.aim.x, this.aim.y);
-    }
-    this.animateActor(this.player, delta, Math.hypot(this.moveInput.x, this.moveInput.y));
+    this.teammates = [
+      this.makeActor(this.start.x + 56, this.start.y - 70, 'green', 'operator', 'Operator 12', 120),
+      this.makeActor(this.start.x + 62, this.start.y + 74, 'green', 'heavy', 'The Heavy', 140),
+    ];
 
-    if (this.time.now - this.startedAt > 300000) this.finish('TIME');
+    this.enemies = [
+      this.makeActor(this.worldWidth * (this.isPhoneLayout ? 0.72 : 0.82), this.worldHeight * (this.isPhoneLayout ? 0.62 : 0.42), 'orange', 'runner', 'Runner', 100),
+      this.makeActor(this.worldWidth * (this.isPhoneLayout ? 0.66 : 0.78), this.worldHeight * (this.isPhoneLayout ? 0.76 : 0.58), 'orange', 'anchor', 'Anchor', 120),
+    ];
   }
 
   private drawArena() {
@@ -164,287 +194,346 @@ this.input.on('pointerdown', this.handlePointerDown, this);
     const h = this.worldHeight;
 
     g.fillStyle(0x6f9e4d, 1).fillRect(0, 0, w, h);
-    g.fillStyle(0x83ad5d, 0.45).fillRect(0, 0, w, h * 0.50);
-    g.fillStyle(0x5d8d43, 0.45).fillRect(0, h * 0.50, w, h * 0.50);
+    g.fillStyle(0x83ad5d, 0.56).fillRect(0, 0, w * 0.50, h);
+    g.fillStyle(0x5c8b42, 0.42).fillRect(w * 0.50, 0, w * 0.50, h);
 
-    // Grass variation makes the field read as an outdoor place rather than a flat green board.
-    for (let i = 0; i < 180; i += 1) {
-      const x = (i * 173.7) % w;
-      const y = (i * 97.3) % h;
-      g.lineStyle(i % 3 === 0 ? 2 : 1, i % 2 ? 0x47763a : 0x9abe70, 0.28);
+    for (let i = 0; i < (this.isPhoneLayout ? 150 : 190); i += 1) {
+      const x = (i * 131.7) % w;
+      const y = (i * 89.4) % h;
+      g.lineStyle(i % 3 === 0 ? 2 : 1, i % 2 ? 0x4f7b3c : 0x9abe70, 0.22);
       g.lineBetween(x, y, x + 4, y - 7);
     }
 
-    // White boundary posts and a simple rope/fence line, matching the field language from the real session.
-    for (let i = 0; i < 12; i += 1) {
-      const x = 80 + i * ((w - 160) / 11);
-      this.drawPost(g, x, 55);
-      this.drawPost(g, x, h - 55);
+    const left = this.isPhoneLayout ? 48 : 70;
+    const right = w - left;
+    g.lineStyle(3, 0xf4f1df, 0.68);
+    g.lineBetween(left, 0, left, h);
+    g.lineBetween(right, 0, right, h);
+
+    for (const y of [70, h - 70]) {
+      this.drawPost(g, left, y);
+      this.drawPost(g, right, y);
     }
-    g.lineStyle(3, 0xf4f1df, 0.45);
-    g.lineBetween(80, 55, w - 80, 55);
-    g.lineBetween(80, h - 55, w - 80, h - 55);
 
-    // Green and orange starting areas.
-    g.fillStyle(0x175c43, 0.24).fillRect(50, h * 0.34, w * 0.17, h * 0.32);
-    g.lineStyle(3, 0xcde7bd, 0.55).strokeRect(50, h * 0.34, w * 0.17, h * 0.32);
-    g.fillStyle(0x9b4b29, 0.18).fillRect(w - 50 - w * 0.17, h * 0.34, w * 0.17, h * 0.32);
-    g.lineStyle(3, 0xffd4b7, 0.45).strokeRect(w - 50 - w * 0.17, h * 0.34, w * 0.17, h * 0.32);
+    // Team start area and the first readable training vignette.
+    g.fillStyle(0x195e45, 0.24).fillRect(w * 0.31, h * 0.17, w * 0.20, h * 0.17);
+    g.lineStyle(2, 0xd5efc9, 0.50).strokeRect(w * 0.31, h * 0.17, w * 0.20, h * 0.17);
 
-    this.add.text(78, h * 0.34 + 18, 'GREEN BASE', {
-      fontFamily: 'monospace', fontSize: '13px', fontStyle: 'bold', color: '#ecf8e8'
-    }).setDepth(3);
-    this.add.text(w - 78, h * 0.34 + 18, 'ORANGE BASE', {
-      fontFamily: 'monospace', fontSize: '13px', fontStyle: 'bold', color: '#fff0df'
-    }).setOrigin(1, 0).setDepth(3);
+    this.drawTree(w * 0.34, h * 0.15, this.isPhoneLayout ? 1.05 : 1.2);
 
-    this.drawBunkers();
-    this.drawTrees();
-    this.drawCylinders();
-    this.drawTacticZone();
+    const platformX = w * 0.54;
+    const platformY = h * 0.19;
+    const platformW = this.isPhoneLayout ? w * 0.30 : w * 0.22;
+    const platformH = this.isPhoneLayout ? h * 0.07 : h * 0.12;
+    this.drawCover(platformX, platformY, platformW, platformH, 0x737b79, 0x414846);
+
+    // Secondary field cover creates routes without turning the phone screen into a wall of obstacles.
+    this.drawCover(w * 0.17, h * 0.43, w * 0.24, h * 0.042, 0x9d754d, 0x5a4633);
+    this.drawCover(w * 0.58, h * 0.50, w * 0.28, h * 0.046, 0x6e8190, 0x4d5961);
+    this.drawCover(w * 0.26, h * 0.67, w * 0.22, h * 0.042, 0xb58c58, 0x5b432f);
+    this.drawCover(w * 0.60, h * 0.78, w * 0.24, h * 0.045, 0x6e8190, 0x4d5961);
+
+    const cylinders = [
+      [w * 0.78, h * 0.36],
+      [w * 0.22, h * 0.56],
+      [w * 0.82, h * 0.64],
+    ];
+
+    for (const [x, y] of cylinders) this.drawCylinder(x, y);
+
+    // Small white field markers/collectibles make the arena legible without becoming an inventory system.
+    for (const [x, y] of [
+      [w * 0.76, h * 0.23],
+      [w * 0.72, h * 0.39],
+      [w * 0.84, h * 0.53],
+      [w * 0.72, h * 0.70],
+    ]) {
+      const marker = this.add.circle(x, y, 4, 0xf4f1df, 0.9).setDepth(5);
+      this.tweens.add({ targets: marker, alpha: 0.35, scale: 1.5, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    }
+
+    // Opponent base / training end point.
+    g.fillStyle(0xa34f2d, 0.17).fillRect(w * 0.72, h * 0.72, w * 0.18, h * 0.16);
+    g.lineStyle(2, 0xffceb5, 0.44).strokeRect(w * 0.72, h * 0.72, w * 0.18, h * 0.16);
   }
 
   private drawPost(g: Phaser.GameObjects.Graphics, x: number, y: number) {
-    g.fillStyle(0x7b6d58, 1).fillRect(x - 3, y, 6, 26);
-    g.fillStyle(0xf4f1df, 1).fillRect(x - 5, y - 10, 10, 13);
-  }
-
-  private drawBunkers() {
-    const defs = this.isPhoneLayout
-      ? [
-          [0.22, 0.16, 0.46, 0.035, 0x9d754d],
-          [0.08, 0.27, 0.58, 0.045, 0x6e8190],
-          [0.48, 0.36, 0.40, 0.042, 0xb58c58],
-          [0.10, 0.48, 0.46, 0.045, 0x6e8190],
-          [0.44, 0.59, 0.48, 0.040, 0xb58c58],
-          [0.08, 0.72, 0.56, 0.045, 0x6e8190],
-          [0.24, 0.84, 0.52, 0.035, 0x9d754d],
-        ]
-      : [
-          [0.21, 0.23, 0.12, 0.09, 0x9d754d],
-          [0.35, 0.42, 0.16, 0.10, 0x6e8190],
-          [0.52, 0.22, 0.13, 0.08, 0xb58c58],
-          [0.65, 0.62, 0.15, 0.09, 0x6e8190],
-          [0.79, 0.40, 0.12, 0.08, 0xb58c58],
-          [0.51, 0.76, 0.16, 0.09, 0x6e8190],
-        ];
-
-    for (const [nx, ny, nw, nh, color] of defs) {
-      const x = Number(nx) * this.worldWidth;
-      const y = Number(ny) * this.worldHeight;
-      const cw = Number(nw) * this.worldWidth;
-      const ch = Math.max(28, Number(nh) * this.worldHeight);
-      const g = this.add.graphics();
-      g.fillStyle(Number(color), 1).fillRect(x, y, cw, ch);
-      g.fillStyle(0x554a3e, 0.40).fillRect(x, y + ch - 7, cw, 7);
-      g.lineStyle(2, 0xf0d7aa, 0.45).strokeRect(x, y, cw, ch);
-      this.covers.push(new Phaser.Geom.Rectangle(x, y, cw, ch));
-    }
-  }
-
-  private drawTrees() {
-    const positions = this.isPhoneLayout
-      ? [
-          [0.12, 0.12, 1.1], [0.82, 0.12, 0.9], [0.90, 0.31, 0.75],
-          [0.14, 0.43, 0.9], [0.86, 0.52, 1.05], [0.13, 0.67, 0.8],
-          [0.88, 0.77, 0.9], [0.12, 0.90, 1.0],
-        ]
-      : [
-          [0.15, 0.20, 1.1], [0.39, 0.16, 0.75], [0.60, 0.86, 0.85],
-          [0.88, 0.27, 0.9], [0.92, 0.78, 1.0], [0.08, 0.78, 0.8],
-        ];
-
-    for (const [nx, ny, scale] of positions) {
-      this.drawTree(Number(nx) * this.worldWidth, Number(ny) * this.worldHeight, Number(scale));
-    }
+    g.fillStyle(0x6f604f, 1).fillRect(x - 3, y, 6, 23);
+    g.fillStyle(0xf4f1df, 1).fillRect(x - 5, y - 9, 10, 12);
   }
 
   private drawTree(x: number, y: number, scale: number) {
     const g = this.add.graphics();
-    g.fillStyle(0x715437, 1).fillRect(x - 6 * scale, y + 17 * scale, 12 * scale, 45 * scale);
-    g.fillStyle(0x315f39, 1).fillCircle(x, y, 31 * scale);
-    g.fillStyle(0x47733a, 1).fillCircle(x - 22 * scale, y + 9 * scale, 23 * scale);
-    g.fillStyle(0x56883f, 1).fillCircle(x + 23 * scale, y + 8 * scale, 25 * scale);
-    g.fillStyle(0x7ba95a, 0.65).fillCircle(x + 5 * scale, y - 10 * scale, 12 * scale);
+    g.fillStyle(0x6d4d32, 1).fillRect(x - 5 * scale, y + 17 * scale, 10 * scale, 38 * scale);
+    g.fillStyle(0x2d5d35, 1).fillCircle(x, y, 28 * scale);
+    g.fillStyle(0x477a3a, 1).fillCircle(x - 20 * scale, y + 8 * scale, 22 * scale);
+    g.fillStyle(0x5b8c46, 1).fillCircle(x + 21 * scale, y + 8 * scale, 23 * scale);
   }
 
-  private drawCylinders() {
-    const points = this.isPhoneLayout
-      ? [[0.77, 0.22], [0.27, 0.35], [0.77, 0.47], [0.26, 0.63], [0.73, 0.78]]
-      : [[0.28, 0.68], [0.45, 0.30], [0.70, 0.72], [0.77, 0.28]];
-
-    for (const [nx, ny] of points) {
-      const x = Number(nx) * this.worldWidth;
-      const y = Number(ny) * this.worldHeight;
-      const g = this.add.graphics();
-      g.fillStyle(0x7d5d40, 1).fillEllipse(x, y, 34, 24);
-      g.fillStyle(0xb58a58, 1).fillEllipse(x, y - 10, 34, 24);
-      g.lineStyle(2, 0x4d3b2b, 0.7).strokeEllipse(x, y - 10, 34, 24);
-      this.covers.push(new Phaser.Geom.Rectangle(x - 17, y - 20, 34, 30));
-    }
-  }
-
-  private drawTacticZone() {
-    const x = this.worldWidth * 0.50;
-    const y = this.worldHeight * 0.50;
-    const r = Math.min(this.worldWidth, this.worldHeight) * 0.10;
+  private drawCover(x: number, y: number, width: number, height: number, color: number, shadow: number) {
     const g = this.add.graphics();
-    g.fillStyle(0x315a37, 0.72).fillCircle(x, y, r);
-    g.lineStyle(4, 0xe8c95c, 0.8).strokeCircle(x, y, r);
-    this.add.text(x, y, 'TACTIC\nZONE', {
-      fontFamily: 'monospace', fontSize: this.isPhoneLayout ? '15px' : '18px',
-      fontStyle: 'bold', color: '#f4f1df', align: 'center'
-    }).setOrigin(0.5).setDepth(4);
+    g.fillStyle(color, 1).fillRect(x, y, width, height);
+    g.fillStyle(shadow, 0.58).fillRect(x, y + height - 7, width, 7);
+    g.lineStyle(2, 0xf4f1df, 0.35).strokeRect(x, y, width, height);
+    this.covers.push(new Phaser.Geom.Rectangle(x, y, width, height));
+  }
+
+  private drawCylinder(x: number, y: number) {
+    const g = this.add.graphics();
+    g.fillStyle(0x765638, 1).fillEllipse(x, y, 34, 24);
+    g.fillStyle(0xb48a55, 1).fillEllipse(x, y - 10, 34, 24);
+    g.lineStyle(2, 0x4d3b2b, 0.75).strokeEllipse(x, y - 10, 34, 24);
+    this.covers.push(new Phaser.Geom.Rectangle(x - 17, y - 20, 34, 30));
   }
 
   private createUi() {
-    this.scoreText = this.add.text(this.scale.width * 0.50, 12, '', {
-      fontFamily: 'monospace', fontSize: this.uiFont(12), fontStyle: 'bold',
-      color: '#ffffff', backgroundColor: '#17261b',
-      padding: { left: 10, right: 10, top: 7, bottom: 7 },
-    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(180);
+    this.headerBg = this.add.rectangle(0, 0, this.scale.width, this.isPhoneLayout ? 60 : 58, 0x18231d, 0.94)
+      .setOrigin(0, 0).setScrollFactor(0).setDepth(180);
 
-    this.statusText = this.add.text(this.scale.width * 0.50, this.isPhoneLayout ? 56 : 20, '', {
-      fontFamily: 'monospace', fontSize: this.uiFont(10), fontStyle: 'bold',
-      color: '#ffffff', backgroundColor: '#17261b',
-      padding: { left: 10, right: 10, top: 7, bottom: 7 },
-    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(180);
+    this.baseText = this.add.text(16, 13, 'GREEN BASE', {
+      fontFamily: 'monospace',
+      fontSize: this.isPhoneLayout ? '11px' : '13px',
+      fontStyle: 'bold',
+      color: '#9fd37d',
+      letterSpacing: 1.1,
+    }).setScrollFactor(0).setDepth(181);
 
-    this.hintText = this.add.text(this.scale.width * 0.50, this.scale.height - (this.isPhoneLayout ? 32 : 20),
-      this.isPhoneLayout ? 'D-PAD MOVE  ·  TAP FIELD TO AIM  ·  HOLD FIRE' : 'DESKTOP: WASD + MOUSE CLICK/SPACE',
-      {
-        fontFamily: 'monospace', fontSize: this.uiFont(8), color: '#f4f1df',
-        backgroundColor: '#17261b', padding: { left: 9, right: 9, top: 6, bottom: 6 },
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(180);
+    this.instructionText = this.add.text(this.scale.width * 0.52, 13, 'TEAM TRAINING · MOVE WITH YOUR TEAM', {
+      fontFamily: 'monospace',
+      fontSize: this.isPhoneLayout ? '8px' : '10px',
+      fontStyle: 'bold',
+      color: '#f4f1df',
+      letterSpacing: 0.5,
+    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(181);
 
-    this.updateUiPositions();
+    this.scoreText = this.add.text(16, this.isPhoneLayout ? 34 : 37, '', {
+      fontFamily: 'monospace',
+      fontSize: '8px',
+      color: '#cbd9c4',
+    }).setScrollFactor(0).setDepth(181);
+
+    this.radar = this.add.graphics().setScrollFactor(0).setDepth(182);
+    this.hitOverlay = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0xd8473e, 0)
+      .setOrigin(0, 0).setScrollFactor(0).setDepth(190);
+
+    this.layoutUi(this.scale.width, this.scale.height);
   }
 
-  private updateUiPositions() {
-    if (!this.scoreText) return;
-    this.scoreText.setPosition(this.scale.width * 0.50, 12);
-    this.statusText.setPosition(this.scale.width * 0.50, this.isPhoneLayout ? 56 : 20);
-    this.hintText.setPosition(this.scale.width * 0.50, this.scale.height - (this.isPhoneLayout ? 28 : 20));
+  private layoutUi(width: number, height: number) {
+    const compact = width < 520 || height > width;
+    const headerHeight = this.isPhoneLayout ? 60 : 58;
+    this.headerBg.setSize(width, headerHeight);
+    this.instructionText.setPosition(width * (compact ? 0.56 : 0.50), 13);
+    this.scoreText.setText(`GREEN ${this.teamScore} · ORANGE ${this.opponentScore}`);
+
+    this.hitOverlay.setSize(width, height);
+    this.renderRadar();
   }
 
-  private makeActor(x: number, y: number, team: Actor['team'], role: Actor['role'], name: string, hp: number): Actor {
+  private renderRadar() {
+    if (!this.radar || !this.player) return;
+    const width = this.scale.width;
+    const radius = this.isPhoneLayout ? 24 : 28;
+    const cx = width - radius - 14;
+    const cy = 30;
+
+    this.radar.clear();
+    this.radar.fillStyle(0x0e1914, 0.78).fillCircle(cx, cy, radius);
+    this.radar.lineStyle(2, 0x88a96e, 0.72).strokeCircle(cx, cy, radius);
+    this.radar.lineStyle(1, 0x557356, 0.45);
+    this.radar.lineBetween(cx - radius + 5, cy, cx + radius - 5, cy);
+    this.radar.lineBetween(cx, cy - radius + 5, cx, cy + radius - 5);
+
+    const plot = (actor: Actor, color: number) => {
+      const dx = actor.body.x - this.player.body.x;
+      const dy = actor.body.y - this.player.body.y;
+      const scale = radius / 210;
+      const px = Phaser.Math.Clamp(dx * scale, -radius + 5, radius - 5);
+      const py = Phaser.Math.Clamp(dy * scale, -radius + 5, radius - 5);
+      this.radar.fillStyle(color, actor.alive ? 1 : 0.22).fillCircle(cx + px, cy + py, actor === this.player ? 3 : 2.5);
+    };
+
+    plot(this.player, 0xe8c95c);
+    this.teammates.forEach((actor) => plot(actor, 0x68c984));
+    this.enemies.forEach((actor) => plot(actor, 0xe58a52));
+    this.radar.lineStyle(1, 0xe8c95c, 0.38).strokeCircle(cx, cy, 5);
+  }
+
+  private makeActor(x: number, y: number, team: Actor['team'], role: ActorRole, name: string, hp: number): Actor {
     const size = this.actorSize(role);
     const body = this.add.container(x, y).setDepth(30);
-    this.drawSuit(body, team, role, size);
+    const parts = this.drawCharacter(body, team, role, size);
 
-    const label = this.add.text(x, y - size * 0.95, name, {
+    const label = this.add.text(x, y - size * 1.30, name, {
       fontFamily: 'monospace',
-      fontSize: this.isPhoneLayout ? '10px' : '11px',
-      fontStyle: 'bold', color: '#ffffff', backgroundColor: '#203423',
+      fontSize: this.isPhoneLayout ? '9px' : '11px',
+      fontStyle: 'bold',
+      color: '#ffffff',
+      backgroundColor: '#0f1d16',
       padding: { left: 5, right: 5, top: 3, bottom: 3 },
-    }).setOrigin(0.5, 1).setDepth(31);
+    }).setOrigin(0.5, 1).setDepth(80);
 
     return {
-      body, label, team, role, hp, maxHp: hp,
-      speed: role === 'heavy' ? 78 : role === 'operator' ? 118 : 104,
-      startX: x, startY: y, alive: true, cooldown: 0,
+      body,
+      label,
+      parts,
+      team,
+      role,
+      hp,
+      maxHp: hp,
+      speed:
+        role === 'heavy' ? 78 :
+        role === 'operator' ? 118 :
+        role === 'runner' ? 108 :
+        role === 'anchor' ? 84 : 128,
+      startX: x,
+      startY: y,
+      alive: true,
+      cooldown: 0,
+      animTime: Math.random() * 1000,
+      firePulse: 0,
     };
   }
 
-  private drawSuit(container: Phaser.GameObjects.Container, team: Actor['team'], role: Actor['role'], size: number) {
-    const g = this.add.graphics();
-    const teamMain = team === 'green' ? 0x176b4b : 0xc85d2e;
-    const teamLight = team === 'green' ? 0x55a878 : 0xe58a52;
-    const vest = team === 'green' ? 0x214e3f : 0x71402f;
-    const skin = 0xc99262;
-    const mask = 0x17201e;
+  private drawCharacter(container: Phaser.GameObjects.Container, team: Actor['team'], role: ActorRole, size: number): ActorParts {
+    const isGreen = team === 'green';
+    const teamMain = isGreen ? 0x1f7a50 : 0xb85632;
+    const teamLight = isGreen ? 0x65bb7d : 0xe58a52;
+    const dark = isGreen ? 0x153b2b : 0x452118;
+    const fabric = isGreen ? 0x285340 : 0x6e3b2c;
+    const mask = 0x18231f;
+    const helmetColor = 0x303b36;
+    const skin = 0xb77d51;
+    const roleScale = role === 'heavy' || role === 'anchor' ? 1.12 : role === 'operator' || role === 'runner' ? 0.94 : 1;
 
-    // Shadow, boots, trousers, protective vest, arms, helmet and paintball mask.
-    g.fillStyle(0x243323, 0.30).fillEllipse(0, size * 0.54, size * 1.35, size * 0.45);
-    g.fillStyle(0x20282a, 1).fillRect(-size * 0.38, size * 0.25, size * 0.28, size * 0.38);
-    g.fillStyle(0x20282a, 1).fillRect(size * 0.10, size * 0.25, size * 0.28, size * 0.38);
-    g.fillStyle(0x3c4b43, 1).fillRect(-size * 0.36, size * 0.02, size * 0.30, size * 0.30);
-    g.fillStyle(0x3c4b43, 1).fillRect(size * 0.06, size * 0.02, size * 0.30, size * 0.30);
-    g.fillStyle(vest, 1).fillRect(-size * 0.46, -size * 0.12, size * 0.92, size * 0.48);
-    g.fillStyle(teamMain, 1).fillRect(-size * 0.40, -size * 0.08, size * 0.80, size * 0.35);
-    g.fillStyle(teamLight, 0.8).fillRect(-size * 0.08, -size * 0.08, size * 0.16, size * 0.35);
-    g.fillStyle(skin, 1).fillRect(-size * 0.64, -size * 0.03, size * 0.18, size * 0.35);
-    g.fillStyle(skin, 1).fillRect(size * 0.46, -size * 0.03, size * 0.18, size * 0.35);
-    g.fillStyle(0x111715, 1).fillRect(-size * 0.56, -size * 0.42, size * 1.12, size * 0.18);
-    g.fillStyle(0x37433f, 1).fillCircle(0, -size * 0.42, size * 0.31);
-    g.fillStyle(mask, 1).fillRect(-size * 0.34, -size * 0.43, size * 0.68, size * 0.23);
-    g.fillStyle(0x9bc4bd, 0.65).fillRect(-size * 0.27, -size * 0.39, size * 0.54, size * 0.10);
-    g.fillStyle(teamLight, 0.95).fillRect(-size * 0.47, -size * 0.17, size * 0.18, size * 0.09);
+    const shadow = this.add.ellipse(0, size * 0.54, size * 1.35 * roleScale, size * 0.46, 0x102018, 0.32).setOrigin(0.5);
 
-    // Role silhouettes: Heavy has a broader vest/shoulder profile; Operator is slimmer.
-    if (role === 'heavy' || role === 'anchor') {
-      g.fillStyle(vest, 1).fillRect(-size * 0.58, -size * 0.16, size * 1.16, size * 0.15);
-    }
-    if (role === 'operator' || role === 'runner') {
-      g.fillStyle(teamLight, 0.75).fillRect(-size * 0.52, -size * 0.08, size * 0.12, size * 0.28);
-      g.fillStyle(teamLight, 0.75).fillRect(size * 0.40, -size * 0.08, size * 0.12, size * 0.28);
-    }
+    const backpack =
+      role === 'heavy' || role === 'anchor'
+        ? this.add.rectangle(0, size * 0.11, size * 0.76, size * 0.52, dark, 1)
+        : this.add.rectangle(0, size * 0.13, size * 0.52, size * 0.34, dark, 1);
 
-    container.add(g);
+    const leftLeg = this.add.rectangle(-size * 0.20, size * 0.28, size * 0.22, size * 0.40, fabric, 1).setOrigin(0.5);
+    const rightLeg = this.add.rectangle(size * 0.20, size * 0.28, size * 0.22, size * 0.40, fabric, 1).setOrigin(0.5);
+    const leftBoot = this.add.rectangle(-size * 0.20, size * 0.49, size * 0.25, size * 0.14, 0x171e1c, 1).setOrigin(0.5);
+    const rightBoot = this.add.rectangle(size * 0.20, size * 0.49, size * 0.25, size * 0.14, 0x171e1c, 1).setOrigin(0.5);
+
+    const torso = this.add.rectangle(0, 0, size * 0.76 * roleScale, size * 0.46, dark, 1).setOrigin(0.5);
+    const vest = this.add.rectangle(0, -size * 0.01, size * 0.62 * roleScale, size * 0.34, teamMain, 1).setOrigin(0.5);
+    const accent = this.add.rectangle(0, -size * 0.03, size * 0.11, size * 0.30, teamLight, 0.9).setOrigin(0.5);
+
+    const leftArm = this.add.rectangle(-size * 0.48, -size * 0.01, size * 0.16, size * 0.36, skin, 1)
+      .setOrigin(0.5).setRotation(-0.24);
+    const rightArm = this.add.rectangle(size * 0.48, -size * 0.01, size * 0.16, size * 0.36, skin, 1)
+      .setOrigin(0.5).setRotation(0.24);
+
+    const helmet = this.add.circle(0, -size * 0.42, size * 0.30, helmetColor, 1);
+    const maskRect = this.add.rectangle(0, -size * 0.38, size * 0.64, size * 0.19, mask, 1).setOrigin(0.5);
+    const visor = this.add.rectangle(0, -size * 0.39, size * 0.42, size * 0.055, 0x9dc8c0, 0.72).setOrigin(0.5);
+    const weapon = this.add.rectangle(0, -size * 0.76, size * 0.15, size * 0.48, 0x232a26, 1)
+      .setOrigin(0.5);
+    const weaponAccent = this.add.rectangle(0, -size * 0.72, size * 0.22, size * 0.08, teamLight, 0.92).setOrigin(0.5);
+    const muzzle = this.add.circle(0, -size * 1.00, size * 0.075, 0xe8c95c, 1).setVisible(false);
+
+    container.add([shadow, backpack, leftLeg, rightLeg, leftBoot, rightBoot, torso, vest, accent, leftArm, rightArm, helmet, maskRect, visor, weapon, weaponAccent, muzzle]);
+
+    return {
+      shadow,
+      backpack,
+      leftLeg,
+      rightLeg,
+      leftBoot,
+      rightBoot,
+      torso,
+      vest,
+      leftArm,
+      rightArm,
+      helmet,
+      mask: maskRect,
+      accent,
+      weapon,
+      muzzle,
+    };
   }
 
-  private actorSize(role?: Actor['role']) {
-    const base = Phaser.Math.Clamp(Math.min(this.scale.width, this.scale.height) * (this.isPhoneLayout ? 0.105 : 0.055), 30, 48);
-    return role === 'heavy' || role === 'anchor' ? base * 1.16 : base;
-  }
-
-  private teamSpacing() {
-    return Phaser.Math.Clamp(this.worldHeight * 0.055, 62, 100);
+  private actorSize(role?: ActorRole) {
+    const base = Phaser.Math.Clamp(
+      Math.min(this.scale.width, this.scale.height) * (this.isPhoneLayout ? 0.105 : 0.055),
+      30,
+      46,
+    );
+    return role === 'heavy' || role === 'anchor' ? base * 1.18 : role === 'operator' || role === 'runner' ? base * 0.92 : base;
   }
 
   private updatePlayer(delta: number) {
-    const pointer = this.input.activePointer;
-    let moveX = (this.keys.right.isDown ? 1 : 0) - (this.keys.left.isDown ? 1 : 0);
-    let moveY = (this.keys.down.isDown ? 1 : 0) - (this.keys.up.isDown ? 1 : 0);
+    let moveX = 0;
+    let moveY = 0;
+
     if (this.isPhoneLayout) {
       moveX = this.moveInput.x;
       moveY = this.moveInput.y;
+    } else {
+      moveX = (this.keys.right.isDown ? 1 : 0) - (this.keys.left.isDown ? 1 : 0);
+      moveY = (this.keys.down.isDown ? 1 : 0) - (this.keys.up.isDown ? 1 : 0);
     }
 
-    const len = Math.hypot(moveX, moveY);
-    if (len > 0.05) {
-      moveX /= Math.max(1, len);
-      moveY /= Math.max(1, len);
-      this.moveActor(this.player, moveX * this.player.speed * delta / 1000, moveY * this.player.speed * delta / 1000);
+    const length = Math.hypot(moveX, moveY);
+    if (length > 0.05) {
+      this.moveActor(
+        this.player,
+        (moveX / Math.max(1, length)) * this.player.speed * delta / 1000,
+        (moveY / Math.max(1, length)) * this.player.speed * delta / 1000,
+      );
     }
 
-    if (!this.isPhoneLayout && pointer.isDown && pointer.x > this.scale.width * 0.50) {
-      const aimPoint = this.cameraWorldPoint(pointer.x, pointer.y);
-      const dx = aimPoint.x - this.player.body.x;
-      const dy = aimPoint.y - this.player.body.y;
-      const length = Math.hypot(dx, dy) || 1;
-      this.aim = { x: dx / length, y: dy / length };
-      this.player.body.rotation = Math.atan2(this.aim.y, this.aim.x) + Math.PI / 2;
-      if (this.time.now - this.lastShot > 280) this.fire(this.player, this.aim.x, this.aim.y);
+    if (!this.isPhoneLayout) {
+      const pointer = this.input.activePointer;
+      if (pointer.isDown && pointer.x > this.scale.width * 0.42) {
+        const aimPoint = this.cameraWorldPoint(pointer.x, pointer.y);
+        this.setAimFromPoint(aimPoint.x, aimPoint.y);
+        if (this.player.cooldown <= 0) this.fire(this.player, this.aim.x, this.aim.y);
+      }
     }
-  }
 
-  private cameraWorldPoint(x: number, y: number) {
-    return this.cameras.main.getWorldPoint(x, y);
+    this.player.cooldown -= delta;
+
+    if (this.isPhoneLayout && this.fireHeld && this.player.cooldown <= 0) {
+      this.fire(this.player, this.aim.x, this.aim.y);
+    }
+
+    const moving = length > 0.05;
+    this.animateActor(this.player, delta, moving);
+
+    if (moving) {
+      this.faceActor(this.player, moveX, moveY);
+    }
   }
 
   private updateTeammates(delta: number) {
     this.teammates.forEach((mate, index) => {
       if (!mate.alive) return;
 
-      const followDistance = this.isPhoneLayout ? 80 : 105;
-      const targetX = this.player.body.x - 85;
+      mate.cooldown -= delta;
+      const followDistance = this.isPhoneLayout ? 64 : 96;
+      const targetX = this.player.body.x - 66;
       const targetY = this.player.body.y + (index === 0 ? -followDistance : followDistance);
       const dx = targetX - mate.body.x;
       const dy = targetY - mate.body.y;
-      const len = Math.hypot(dx, dy) || 1;
+      const distance = Math.hypot(dx, dy) || 1;
 
-      if (len > 36) {
-        this.moveActor(mate, dx / len * mate.speed * 0.55 * delta / 1000, dy / len * mate.speed * 0.55 * delta / 1000);
-        mate.body.rotation = Math.atan2(dy, dx) + Math.PI / 2;
+      if (distance > 30) {
+        this.moveActor(mate, dx / distance * mate.speed * 0.60 * delta / 1000, dy / distance * mate.speed * 0.60 * delta / 1000);
+        this.faceActor(mate, dx, dy);
       }
-      this.animateActor(mate, delta, len > 36 ? 1 : 0);
 
-      mate.cooldown -= delta;
+      this.animateActor(mate, delta, distance > 30);
+
       const enemy = this.nearestEnemy(mate);
       if (enemy && mate.cooldown <= 0) {
-        this.fire(mate, enemy.body.x - mate.body.x, enemy.body.y - mate.body.y);
-        mate.cooldown = mate.role === 'operator' ? 850 : 1150;
+        this.faceActor(mate, enemy.body.x - mate.body.x, enemy.body.y - mate.body.y);
+        if (this.fire(mate, enemy.body.x - mate.body.x, enemy.body.y - mate.body.y)) {
+          mate.cooldown = mate.role === 'operator' ? 760 : 1120;
+        }
       }
     });
   }
@@ -459,18 +548,27 @@ this.input.on('pointerdown', this.handlePointerDown, this);
 
       const dx = target.body.x - enemy.body.x;
       const dy = target.body.y - enemy.body.y;
-      const len = Math.hypot(dx, dy) || 1;
-      const advance = this.isPhoneLayout ? 0.22 : 0.28;
+      const distance = Math.hypot(dx, dy) || 1;
 
-      if (index === 0 || enemy.role === 'runner') {
-        this.moveActor(enemy, dx / len * enemy.speed * advance * delta / 1000, dy / len * enemy.speed * advance * delta / 1000);
-        enemy.body.rotation = Math.atan2(dy, dx) + Math.PI / 2;
+      if (enemy.role === 'runner') {
+        this.moveActor(enemy, dx / distance * enemy.speed * 0.24 * delta / 1000, dy / distance * enemy.speed * 0.24 * delta / 1000);
+        this.faceActor(enemy, dx, dy);
+        this.animateActor(enemy, delta, true);
+      } else {
+        this.faceActor(enemy, dx, dy);
+        this.animateActor(enemy, delta, false);
       }
-      this.animateActor(enemy, delta, (index === 0 || enemy.role === 'runner') ? 1 : 0);
 
-      if (enemy.cooldown <= 0 && len < this.worldWidth * 0.44) {
-        this.fire(enemy, dx, dy);
-        enemy.cooldown = enemy.role === 'anchor' ? 1350 : 950;
+      const range = this.isPhoneLayout ? 640 : 760;
+      if (distance < range && enemy.cooldown <= 0) {
+        if (this.fire(enemy, dx, dy)) {
+          enemy.cooldown = enemy.role === 'anchor' ? 1320 : 960;
+        }
+      }
+
+      // The Anchor holds space instead of relentlessly chasing. The Runner advances and pressures lanes.
+      if (index === 1 && distance > 300 && this.time.now % 1400 < 20) {
+        this.moveActor(enemy, dx / distance * enemy.speed * 0.10 * delta / 1000, dy / distance * enemy.speed * 0.10 * delta / 1000);
       }
     });
   }
@@ -484,8 +582,8 @@ this.input.on('pointerdown', this.handlePointerDown, this);
 
       if (
         ball.ttl <= 0 ||
-        ball.body.x < -20 || ball.body.x > this.worldWidth + 20 ||
-        ball.body.y < -20 || ball.body.y > this.worldHeight + 20 ||
+        ball.body.x < 0 || ball.body.x > this.worldWidth ||
+        ball.body.y < 0 || ball.body.y > this.worldHeight ||
         this.hitCover(ball.body.x, ball.body.y)
       ) {
         ball.body.destroy();
@@ -494,8 +592,9 @@ this.input.on('pointerdown', this.handlePointerDown, this);
       }
 
       const targets = ball.owner.team === 'green' ? this.enemies : [this.player, ...this.teammates];
+      const radius = this.actorSize(ball.owner.role) * 0.68;
       const target = targets.find((actor) =>
-        actor.alive && Phaser.Math.Distance.Between(ball.body.x, ball.body.y, actor.body.x, actor.body.y) < this.actorSize() * 0.72
+        actor.alive && Phaser.Math.Distance.Between(ball.body.x, ball.body.y, actor.body.x, actor.body.y) < radius
       );
 
       if (target) {
@@ -506,29 +605,54 @@ this.input.on('pointerdown', this.handlePointerDown, this);
     }
   }
 
-  private hitActor(target: Actor, shooter: Actor) {
-    target.hp -= 40;
+  private hitCover(x: number, y: number, padding = 3) {
+    return this.covers.some((cover) =>
+      x >= cover.x - padding &&
+      x <= cover.x + cover.width + padding &&
+      y >= cover.y - padding &&
+      y <= cover.y + cover.height + padding
+    );
+  }
 
-    this.tweens.add({ targets: target.body, alpha: 0.35, duration: 80, yoyo: true, repeat: 2 });
-    if (target === this.player) this.cameras.main.shake(120, 0.004);
+  private hitActor(target: Actor, shooter: Actor) {
+    target.hp -= 50;
+    this.lastHitAt = this.time.now;
+
+    this.tweens.add({
+      targets: target.body,
+      alpha: 0.35,
+      duration: 70,
+      yoyo: true,
+      repeat: 2,
+    });
+
+    this.spawnPaintBurst(target.body.x, target.body.y, shooter.team === 'green' ? 0x79d89a : 0xe78b58);
+
+    if (target === this.player) {
+      this.hitOverlay.setAlpha(0.24);
+      this.tweens.add({ targets: this.hitOverlay, alpha: 0, duration: 220 });
+      this.cameras.main.shake(110, 0.0035);
+      this.statusText.setText(target.hp > 0 ? 'PAINT HIT · BREAK LINE' : 'PAINT HIT · RESETTING');
+    }
 
     if (target.hp > 0) {
-      this.statusText.setText(target === this.player ? 'PAINT HIT · BREAK LINE' : target.label.text + ' HIT');
+      if (target !== this.player) {
+        target.label.setText(target.label.text.replace(/ HIT$/, '') + ' HIT');
+      }
       return;
     }
 
     if (target === this.player) {
-      this.player.body.setScale(1.12, 0.88);
-      this.tweens.add({ targets: this.player.body, scaleX: 1, scaleY: 1, duration: 180, ease: 'Back.Out' });
       this.opponentScore += 1;
       this.respawnPlayer();
     } else {
       if (target.team === 'orange') this.teamScore += 1;
-      this.respawnActor(target, target.startX, target.startY, 750);
+      this.respawnActor(target, target.startX, target.startY, 700);
     }
 
     if (this.teamScore >= 5 || this.opponentScore >= 5) {
       this.finish(this.teamScore >= 5 ? 'GREEN TEAM' : 'ORANGE TEAM');
+      return;
     }
 
     this.statusText.setText(shooter.label.text + ' TAGGED ' + target.label.text);
@@ -538,29 +662,28 @@ this.input.on('pointerdown', this.handlePointerDown, this);
     this.player.alive = false;
     this.player.body.setVisible(false);
     this.player.label.setVisible(false);
-    this.moveInput.x = 0;
-    this.moveInput.y = 0;
-    this.movePointerId = undefined;
-    this.firePointerId = undefined;
-    this.fireHeld = false;
+    this.setMoveVector(0, 0);
+    this.setFireHeld(false);
 
     this.respawnText?.destroy();
-    this.respawnText = this.add.text(this.scale.width / 2, this.scale.height * 0.50, 'HIT · RESETTING TO START', {
-      fontFamily: 'monospace', fontSize: this.isPhoneLayout ? '15px' : '19px',
-      fontStyle: 'bold', color: '#ffffff', backgroundColor: '#9d3e2b',
+    this.respawnText = this.add.text(this.scale.width / 2, this.scale.height * 0.50, 'HIT · RESETTING TO GREEN BASE', {
+      fontFamily: 'monospace',
+      fontSize: this.isPhoneLayout ? '14px' : '18px',
+      fontStyle: 'bold',
+      color: '#ffffff',
+      backgroundColor: '#9d3e2b',
       padding: { left: 14, right: 14, top: 10, bottom: 10 },
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(250);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(260);
 
-    this.time.delayedCall(this.isPhoneLayout ? 700 : 850, () => {
+    this.time.delayedCall(this.isPhoneLayout ? 650 : 850, () => {
       if (this.teamScore >= 5 || this.opponentScore >= 5) return;
 
       this.player.body.setPosition(this.start.x, this.start.y);
-      this.player.label.setPosition(this.start.x, this.start.y - this.actorSize('player') * 0.95);
+      this.player.label.setPosition(this.start.x, this.start.y - this.actorSize('player') * 1.30);
       this.player.hp = this.player.maxHp;
       this.player.alive = true;
       this.player.body.setVisible(true);
-      this.player.label.setVisible(true);
-      this.cameras.main.startFollow(this.player.body, true, 0.12, 0.12);
+      this.cameras.main.startFollow(this.player.body, true, 0.14, 0.14);
       this.respawnText?.destroy();
       this.respawnText = undefined;
       this.statusText.setText('BACK IN · TAKE A NEW ROUTE');
@@ -576,232 +699,237 @@ this.input.on('pointerdown', this.handlePointerDown, this);
       actor.hp = actor.maxHp;
       actor.alive = true;
       actor.body.setPosition(x, y);
-      actor.label.setPosition(x, y - this.actorSize(actor.role) * 0.95);
+      actor.label.setPosition(x, y - this.actorSize(actor.role) * 1.30);
       actor.body.setVisible(true);
-      actor.label.setVisible(true);
     });
-  }
-
-  private finish(winner: string) {
-    this.scene.pause();
-    this.statusText.setText('TRAINING RESULT · ' + winner + ' WINS');
-    this.hintText.setText(this.isPhoneLayout ? 'TAP TO RESTART TRAINING' : 'TAP / CLICK TO RESTART TRAINING');
-    this.input.once('pointerdown', () => this.scene.restart());
-    this.input.keyboard?.once('keydown', () => this.scene.restart());
   }
 
   private fire(owner: Actor, dx: number, dy: number) {
-    const len = Math.hypot(dx, dy) || 1;
-    const speed = this.isPhoneLayout ? 430 : 500;
-    const radius = this.isPhoneLayout ? 5 : 5;
+    if (owner.cooldown > 0) return false;
 
-    const ball = this.add.circle(owner.body.x, owner.body.y, radius,
-      owner.team === 'green' ? 0xe6f5d9 : 0xffbd86, 1
-    ).setDepth(25);
+    const len = Math.hypot(dx, dy) || 1;
+    const size = this.actorSize(owner.role);
+    const color = owner.team === 'green' ? 0xe6f5d9 : 0xffbd86;
+
+    const ball = this.add.circle(
+      owner.body.x + (dx / len) * size * 0.85,
+      owner.body.y + (dy / len) * size * 0.85,
+      this.isPhoneLayout ? 4.5 : 5,
+      color,
+      1,
+    ).setDepth(50);
 
     this.paintballs.push({
       body: ball,
-      vx: dx / len * speed,
-      vy: dy / len * speed,
+      vx: (dx / len) * (this.isPhoneLayout ? 470 : 530),
+      vy: (dy / len) * (this.isPhoneLayout ? 470 : 530),
       owner,
       ttl: 1250,
     });
-    this.lastShot = this.time.now;
+
+    owner.cooldown = 300;
+    owner.firePulse = 1;
+
+    owner.parts.weapon.y += 4;
+    owner.parts.muzzle.setVisible(true).setAlpha(1);
+    this.tweens.add({
+      targets: owner.parts.weapon,
+      y: owner.parts.weapon.y - 4,
+      duration: 85,
+      ease: 'Sine.easeOut',
+    });
+    this.tweens.add({
+      targets: owner.parts.muzzle,
+      alpha: 0,
+      duration: 90,
+      onComplete: () => owner.parts.muzzle.setVisible(false),
+    });
+
+    return true;
+  }
+
+  private updateActorPresentation(actor: Actor, delta: number, moving: boolean) {
+    if (!actor.alive) return;
+
+    actor.animTime += delta;
+    const heavy = actor.role === 'heavy' || actor.role === 'anchor';
+    const phase = actor.animTime * (moving ? (heavy ? 0.012 : 0.017) : 0.004);
+    const swing = moving ? Math.sin(phase) : Math.sin(phase) * 0.18;
+
+    actor.parts.leftLeg.y = actor.parts.rightLeg.y = this.actorSize(actor.role) * 0.28;
+    actor.parts.leftBoot.y = actor.parts.rightBoot.y = this.actorSize(actor.role) * 0.49;
+
+    actor.parts.leftLeg.rotation = swing * 0.12;
+    actor.parts.rightLeg.rotation = -swing * 0.12;
+    actor.parts.leftBoot.rotation = swing * 0.12;
+    actor.parts.rightBoot.rotation = -swing * 0.12;
+
+    actor.parts.leftArm.rotation = -0.24 - swing * 0.10;
+    actor.parts.rightArm.rotation = 0.24 + swing * 0.10;
+
+    const breath = Math.sin(actor.animTime * 0.004) * 0.012;
+    actor.parts.torso.scaleY = 1 + breath;
+    actor.parts.vest.scaleY = 1 + breath;
+
+    actor.firePulse = Math.max(0, actor.firePulse - delta / 120);
+    if (actor.firePulse <= 0 && actor.parts.muzzle.visible) {
+      actor.parts.muzzle.setVisible(false);
+    }
+
+    actor.label.setPosition(actor.body.x, actor.body.y - this.actorSize(actor.role) * 1.30);
+  }
+
+  private animateActor(actor: Actor, delta: number, moving: boolean) {
+    this.updateActorPresentation(actor, delta, moving);
   }
 
   private moveActor(actor: Actor, dx: number, dy: number) {
-    const margin = this.actorSize(actor.role) * 0.60;
-    const nextX = Phaser.Math.Clamp(actor.body.x + dx, margin, this.worldWidth - margin);
-    const nextY = Phaser.Math.Clamp(actor.body.y + dy, margin + 8, this.worldHeight - margin - 8);
+    const margin = this.actorSize(actor.role) * 0.66;
+    const nextX = Phaser.Math.Clamp(actor.body.x + dx, 58 + margin, this.worldWidth - 58 - margin);
+    const nextY = Phaser.Math.Clamp(actor.body.y + dy, 18 + margin, this.worldHeight - 18 - margin);
 
     if (!this.hitCover(nextX, nextY, margin)) {
       actor.body.setPosition(nextX, nextY);
-      actor.label.setPosition(nextX, nextY - this.actorSize(actor.role) * 0.95);
+      actor.label.setPosition(nextX, nextY - this.actorSize(actor.role) * 1.30);
     }
   }
 
-  private hitCover(x: number, y: number, radius = 3) {
-    return this.covers.some((cover) =>
-      x >= cover.x - radius &&
-      x <= cover.x + cover.width + radius &&
-      y >= cover.y - radius &&
-      y <= cover.y + cover.height + radius
-    );
+  private faceActor(actor: Actor, dx: number, dy: number) {
+    const len = Math.hypot(dx, dy) || 1;
+    actor.body.rotation = Math.atan2(dy / len, dx / len) + Math.PI / 2;
   }
 
-  private nearestEnemy(actor: Actor) {
-    return this.enemies.filter((item) => item.alive).sort((a, b) =>
-      Phaser.Math.Distance.Between(actor.body.x, actor.body.y, a.body.x, a.body.y) -
-      Phaser.Math.Distance.Between(actor.body.x, actor.body.y, b.body.x, b.body.y)
-    )[0];
-  }
-
-  private nearestGreen(actor: Actor) {
-    return [this.player, ...this.teammates].filter((item) => item.alive).sort((a, b) =>
-      Phaser.Math.Distance.Between(actor.body.x, actor.body.y, a.body.x, a.body.y) -
-      Phaser.Math.Distance.Between(actor.body.x, actor.body.y, b.body.x, b.body.y)
-    )[0];
-  }
-
-  private updateUi() {
-    if (!this.scoreText) return;
-    this.scoreText.setText('GREEN ' + this.teamScore + ' · ORANGE ' + this.opponentScore + ' · ' + this.playerName);
-  }
-
-  private renderTouchUi() {
-    if (!this.touchUi || !this.mobileUi) return;
-    this.touchUi.clear();
-    this.mobileUi.clear();
-    if (!this.isPhoneLayout) return;
-
-    const w = this.scale.width;
-    const h = this.scale.height;
-    const pad = Phaser.Math.Clamp(Math.min(w, h) * 0.18, 74, 108);
-    const cx = pad + 22;
-    const cy = h - pad - 16;
-    this.dpadBounds.setTo(cx - pad, cy - pad, pad * 2, pad * 2);
-
-    const fireR = Phaser.Math.Clamp(Math.min(w, h) * 0.115, 48, 72);
-    const fireX = w - fireR - 28;
-    const fireY = h - fireR - 34;
-    this.fireBounds.setTo(fireX - fireR, fireY - fireR, fireR * 2, fireR * 2);
-
-    // Fixed, pressable controls: no thumb-dragging around the battlefield.
-    this.mobileUi.fillStyle(0x102018, 0.42).fillCircle(cx, cy, pad);
-    this.mobileUi.lineStyle(3, 0xf4f1df, 0.55).strokeCircle(cx, cy, pad);
-    const arm = pad * 0.38;
-    const cell = pad * 0.62;
-    const pressed = this.movePointerId !== undefined;
-    this.mobileUi.fillStyle(pressed ? 0x55a878 : 0x214e3f, 0.88);
-    this.mobileUi.fillRect(cx - cell / 2, cy - pad * 0.80, cell, arm);
-    this.mobileUi.fillRect(cx - cell / 2, cy + pad * 0.42, cell, arm);
-    this.mobileUi.fillRect(cx - pad * 0.80, cy - cell / 2, arm, cell);
-    this.mobileUi.fillRect(cx + pad * 0.42, cy - cell / 2, arm, cell);
-    this.mobileUi.lineStyle(2, 0xf4f1df, 0.30).strokeCircle(cx, cy, pad * 0.32);
-    this.mobileUi.fillStyle(this.fireHeld ? 0xffd36a : 0xe8c95c, 0.92).fillCircle(fireX, fireY, fireR);
-    this.mobileUi.lineStyle(3, 0xffffff, 0.70).strokeCircle(fireX, fireY, fireR);
-    this.mobileUi.fillStyle(0x102018, 1).fillCircle(fireX, fireY, fireR * 0.64);
-    this.mobileUi.fillStyle(0xf4f1df, 1).fillCircle(fireX, fireY, fireR * 0.22);
-    this.mobileUi.lineStyle(3, 0xe8c95c, 0.35).strokeCircle(fireX, fireY, fireR * 0.42);
-
-    const aimX = this.scale.width * 0.68;
-    const aimY = this.scale.height * 0.18;
-    this.mobileUi.fillStyle(0x102018, 0.50).fillCircle(aimX, aimY, 30);
-    this.mobileUi.lineStyle(2, 0xf4f1df, 0.55).strokeCircle(aimX, aimY, 30);
-    this.mobileUi.lineBetween(aimX - 13, aimY, aimX + 13, aimY);
-    this.mobileUi.lineBetween(aimX, aimY - 13, aimX, aimY + 13);
-    this.mobileUi.fillStyle(0xe8c95c, 0.95).fillCircle(aimX, aimY, 4);
-
-    if (this.aimMarker.visible) {
-      this.touchUi.lineStyle(3, 0xe8c95c, 0.72).strokeCircle(this.aimMarker.x, this.aimMarker.y, 18);
-      this.touchUi.lineStyle(2, 0xe8c95c, 0.24).lineBetween(this.scale.width * 0.50, this.scale.height * 0.50, this.aimMarker.x, this.aimMarker.y);
-    }
-  }
-
-  private touchRadius() {
-    return Phaser.Math.Clamp(Math.min(this.scale.width, this.scale.height) * 0.15, 56, 84);
-  }
-
-  private uiFont(base: number) {
-    if (!this.isPhoneLayout) return base + 'px';
-    return Phaser.Math.Clamp(base * (this.scale.width / 360), 8, 14).toFixed(1) + 'px';
-  }
-
-  private updateMobileAim(pointer: Phaser.Input.Pointer) {
-    const world = this.cameraWorldPoint(pointer.x, pointer.y);
-    this.aim = this.directionTo(this.player.body.x, this.player.body.y, world.x, world.y);
-    this.aimMarker = { x: pointer.x, y: pointer.y, visible: true };
-    this.player.body.rotation = Math.atan2(this.aim.y, this.aim.x) + Math.PI / 2;
+  private setAimFromPoint(x: number, y: number) {
+    const dx = x - this.player.body.x;
+    const dy = y - this.player.body.y;
+    const len = Math.hypot(dx, dy) || 1;
+    this.aim.x = dx / len;
+    this.aim.y = dy / len;
+    this.aimPoint = { x, y };
+    this.faceActor(this.player, dx, dy);
   }
 
   private handlePointerDown(pointer: Phaser.Input.Pointer) {
     if (!this.isPhoneLayout) {
-      if (pointer.x > this.scale.width * 0.50) {
-        const world = this.cameraWorldPoint(pointer.x, pointer.y);
-        this.aim = this.directionTo(this.player.body.x, this.player.body.y, world.x, world.y);
+      if (pointer.x > this.scale.width * 0.42) {
+        const point = this.cameraWorldPoint(pointer.x, pointer.y);
+        this.setAimFromPoint(point.x, point.y);
         this.fire(this.player, this.aim.x, this.aim.y);
       }
       return;
     }
 
-    const w = this.scale.width;
-    const h = this.scale.height;
-    const pad = Phaser.Math.Clamp(Math.min(w, h) * 0.18, 74, 108);
-    const cx = pad + 22;
-    const cy = h - pad - 16;
-    const fireR = Phaser.Math.Clamp(Math.min(w, h) * 0.115, 48, 72);
-    const fireX = w - fireR - 28;
-    const fireY = h - fireR - 34;
+    // The HTML movement/fire controls live above the canvas. Any canvas touch
+    // in the playable area is therefore an aim tap only.
+    if (pointer.y < this.scale.height - 132) {
+      const point = this.cameraWorldPoint(pointer.x, pointer.y);
+      this.setAimFromPoint(point.x, point.y);
+    }
+  }
 
-    if (Phaser.Math.Distance.Between(pointer.x, pointer.y, fireX, fireY) <= fireR && this.firePointerId === undefined) {
-      this.firePointerId = pointer.id;
-      this.fireHeld = true;
+  private handlePointerUp(_pointer: Phaser.Input.Pointer) {
+    // Touch buttons release themselves in the DOM control layer.
+  }
+
+  private cameraWorldPoint(x: number, y: number) {
+    return this.cameras.main.getWorldPoint(x, y);
+  }
+
+  private updateAimMarker() {
+    this.touchUi.clear();
+    if (!this.aimPoint) return;
+
+    const camera = this.cameras.main;
+    const screenX = (this.aimPoint.x - camera.scrollX) * camera.zoom;
+    const screenY = (this.aimPoint.y - camera.scrollY) * camera.zoom;
+
+    this.touchUi.lineStyle(2, 0xe8c95c, 0.82);
+    this.touchUi.strokeCircle(screenX, screenY, 12);
+    this.touchUi.lineBetween(screenX - 9, screenY, screenX + 9, screenY);
+    this.touchUi.lineBetween(screenX, screenY - 9, screenX, screenY + 9);
+    this.touchUi.fillStyle(0xe8c95c, 0.85);
+    this.touchUi.fillCircle(screenX, screenY, 2.5);
+  }
+
+  private spawnPaintBurst(x: number, y: number, color: number) {
+    for (let i = 0; i < 7; i += 1) {
+      const angle = (Math.PI * 2 * i) / 7;
+      const distance = 8 + i * 1.5;
+      const dot = this.add.circle(x, y, i % 2 === 0 ? 2.4 : 1.6, color, 0.95).setDepth(55);
+      this.tweens.add({
+        targets: dot,
+        x: x + Math.cos(angle) * distance,
+        y: y + Math.sin(angle) * distance,
+        alpha: 0,
+        duration: 180 + i * 12,
+        onComplete: () => dot.destroy(),
+      });
+    }
+  }
+
+  public update(_time: number, delta: number) {
+    if (!this.player?.alive) return;
+
+    this.updatePlayer(delta);
+    this.updateTeammates(delta);
+    this.updateEnemies(delta);
+    this.updatePaintballs(delta);
+    this.updateAimMarker();
+    this.renderRadar();
+    this.updateUi();
+
+    if (Phaser.Input.Keyboard.JustDown(this.keys.fire)) {
       this.fire(this.player, this.aim.x, this.aim.y);
-      return;
     }
 
-    if (Phaser.Math.Distance.Between(pointer.x, pointer.y, cx, cy) <= pad && this.movePointerId === undefined) {
-      this.movePointerId = pointer.id;
-      this.setMoveFromDpad(pointer.x - cx, pointer.y - cy, pad);
-      return;
-    }
-
-    // Anywhere in the playfield on the right is an aim tap. The player does not need to drag a virtual stick.
-    if (pointer.x > w * 0.42 && pointer.y < h - 120) {
-      this.updateMobileAim(pointer);
-      return;
+    if (this.time.now - this.startedAt > 300000) {
+      this.finish('TIME');
     }
   }
 
-  private handlePointerMove(pointer: Phaser.Input.Pointer) {
-    if (!this.isPhoneLayout) return;
-    if (this.movePointerId === pointer.id) {
-      const w = this.scale.width;
-      const h = this.scale.height;
-      const pad = Phaser.Math.Clamp(Math.min(w, h) * 0.18, 74, 108);
-      this.setMoveFromDpad(pointer.x - (pad + 22), pointer.y - (h - pad - 16), pad);
-    }
+  private updateUi() {
+    if (!this.player) return;
+    this.scoreText?.setText(`GREEN ${this.teamScore} · ORANGE ${this.opponentScore}`);
+    this.layoutUi(this.scale.width, this.scale.height);
   }
 
-  private handlePointerUp(pointer: Phaser.Input.Pointer) {
-    if (this.movePointerId === pointer.id) {
-      this.movePointerId = undefined;
-      this.moveInput.x = 0;
-      this.moveInput.y = 0;
-    }
-    if (this.firePointerId === pointer.id) {
-      this.firePointerId = undefined;
-      this.fireHeld = false;
-    }
+  private finish(winner: string) {
+    this.statusText?.setVisible(true).setText('TRAINING RESULT · ' + winner + ' WINS');
+    const banner = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, Math.min(this.scale.width * 0.84, 520), 150, 0x102018, 0.96)
+      .setScrollFactor(0).setDepth(300).setStrokeStyle(3, 0xe8c95c, 0.8);
+    const title = this.add.text(banner.x, banner.y - 30, 'TRAINING COMPLETE', {
+      fontFamily: 'monospace', fontSize: this.isPhoneLayout ? '15px' : '19px',
+      fontStyle: 'bold', color: '#f4f1df',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(301);
+    const hint = this.add.text(banner.x, banner.y + 18, 'TAP TO PLAY AGAIN', {
+      fontFamily: 'monospace', fontSize: this.isPhoneLayout ? '9px' : '10px',
+      color: '#e8c95c',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(301);
+
+    this.scene.pause();
+    this.input.once('pointerdown', () => {
+      this.scene.restart();
+    });
+    this.input.keyboard?.once('keydown', () => {
+      this.scene.restart();
+    });
   }
 
-  private setMoveFromDpad(dx: number, dy: number, radius: number) {
-    const distance = Math.hypot(dx, dy);
-    if (distance < radius * 0.18) {
-      this.moveInput.x = 0;
-      this.moveInput.y = 0;
-      return;
-    }
-    const x = Phaser.Math.Clamp(dx / radius, -1, 1);
-    const y = Phaser.Math.Clamp(dy / radius, -1, 1);
-    // Quantize to eight directions so the button-style pad feels intentional and predictable.
-    const angle = Math.atan2(y, x);
-    const octant = Math.round(angle / (Math.PI / 4));
-    this.moveInput.x = Math.cos(octant * Math.PI / 4);
-    this.moveInput.y = Math.sin(octant * Math.PI / 4);
+  private nearestEnemy(actor: Actor) {
+    return this.enemies
+      .filter((item) => item.alive)
+      .sort((a, b) =>
+        Phaser.Math.Distance.Between(actor.body.x, actor.body.y, a.body.x, a.body.y) -
+        Phaser.Math.Distance.Between(actor.body.x, actor.body.y, b.body.x, b.body.y)
+      )[0];
   }
 
-  private animateActor(actor: Actor, _delta: number, movement: number) {
-    if (!actor.alive) return;
-    const walking = movement > 0.05;
-    const bob = Math.sin(this.time.now * (walking ? 0.018 : 0.006)) * (walking ? 0.035 : 0.012);
-    actor.body.setScale(1 + bob, 1 - bob);
-  }
-
-  private directionTo(x1: number, y1: number, x2: number, y2: number) {
-    const dx = x2 - x1;
-    const dy = y2 - y1;
-    const len = Math.hypot(dx, dy) || 1;
-    return { x: dx / len, y: dy / len };
+  private nearestGreen(actor: Actor) {
+    return [this.player, ...this.teammates]
+      .filter((item) => item.alive)
+      .sort((a, b) =>
+        Phaser.Math.Distance.Between(actor.body.x, actor.body.y, a.body.x, a.body.y) -
+        Phaser.Math.Distance.Between(actor.body.x, actor.body.y, b.body.x, b.body.y)
+      )[0];
   }
 }
