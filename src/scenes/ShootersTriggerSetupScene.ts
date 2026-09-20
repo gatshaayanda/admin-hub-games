@@ -4,7 +4,7 @@ const PLAYER_KEY = 'admin-hub-games:shooters-trigger-player';
 
 export class ShootersTriggerSetupScene extends Phaser.Scene {
   private name = '';
-  private input?: HTMLInputElement;
+  private nameInput?: HTMLInputElement;
   private status?: Phaser.GameObjects.Text;
   private leaving = false;
   private resizeHandler?: () => void;
@@ -89,7 +89,7 @@ export class ShootersTriggerSetupScene extends Phaser.Scene {
       color: '#102018', letterSpacing: 1,
     }).setOrigin(0.5);
 
-    button.on('pointerdown', (_pointer, _x, _y, event) => {
+    button.on('pointerdown', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
       this.startTraining();
     });
