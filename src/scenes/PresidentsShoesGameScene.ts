@@ -143,7 +143,7 @@ export class PresidentsShoesGameScene extends Phaser.Scene {
       color: country.muted, wordWrap: { width: buttonWidth - 36 },
     }).setOrigin(0, 0.5);
 
-    button.on('pointerdown', (_pointer, _x, _y, event) => {
+    button.on('pointerdown', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
       this.choose(choice);
     });
@@ -198,7 +198,7 @@ export class PresidentsShoesGameScene extends Phaser.Scene {
       color: country.secondary, letterSpacing: 1.2,
     }).setOrigin(0.5);
 
-    next.on('pointerdown', (_pointer, _x, _y, event) => {
+    next.on('pointerdown', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
       this.state = { ...this.state, pendingConsequence: undefined, lastEffects: undefined };
       this.saveState();
@@ -264,8 +264,8 @@ export class PresidentsShoesGameScene extends Phaser.Scene {
       color: '#ffffff', letterSpacing: 1,
     }).setOrigin(0.5);
 
-    replay.on('pointerdown', (_pointer, _x, _y, event) => { event.stopPropagation(); this.resetStory(); });
-    menu.on('pointerdown', (_pointer, _x, _y, event) => { event.stopPropagation(); this.returnToLibrary(); });
+    replay.on('pointerdown', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => { event.stopPropagation(); this.resetStory(); });
+    menu.on('pointerdown', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => { event.stopPropagation(); this.returnToLibrary(); });
 
     this.contentObjects.push(panel, result, title, summary, finalStats, replay, replayText, menu, menuText);
 

@@ -13,6 +13,9 @@ function startHall() {
       { PresidentsShoesIntroScene },
       { PresidentsShoesSetupScene },
       { PresidentsShoesGameScene },
+      { ShootersTriggerIntroScene },
+      { ShootersTriggerSetupScene },
+      { ShootersTriggerTrainingScene },
     ] = await Promise.all([
       import('phaser'),
       import('./pwa'),
@@ -24,6 +27,9 @@ function startHall() {
       import('./scenes/PresidentsShoesIntroScene'),
       import('./scenes/PresidentsShoesSetupScene'),
       import('./scenes/PresidentsShoesGameScene'),
+      import('./scenes/ShootersTriggerIntroScene'),
+      import('./scenes/ShootersTriggerSetupScene'),
+      import('./scenes/ShootersTriggerTrainingScene'),
     ]);
 
     registerPwa();
@@ -45,7 +51,7 @@ function startHall() {
         min: { width: 320, height: 180 },
         max: { width: 0, height: 0 },
       },
-      scene: [BootScene, PublisherIntroScene, NameEntryScene, HallIntroScene, GameShellScene, PresidentsShoesIntroScene, PresidentsShoesSetupScene, PresidentsShoesGameScene],
+      scene: [BootScene, PublisherIntroScene, NameEntryScene, HallIntroScene, GameShellScene, PresidentsShoesIntroScene, PresidentsShoesSetupScene, PresidentsShoesGameScene, ShootersTriggerIntroScene, ShootersTriggerSetupScene, ShootersTriggerTrainingScene],
     };
 
     const game = new Phaser.Game(config);

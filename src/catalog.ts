@@ -1,8 +1,8 @@
 type GameMenuItem = {
-  id: 'hall' | 'presidents-shoes';
+  id: 'hall' | 'presidents-shoes' | 'shooters-trigger';
   title: string;
   description: string;
-  status: 'PLAY NOW';
+  status: 'PLAY NOW' | 'IN DEVELOPMENT';
   playable: true;
 };
 
@@ -12,6 +12,13 @@ const games: GameMenuItem[] = [
     title: 'HALL',
     description: 'The Admin Hub Games world. Explore, read, leave something behind and return.',
     status: 'PLAY NOW',
+    playable: true,
+  },
+  {
+    id: 'shooters-trigger',
+    title: 'SHOOTERS TRIGGER',
+    description: 'Paintball team training in development. Enter the field, play with your team and learn the arena.',
+    status: 'IN DEVELOPMENT',
     playable: true,
   },
   {
@@ -47,7 +54,7 @@ export function renderCatalog(onPlay: (gameId: GameMenuItem['id']) => void) {
         <div class="menu-intro">
           <p class="eyebrow">PLAY · DISCOVER · RETURN</p>
           <h1 id="game-menu-title">Choose a game.</h1>
-          <p>Select a world to begin. The game's own introduction will play after you enter.</p>
+          <p>Select a world to begin. Games marked IN DEVELOPMENT are playable foundations, not finished releases.</p>
         </div>
 
         <div class="menu-grid">
@@ -67,7 +74,7 @@ export function renderCatalog(onPlay: (gameId: GameMenuItem['id']) => void) {
 
       <footer class="game-menu-footer">
         <span>ADMIN HUB × PHASER</span>
-        <span>2 GAMES READY</span>
+        <span>2 RELEASED · 1 IN DEVELOPMENT</span>
       </footer>
     </main>
   `);
