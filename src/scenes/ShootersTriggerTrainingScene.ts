@@ -22,6 +22,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   private player!: Phaser.GameObjects.Container;
   private playerPoseA!: Phaser.GameObjects.Graphics;
   private playerPoseB!: Phaser.GameObjects.Graphics;
+  private playerWeapon!: Phaser.GameObjects.Graphics;
   private playerMoving = false;
   private playerFacing = 1;
   private playerAnimTime = 0;
@@ -41,6 +42,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
   private aim = new Phaser.Math.Vector2(1, 0);
   private aimPoint?: Phaser.Math.Vector2;
+  private hasAimInput = false;
   private fireHeld = false;
   private fireCooldown = 0;
 
@@ -80,11 +82,13 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     this.controlsCleanup = installShootersTriggerMobileControls();
 
     this.input.on('pointerdown', this.handlePointerDown, this);
+    this.input.on('pointermove', this.handlePointerMove, this);
     this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
       this.input.off('pointerdown', this.handlePointerDown, this);
+      this.input.off('pointermove', this.handlePointerMove, this);
       this.controlsCleanup?.();
       this.controlsCleanup = undefined;
     });
@@ -107,11 +111,20 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     this.fireHeld = held;
   }
 
+  public setAimVector(x: number, y: number) {
+    const length = Math.hypot(x, y);
+    if (length < 0.05) return;
+    this.aim.set(x / length, y / length);
+    this.hasAimInput = true;
+    this.updateWeaponPose();
+  }
+
   update(_time: number, delta: number) {
     this.updateMovement(delta);
     this.updateAimAndFire(delta);
     this.updatePaintballs(delta);
     this.updatePlayerAnimation(delta);
+    this.updateWeaponPose();
     this.updateHud();
   }
 
@@ -182,38 +195,34 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   }
 
   private handlePointerDown(pointer: Phaser.Input.Pointer) {
-    if (this.isPhoneSession()) {
-      if (pointer.y >= this.scale.height - 145) return;
-      const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-      this.setAimPoint(point.x, point.y);
-      return;
-    }
-
-    // Keep Hall-style click-to-walk available on the left side, while the
-    // right side remains the shooting/aiming side for desktop play.
-    if (pointer.x < this.scale.width * 0.46) {
-      const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-      this.playerTarget = new Phaser.Math.Vector2(point.x, point.y);
-      return;
-    }
+    if (this.isPhoneSession()) return;
 
     const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
     this.setAimPoint(point.x, point.y);
     this.fire();
   }
 
+  private handlePointerMove(pointer: Phaser.Input.Pointer) {
+    if (this.isPhoneSession() || !pointer.isDown) return;
+    const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+    this.setAimPoint(point.x, point.y);
+  }
+
   private setAimPoint(x: number, y: number) {
     this.aimPoint = new Phaser.Math.Vector2(x, y);
     this.aim.set(x - this.player.x, y - this.player.y).normalize();
+    this.hasAimInput = true;
+    this.updateWeaponPose();
   }
 
   private fire() {
     if (this.fireCooldown > 0) return;
     this.fireCooldown = 240;
     const speed = 520;
+    const muzzleDistance = 34;
     const ball = this.add.circle(
-      this.player.x + this.aim.x * 25,
-      this.player.y + this.aim.y * 25,
+      this.player.x + this.aim.x * muzzleDistance,
+      this.player.y + this.aim.y * muzzleDistance,
       4,
       0xf0dfb6,
       1,
@@ -278,35 +287,41 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
   private createPlayer(x: number, y: number) {
     const container = this.add.container(x, y);
-    const shadow = this.add.ellipse(0, 33, 24, 9, 0x4a3524, 0.28);
+    const shadow = this.add.ellipse(0, 34, 27, 10, 0x3d3025, 0.28);
 
     const makePose = (legOffset: number, bob: number) => {
       const g = this.add.graphics();
 
-      // Hall's proportions and grounded walk language, with paintball gear.
-      g.fillStyle(0x263b3a, 1).fillRect(-9, -20 + bob, 18, 10);
-      g.fillStyle(0x6e432c, 1).fillRect(-8, -13 + bob, 16, 13);
-      g.fillStyle(0x315845, 1).fillRect(-10, bob, 20, 19);
+      // A readable, grounded top-down player: helmet, face, vest, arms,
+      // separated legs and boots. The weapon is intentionally NOT part of
+      // this body graphic so it can follow the aim direction independently.
+      g.fillStyle(0x18211e, 1).fillEllipse(0, -14 + bob, 18, 13);
+      g.fillStyle(0x5c7448, 1).fillEllipse(0, -19 + bob, 21, 10);
+      g.fillStyle(0x93a26b, 0.72).fillEllipse(-4, -21 + bob, 10, 5);
+      g.fillStyle(0x6e432c, 1).fillEllipse(0, -7 + bob, 13, 10);
+      g.fillStyle(0x17201c, 0.92).fillRect(-7, -4 + bob, 14, 4);
+      g.fillStyle(0x315845, 1).fillRoundedRect(-11, 0 + bob, 22, 19, 6);
+      g.fillStyle(0x466d4f, 1).fillRect(-8, 3 + bob, 16, 4);
+      g.fillStyle(0xb8a06a, 1).fillCircle(-9, 8 + bob, 3).fillCircle(9, 8 + bob, 3);
       g.fillStyle(0xd4a45d, 1)
-        .fillRect(-9 + legOffset, 19 + bob, 7, 12)
-        .fillRect(2 - legOffset, 19 + bob, 7, 12);
+        .fillRoundedRect(-10 + legOffset, 18 + bob, 7, 13, 2)
+        .fillRoundedRect(3 - legOffset, 18 + bob, 7, 13, 2);
       g.fillStyle(0x171d1b, 1)
-        .fillRect(-11 + legOffset, 29 + bob, 9, 5)
-        .fillRect(2 - legOffset, 29 + bob, 9, 5);
-
-      // Paintball marker held from the torso, not mounted to the head.
-      g.fillStyle(0x222925, 1).fillRect(8, 2 + bob, 18, 5);
-      g.fillStyle(0x111715, 1).fillRect(20, 0 + bob, 7, 3);
-      g.fillStyle(0xb97e55, 1).fillRect(4, -2 + bob, 5, 15);
+        .fillRoundedRect(-11 + legOffset, 29 + bob, 9, 6, 2)
+        .fillRoundedRect(2 - legOffset, 29 + bob, 9, 6, 2);
       return g;
     };
 
     this.playerPoseA = makePose(0, 0);
     this.playerPoseB = makePose(2, 1).setVisible(false);
 
-    container.add([shadow, this.playerPoseA, this.playerPoseB]);
+    this.playerWeapon = this.add.graphics();
+    this.playerWeapon.setPosition(5, 3);
 
-    this.nameText = this.add.text(x, y - 48, this.playerName, {
+    container.add([shadow, this.playerPoseA, this.playerPoseB, this.playerWeapon]);
+    this.playerWeapon.setDepth(31);
+
+    this.nameText = this.add.text(x, y - 50, this.playerName, {
       fontFamily: 'monospace',
       fontSize: '10px',
       color: '#fff4d4',
@@ -314,8 +329,37 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       strokeThickness: 4,
     }).setOrigin(0.5).setDepth(40);
 
-    container.setData('nameText', this.nameText);
     return container;
+  }
+
+  private updateWeaponPose() {
+    if (!this.playerWeapon) return;
+
+    const angle = Math.atan2(this.aim.y, this.aim.x);
+    this.playerWeapon.setRotation(angle);
+
+    const g = this.playerWeapon;
+    g.clear();
+
+    // Paintball marker: stock -> grip -> body -> barrel. Arms connect to
+    // the marker so the hands follow the actual muzzle direction.
+    g.lineStyle(6, 0xb97e55, 1);
+    g.lineBetween(-4, 5, 11, 2);
+    g.lineStyle(4, 0x222925, 1);
+    g.lineBetween(2, 5, 12, 2);
+
+    g.fillStyle(0x26302c, 1).fillRoundedRect(7, -4, 18, 9, 3);
+    g.fillStyle(0x111715, 1).fillRect(22, -2, 13, 5);
+    g.fillStyle(0x53635c, 1).fillRect(13, -9, 7, 5);
+    g.fillStyle(0x171d1b, 1).fillRect(12, 4, 5, 9);
+
+    // Front hand / rear hand.
+    g.fillStyle(0xd4a45d, 1).fillCircle(7, 1, 3).fillCircle(12, 4, 3);
+
+    // Small sight line makes the muzzle direction legible without a permanent
+    // giant aiming dot on the playfield.
+    g.lineStyle(1, 0xe8c95c, 0.35);
+    g.lineBetween(35, 0, 43, 0);
   }
 
   private drawField() {
@@ -483,10 +527,10 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
     this.hintText.setText(
       this.isPhoneSession()
-        ? 'JOYSTICK TO MOVE  ·  TAP FIELD TO AIM  ·  FIRE'
+        ? 'MOVE  ·  DRAG RIGHT TO AIM  ·  FIRE'
         : distance > 0
           ? `WALKING TO MARKER  ·  ${distance}`
-          : 'WASD / ARROWS  ·  TAP LEFT TO WALK  ·  TAP RIGHT TO AIM/FIRE',
+          : 'WASD / ARROWS  ·  MOUSE AIM  ·  LEFT CLICK / SPACE FIRE',
     );
 
     this.nameText.setPosition(this.player.x, this.player.y - 48);
@@ -501,11 +545,12 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     const x = (this.aimPoint.x - camera.scrollX) * camera.zoom;
     const y = (this.aimPoint.y - camera.scrollY) * camera.zoom;
 
-    this.aimUi.lineStyle(2, 0xe8c95c, 0.82);
-    this.aimUi.strokeCircle(x, y, 12);
-    this.aimUi.lineBetween(x - 9, y, x + 9, y);
-    this.aimUi.lineBetween(x, y - 9, x, y + 9);
-    this.aimUi.fillStyle(0xe8c95c, 0.85).fillCircle(x, y, 2.5);
+    this.aimUi.lineStyle(1.5, 0xe8c95c, 0.72);
+    this.aimUi.strokeCircle(x, y, 10);
+    this.aimUi.lineBetween(x - 7, y, x - 2, y);
+    this.aimUi.lineBetween(x + 2, y, x + 7, y);
+    this.aimUi.lineBetween(x, y - 7, x, y - 2);
+    this.aimUi.lineBetween(x, y + 2, x, y + 7);
   }
 
   private handleResize(width: number, height: number) {
