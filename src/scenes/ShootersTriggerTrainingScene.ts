@@ -288,6 +288,13 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         continue;
       }
 
+      if (this.hitCover(ball.body.x, ball.body.y)) {
+        recordShooting(this.progress, 'coverHits');
+        ball.body.destroy();
+        this.paintballs.splice(i, 1);
+        continue;
+      }
+
       const target = this.targets.find((item) =>
         Phaser.Math.Distance.Between(ball.body.x, ball.body.y, item.x, item.y) < 30,
       );
