@@ -90,9 +90,12 @@ export function showShotAlert(
   direction?: string,
 ) {
   const message=direction ? text+' · '+direction : text;
+  const previous=scene.data.get('shooters-trigger-active-alert') as Phaser.GameObjects.Text | undefined;
+  previous?.destroy();
   const alert=scene.add.text(scene.scale.width/2,58,message,{
     fontFamily:'monospace',fontSize:'10px',fontStyle:'bold',color:'#f4f1df',
     backgroundColor:'#8f3e2f',padding:{left:10,right:10,top:7,bottom:7},
   }).setOrigin(.5).setScrollFactor(0).setDepth(230);
-  scene.tweens.add({targets:alert,alpha:0,y:38,duration:850,onComplete:()=>alert.destroy()});
+  scene.data.set('shooters-trigger-active-alert',alert);
+  scene.tweens.add({targets:alert,alpha:0,y:38,duration:850,onComplete:()=>{if(scene.data.get('shooters-trigger-active-alert')===alert)scene.data.remove('shooters-trigger-active-alert');alert.destroy();}});
 }
