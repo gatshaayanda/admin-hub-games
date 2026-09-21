@@ -412,10 +412,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
     this.muzzleFlash.clear();
     this.muzzleFlash.setRotation(angle);
-    this.muzzleFlash.setPosition(
-      this.player.x + this.aim.x * (42 - recoilOffset),
-      this.player.y + this.aim.y * (42 - recoilOffset),
-    );
+    this.muzzleFlash.setPosition(42 - recoilOffset, 0);
     if (this.muzzleFlashTimer > 0) {
       const pulse = this.muzzleFlashTimer / 72;
       this.muzzleFlash.fillStyle(0xffe7a3, 0.92 * pulse);
