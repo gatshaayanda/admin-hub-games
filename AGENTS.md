@@ -2249,3 +2249,86 @@ The previous "ENTER ARENA" shortcut from Media is intentionally removed. The Are
 Do not jump to Step 4 until the product owner confirms the Step 3 town/readiness experience. The next step should be defined conversationally first, then implemented as one controlled checkpoint.
 
 Unexpected result = STOP → inspect reality → then act.
+
+
+## Shooters Trigger — Home Field Wayfinding Correction — September 21, 2026
+
+The previous Step 3 town description was too literal about chronological progression and led to hard location locks and an incorrect Armory spawn. That implementation direction is superseded. The authoritative Home Field model is now **open-world preparation with strong spatial wayfinding**.
+
+### Player arrival and town geometry
+
+After Shooter Setup, the player arrives at a neutral **Field Town arrival square**. Never spawn the player at the Armory or another service location merely because it is geographically central.
+
+The first useful destination, Shooting Range, should be visible from the arrival area. The main street should make the rest of the town legible without requiring a tutorial checklist:
+
+```text
+                 ARENA GATE
+                     ↑
+              MEDIA    ARMORY
+                →        ←
+                     ↑
+               EVASION YARD
+                     ↑
+              SHOOTING RANGE
+                     ↑
+               ARRIVAL SQUARE
+                    YOU
+```
+
+This is a **recommended learning route, not a locked quest chain**. The town should feel like a small place the player can walk around, not a horizontal row of level-select buttons.
+
+### Open-order rule
+
+The player is a guest in the field town. From Home Field, the player may choose what to do and in what order when the game rules allow it.
+
+Do not hard-lock:
+- Evasion behind a Shooting result;
+- Armory behind Evasion;
+- Media behind an upgrade;
+- Arena behind Media review.
+
+The persistent performance system still matters. Training history, shooting/evasion skill, budget, equipment and readiness should determine consequences **inside** activities and the Arena. The world answers **where can I go?**; persistent state answers **what happens because of what I have done?**
+
+### Wayfinding principles
+
+Keep the town compact and readable:
+- one dominant main street;
+- one central arrival square;
+- five purposeful locations;
+- strong sightlines;
+- in-world numbered signs;
+- restrained scenery for atmosphere;
+- no arbitrary western attractions;
+- no giant navigation HUD;
+- no minimap unless real phone playtesting proves the world needs one.
+
+The Westworld reference means the ease of understanding the place, not a literal Westworld recreation.
+
+### Contextual entry
+
+Use the Hall convention for interactions:
+- no entry button when the player is far from a destination;
+- when close to a destination, show one normal rectangular contextual button;
+- label it with the actual destination;
+- keep it above the mobile movement dock;
+- never cover MOVE/AIM/FIRE controls;
+- keep keyboard `E` as the desktop equivalent.
+
+All five locations use the same interaction language. Armory arrival opens the purchase/inspection interaction; it does not silently spend budget or teleport the player. Arena is a physical destination and must not be exposed as a persistent shortcut from Media.
+
+### Acceptance playtest
+
+Before another town redesign, test the live phone build and answer:
+1. Do I know where I am immediately?
+2. Can I see the first useful destination?
+3. Can I walk there naturally?
+4. Can I understand the other destinations without a tutorial checklist?
+5. Can I choose another destination instead?
+6. Does the contextual button feel like a normal Hall-style interaction?
+7. Does any UI obstruct movement?
+8. Does Arena feel like a destination rather than a menu shortcut?
+9. After returning from an activity, does the town make the next choice feel natural?
+
+Playtesting is the acceptance authority. Do not add decoration or systems just because the town can support them.
+
+**Correction principle:** the recommended sequence is visible in the world; player agency remains open.
