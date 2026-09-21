@@ -25,41 +25,42 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
   private activeLocationId: Location['id'] | null = null;
   private equipmentModal?: HTMLDivElement;
   private statusText?: Phaser.GameObjects.Text;
+  private enterButton?: Phaser.GameObjects.Container;
 
   private locations: Location[] = [
     {
       id: 'shooting',
       name: 'SHOOTING RANGE',
-      subtitle: '01 · AIM · FIRE · LEARN',
-      x: 690, y: 930, color: 0x285d35,
+      subtitle: '01 · AIM · FIRE · TRAIN',
+      x: 520, y: 805, color: 0x285d35,
       locked: () => false, lockedText: '',
     },
     {
       id: 'evasion',
       name: 'EVASION YARD',
       subtitle: '02 · MOVE · COVER · SURVIVE',
-      x: 430, y: 620, color: 0x3d6332,
+      x: 850, y: 805, color: 0x3d6332,
       locked: () => !this.has('shooting'), lockedText: 'COMPLETE SHOOTING FIRST',
     },
     {
       id: 'upgrades',
       name: 'ARMORY & OUTFITTER',
       subtitle: '03 · CHECK · UPGRADE · EQUIP',
-      x: 870, y: 340, color: 0x6a5030,
+      x: 1180, y: 805, color: 0x6a5030,
       locked: () => !this.has('evasion'), lockedText: 'COMPLETE EVASION FIRST',
     },
     {
       id: 'media',
       name: 'MEDIA BUREAU',
       subtitle: '04 · REVIEW · REPORT · PREPARE',
-      x: 1370, y: 360, color: 0x5c5530,
+      x: 1510, y: 805, color: 0x5c5530,
       locked: () => !this.has('evasion') || !this.hasUpgrade(), lockedText: 'CHECK YOUR TRAINING + LOADOUT FIRST',
     },
     {
       id: 'arena',
       name: 'ARENA GATE',
       subtitle: '05 · 1v1 · FIRST TO 3',
-      x: 1780, y: 760, color: 0x633a31,
+      x: 1900, y: 805, color: 0x633a31,
       locked: () => !this.hasMediaReview(), lockedText: 'REVIEW THE MEDIA BUREAU FIRST',
     },
   ];
@@ -100,7 +101,8 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
       align: 'center', wordWrap: { width: width * .78 },
     }).setOrigin(.5).setScrollFactor(0).setDepth(200).setAlpha(0);
 
-    this.add.text(width / 2, 22, 'SHOOTERS TRIGGER · SWEETWATER FIELD TOWN', {
+    this.enterButton = this.makeEnterButton(width / 2, height - Math.max(170, height * .22));
+    this.add.text(width / 2, 22, 'SHOOTERS TRIGGER · FIELD TOWN', {
       fontFamily: 'monospace', fontSize: '12px', fontStyle: 'bold',
       color: '#fff4d4', stroke: '#493526', strokeThickness: 4,
     }).setOrigin(.5).setScrollFactor(0).setDepth(190);
@@ -110,6 +112,8 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
       this.equipmentModal?.remove();
       this.equipmentModal = undefined;
       this.activeLocationId = null;
+      this.enterButton?.destroy();
+      this.enterButton = undefined;
     });
 
     window.dispatchEvent(new Event('admin-hub-games:game-ready'));
@@ -177,6 +181,21 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     const dx = Math.abs(this.player.x - location.x);
     const dy = Math.abs(this.player.y - location.y);
     return dx <= 155 && dy <= 82;
+  }
+
+  private makeEnterButton(x: number, y: number) {
+    const button = this.add.container(x, y).setScrollFactor(0).setDepth(250).setVisible(false);
+    const shape = this.add.rectangle(0, 0, Math.min(300, this.scale.width * .78), 46, 0x2f7775, .96)
+      .setStrokeStyle(2, 0xf0dfb6, .9);
+    const text = this.add.text(0, 0, 'ENTER LOCATION', {
+      fontFamily: 'monospace', fontSize: '10px', fontStyle: 'bold', color: '#fff4d4', align: 'center', letterSpacing: 1
+    }).setOrigin(.5);
+    button.add([shape, text]).setSize(shape.width, shape.height).setInteractive({ useHandCursor: false });
+    button.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
+      this.interact();
+    });
+    return button;
   }
 
   private interact() {
@@ -280,9 +299,20 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     const nearby = this.getNearbyLocation();
     if (!nearby || nearby.distance > 235) {
       this.activeLocationId = null;
+      this.enterButton?.setVisible(false);
       return;
     }
     this.activeLocationId = nearby.location.id;
+    if (this.enterButton) {
+      this.enterButton.setVisible(true);
+      const locked = nearby.location.locked();
+      const label = locked ? `${nearby.location.name} · PREPARE FIRST` : `ENTER ${nearby.location.name}`;
+      (this.enterButton.getAt(1) as Phaser.GameObjects.Text).setText(label);
+      const shape = this.enterButton.getAt(0) as Phaser.GameObjects.Rectangle;
+      shape.setFillStyle(locked ? 0x493526 : 0x2f7775, 0.96);
+      shape.setStrokeStyle(2, 0xf0dfb6, 0.9);
+      this.enterButton.setData('locked', locked);
+    }
   }
 
   private showStatus(message: string) {
@@ -339,14 +369,12 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
 
     // Cross streets connect the town naturally but the five required stops stay
     // on the main progression road.
-    g.fillStyle(0x946c43,1).fillRoundedRect(650,250,150,680,55);
-    g.fillStyle(0x946c43,1).fillRoundedRect(1260,260,150,690,55);
-    g.fillStyle(0x946c43,1).fillRoundedRect(1680,600,180,620,60);
+
 
     // Central square / spawn.
     g.fillStyle(0xc39a61,1).fillCircle(1200,805,170);
     g.lineStyle(5,0xe0bd7e,.65).strokeCircle(1200,805,170);
-    this.drawTownBuilding(g,1200,805,260,150,0x5f4a36,'FIELD TOWN SQUARE');
+    this.drawTownBuilding(g,1200,805,250,135,0x5f4a36,'FIELD TOWN SQUARE');
     this.add.text(1200,895,'YOU ARRIVE HERE',{fontFamily:'monospace',fontSize:'9px',fontStyle:'bold',color:'#fff4d4'}).setOrigin(.5);
 
     this.locations.forEach((l,index)=>{
@@ -357,11 +385,11 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
 
     // Directional signs are in-world, not floating HUD banners.
     const signs=[
-      [920,650,'01 SHOOTING  →'],
-      [590,510,'02 EVASION  →'],
-      [1010,270,'03 ARMORY  →'],
-      [1515,500,'04 MEDIA  →'],
-      [1830,650,'05 ARENA  →'],
+      [520,675,'01 SHOOTING  →'],
+      [850,675,'02 EVASION  →'],
+      [1180,675,'03 ARMORY  →'],
+      [1510,675,'04 MEDIA  →'],
+      [1900,675,'05 ARENA  →'],
     ] as const;
     signs.forEach(([x,y,text])=>{
       g.fillStyle(0x4d3827,1).fillRoundedRect(x-78,y-18,156,36,5);
@@ -369,16 +397,9 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
       this.add.text(x,y,text,{fontFamily:'monospace',fontSize:'8px',fontStyle:'bold',color:'#493526',align:'center'}).setOrigin(.5);
     });
 
-    this.add.text(1200,115,'THE FIELD HAS AN ORDER',{fontFamily:'monospace',fontSize:'22px',fontStyle:'bold',color:'#fff4d4',stroke:'#493526',strokeThickness:6}).setOrigin(.5);
-    this.add.text(1200,150,'TRAIN → EVADE → EQUIP → REVIEW → ARENA',{fontFamily:'monospace',fontSize:'11px',fontStyle:'bold',color:'#f5d37a',stroke:'#493526',strokeThickness:3}).setOrigin(.5);
+    this.add.text(1200,115,'FIELD TOWN · KNOW WHERE TO GO',{fontFamily:'monospace',fontSize:'22px',fontStyle:'bold',color:'#fff4d4',stroke:'#493526',strokeThickness:6}).setOrigin(.5);
+    this.add.text(1200,150,'01 TRAIN → 02 EVADE → 03 EQUIP → 04 REVIEW → 05 ARENA',{fontFamily:'monospace',fontSize:'11px',fontStyle:'bold',color:'#f5d37a',stroke:'#493526',strokeThickness:3}).setOrigin(.5);
 
-    // Western-town silhouettes: saloon, marshal office, stable and water tower.
-    this.drawSideBuilding(g,260,390,220,125,'THE SALOON',0x654632);
-    this.drawSideBuilding(g,1900,360,230,125,'MARSHAL OFFICE',0x4f5c43);
-    this.drawSideBuilding(g,350,1110,260,120,'STABLES',0x5b432f);
-    g.lineStyle(8,0x654632,1).lineBetween(2050,250,2050,610);
-    g.lineStyle(5,0x654632,1).strokeCircle(2050,230,70);
-    this.add.text(2050,150,'WATER TOWER',{fontFamily:'monospace',fontSize:'8px',fontStyle:'bold',color:'#fff4d4',stroke:'#493526',strokeThickness:3}).setOrigin(.5);
   }
 
   private drawTownBuilding(g: Phaser.GameObjects.Graphics, x:number,y:number,w:number,h:number,color:number,label:string) {
