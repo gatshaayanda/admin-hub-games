@@ -278,9 +278,13 @@ function buildAimZone() {
   zone.setAttribute('aria-label', 'Aim by dragging');
 
   let pointerId: number | null = null;
+  let originX = 0;
+  let originY = 0;
 
   const reset = () => {
     pointerId = null;
+    originX = 0;
+    originY = 0;
     getScene()?.setAimVector?.(0, 0);
   };
 
@@ -367,7 +371,7 @@ export function installShootersTriggerMobileControls() {
 
   const hint = document.createElement('div');
   hint.className = 'st-hint';
-  hint.textContent = 'MOVE · TAP FIELD TO AIM · FIRE';
+  hint.textContent = 'MOVE · DRAG TO AIM · FIRE';
 
   root.append(joystick, aimZone, fire, hint);
   document.body.appendChild(root);
