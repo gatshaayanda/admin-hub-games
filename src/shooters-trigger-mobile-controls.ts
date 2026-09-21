@@ -144,8 +144,7 @@ function installStyles() {
       border: 3px solid rgba(255, 255, 255, .82);
       border-radius: 50%;
       background:
-        radial-gradient(circle at 50% 42%, rgba(255, 255, 255, .95) 0 10%, transparent 11%),
-        radial-gradient(circle, rgba(16, 32, 24, .94) 0 54%, rgba(232, 201, 92, .95) 55% 63%, rgba(16, 32, 24, .62) 64% 100%);
+        radial-gradient(circle, rgba(232, 201, 92, .95) 0 7%, rgba(16, 32, 24, .96) 8% 48%, rgba(232, 201, 92, .95) 49% 57%, rgba(16, 32, 24, .72) 58% 100%);
       box-shadow: 0 6px 0 rgba(0, 0, 0, .34);
       color: #f4f1df;
       font: 800 clamp(9px, 2.5vw, 12px)/1 monospace;
@@ -155,13 +154,14 @@ function installStyles() {
       -webkit-tap-highlight-color: transparent;
     }
 
-    #${ROOT_ID} .st-fire::after {
-      content: "FIRE";
+    #${ROOT_ID} .st-fire::before {
+      content: "⊙";
       position: absolute;
       inset: 0;
       display: grid;
       place-items: center;
       color: #f4f1df;
+      font: 800 30px/1 sans-serif;
       text-shadow: 0 1px 0 #102018;
     }
 
@@ -325,7 +325,7 @@ function buildFireButton() {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'st-fire';
-  button.setAttribute('aria-label', 'Fire');
+  button.setAttribute('aria-label', 'Shoot');
 
   const release = (event?: Event) => {
     event?.preventDefault();
@@ -371,7 +371,7 @@ export function installShootersTriggerMobileControls() {
 
   const hint = document.createElement('div');
   hint.className = 'st-hint';
-  hint.textContent = 'MOVE · DRAG TO AIM · FIRE';
+  hint.textContent = 'MOVE · AIM · SHOOT';
 
   root.append(joystick, aimZone, fire, hint);
   document.body.appendChild(root);
