@@ -20,7 +20,6 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   isPhoneSession(){return window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints>0;}
   private createExitButton(){const button=document.createElement('button');button.type='button';button.textContent='EXIT ARENA · HOME FIELD';Object.assign(button.style,{position:'fixed',right:'18px',top:'18px',minHeight:'44px',padding:'9px 14px',border:'2px solid #f4f1df',borderRadius:'10px',background:'#102018',color:'#f4f1df',fontFamily:'monospace',fontSize:'10px',fontWeight:'800',letterSpacing:'.7px',zIndex:'1450',touchAction:'manipulation'});button.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();this.scene.start('ShootersTriggerLobbyScene');});document.body.appendChild(button);this.sessionButton=button;}
   setFireHeld(v:boolean){this.fire=v;} setAimVector(x:number,y:number){const l=Math.hypot(x,y);if(l>.05)this.aim.set(x/l,y/l);}
-  shutdown(){this.cleanup?.();this.sessionButton?.remove();super.shutdown();}
   private createPlayer(x:number,y:number){const c=this.createUnit(x,y,0xe8c95c,'YOU');return c;}
   private createUnit(x:number,y:number,color:number,label:string){const c=this.add.container(x,y).setDepth(30);const g=this.add.graphics();g.fillStyle(color,1).fillCircle(0,0,22);this.add.text(x,y+30,label,{fontFamily:'monospace',fontSize:'9px',color:'#f4f1df'}).setOrigin(.5).setDepth(31);c.add(g);return c;}
 }
