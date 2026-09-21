@@ -235,6 +235,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   private fire() {
     if (this.fireCooldown > 0) return;
     this.fireCooldown = 240;
+    this.shotsFired += 1;
     this.recoilKick = 1;
     this.muzzleFlashTimer = 72;
     const speed = 520;
