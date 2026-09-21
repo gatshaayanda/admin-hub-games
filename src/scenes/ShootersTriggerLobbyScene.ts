@@ -27,7 +27,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
   private prompt?: Phaser.GameObjects.Container;
   private activeLocation?: Location;
   private playerName = 'Player';
-  private progress = loadShootersProgress();
+  private progress = loadShootersProgress();\n  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;\n  private keys!: Record<string, Phaser.Input.Keyboard.Key>;
 
   constructor() {
     super('ShootersTriggerLobbyScene');
@@ -50,7 +50,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
       Math.min(this.scale.height * 0.22, 145),
     );
 
-    this.createHud();
+    this.cursors = this.input.keyboard!.createCursorKeys();\n    this.keys = this.input.keyboard!.addKeys('W,A,S,D') as Record<string, Phaser.Input.Keyboard.Key>;\n    this.createHud();
     this.controlsCleanup = installShootersTriggerMobileControls('ShootersTriggerLobbyScene', false);
     addFieldGuide(this, 'SHOOTERS TRIGGER · FIELD GUIDE', [
       'This is the Home Field. Walk around it instead of selecting a flat menu.',
