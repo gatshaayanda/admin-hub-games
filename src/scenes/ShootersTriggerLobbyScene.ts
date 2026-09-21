@@ -288,13 +288,11 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     this.activeLocationId = nearby.location.id;
     if (this.enterButton) {
       this.enterButton.setVisible(true);
-      const locked = nearby.location.locked();
-      const label = locked ? `${nearby.location.name} · PREPARE FIRST` : `ENTER ${nearby.location.name}`;
+      const label = `ENTER ${nearby.location.name}`;
       (this.enterButton.getAt(1) as Phaser.GameObjects.Text).setText(label);
       const shape = this.enterButton.getAt(0) as Phaser.GameObjects.Rectangle;
-      shape.setFillStyle(locked ? 0x493526 : 0x2f7775, 0.96);
+      shape.setFillStyle(0x2f7775, 0.96);
       shape.setStrokeStyle(2, 0xf0dfb6, 0.9);
-      this.enterButton.setData('locked', locked);
     }
   }
 
