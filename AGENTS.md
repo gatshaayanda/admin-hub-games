@@ -2408,3 +2408,30 @@ not:
 **player → floating marker → menu button**.
 
 This is the default visual/interaction rule for future Shooters Trigger world-building unless the product owner explicitly overrides it.
+
+
+## Shooters Trigger — Open Arena / No Gate Correction — September 21, 2026
+
+The Arena is an **open physical play field**, not a gated building or locked destination.
+
+Permanent rules:
+- Do not draw an Arena gate, doorway, fence opening, or artificial threshold whose purpose is to justify entry.
+- The Arena itself is the destination: a recognizable open field with real playing-space objects.
+- The contextual action appears only when the player is physically near the Arena field.
+- The Arena may be visited in any order permitted by the open Home Field contract; preparation affects the match, not access.
+- Do not call the location **ARENA GATE** anywhere in the lobby. Use **ARENA**.
+- Do not create world objects solely to support a UI button. The physical place must exist first; UI only describes what can be done there.
+
+### Corrected Home Field composition
+
+The player's first view should read as a central field headquarters with:
+- Arena ahead;
+- Shooting and Evasion as distinct left/right training wings;
+- Armory and Media as support areas around the rear/sides of Field HQ;
+- clear walking space connecting all five areas.
+
+The layout must be judged from the **phone camera's initial viewport**, not from the full-map diagram alone. The first screen should establish the hub and its major directions without presenting an accidental cluster of destinations.
+
+The permanent visual rule remains:
+
+**physical place first → contextual action second.**
