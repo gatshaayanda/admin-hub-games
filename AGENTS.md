@@ -1617,7 +1617,7 @@ The game should use a tight feedback loop:
 ACTION → IMMEDIATE FEEDBACK → UNDERSTANDING → ADJUSTMENT → RETRY
 ```
 
-Research on flow and game-system learning emphasizes concrete goals, appropriately challenging tasks, timely feedback and reduced distraction. Feedback close to the action helps players connect their action to its result. citeturn0search1turn0search9
+Research on flow and game-system learning emphasizes concrete goals, appropriately challenging tasks, timely feedback and reduced distraction. Feedback close to the action helps players connect their action to its result.
 
 Apply that directly:
 - shooting hit feedback appears immediately;
@@ -1633,7 +1633,7 @@ Use **mastery** rather than grind:
 - “Can I beat the same opponent after they improve?”
 - “Can I win with less equipment spending?”
 
-Avoid clutter. Mobile action research repeatedly emphasizes independent movement/aim and keeping controls expressive without forcing the player to stare at the interface. citeturn0search0turn0search2turn0search3
+Avoid clutter. Mobile action research repeatedly emphasizes independent movement/aim and keeping controls expressive without forcing the player to stare at the interface.
 
 ### Mobile-first combat presentation
 
@@ -1798,11 +1798,11 @@ Do not add:
 
 ### Research basis for this direction
 
-The mobile control foundation is consistent with established twin-stick design: independent movement and shooting, left-side movement/right-side aiming, forgiving touch interaction and minimizing the need to look at the controls. citeturn0search0turn0search2turn0search3
+The mobile control foundation is consistent with established twin-stick design: independent movement and shooting, left-side movement/right-side aiming, forgiving touch interaction and minimizing the need to look at the controls.
 
-Game-design research also supports the intended engagement loop: clear goals, challenge matched to skill, immediate feedback, low distraction, learning through repeated system feedback, and meaningful player agency. citeturn0search1turn0search9turn0search11
+Game-design research also supports the intended engagement loop: clear goals, challenge matched to skill, immediate feedback, low distraction, learning through repeated system feedback, and meaningful player agency.
 
-Paintball itself provides a useful conceptual foundation for body/equipment hits, cover and close-range positional play, but Shooter Trigger's hit thresholds are fictional game rules and should remain internally consistent rather than pretending to simulate tournament regulations. citeturn0search48
+Paintball itself provides a useful conceptual foundation for body/equipment hits, cover and close-range positional play, but Shooter Trigger's hit thresholds are fictional game rules and should remain internally consistent rather than pretending to simulate tournament regulations.
 
 ### Direction-lock rule
 
