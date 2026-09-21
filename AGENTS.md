@@ -1911,3 +1911,10 @@ When continuing Shooters Trigger:
 The intended player experience is:
 
 **walk → discover → enter → act or decide → understand → close → return → see what changed → prepare → act again.**
+
+
+### External design check — September 21, 2026
+
+The lobby → focused activity → immediate result → return/review loop is consistent with established game-UX guidance: clear goals, timely feedback, progressive introduction of mechanics, and visible long-term progress help players connect actions to outcomes and learn systems. The Shooter implementation should therefore keep the world/lobby exploratory while keeping each training/combat scene focused on one teachable task, then use Media Coverage as the longer-term interpretation layer.
+
+Research reference: GameDeveloper discussions on cognitive flow and feedback, tutorial progression, player agency/context, and gameplay flow were reviewed while locking this architecture. These are design references, not hard rules; actual player testing remains the acceptance authority.
