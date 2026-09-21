@@ -11,6 +11,8 @@ type Paintball = {
 type Target = {
   body: Phaser.GameObjects.Container;
   plate: Phaser.GameObjects.Arc;
+  splatter: Phaser.GameObjects.Graphics;
+  kind: 'dummy' | 'bottle';
   x: number;
   y: number;
   hits: number;
@@ -282,10 +284,13 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       if (target) {
         target.hits += 1;
         target.plate.setFillStyle(0xe8c95c, 1);
+        this.showTargetSplatter(target);
         this.time.delayedCall(130, () => {
           if (target.plate.active) target.plate.setFillStyle(0xe06a3d, 1);
         });
-        this.statusText.setText(`TARGET HIT  ·  ${target.hits} ${target.hits === 1 ? 'HIT' : 'HITS'}`);
+        this.statusText.setText(
+          `${target.kind === 'bottle' ? 'BOTTLE HIT' : 'DUMMY HIT'}  ·  PAINT SPLAT  ·  ${target.hits}`,
+        );
         ball.body.destroy();
         this.paintballs.splice(i, 1);
       }
@@ -311,11 +316,11 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     const makePose = (legOffset: number, bob: number) => {
       const g = this.add.graphics();
 
-      // Simple, unmistakably human top-down silhouette: head/skin/ears,
-      // helmet + mask, neck, shoulders, torso, hips, legs and boots.
-      // Equipment sits on the person instead of replacing the person.
-      g.fillStyle(0x27352d, 1).fillEllipse(0, -20 + bob, 24, 18);
-      g.fillStyle(0xd4a45d, 1).fillEllipse(0, -17 + bob, 13, 12);
+      // The human body is deliberately brighter/separated from the equipment:
+      // head -> mask -> neck -> jersey -> pants -> boots. Gear accents sit on
+      // top of this person instead of becoming the person.
+      g.fillStyle(0x3b2f28, 1).fillEllipse(0, -20 + bob, 24, 18);
+      g.fillStyle(0xd8a66b, 1).fillEllipse(0, -17 + bob, 13, 12);
       g.fillStyle(0xd4a45d, 1)
         .fillCircle(-7, -17 + bob, 2.5)
         .fillCircle(7, -17 + bob, 2.5);
@@ -326,8 +331,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
       // Neck and shoulders make the human anatomy readable beneath the gear.
       g.fillStyle(0xd4a45d, 1).fillRoundedRect(-4, -8 + bob, 8, 7, 2);
-      g.fillStyle(0x2f5f4b, 1).fillRoundedRect(-15, -4 + bob, 30, 22, 8);
-      g.fillStyle(0x3e7657, 1).fillRoundedRect(-10, -1 + bob, 20, 14, 4);
+      g.fillStyle(0x2f6b4e, 1).fillRoundedRect(-15, -4 + bob, 30, 22, 8);
+      g.fillStyle(0x4f8b65, 1).fillRoundedRect(-10, -1 + bob, 20, 14, 4);
       g.fillStyle(0x17201c, 0.9)
         .fillRoundedRect(-15, 0 + bob, 6, 13, 2)
         .fillRoundedRect(9, 0 + bob, 6, 13, 2);
@@ -341,7 +346,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
       // Hips, separated legs and boots provide the stable ground anchor.
       g.fillStyle(0x29372f, 1).fillRoundedRect(-11, 16 + bob, 22, 7, 3);
-      g.fillStyle(0x435044, 1)
+      g.fillStyle(0x566052, 1)
         .fillRoundedRect(-10 + legOffset, 20 + bob, 8, 13, 2)
         .fillRoundedRect(2 - legOffset, 20 + bob, 8, 13, 2);
       g.fillStyle(0x202522, 1)
@@ -517,23 +522,75 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   }
 
   private createTargets() {
-    const positions = [
-      [1820, 430],
-      [1970, 520],
-      [1880, 650],
-      [2050, 760],
-      [1740, 820],
-    ] as const;
+    const targets = [
+      { x: 1820, y: 430, kind: 'dummy' as const },
+      { x: 1970, y: 520, kind: 'bottle' as const },
+      { x: 1880, y: 650, kind: 'dummy' as const },
+      { x: 2050, y: 760, kind: 'bottle' as const },
+      { x: 1740, y: 820, kind: 'dummy' as const },
+      { x: 1940, y: 900, kind: 'bottle' as const },
+    ];
 
-    for (const [x, y] of positions) {
-      const body = this.add.container(x, y).setDepth(15);
+    for (const target of targets) {
+      const body = this.add.container(target.x, target.y).setDepth(15);
+      const splatter = this.add.graphics().setDepth(1);
       const post = this.add.rectangle(0, 30, 7, 60, 0x594838, 1);
-      const plate = this.add.circle(0, 0, 24, 0xd66a3d, 1)
-        .setStrokeStyle(3, 0xf4f1df, 0.8);
-      const center = this.add.circle(0, 0, 8, 0xf4f1df, 1);
-      body.add([post, plate, center]);
-      this.targets.push({ body, plate, x, y, hits: 0 });
+
+      let plate: Phaser.GameObjects.Arc;
+      if (target.kind === 'bottle') {
+        const bottleBody = this.add.roundedRectangle?.(0, 5, 18, 34, 0xddd8c2, 1, 4);
+        if (bottleBody) {
+          body.add(bottleBody);
+        } else {
+          body.add(this.add.rectangle(0, 5, 18, 34, 0xddd8c2, 1));
+        }
+        body.add(this.add.rectangle(0, -14, 8, 5, 0x5f6e69, 1));
+        plate = this.add.circle(0, -1, 9, 0xf4f1df, 1).setStrokeStyle(2, 0xd66a3d, 0.9);
+      } else {
+        plate = this.add.circle(0, 0, 24, 0xd66a3d, 1)
+          .setStrokeStyle(3, 0xf4f1df, 0.8);
+        body.add(this.add.circle(0, 0, 8, 0xf4f1df, 1));
+      }
+
+      body.add([post, plate, splatter]);
+      this.targets.push({
+        body,
+        plate,
+        splatter,
+        kind: target.kind,
+        x: target.x,
+        y: target.y,
+        hits: 0,
+      });
     }
+  }
+
+  private showTargetSplatter(target: Target) {
+    const g = target.splatter;
+    g.clear();
+
+    // Paint remains on the target after the hit. It is feedback, not a
+    // disappearing “hit effect”, so the range visibly records where the
+    // player has been shooting.
+    const marks = [
+      [-8, -5, 4],
+      [5, -7, 3],
+      [10, 2, 2.5],
+      [-4, 7, 2.5],
+      [3, 2, 5],
+    ];
+
+    g.fillStyle(0xe94f46, 0.9);
+    for (const [x, y, radius] of marks) {
+      g.fillCircle(x + Phaser.Math.Between(-2, 2), y + Phaser.Math.Between(-2, 2), radius);
+    }
+
+    g.fillStyle(0xf27b4f, 0.72);
+    g.fillCircle(-12, 8, 2);
+    g.fillCircle(12, -9, 2);
+    g.lineStyle(2, 0xe94f46, 0.72);
+    g.lineBetween(-12, -2, -17, -7);
+    g.lineBetween(10, 6, 16, 10);
   }
 
   private hitCover(x: number, y: number, padding = 12) {
