@@ -37,7 +37,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   private progress = loadShootersProgress();
   private sessionElapsed = 0;
   private sessionFinished = false;
-  private finishButton?: Phaser.GameObjects.Text;\n  private resultSaved = false;
+  private finishButton?: Phaser.GameObjects.Text;
+  private resultSaved = false;\n  private resultSaved = false;
 
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
@@ -662,11 +663,12 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   }
 
   private finishTraining() {
-    if (this.sessionFinished) return;
+    if (this.resultSaved) return;
+    this.resultSaved = true;
     this.sessionFinished = true;
     finishShooting(this.progress);
     this.cameras.main.fadeOut(300, 16, 26, 19);
-    this.time.delayedCall(300, () => this.scene.start('ShootersTriggerLobbyScene'));
+    this.time.delayedCall(300, () => this.scene.start('ShootersTriggerMediaScene'));
   }
 
   private updateHud() {

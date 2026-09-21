@@ -23,16 +23,16 @@ function getManager(): ShooterManager | undefined {
   return (window.__AHG_GAME__ as unknown as { scene?: ShooterManager } | undefined)?.scene;
 }
 
-function getScene() {
-  return getManager()?.getScene?.('ShootersTriggerTrainingScene');
+function getScene(sceneKey = 'ShootersTriggerTrainingScene') {
+  return getManager()?.getScene?.(sceneKey);
 }
 
-function isActive() {
+function isActive(sceneKey = 'ShootersTriggerTrainingScene') {
   const manager = getManager();
   const scene = getScene(sceneKey);
   if (!scene) return false;
   return manager?.isActive
-    ? manager.isActive('ShootersTriggerTrainingScene') === true
+    ? manager.isActive(sceneKey) === true
     : true;
 }
 
@@ -311,8 +311,8 @@ export function installShootersTriggerMobileControls(sceneKey = 'ShootersTrigger
   const root = document.createElement('div');
   root.id = ROOT_ID;
 
-  const joystick = buildJoystick();
-  const fire = buildFireButton();
+  const joystick = buildJoystick(sceneKey);
+  const fire = combat ? buildFireButton(sceneKey) : undefined;
 
   const hint = document.createElement('div');
   hint.className = 'st-hint';
@@ -322,7 +322,7 @@ export function installShootersTriggerMobileControls(sceneKey = 'ShootersTrigger
   document.body.appendChild(root);
 
   const sync = () => {
-    const scene = getScene();
+    const scene = getScene(sceneKey);
     const active = isActive(sceneKey) && Boolean(scene?.isPhoneSession?.());
 
     root.classList.toggle('is-active', active);
