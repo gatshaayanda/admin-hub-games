@@ -1922,6 +1922,102 @@ The lobby → focused activity → immediate result → return/review loop is co
 Research reference: GameDeveloper discussions on cognitive flow and feedback, tutorial progression, player agency/context, and gameplay flow were reviewed while locking this architecture. These are design references, not hard rules; actual player testing remains the acceptance authority.
 
 
+## Shooters Trigger — Persistent Performance, Budget & Equipment Contract — September 21, 2026
+
+The Shooter player's persistent state is **performance-driven**, not decorative.
+
+### Performance changes the player
+Shooting and Evasion results must feed back into the player's persistent state:
+- shooting accuracy/hit-quality evidence influences shooting skill;
+- movement, survival, cover and incoming-shot evidence influences evasion/cover skill;
+- meaningful performance can change the player's earned budget/reward;
+- retraining can improve or worsen the recorded state depending on actual results;
+- Media Coverage must explain what changed in player-readable language.
+
+Do not treat training results as numbers that disappear after the result screen. The point of training is to change the player's preparation for the next activity.
+
+### Training → Arena connection
+
+The Arena must use recorded preparation state to make the match meaningfully different.
+
+A player's accumulated:
+- shooting skill;
+- evasion/cover skill;
+- equipment;
+- preparation;
+- training history
+
+must influence the player's effectiveness in the 3v3 Arena.
+
+This should create an understandable engagement loop:
+
+```
+TRAIN
+  ↓
+PERFORM
+  ↓
+EARN / IMPROVE
+  ↓
+SPEND / EQUIP
+  ↓
+ENTER ARENA
+  ↓
+FEEL THE DIFFERENCE
+  ↓
+RESULT
+  ↓
+RETRAIN
+```
+
+The player should become **better prepared through demonstrated performance**, not through an arbitrary level-up button.
+
+### Evasion evidence
+
+Evasion training must record useful evidence including:
+- survival time;
+- incoming shots;
+- complete misses;
+- peripheral scrapes;
+- stronger hits;
+- shots intercepted by cover;
+- effective cover usage;
+- reposition/escape behaviour.
+
+That evidence must feed the player's evasion/cover preparation and later Arena effectiveness.
+
+### Equipment / weapon effects
+
+Equipment is part of the persistent preparation state.
+
+Weapons and other equipment must have understandable gameplay effects on relevant attributes. This applies to:
+- the player;
+- Arena opponents/bots;
+- opponent preparation/budget where the game model gives them equipment.
+
+Equipment should therefore affect actual match behaviour/stats rather than being cosmetic labels.
+
+The player's Equipment Store purchase must:
+1. show the cost and understandable effect;
+2. require explicit confirmation;
+3. deduct persistent budget;
+4. persist the selected equipment;
+5. affect the appropriate player attribute/behaviour in later action;
+6. be visible to Media Coverage where useful.
+
+Bots/opponents should use the same broad preparation logic where appropriate: their training/readiness, budget and equipment contribute to their effective match state. Do not create arbitrary hidden advantages just to force an outcome.
+
+### Engagement principle
+
+The purpose of this system is not to make the game grindy. It is to make preparation **matter**.
+
+The player should be able to notice:
+
+> “I trained better, earned more, bought better equipment, and now I can actually feel the difference in the Arena.”
+
+The difference must remain understandable and skill-driven. Training/equipment can improve readiness, but they must not turn the Arena into an automatic win.
+
+This is now a locked product contract for the first complete Shooters Trigger release.
+
 ## Shooters Trigger — Location Entry Control Checkpoint — September 21, 2026
 
 The Home Field lobby must expose an obvious contextual interaction control when the player reaches a physical location.
