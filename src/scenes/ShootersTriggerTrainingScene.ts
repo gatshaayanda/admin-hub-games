@@ -678,7 +678,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
     const hint = this.isPhoneSession()
       ? 'MOVE · DRAG RIGHT TO AIM · FIRE · 60s'
-      : `DRILL ${Math.max(0, 60 - Math.floor(this.sessionElapsed / 1000))}s · HITS ${hits} · END DRILL`;
+      : `SHOOTING LOCATION · ${Math.max(0, 60 - Math.floor(this.sessionElapsed / 1000))}s · HITS ${hits} · END DRILL`;
 
     this.hintText.setText(hint);
     this.nameText.setPosition(this.player.x, this.player.y - 48);
