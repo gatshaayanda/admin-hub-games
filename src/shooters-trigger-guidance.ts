@@ -65,7 +65,7 @@ export function updateOffscreenSignal(
   sources: SignalSource[],
 ) {
   const w=scene.scale.width,h=scene.scale.height, pad=34;
-  const camera=scene.cameras.main, view=camera.worldView;
+  const camera=scene.cameras.main;
   let best: SignalSource|undefined, bestDistance=Infinity;
   for(const source of sources){
     const sx=(source.x-camera.scrollX)*camera.zoom, sy=(source.y-camera.scrollY)*camera.zoom;
