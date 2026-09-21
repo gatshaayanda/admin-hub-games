@@ -1069,6 +1069,45 @@ When the next Shooters Trigger change is requested:
 Unexpected movement/camera behaviour = **STOP → inspect Hall and the Shooters Trigger diff → then act.**
 
 
+
+## Shooters Trigger — Lobby + Phone Guidance Contract — September 21, 2026
+
+The Home Field is an open-order physical lobby. The player may visit any destination at any time; the game does not hard-lock locations. The world should teach where places are, while the phone provides contextual guidance about what to do next.
+
+### Physical lobby destinations
+
+The lobby has four physical destinations:
+1. **Shooting Range** — build shooting evidence.
+2. **Evasion Yard** — build evasion, cover and survival evidence.
+3. **Armory & Outfitter** — spend earned in-game budget on preparation.
+4. **Arena** — open physical match field; preparation affects the match, not access.
+
+There is **no physical Media Bureau** in the lobby. Media/coverage is a player-memory function delivered through the phone and result/coverage scenes. Do not add a media building, desk, camera station or fifth destination merely to justify narrative coverage.
+
+### Phone guidance
+
+The phone is the lobby's lightweight guidance and memory layer. It should behave like a personal message/notes device, not a tutorial wall.
+
+For a new player:
+- first message: welcome and recommend Shooting Range;
+- after a shooting record: recommend Evasion Yard;
+- after both training records: explain that Arena is open, with optional retraining/Armory preparation;
+- after an Arena result: acknowledge the result and recommend retraining/preparation before another attempt.
+
+The phone must explain **why** the next activity matters using the actual recorded state. It must not invent performance claims or expose hidden formulas.
+
+The phone guidance is advisory. The player can close it and walk directly to any physical destination.
+
+### Starting economy
+
+A new player should begin with **no earned budget**. Arena outcomes create the first meaningful opportunity to earn budget. Existing saved budget must be preserved; do not silently reset returning players.
+
+### Design loop
+
+**ARRIVE → TRAIN → RECORD → PREPARE → ARENA → EARN → RETRAIN / UPGRADE → ARENA AGAIN**
+
+The player's shooting/evasion evidence remains the source of progression. Do not replace the Good / Really Good / exceptional hit-quality model in the game contract with generic XP grinding.
+
 ## Shooters Trigger — Combat Presentation Refinement — September 21, 2026
 
 This is the authoritative refinement layer for the current single-player Shooters Trigger slice. The objective is not merely to make the existing controls prettier; the objective is to make the player read as a believable paintball participant and make movement, aim, weapon handling and firing agree frame-by-frame.

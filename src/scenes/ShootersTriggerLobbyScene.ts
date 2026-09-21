@@ -24,12 +24,13 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
   private equipmentModal?: HTMLDivElement;
   private statusText?: Phaser.GameObjects.Text;
   private enterButton?: Phaser.GameObjects.Container;
+  private phoneButton?: HTMLButtonElement;
+  private phoneModal?: HTMLDivElement;
 
   private locations: Location[] = [
     { id: 'shooting', name: 'SHOOTING RANGE', subtitle: '01 · AIM · FIRE · TRAIN', x: 1580, y: 690, color: 0xd66a3d },
     { id: 'evasion', name: 'EVASION YARD', subtitle: '02 · MOVE · COVER · SURVIVE', x: 780, y: 690, color: 0x2f7775 },
     { id: 'upgrades', name: 'ARMORY & OUTFITTER', subtitle: '03 · GEAR · UPGRADE · PREP', x: 760, y: 1080, color: 0xe8c95c },
-    { id: 'media', name: 'MEDIA BUREAU', subtitle: '04 · REVIEW · REPORT · REFLECT', x: 1600, y: 1080, color: 0x8fb39b },
     { id: 'arena', name: 'ARENA', subtitle: '05 · 1v1 · FIRST TO 3', x: 1180, y: 420, color: 0xd66a3d },
   ];
 
@@ -68,6 +69,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     }).setOrigin(.5).setScrollFactor(0).setDepth(200).setAlpha(0);
 
     this.enterButton = this.makeEnterButton(width / 2, height - Math.max(170, height * .22));
+    this.createPhoneButton();
     this.add.text(width / 2, 22, 'SHOOTERS TRIGGER · FIELD HQ', {
       fontFamily: 'monospace', fontSize: '12px', fontStyle: 'bold',
       color: '#fff4d4', stroke: '#493526', strokeThickness: 4,
@@ -77,6 +79,10 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
       this.joystickCleanup?.();
       this.equipmentModal?.remove();
       this.equipmentModal = undefined;
+      this.phoneModal?.remove();
+      this.phoneModal = undefined;
+      this.phoneButton?.remove();
+      this.phoneButton = undefined;
       this.activeLocationId = null;
       this.enterButton?.destroy();
       this.enterButton = undefined;
@@ -129,12 +135,8 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     try { return Number(localStorage.getItem('shooters-trigger:upgrade-level') || 0) > 0; } catch { return false; }
   }
 
-  private hasMediaReview() {
-    try { return !!localStorage.getItem('shooters-trigger:media-reviewed'); } catch { return false; }
-  }
-
   private getBudget() {
-    try { return Number(localStorage.getItem('shooters-trigger:budget') || 100); } catch { return 100; }
+    try { return Number(localStorage.getItem('shooters-trigger:budget') || 0); } catch { return 0; }
   }
 
   private getNearbyLocation() {
@@ -180,13 +182,71 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
       case 'upgrades':
         this.openEquipmentStore();
         break;
-      case 'media':
-        this.scene.start('ShootersTriggerMediaScene');
-        break;
       case 'arena':
         this.scene.start('ShootersTriggerArenaScene');
         break;
     }
+  }
+
+
+  private createPhoneButton() {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = 'PHONE';
+    Object.assign(button.style, {
+      position: 'fixed', right: '16px', top: '54px', minWidth: '88px', minHeight: '42px',
+      padding: '8px 12px', border: '2px solid #f4f1df', borderRadius: '9px',
+      background: '#102018', color: '#fff4d4', fontFamily: 'monospace', fontSize: '10px',
+      fontWeight: '800', zIndex: '1450', touchAction: 'manipulation',
+    });
+    button.addEventListener('pointerdown', (event) => {
+      event.preventDefault(); event.stopPropagation(); this.openPhone();
+    });
+    document.body.appendChild(button);
+    this.phoneButton = button;
+  }
+
+  private openPhone() {
+    if (this.phoneModal) return;
+    let shooting = false, evasion = false, arena = false;
+    try {
+      shooting = !!localStorage.getItem('shooters-trigger:last-shooting');
+      evasion = !!localStorage.getItem('shooters-trigger:last-evasion');
+      arena = !!localStorage.getItem('shooters-trigger:last-arena');
+    } catch {}
+
+    const next = !shooting
+      ? ['WELCOME TO THE FIELD', 'Start at the Shooting Range. Your shots will be recorded by quality: scrapes, marker-hand hits, center-mass hits and rare exceptional hits.']
+      : !evasion
+        ? ['SHOOTING RECORDED', 'Your first training record is in. Next stop: Evasion Yard. Learn to move, use cover and survive pressure.']
+        : !arena
+          ? ['FIELD-READY CHECK', 'Both training records are in. The Arena is open when you want to test yourself. Retrain first or visit the Armory if you have earned budget.']
+          : ['NEW MATCH REPORT', 'Your last Arena result is recorded. Retrain, review your performance, change your preparation, then try the Arena again.'];
+
+    const modal = document.createElement('div');
+    Object.assign(modal.style, {
+      position: 'fixed', inset: '0', zIndex: '1550', display: 'grid', placeItems: 'center',
+      padding: '20px', background: 'rgba(12,18,14,.72)', fontFamily: 'monospace', touchAction: 'manipulation',
+    });
+    const card = document.createElement('div');
+    Object.assign(card.style, {
+      width: 'min(430px,92vw)', padding: '22px', background: '#151a16', color: '#f4f1df',
+      border: '2px solid #e8c95c', borderRadius: '12px', boxShadow: '0 12px 34px rgba(0,0,0,.45)',
+    });
+    const title = document.createElement('div'); title.textContent = next[0];
+    title.style.cssText = 'font-size:17px;font-weight:800;color:#e8c95c;letter-spacing:1px;margin-bottom:14px;';
+    const message = document.createElement('div'); message.textContent = next[1];
+    message.style.cssText = 'font-size:11px;line-height:1.7;margin-bottom:14px;';
+    const status = document.createElement('div');
+    status.textContent = 'SHOOTING ' + (shooting ? '✓' : '—') + '   EVASION ' + (evasion ? '✓' : '—') + '   ARENA ' + (arena ? '✓' : '—');
+    status.style.cssText = 'font-size:9px;color:#9fbda8;line-height:1.8;margin-bottom:18px;';
+    const freedom = document.createElement('div');
+    freedom.textContent = 'OPEN FIELD · YOU CAN VISIT ANY LOCATION IN ANY ORDER';
+    freedom.style.cssText = 'font-size:9px;color:#e8c95c;line-height:1.6;margin-bottom:18px;';
+    const close = document.createElement('button'); close.type='button'; close.textContent='CLOSE PHONE';
+    Object.assign(close.style,{width:'100%',minHeight:'46px',border:'2px solid #f4f1df',borderRadius:'8px',background:'#102018',color:'#f4f1df',fontFamily:'monospace',fontSize:'10px',fontWeight:'800'});
+    close.addEventListener('pointerdown',(event)=>{event.preventDefault();event.stopPropagation();modal.remove();this.phoneModal=undefined;});
+    card.append(title,message,status,freedom,close); modal.appendChild(card); document.body.appendChild(modal); this.phoneModal=modal;
   }
 
   private openEquipmentStore() {
@@ -315,8 +375,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     const g = this.add.graphics();
     g.fillStyle(0x78a653, 1).fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
-    // The lobby uses the same grounded field vocabulary as training, but it is
-    // arranged as a field headquarters/staging compound rather than a shooting course.
+    // The lobby is a field headquarters: four playable destinations around a calm arrival area.
     g.fillStyle(0x8fb36b, 0.24).fillRoundedRect(760, 760, 880, 470, 34);
     g.fillStyle(0xd1b46c, 0.26).fillRect(1080, 180, 240, 1010);
     g.fillStyle(0xd1b46c, 0.18).fillRect(320, 730, 1760, 120);
@@ -352,21 +411,14 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     this.drawCrates(800, 1310, 3);
     this.drawSign(760, 1060, '03', 'ARMORY & OUTFITTER', 0xe8c95c);
 
-    // Media: a small field desk/camera/report station.
-    this.drawShelter(1420, 1110, 360, 140, 'MEDIA');
-    this.drawMediaDesk(1600, 1290);
-    this.drawCamera(1790, 1270);
-    this.drawSign(1600, 1060, '04', 'MEDIA BUREAU', 0x8fb39b);
-
     // Arena: an open physical play field. There is no gate or artificial entry point.
     this.drawArenaField(980, 300, 400, 240);
-    this.drawSign(1180, 560, '05', 'ARENA', 0xd66a3d);
 
     // Grounded wayfinding signs replace floating destination markers.
     this.drawSign(1580, 640, '01', 'SHOOTING', 0xd66a3d);
     this.drawSign(780, 640, '02', 'EVASION', 0x2f7775);
     this.drawSign(760, 1030, '03', 'ARMORY', 0xe8c95c);
-    this.drawSign(1600, 1030, '04', 'MEDIA', 0x8fb39b);
+    this.drawSign(1180, 560, '04', 'ARENA', 0xd66a3d);
 
     this.drawTree(300, 280, 1.15);
     this.drawTree(2110, 330, 0.95);
