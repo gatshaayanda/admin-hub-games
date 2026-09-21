@@ -13,6 +13,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
   private joystickCleanup?: () => void;
   private locationPrompt?: HTMLButtonElement;
   private activeLocationId: string | null = null;
+  private equipmentModal?: HTMLDivElement;
 
   private locations: Location[] = [
     { id: 'shooting', name: 'SHOOTING LOCATION', subtitle: 'AIM · HIT QUALITY · REWARD', x: 420, y: 620, color: 0x285d35 },
@@ -49,6 +50,8 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
       this.joystickCleanup?.();
       this.locationPrompt?.remove();
       this.locationPrompt = undefined;
+      this.equipmentModal?.remove();
+      this.equipmentModal = undefined;
       this.activeLocationId = null;
     });
   }
@@ -103,8 +106,88 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
       arena: 'ShootersTriggerArenaScene',
     };
 
-    if (nearest.id === 'upgrades') this.buyUpgrades();
+    if (nearest.id === 'upgrades') this.openEquipmentStore();
     else this.scene.start(next[nearest.id]);
+  }
+
+  private openEquipmentStore() {
+    if (this.equipmentModal) return;
+
+    const modal = document.createElement('div');
+    Object.assign(modal.style, {
+      position: 'fixed',
+      inset: '0',
+      zIndex: '1500',
+      display: 'grid',
+      placeItems: 'center',
+      padding: '24px',
+      background: 'rgba(10,18,13,.72)',
+      fontFamily: 'monospace',
+    });
+
+    const card = document.createElement('div');
+    Object.assign(card.style, {
+      width: 'min(460px, 92vw)',
+      padding: '24px',
+      border: '2px solid #e8c95c',
+      borderRadius: '14px',
+      background: '#172219',
+      color: '#f4f1df',
+      boxShadow: '0 10px 30px rgba(0,0,0,.35)',
+      textAlign: 'center',
+    });
+
+    const title = document.createElement('div');
+    title.textContent = 'EQUIPMENT STORE';
+    title.style.cssText = 'font-size:18px;font-weight:800;color:#e8c95c;letter-spacing:1px;margin-bottom:12px;';
+    const detail = document.createElement('div');
+    detail.textContent = `UPGRADE PACKAGE · 20 BUDGET · AVAILABLE ${this.getBudget()}`;
+    detail.style.cssText = 'font-size:11px;line-height:1.6;margin-bottom:20px;';
+
+    const actions = document.createElement('div');
+    actions.style.cssText = 'display:flex;gap:10px;justify-content:center;flex-wrap:wrap;';
+
+    const makeButton = (label: string) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = label;
+      Object.assign(button.style, {
+        minWidth: '150px',
+        minHeight: '48px',
+        padding: '10px 14px',
+        border: '2px solid #f4f1df',
+        borderRadius: '10px',
+        background: '#102018',
+        color: '#f4f1df',
+        fontFamily: 'monospace',
+        fontSize: '11px',
+        fontWeight: '800',
+        touchAction: 'manipulation',
+      });
+      return button;
+    };
+
+    const buy = makeButton('BUY UPGRADE · 20');
+    const cancel = makeButton('CANCEL · HOME FIELD');
+    buy.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      this.equipmentModal?.remove();
+      this.equipmentModal = undefined;
+      this.buyUpgrades();
+    });
+    cancel.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      this.equipmentModal?.remove();
+      this.equipmentModal = undefined;
+    });
+
+    actions.append(buy, cancel);
+    card.append(title, detail, actions);
+    modal.appendChild(card);
+    document.body.appendChild(modal);
+    this.equipmentModal = modal;
   }
 
   private createLocationPrompt() {
