@@ -1064,6 +1064,102 @@ When the next Shooters Trigger change is requested:
 Unexpected movement/camera behaviour = **STOP → inspect Hall and the Shooters Trigger diff → then act.**
 
 
+## Shooters Trigger — Combat Presentation Refinement — September 21, 2026
+
+This is the authoritative refinement layer for the current single-player Shooters Trigger slice. The objective is not merely to make the existing controls prettier; the objective is to make the player read as a believable paintball participant and make movement, aim, weapon handling and firing agree frame-by-frame.
+
+### Character clothing / equipment contract
+
+The player must visibly read as a **paintball player**, not a generic green blob or a head with a gun attached.
+
+The procedural character should communicate:
+- full-face paintball mask with visible visor/lens;
+- helmet/mask shell;
+- protective jersey/body layer;
+- chest/shoulder protection;
+- pod harness / equipment belt;
+- gloves/hands;
+- pants separated from torso;
+- boots as the ground anchor;
+- marker with stock, grip, hopper/loader, barrel, sight and air/tank detail;
+- small team accent without turning the player into a mascot.
+
+The body is layered. The torso, legs and feet remain the stable ground-facing mass; combat layers (arms, marker, recoil and muzzle flash) are allowed to respond to aim/fire independently.
+
+### Aim truth
+
+There are two valid aim states:
+
+1. **Movement default:** before the player has supplied an explicit aim input, the current movement vector becomes the aim vector. Therefore diagonal movement produces diagonal facing and diagonal projectile travel instead of a permanently horizontal first shot.
+2. **Explicit combat aim:** after mouse movement or the mobile right-side drag establishes aim, movement and aim become independent. The player can strafe, retreat, circle and fire in another direction.
+
+The projectile, marker barrel, hands/forearms and reticle must all agree with the same normalized aim vector.
+
+Never hard-code a left/right firing axis. Phaser's coordinate system uses radians with 0° pointing right, 90° down, 180° left and -90° up; use atan2(aim.y, aim.x) and the same vector for weapon rotation and projectile velocity.
+
+### Weapon handling / firing animation
+
+Firing is a short animation state, not just a new projectile:
+- marker moves backward along its local barrel axis for a brief recoil pulse;
+- braced forearms remain connected to the marker;
+- muzzle flash appears at the actual muzzle;
+- projectile spawns from that muzzle position;
+- muzzle flash and recoil decay quickly so repeated fire remains readable;
+- the character body does not spin or pitch with the weapon.
+
+The current implementation uses procedural frame-like layers rather than a large authored sprite sheet. This is intentional: it gives us a cheap animation rig now while preserving a stable path to authored directional sprite sheets later. Phaser supports frame-based sprite-sheet/atlas animation when that art phase is justified.
+
+### Animation quality bar
+
+A believable top-down shooter character needs more than whole-body bobbing. Prioritize:
+- grounded feet and alternating stride;
+- stable upper body while aiming;
+- arms/forearms braced around the marker;
+- explicit fire/recoil state;
+- visible muzzle feedback;
+- restrained idle movement;
+- future hit/stagger/reload states as separate additions.
+
+Do not add a giant animation system or skeletal dependency prematurely. Layered procedural parts are the current production solution; authored 4/8-direction sprite sheets are the next visual phase only after this core is accepted.
+
+### Verification scenarios for this refinement
+
+The acceptance test must include all of these, not just “the player can shoot”:
+- stand still and fire right;
+- stand still and fire left;
+- stand still and fire up;
+- stand still and fire down;
+- walk up-right and fire up-right before touching aim;
+- walk down-left and fire down-left before touching aim;
+- move diagonally while holding an explicit opposite aim;
+- strafe while maintaining a fixed aim;
+- fire repeatedly and visually confirm recoil/muzzle flash on every shot;
+- confirm the paintball starts at the barrel muzzle rather than the character centre;
+- confirm cover stops the projectile;
+- phone: left joystick + right drag aim + FIRE simultaneously;
+- phone: diagonal movement without explicit aim still produces diagonal default fire;
+- phone: explicit aim overrides movement direction.
+
+### Research basis
+
+Current top-down/twin-stick references reinforce independent movement and aim as the core combat interaction, with left-side movement and right-side aiming on touch devices. Current character-animation guidance also emphasizes stable upper-body aiming, connected weapon/hand placement, layered body parts, and small readable firing reactions rather than a giant full-body animation. Phaser's documented transform model supports keeping the player container stable while rotating child combat layers and using frame-based sprite animation later.
+
+Reference sources:
+- Phaser Containers: https://docs.phaser.io/phaser/concepts/gameobjects/container
+- Phaser rotation / transform: https://docs.phaser.io/phaser/concepts/actions
+- Phaser frame animations: https://docs.phaser.io/phaser/concepts/animations
+- KIDA twin-stick fundamentals: https://www.kidastudios.com/apps/captain-star/guides/twin-stick-space-shooter-tips.html
+- GameDeveloper mobile twin-stick usability: https://www.gamedeveloper.com/design/a-guide-to-ios-twin-stick-shooter-usability
+- Charios top-down shooter animation: https://charios.com/blog/top-down-shooter-character-animation-guide
+- Paintball equipment reference: https://sportsfoundation.org/paintball-equipment-list/
+
+### Revision rule
+
+When a player-facing combat problem is reported, inspect the actual rendered relationship between feet → torso → arms → marker → muzzle → projectile → reticle before adding another control or visual effect. Fix the shared source of truth rather than patching one direction or one device.
+
+Unexpected direction, animation or weapon alignment = **STOP → inspect vector, transform parent, muzzle origin and rendered layer order → simplify/fix → build → verify all four cardinal directions + diagonals → checkpoint.**
+
+
 ## Shooters Trigger — Combat Feel Refinement — September 21, 2026
 
 The next refinement preserves the accepted Hall movement foundation but makes Shooter controls and weapon presentation follow established top-down shooter conventions.
