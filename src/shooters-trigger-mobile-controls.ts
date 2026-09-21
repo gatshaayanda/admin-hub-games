@@ -325,10 +325,28 @@ function buildFireButton() {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'st-fire';
-  button.setAttribute('aria-label', 'Shoot');
+  button.setAttribute('aria-label', 'Aim and shoot');
+
+  let pointerId: number | null = null;
+  let originX = 0;
+  let originY = 0;
+
+  const update = (event: PointerEvent) => {
+    if (pointerId !== event.pointerId) return;
+    const x = event.clientX - originX;
+    const y = event.clientY - originY;
+    const length = Math.hypot(x, y);
+    if (length >= 8) {
+      getScene()?.setAimVector?.(x / length, y / length);
+    }
+    getScene()?.setFireHeld?.(true);
+  };
 
   const release = (event?: Event) => {
     event?.preventDefault();
+    pointerId = null;
+    originX = 0;
+    originY = 0;
     button.classList.remove('is-held');
     getScene()?.setFireHeld?.(false);
   };
@@ -338,18 +356,18 @@ function buildFireButton() {
     event.stopPropagation();
     if (!isActive()) return;
     adminHubAudio.start();
-    button.classList.add('is-held');
+    pointerId = event.pointerId;
+    originX = event.clientX;
+    originY = event.clientY;
     button.setPointerCapture?.(event.pointerId);
-    getScene()?.setFireHeld?.(true);
+    button.classList.add('is-held');
+    update(event);
   });
 
+  button.addEventListener('pointermove', update);
   button.addEventListener('pointerup', release);
   button.addEventListener('pointercancel', release);
   button.addEventListener('lostpointercapture', () => release());
-  button.addEventListener('pointerleave', (event) => {
-    if (button.hasPointerCapture?.(event.pointerId)) return;
-    release(event);
-  });
 
   return button;
 }
