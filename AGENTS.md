@@ -1248,3 +1248,58 @@ Do not add all states at once. Add one, verify it, then checkpoint.
 If a control can be removed without reducing expressive gameplay, remove it.
 
 Unexpected ambiguity = **STOP → inspect the input path and rendered direction → simplify → verify → checkpoint.**
+
+
+## Shooters Trigger — Person + Aim-First Control Refinement — September 21, 2026
+
+The current refinement makes two product-owner decisions authoritative:
+
+### The player is a person wearing paintball gear
+
+The character must read as a simple human first, paintball player second:
+- visible head/face/skin silhouette;
+- helmet and full-face paintball mask worn around the head;
+- visible neck and shoulders;
+- recognizable torso and hips;
+- separate legs and boots;
+- protective jersey/chest gear and pod harness layered over the body;
+- marker held by visible arms/hands rather than floating beside or above the body.
+
+Do not solve “paintball player” by adding more equipment to an ambiguous silhouette. If the character reads like invisible equipment, simplify the gear and strengthen the human anatomy.
+
+### Aim drives fire
+
+The current shooter uses an aim-first combat contract:
+- movement joystick / WASD controls movement only;
+- mouse position / phone right-side drag controls aim;
+- the current normalized aim vector is the firing direction;
+- firing never silently changes direction because the player is walking;
+- movement and aim remain independent so the player can strafe, retreat or circle while continuing to shoot in the chosen direction;
+- before the first explicit aim input, keep the stable initial aim rather than deriving aim from movement.
+
+This is the intended top-down/twin-stick relationship: independent movement and aim are the core interaction, and the firing system consumes the aim vector.
+
+### Mobile firing control
+
+The mobile firing control is now icon-led rather than text-led:
+- no persistent word “FIRE” inside the button;
+- use a compact target/shoot icon;
+- keep the button large, obvious and thumb-friendly;
+- accessibility label may still describe the action as “Shoot”;
+- hint copy is “MOVE · AIM · SHOOT”.
+
+### Acceptance test for this refinement
+
+- stand still, aim right, shoot right;
+- stand still, aim left/up/down, shoot in the selected direction;
+- walk diagonally while holding a different aim direction; shots must continue along the aim direction;
+- walk/strafe without changing aim; shots must not snap toward movement;
+- phone: left joystick + right aim drag + shoot button simultaneously;
+- verify the player reads as a human in paintball equipment at normal phone scale;
+- verify the marker is held by the person and not attached to the head;
+- verify recoil/muzzle flash remain aligned to the marker and projectile;
+- verify Hall and President's Shoes remain unchanged.
+
+### Revision rule
+
+If the player looks like gear without a person, stop adding equipment. Inspect the head → neck → shoulders → torso → hips → legs → boots silhouette first, then re-layer the paintball equipment around that human base.
