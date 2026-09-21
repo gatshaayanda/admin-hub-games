@@ -21,7 +21,7 @@ export class ShootersTriggerIntroScene extends Phaser.Scene {
       fontStyle: 'bold', color: '#f4f1df', align: 'center', lineSpacing: -7,
     }).setOrigin(0.5);
 
-    this.add.text(width / 2, height * 0.39, 'PAINTBALL · TEAM TRAINING · ARENA TACTICS', {
+    this.add.text(width / 2, height * 0.39, 'PAINTBALL · FIELD TRAINING · MOVEMENT + AIM', {
       fontFamily: 'monospace', fontSize: Math.max(10, Math.min(16, Math.min(width, height) * 0.026)) + 'px',
       fontStyle: 'bold', color: '#e8c95c', letterSpacing: 1.4,
     }).setOrigin(0.5);
@@ -29,13 +29,13 @@ export class ShootersTriggerIntroScene extends Phaser.Scene {
     const panel = this.add.rectangle(width / 2, height * 0.60, Math.min(width * 0.86, 760), Math.min(height * 0.30, 220), 0x102018, 0.94)
       .setStrokeStyle(3, 0x8ab56a, 0.75);
 
-    this.add.text(panel.x, panel.y - panel.height * 0.25, 'YOUR TEAM IS WAITING ON THE FIELD.', {
+    this.add.text(panel.x, panel.y - panel.height * 0.25, 'THE FIELD IS YOURS.', {
       fontFamily: 'monospace', fontSize: Math.max(14, Math.min(21, Math.min(width, height) * 0.035)) + 'px',
       fontStyle: 'bold', color: '#f4f1df', align: 'center', wordWrap: { width: panel.width * 0.82 },
     }).setOrigin(0.5);
 
     this.add.text(panel.x, panel.y + panel.height * 0.08,
-      'Learn the field by playing it. Move with your teammates,\nuse cover, tag opponents and reset when you get hit.',
+      'Learn the field by moving through it. Walk, use cover, aim, fire\nand build the movement feel before the full match is rebuilt.',
       {
         fontFamily: 'Arial, Helvetica, sans-serif',
         fontSize: Math.max(14, Math.min(19, Math.min(width, height) * 0.031)) + 'px',
