@@ -11,12 +11,8 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private interactKey!: Phaser.Input.Keyboard.Key;
   private joystickCleanup?: () => void;
-  private buyUpgrades() {
-    const current = Number(localStorage.getItem('shooters-trigger:budget') || 100);
-    const next = Math.max(0, current - 20);
-    localStorage.setItem('shooters-trigger:budget', String(next));
-    this.scene.start('ShootersTriggerMediaScene', { from: 'equipment', budget: next });
-  }
+  private locationPrompt?: HTMLButtonElement;
+  private activeLocationId: string | null = null;
 
   private locations: Location[] = [
     { id: 'shooting', name: 'SHOOTING LOCATION', subtitle: 'AIM · HIT QUALITY · REWARD', x: 420, y: 620, color: 0x285d35 },
@@ -41,6 +37,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     this.keys = this.input.keyboard!.addKeys('W,A,S,D') as Record<string, Phaser.Input.Keyboard.Key>;
     this.interactKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E);
     this.installWalkJoystick();
+    this.createLocationPrompt();
 
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       const p = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
@@ -48,7 +45,12 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     });
 
     window.dispatchEvent(new Event('admin-hub-games:game-ready'));
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.joystickCleanup?.());
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.joystickCleanup?.();
+      this.locationPrompt?.remove();
+      this.locationPrompt = undefined;
+      this.activeLocationId = null;
+    });
   }
 
   update(_time: number, delta: number) {
@@ -70,24 +72,98 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
       this.player.y = Phaser.Math.Clamp(this.player.y + dy / len * d, 90, 1350);
     }
     if (Phaser.Input.Keyboard.JustDown(this.interactKey)) this.interact();
-    this.locations.forEach(l => {
-      if (Phaser.Math.Distance.Between(this.player.x, this.player.y, l.x, l.y) < 90) this.showPrompt(l);
-    });
+    this.updateLocationPrompt();
+  }
+
+  private getBudget() {
+    try {
+      return Number(localStorage.getItem('shooters-trigger:budget') || 100);
+    } catch {
+      return 100;
+    }
+  }
+
+  private buyUpgrades() {
+    const current = this.getBudget();
+    const next = Math.max(0, current - 20);
+    localStorage.setItem('shooters-trigger:budget', String(next));
+    this.scene.start('ShootersTriggerMediaScene', { from: 'equipment', budget: next });
   }
 
   private interact() {
     const nearest = this.locations.reduce((a, b) =>
       Phaser.Math.Distance.Between(this.player.x,this.player.y,a.x,a.y) <
       Phaser.Math.Distance.Between(this.player.x,this.player.y,b.x,b.y) ? a : b);
-    if (Phaser.Math.Distance.Between(this.player.x,this.player.y,nearest.x,nearest.y) > 110) return;
+    if (Phaser.Math.Distance.Between(this.player.x,this.player.y,nearest.x,nearest.y) > 130) return;
+
     const next: Record<string,string> = {
-      upgrades: 'buy',
       shooting: 'ShootersTriggerTrainingScene',
       evasion: 'ShootersTriggerEvasionScene',
       media: 'ShootersTriggerMediaScene',
       arena: 'ShootersTriggerArenaScene',
     };
-    if (next[nearest.id] === 'buy') this.buyUpgrades(); else this.scene.start(next[nearest.id]);
+
+    if (nearest.id === 'upgrades') this.buyUpgrades();
+    else this.scene.start(next[nearest.id]);
+  }
+
+  private createLocationPrompt() {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.setAttribute('aria-label', 'Enter nearby Shooters Trigger location');
+    Object.assign(button.style, {
+      position: 'fixed',
+      left: '50%',
+      bottom: 'max(22px, env(safe-area-inset-bottom))',
+      transform: 'translateX(-50%) translateY(12px)',
+      minWidth: 'min(340px, calc(100vw - 36px))',
+      minHeight: '58px',
+      padding: '12px 22px',
+      border: '2px solid #f4f1df',
+      borderRadius: '12px',
+      background: '#102018',
+      color: '#f4f1df',
+      fontFamily: 'monospace',
+      fontSize: '13px',
+      fontWeight: '800',
+      letterSpacing: '1px',
+      boxShadow: '0 6px 0 rgba(0,0,0,.28)',
+      zIndex: '1450',
+      display: 'none',
+      touchAction: 'manipulation',
+      WebkitTapHighlightColor: 'transparent',
+    });
+    button.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      this.interact();
+    });
+    document.body.appendChild(button);
+    this.locationPrompt = button;
+  }
+
+  private updateLocationPrompt() {
+    const distances = this.locations.map((location) => ({
+      location,
+      distance: Phaser.Math.Distance.Between(this.player.x, this.player.y, location.x, location.y),
+    }));
+    distances.sort((a, b) => a.distance - b.distance);
+    const nearest = distances[0];
+
+    if (!nearest || nearest.distance > 150) {
+      if (this.locationPrompt) this.locationPrompt.style.display = 'none';
+      this.activeLocationId = null;
+      return;
+    }
+
+    const action = nearest.location.id === 'upgrades' ? 'OPEN EQUIPMENT STORE' : `ENTER ${nearest.location.name}`;
+    if (this.locationPrompt) {
+      this.locationPrompt.textContent = action + '  ·  E';
+      this.locationPrompt.style.display = 'block';
+      this.locationPrompt.style.opacity = nearest.distance <= 130 ? '1' : '0.62';
+      this.locationPrompt.style.transform = 'translateX(-50%) translateY(0)';
+    }
+    this.activeLocationId = nearest.location.id;
   }
 
   private installWalkJoystick() {
@@ -100,16 +176,9 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     let id:number|null=null;
     const reset=()=>{id=null;knob.style.transform='translate(0,0)';this.joystickVector.set(0,0);};
     const move=(e:PointerEvent)=>{if(id!==e.pointerId)return;const r=root.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,dx=e.clientX-cx,dy=e.clientY-cy,len=Math.hypot(dx,dy)||1,max=38,k=Math.min(1,max/len);knob.style.transform=`translate(${dx*k}px,${dy*k}px)`;this.joystickVector.set(dx/len*Math.min(1,len/max),dy/len*Math.min(1,len/max));};
-    root.onpointerdown=e=>{e.preventDefault();id=e.pointerId;root.setPointerCapture?.(e.pointerId);move(e);};
+    root.onpointerdown=e=>{e.preventDefault();e.stopPropagation();id=e.pointerId;root.setPointerCapture?.(e.pointerId);move(e);};
     root.onpointermove=move; root.onpointerup=reset; root.onpointercancel=reset; root.onlostpointercapture=reset;
     this.joystickCleanup=()=>root.remove();
-  }
-
-  private showPrompt(l: Location) {
-    if (!this.registry.get('shootersLobbyPrompt')) {
-      this.registry.set('shootersLobbyPrompt', l.id);
-      this.time.delayedCall(900, () => this.registry.remove('shootersLobbyPrompt'));
-    }
   }
 
   private drawWorld() {
@@ -127,7 +196,8 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
       this.add.text(l.x,l.y+45,l.subtitle,{fontFamily:'monospace',fontSize:'9px',color:'#e8c95c',align:'center'}).setOrigin(.5);
     });
     this.add.text(1200,105,'SHOOTERS TRIGGER · HOME FIELD',{fontFamily:'monospace',fontSize:'22px',fontStyle:'bold',color:'#f4f1df'}).setOrigin(.5);
-    this.add.text(1200,140,'AYANDA · BUDGET 100',{fontFamily:'monospace',fontSize:'11px',color:'#e8c95c'}).setOrigin(.5);
+    this.add.text(1200,140,`AYANDA · BUDGET ${this.getBudget()}`,{fontFamily:'monospace',fontSize:'11px',color:'#e8c95c'}).setOrigin(.5);
+    this.add.text(1200,166,'WALK TO A LOCATION · TAP ENTER OR PRESS E',{fontFamily:'monospace',fontSize:'10px',color:'#f4f1df',alpha:.78}).setOrigin(.5);
   }
 
   private createUnarmedPlayer(x:number,y:number) {
