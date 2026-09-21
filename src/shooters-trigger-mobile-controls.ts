@@ -217,6 +217,8 @@ function buildJoystick() {
   base.append(knob, label);
 
   let pointerId: number | null = null;
+  let originX = 0;
+  let originY = 0;
 
   const reset = () => {
     pointerId = null;
@@ -284,11 +286,8 @@ function buildAimZone() {
 
   const update = (event: PointerEvent) => {
     if (pointerId !== event.pointerId) return;
-    const rect = zone.getBoundingClientRect();
-    const cx = rect.left + rect.width * 0.72;
-    const cy = rect.top + rect.height * 0.5;
-    const x = event.clientX - cx;
-    const y = event.clientY - cy;
+    const x = event.clientX - originX;
+    const y = event.clientY - originY;
     const length = Math.hypot(x, y);
     if (length < 8) return;
     getScene()?.setAimVector?.(x / length, y / length);
@@ -300,6 +299,8 @@ function buildAimZone() {
     if (!isActive()) return;
     adminHubAudio.start();
     pointerId = event.pointerId;
+    originX = event.clientX;
+    originY = event.clientY;
     zone.setPointerCapture?.(event.pointerId);
     update(event);
   });
