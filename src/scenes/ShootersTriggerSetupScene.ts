@@ -73,7 +73,7 @@ export class ShootersTriggerSetupScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     this.add.text(width / 2, height * 0.55,
-      'TEAM GREEN\nYou + Operator 12 + The Heavy\n\nTEAM ORANGE\nTraining opponents',
+      'ONE PLAYER\nYou\n\nONE FIELD\nWalk · Aim · Fire · Explore',
       {
         fontFamily: 'monospace',
         fontSize: Math.max(11, Math.min(16, Math.min(width, height) * 0.026)) + 'px',
@@ -84,7 +84,7 @@ export class ShootersTriggerSetupScene extends Phaser.Scene {
     const button = this.add.rectangle(width / 2, height * 0.76, buttonWidth, 58, 0xe8c95c, 1)
       .setStrokeStyle(2, 0xf4f1df, 0.8).setInteractive({ useHandCursor: false });
 
-    this.add.text(button.x, button.y, 'START TEAM TRAINING', {
+    this.add.text(button.x, button.y, 'START FIELD TRAINING', {
       fontFamily: 'monospace', fontSize: '11px', fontStyle: 'bold',
       color: '#102018', letterSpacing: 1,
     }).setOrigin(0.5);
