@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { installShootersTriggerMobileControls } from '../shooters-trigger-mobile-controls';
+import { loadShootersProgress, recordShooting, finishShooting, saveShootersProgress } from '../shooters-trigger-state';
 
 type Paintball = {
   body: Phaser.GameObjects.Arc;
@@ -32,6 +33,10 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   private playerAnimTime = 0;
   private playerTarget: Phaser.Math.Vector2 | null = null;
   private playerName = 'Player';
+  private progress = loadShootersProgress();
+  private sessionElapsed = 0;
+  private sessionFinished = false;
+  private finishButton?: Phaser.GameObjects.Text;
 
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
@@ -65,6 +70,9 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
   create() {
     this.playerName = String(this.registry.get('shootersTriggerPlayer') || 'Player');
+    this.progress = loadShootersProgress(this.playerName);
+    this.progress.shootingTraining = { shots: 0, misses: 0, coverHits: 0, scrapes: 0, markerHits: 0, centerMass: 0, headshots: 0 };
+    saveShootersProgress(this.progress);
 
     this.cameras.main.setBackgroundColor('#6f984b');
     this.drawField();
@@ -132,6 +140,9 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number) {
+    if (this.sessionFinished) return;
+    this.sessionElapsed += delta;
+    if (this.sessionElapsed >= 60000) { this.finishTraining(); return; }
     this.updateMovement(delta);
     this.updateAimAndFire(delta);
     this.updatePaintballs(delta);
@@ -269,9 +280,9 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         ball.body.x < 0 ||
         ball.body.x > this.worldWidth ||
         ball.body.y < 0 ||
-        ball.body.y > this.worldHeight ||
-        this.hitCover(ball.body.x, ball.body.y)
+        ball.body.y > this.worldHeight
       ) {
+        recordShooting(this.progress, 'misses');
         ball.body.destroy();
         this.paintballs.splice(i, 1);
         continue;
@@ -282,6 +293,9 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       );
 
       if (target) {
+        const distance = Phaser.Math.Distance.Between(ball.body.x, ball.body.y, target.x, target.y);
+        const hitType = distance < 8 ? 'headshots' : distance < 15 ? 'centerMass' : target.kind === 'bottle' ? 'markerHits' : 'scrapes';
+        recordShooting(this.progress, hitType as 'headshots'|'centerMass'|'markerHits'|'scrapes');
         target.hits += 1;
         target.plate.setFillStyle(0xe8c95c, 1);
         this.showTargetSplatter(target);
@@ -619,6 +633,9 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       strokeThickness: 4,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(71);
 
+    this.finishButton = this.add.text(this.scale.width - 16, 52, 'END DRILL', { fontFamily: 'monospace', fontSize: '9px', color: '#102018', backgroundColor: '#e8c95c', padding: { left: 9, right: 9, top: 8, bottom: 8 } }).setOrigin(1, 0).setScrollFactor(0).setDepth(72).setInteractive();
+    this.finishButton.on('pointerdown', () => this.finishTraining());
+
     this.add.text(this.scale.width - 16, 16, 'SHOOTERS TRIGGER', {
       fontFamily: 'monospace',
       fontSize: '10px',
@@ -632,6 +649,14 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     this.layoutUi(this.scale.width, this.scale.height);
   }
 
+  private finishTraining() {
+    if (this.sessionFinished) return;
+    this.sessionFinished = true;
+    finishShooting(this.progress);
+    this.cameras.main.fadeOut(300, 16, 26, 19);
+    this.time.delayedCall(300, () => this.scene.start('ShootersTriggerLobbyScene'));
+  }
+
   private updateHud() {
     const distance = this.playerTarget
       ? Math.round(Phaser.Math.Distance.Between(this.player.x, this.player.y, this.playerTarget.x, this.playerTarget.y))
@@ -639,7 +664,9 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
     this.hintText.setText(
       this.isPhoneSession()
-        ? 'MOVE  ·  DRAG RIGHT TO AIM  ·  FIRE'
+        ? 'MOVE  ·  DRAG RIGHT TO AIM  ·  FIRE  ·  60s'
+
+        : 'DRILL '+Math.max(0,60-Math.floor(this.sessionElapsed/1000))+'s  ·  HITS '+(this.progress.shootingTraining.scrapes+this.progress.shootingTraining.markerHits+this.progress.shootingTraining.centerMass+this.progress.shootingTraining.headshots)+'  ·  END DRILL'
         : distance > 0
           ? `WALKING TO MARKER  ·  ${distance}`
           : 'WASD / ARROWS  ·  MOUSE AIM  ·  LEFT CLICK / SPACE FIRE',
