@@ -447,5 +447,4 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     poseA.setVisible(step === 0);
     poseB.setVisible(step === 1);
   }
-  }
 }
