@@ -7,8 +7,6 @@ type Location = {
   x: number;
   y: number;
   color: number;
-  locked: () => boolean;
-  lockedText: string;
 };
 
 const WORLD_WIDTH = 2400;
@@ -32,36 +30,31 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
       id: 'shooting',
       name: 'SHOOTING RANGE',
       subtitle: '01 · AIM · FIRE · TRAIN',
-      x: 520, y: 805, color: 0x285d35,
-      locked: () => false, lockedText: '',
+      x: 1200, y: 880, color: 0x285d35,
     },
     {
       id: 'evasion',
       name: 'EVASION YARD',
       subtitle: '02 · MOVE · COVER · SURVIVE',
-      x: 850, y: 805, color: 0x3d6332,
-      locked: () => !this.has('shooting'), lockedText: 'COMPLETE SHOOTING FIRST',
+      x: 1200, y: 640, color: 0x3d6332,
     },
     {
       id: 'upgrades',
       name: 'ARMORY & OUTFITTER',
       subtitle: '03 · CHECK · UPGRADE · EQUIP',
-      x: 1180, y: 805, color: 0x6a5030,
-      locked: () => !this.has('evasion'), lockedText: 'COMPLETE EVASION FIRST',
+      x: 900, y: 410, color: 0x6a5030,
     },
     {
       id: 'media',
       name: 'MEDIA BUREAU',
       subtitle: '04 · REVIEW · REPORT · PREPARE',
-      x: 1510, y: 805, color: 0x5c5530,
-      locked: () => !this.has('evasion') || !this.hasUpgrade(), lockedText: 'CHECK YOUR TRAINING + LOADOUT FIRST',
+      x: 1500, y: 410, color: 0x5c5530,
     },
     {
       id: 'arena',
       name: 'ARENA GATE',
       subtitle: '05 · 1v1 · FIRST TO 3',
-      x: 1900, y: 805, color: 0x633a31,
-      locked: () => !this.hasMediaReview(), lockedText: 'REVIEW THE MEDIA BUREAU FIRST',
+      x: 1200, y: 150, color: 0x633a31,
     },
   ];
 
@@ -71,7 +64,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor('#b58a55');
     this.drawTown();
-    this.player = this.createPlayer(1200, 820);
+    this.player = this.createPlayer(1200, 1120);
     this.player.setDepth(30);
 
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
@@ -86,11 +79,6 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
 
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       const p = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-      const nearby = this.getNearbyLocation();
-      if (nearby.distance < 190 && this.isInsideLocation(nearby.location) && nearby.location.locked()) {
-        this.showStatus(nearby.location.lockedText);
-        return;
-      }
       this.target = new Phaser.Math.Vector2(p.x, p.y);
     });
 
@@ -203,11 +191,6 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     if (!nearby || nearby.distance > 230 || !this.isInsideLocation(nearby.location)) return;
 
     const location = nearby.location;
-    if (location.locked()) {
-      this.showStatus(location.lockedText);
-      return;
-    }
-
     switch (location.id) {
       case 'shooting':
         this.scene.start('ShootersTriggerTrainingScene');
@@ -363,19 +346,19 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     }
 
     // Main dirt street: the route itself explains the intended order.
-    g.fillStyle(0x8a643f,1).fillRoundedRect(120,700,2060,210,70);
-    g.fillStyle(0xa87b4d,1).fillRoundedRect(170,730,1960,150,55);
-    g.lineStyle(3,0xc49b67,.7).lineBetween(210,805,2110,805);
+    g.fillStyle(0x8a643f,1).fillRoundedRect(1020,90,360,1030,90);
+    g.fillStyle(0xa87b4d,1).fillRoundedRect(1060,100,280,1000,70);
+    g.lineStyle(3,0xc49b67,.7).lineBetween(1200,1050,1200,140);
 
     // Cross streets connect the town naturally but the five required stops stay
     // on the main progression road.
 
 
-    // Central square / spawn.
-    g.fillStyle(0xc39a61,1).fillCircle(1200,805,170);
-    g.lineStyle(5,0xe0bd7e,.65).strokeCircle(1200,805,170);
-    this.drawTownBuilding(g,1200,805,250,135,0x5f4a36,'FIELD TOWN SQUARE');
-    this.add.text(1200,895,'YOU ARRIVE HERE',{fontFamily:'monospace',fontSize:'9px',fontStyle:'bold',color:'#fff4d4'}).setOrigin(.5);
+    // Central arrival square. The first destination is visible straight ahead.
+    g.fillStyle(0xc39a61,1).fillCircle(1200,1080,210);
+    g.lineStyle(5,0xe0bd7e,.65).strokeCircle(1200,1080,210);
+    this.add.text(1200,1080,'FIELD TOWN',{fontFamily:'monospace',fontSize:'16px',fontStyle:'bold',color:'#fff4d4',stroke:'#493526',strokeThickness:4}).setOrigin(.5);
+    this.add.text(1200,1130,'YOU ARRIVE HERE',{fontFamily:'monospace',fontSize:'9px',fontStyle:'bold',color:'#fff4d4'}).setOrigin(.5);
 
     this.locations.forEach((l,index)=>{
       this.drawTownBuilding(g,l.x,l.y,300,150,l.color,l.name);
@@ -385,11 +368,11 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
 
     // Directional signs are in-world, not floating HUD banners.
     const signs=[
-      [520,675,'01 SHOOTING  →'],
-      [850,675,'02 EVASION  →'],
-      [1180,675,'03 ARMORY  →'],
-      [1510,675,'04 MEDIA  →'],
-      [1900,675,'05 ARENA  →'],
+      [1200,770,'01 SHOOTING  ↑'],
+      [1200,530,'02 EVASION  ↑'],
+      [900,300,'03 ARMORY  ←'],
+      [1500,300,'04 MEDIA  →'],
+      [1200,90,'05 ARENA  ↑'],
     ] as const;
     signs.forEach(([x,y,text])=>{
       g.fillStyle(0x4d3827,1).fillRoundedRect(x-78,y-18,156,36,5);
@@ -397,8 +380,8 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
       this.add.text(x,y,text,{fontFamily:'monospace',fontSize:'8px',fontStyle:'bold',color:'#493526',align:'center'}).setOrigin(.5);
     });
 
-    this.add.text(1200,115,'FIELD TOWN · KNOW WHERE TO GO',{fontFamily:'monospace',fontSize:'22px',fontStyle:'bold',color:'#fff4d4',stroke:'#493526',strokeThickness:6}).setOrigin(.5);
-    this.add.text(1200,150,'01 TRAIN → 02 EVADE → 03 EQUIP → 04 REVIEW → 05 ARENA',{fontFamily:'monospace',fontSize:'11px',fontStyle:'bold',color:'#f5d37a',stroke:'#493526',strokeThickness:3}).setOrigin(.5);
+    this.add.text(1200,70,'FIELD TOWN · WALK THE STREET · CHOOSE YOUR NEXT MOVE',{fontFamily:'monospace',fontSize:'16px',fontStyle:'bold',color:'#fff4d4',stroke:'#493526',strokeThickness:5}).setOrigin(.5);
+    this.add.text(1200,95,'TRAIN · EVADE · EQUIP · REVIEW · ARENA — OPEN ORDER',{fontFamily:'monospace',fontSize:'9px',fontStyle:'bold',color:'#f5d37a',stroke:'#493526',strokeThickness:2}).setOrigin(.5);
 
   }
 
