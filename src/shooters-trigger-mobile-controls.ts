@@ -3,6 +3,7 @@ import { adminHubAudio } from './audio';
 type ShooterScene = {
   setMoveVector?: (x: number, y: number) => void;
   setFireHeld?: (held: boolean) => void;
+  setAimVector?: (x: number, y: number) => void;
   isPhoneSession?: () => boolean;
 };
 
@@ -107,6 +108,29 @@ function installStyles() {
       color: rgba(244, 241, 223, .45);
       font: 700 clamp(8px, 2.2vw, 10px)/1 monospace;
       letter-spacing: 1px;
+      pointer-events: none;
+    }
+
+    #${ROOT_ID} .st-aim-zone {
+      position: absolute;
+      right: 112px;
+      bottom: 0;
+      width: min(52vw, 360px);
+      height: min(72vh, 520px);
+      pointer-events: auto;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #${ROOT_ID} .st-aim-zone::before {
+      content: "AIM";
+      position: absolute;
+      right: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: rgba(244, 241, 223, .18);
+      font: 700 9px/1 monospace;
+      letter-spacing: 1.4px;
       pointer-events: none;
     }
 
@@ -246,6 +270,52 @@ function buildJoystick() {
   return base;
 }
 
+function buildAimZone() {
+  const zone = document.createElement('div');
+  zone.className = 'st-aim-zone';
+  zone.setAttribute('aria-label', 'Aim by dragging');
+
+  let pointerId: number | null = null;
+
+  const reset = () => {
+    pointerId = null;
+    getScene()?.setAimVector?.(0, 0);
+  };
+
+  const update = (event: PointerEvent) => {
+    if (pointerId !== event.pointerId) return;
+    const rect = zone.getBoundingClientRect();
+    const cx = rect.left + rect.width * 0.72;
+    const cy = rect.top + rect.height * 0.5;
+    const x = event.clientX - cx;
+    const y = event.clientY - cy;
+    const length = Math.hypot(x, y);
+    if (length < 8) return;
+    getScene()?.setAimVector?.(x / length, y / length);
+  };
+
+  zone.addEventListener('pointerdown', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!isActive()) return;
+    adminHubAudio.start();
+    pointerId = event.pointerId;
+    zone.setPointerCapture?.(event.pointerId);
+    update(event);
+  });
+  zone.addEventListener('pointermove', update);
+  zone.addEventListener('pointerup', (event) => {
+    event.preventDefault();
+    if (pointerId === event.pointerId) reset();
+  });
+  zone.addEventListener('pointercancel', (event) => {
+    if (pointerId === event.pointerId) reset();
+  });
+  zone.addEventListener('lostpointercapture', reset);
+
+  return zone;
+}
+
 function buildFireButton() {
   const button = document.createElement('button');
   button.type = 'button';
@@ -291,13 +361,14 @@ export function installShootersTriggerMobileControls() {
   root.id = ROOT_ID;
 
   const joystick = buildJoystick();
+  const aimZone = buildAimZone();
   const fire = buildFireButton();
 
   const hint = document.createElement('div');
   hint.className = 'st-hint';
   hint.textContent = 'MOVE · TAP FIELD TO AIM · FIRE';
 
-  root.append(joystick, fire, hint);
+  root.append(joystick, aimZone, fire, hint);
   document.body.appendChild(root);
 
   const sync = () => {
