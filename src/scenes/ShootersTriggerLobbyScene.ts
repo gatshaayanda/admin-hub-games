@@ -280,7 +280,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     });
     this.add.text(1200,105,'SHOOTERS TRIGGER · HOME FIELD',{fontFamily:'monospace',fontSize:'22px',fontStyle:'bold',color:'#f4f1df'}).setOrigin(.5);
     this.add.text(1200,140,`AYANDA · BUDGET ${this.getBudget()}`,{fontFamily:'monospace',fontSize:'11px',color:'#e8c95c'}).setOrigin(.5);
-    this.add.text(1200,166,'WALK TO A LOCATION · TAP ENTER OR PRESS E',{fontFamily:'monospace',fontSize:'10px',color:'#f4f1df',alpha:.78}).setOrigin(.5);
+    this.add.text(1200,166,'WALK TO A LOCATION · TAP ENTER OR PRESS E',{fontFamily:'monospace',fontSize:'10px',color:'#f4f1df'}).setOrigin(.5);
   }
 
   private createUnarmedPlayer(x:number,y:number) {
