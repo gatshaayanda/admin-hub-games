@@ -10,7 +10,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private interactKey!: Phaser.Input.Keyboard.Key;
-  private locations: Location[] = [
+  private joystickCleanup?: () => void;\n  private locations: Location[] = [
     { id: 'shooting', name: 'SHOOTING LOCATION', subtitle: 'AIM · HIT QUALITY · REWARD', x: 420, y: 620, color: 0x285d35 },
     { id: 'evasion', name: 'EVASION CAMP', subtitle: 'MOVE · COVER · SURVIVE', x: 1160, y: 360, color: 0x3d6332 },
     { id: 'media', name: 'MEDIA COVERAGE CENTER', subtitle: 'STATS · THOUGHTS · EQUIPMENT', x: 1870, y: 610, color: 0x5c5530 },
@@ -30,14 +30,14 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     this.cameras.main.setDeadzone(Math.min(width * .28, 320), Math.min(height * .22, 150));
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.keys = this.input.keyboard!.addKeys('W,A,S,D') as Record<string, Phaser.Input.Keyboard.Key>;
-    this.interactKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+    this.interactKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E);\n    this.installWalkJoystick();
 
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       const p = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
       this.target = new Phaser.Math.Vector2(p.x, p.y);
     });
 
-    window.dispatchEvent(new Event('admin-hub-games:game-ready'));
+    window.dispatchEvent(new Event('admin-hub-games:game-ready'));\n    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.joystickCleanup?.());
   }
 
   update(_time: number, delta: number) {
