@@ -26,11 +26,11 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
   private enterButton?: Phaser.GameObjects.Container;
 
   private locations: Location[] = [
-    { id: 'shooting', name: 'SHOOTING RANGE', subtitle: '01 · AIM · FIRE · TRAIN', x: 1880, y: 820, color: 0xd66a3d },
-    { id: 'evasion', name: 'EVASION YARD', subtitle: '02 · MOVE · COVER · SURVIVE', x: 1420, y: 1080, color: 0x2f7775 },
-    { id: 'upgrades', name: 'ARMORY & OUTFITTER', subtitle: '03 · GEAR · UPGRADE · PREP', x: 1080, y: 300, color: 0xe8c95c },
-    { id: 'media', name: 'MEDIA BUREAU', subtitle: '04 · REVIEW · REPORT · REFLECT', x: 1900, y: 650, color: 0x8fb39b },
-    { id: 'arena', name: 'ARENA GATE', subtitle: '05 · 1v1 · FIRST TO 3', x: 1180, y: 860, color: 0xd66a3d },
+    { id: 'shooting', name: 'SHOOTING RANGE', subtitle: '01 · AIM · FIRE · TRAIN', x: 1900, y: 720, color: 0xd66a3d },
+    { id: 'evasion', name: 'EVASION YARD', subtitle: '02 · MOVE · COVER · SURVIVE', x: 690, y: 960, color: 0x2f7775 },
+    { id: 'upgrades', name: 'ARMORY & OUTFITTER', subtitle: '03 · GEAR · UPGRADE · PREP', x: 610, y: 330, color: 0xe8c95c },
+    { id: 'media', name: 'MEDIA BUREAU', subtitle: '04 · REVIEW · REPORT · REFLECT', x: 1900, y: 900, color: 0x8fb39b },
+    { id: 'arena', name: 'ARENA GATE', subtitle: '05 · 1v1 · FIRST TO 3', x: 1180, y: 230, color: 0xd66a3d },
   ];
 
   private playerMoving = false;
@@ -68,7 +68,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     }).setOrigin(.5).setScrollFactor(0).setDepth(200).setAlpha(0);
 
     this.enterButton = this.makeEnterButton(width / 2, height - Math.max(170, height * .22));
-    this.add.text(width / 2, 22, 'SHOOTERS TRIGGER · FIELD TOWN', {
+    this.add.text(width / 2, 22, 'SHOOTERS TRIGGER · FIELD HQ', {
       fontFamily: 'monospace', fontSize: '12px', fontStyle: 'bold',
       color: '#fff4d4', stroke: '#493526', strokeThickness: 4,
     }).setOrigin(.5).setScrollFactor(0).setDepth(190);
@@ -314,47 +314,71 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
   private drawField() {
     const g = this.add.graphics();
     g.fillStyle(0x78a653, 1).fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-    g.fillStyle(0x86ad5e, 0.42).fillRect(0, 0, WORLD_WIDTH * 0.50, WORLD_HEIGHT);
-    g.fillStyle(0x679346, 0.32).fillRect(WORLD_WIDTH * 0.50, 0, WORLD_WIDTH * 0.50, WORLD_HEIGHT);
-    g.fillStyle(0xd1b46c, 0.30).fillRect(0, 510, WORLD_WIDTH, 92);
-    g.fillStyle(0xd1b46c, 0.22).fillRect(870, 0, 100, WORLD_HEIGHT);
-    g.lineStyle(5, 0xf4f1df, 0.48);
+
+    // The lobby uses the same grounded field vocabulary as training, but it is
+    // arranged as a field headquarters/staging compound rather than a shooting course.
+    g.fillStyle(0x8fb36b, 0.24).fillRoundedRect(760, 760, 880, 470, 34);
+    g.fillStyle(0xd1b46c, 0.26).fillRect(1080, 180, 240, 1010);
+    g.fillStyle(0xd1b46c, 0.18).fillRect(320, 730, 1760, 120);
+
+    g.lineStyle(5, 0xf4f1df, 0.42);
     g.strokeRect(55, 70, WORLD_WIDTH - 110, WORLD_HEIGHT - 120);
 
+    // Arrival / staging compound.
+    this.drawShelter(1180, 1050, 330, 150, 'FIELD HQ');
+    this.drawBench(930, 1035, 150);
+    this.drawBench(1430, 1035, 150);
+    this.drawCrates(1000, 1140, 3);
+    this.drawCrates(1510, 1140, 2);
+    this.drawInfoBoard(1180, 790, 'FIELD BOARD');
+
+    // Shooting station: target stands and a short marked firing lane.
+    this.drawFence(1760, 470, 420, 70);
+    this.drawTargetStand(1900, 455);
+    this.drawTargetStand(2050, 455);
+    this.drawLane(1760, 560, 420, '01 · SHOOTING RANGE');
+
+    // Evasion station: an irregular cover/movement course.
+    this.drawBunker(520, 820, 230, 70, 0x76563b);
+    this.drawBunker(760, 930, 170, 64, 0x5f6e69);
+    this.drawTireStack(560, 1040);
+    this.drawTireStack(790, 1120);
+    this.drawCourseFence(410, 740, 560, 470);
+    this.drawSign(690, 705, '02', 'EVASION YARD', 0x2f7775);
+
+    // Armory: a physical equipment tent/rack area, not a building.
+    this.drawShelter(430, 300, 360, 150, 'ARMORY');
+    this.drawEquipmentRack(430, 500);
+    this.drawCrates(650, 500, 3);
+    this.drawSign(610, 250, '03', 'ARMORY & OUTFITTER', 0xe8c95c);
+
+    // Media: a small field desk/camera/report station.
+    this.drawShelter(1690, 850, 360, 140, 'MEDIA');
+    this.drawMediaDesk(1690, 1030);
+    this.drawCamera(1880, 1010);
+    this.drawSign(1900, 790, '04', 'MEDIA BUREAU', 0x8fb39b);
+
+    // Arena: a real fenced gate with a visible field beyond it.
+    this.drawArenaGate(1180, 230);
+    this.drawArenaField(980, 70, 400, 150);
+    this.drawSign(1180, 300, '05', 'ARENA GATE', 0xd66a3d);
+
+    // Grounded wayfinding signs replace floating destination markers.
+    this.drawSign(1510, 700, '01', 'SHOOTING', 0xd66a3d);
+    this.drawSign(1030, 650, '02', 'EVASION', 0x2f7775);
+    this.drawSign(820, 610, '03', 'ARMORY', 0xe8c95c);
+    this.drawSign(1530, 830, '04', 'MEDIA', 0x8fb39b);
+
     this.drawTree(300, 280, 1.15);
-    this.drawTree(2050, 300, 0.95);
-    this.drawTree(350, 1110, 0.90);
-    this.drawTree(2070, 1090, 1.10);
-    this.drawBunker(690, 360, 190, 72, 0x76563b);
-    this.drawBunker(1470, 350, 230, 76, 0x5f6e69);
-    this.drawBunker(520, 760, 250, 70, 0x9d754d);
-    this.drawBunker(1570, 760, 220, 68, 0x6e8190);
-    this.drawBunker(850, 1030, 260, 74, 0xb58c58);
-    this.drawBunker(1420, 1080, 240, 72, 0x737b79);
-    this.drawTireStack(1080, 300);
-    this.drawTireStack(1900, 650);
-    this.drawTireStack(730, 1170);
+    this.drawTree(2110, 330, 0.95);
+    this.drawTree(280, 1110, 0.90);
+    this.drawTree(2140, 1110, 1.10);
 
-    this.drawStation(1880, 820, '01', 'SHOOTING RANGE', 0xd66a3d);
-    this.drawStation(1420, 1080, '02', 'EVASION YARD', 0x2f7775);
-    this.drawStation(1080, 300, '03', 'ARMORY', 0xe8c95c);
-    this.drawStation(1900, 650, '04', 'MEDIA', 0x8fb39b);
-    this.drawStation(1180, 860, '05', 'ARENA GATE', 0xd66a3d);
-    this.drawFlag(1180, 860, 0xd66a3d, 'ARENA');
-    this.drawFlag(1830, 930, 0xd66a3d, 'SHOOTING');
-
-    g.fillStyle(0xf4f1df, 0.10).fillCircle(1180, 1080, 74);
-    g.lineStyle(3, 0xf4f1df, 0.38).strokeCircle(1180, 1080, 74);
-    this.add.text(1180, 1132, 'FIELD ENTRY · SAFE AREA', {
-      fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold',
-      color: '#fff4d4', stroke: '#315845', strokeThickness: 4,
-    }).setOrigin(0.5).setDepth(6);
-
-    this.add.text(WORLD_WIDTH / 2, 30, 'SHOOTERS TRIGGER · FIELD', {
+    this.add.text(WORLD_WIDTH / 2, 30, 'SHOOTERS TRIGGER · FIELD HQ', {
       fontFamily: 'monospace', fontSize: '15px', fontStyle: 'bold',
       color: '#fff4d4', stroke: '#315845', strokeThickness: 5,
     }).setOrigin(0.5).setDepth(6);
-    this.add.text(WORLD_WIDTH / 2, 56, 'WALK THE FIELD · CHOOSE WHAT TO DO NEXT', {
+    this.add.text(WORLD_WIDTH / 2, 56, 'ARRIVE · LOOK AROUND · CHOOSE YOUR NEXT STOP', {
       fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold',
       color: '#f5d37a', stroke: '#315845', strokeThickness: 3,
     }).setOrigin(0.5).setDepth(6);
@@ -383,32 +407,132 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     }
   }
 
-  private drawFlag(x: number, y: number, color: number, label: string) {
+  private drawShelter(x: number, y: number, width: number, height: number, label: string) {
     const g = this.add.graphics();
-    g.fillStyle(0x594838, 1).fillRect(x, y, 4, 78);
-    g.fillStyle(color, 1).fillTriangle(x + 4, y + 4, x + 64, y + 18, x + 4, y + 32);
-    this.add.text(x + 32, y + 50, label, {
-      fontFamily: 'monospace', fontSize: '9px', color: '#fff4d4',
-      stroke: '#493526', strokeThickness: 4,
-    }).setOrigin(0.5).setDepth(6);
-  }
-
-  private drawStation(x: number, y: number, number: string, label: string, color: number) {
-    const g = this.add.graphics();
-    g.fillStyle(0x315845, 0.16).fillCircle(x, y, 86);
-    g.lineStyle(3, color, 0.70).strokeCircle(x, y, 64);
-    g.fillStyle(color, 0.95).fillCircle(x, y - 42, 18);
-    this.add.text(x, y - 42, number, {
-      fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold', color: '#1d2923',
-    }).setOrigin(0.5).setDepth(8);
-    this.add.text(x, y + 3, label, {
+    g.fillStyle(0x493526, 0.22).fillRoundedRect(x + 10, y + 12, width, height, 12);
+    g.fillStyle(0xd7c08a, 1).fillRoundedRect(x, y, width, height, 12);
+    g.fillStyle(0x6a533b, 1).fillTriangle(x - 10, y + 15, x + width / 2, y - 35, x + width + 10, y + 15);
+    g.fillStyle(0x49654b, 1).fillRect(x + 22, y + 38, width - 44, height - 55);
+    g.lineStyle(3, 0xf4f1df, 0.34).strokeRoundedRect(x, y, width, height, 12);
+    this.add.text(x + width / 2, y + height / 2 + 4, label, {
       fontFamily: 'monospace', fontSize: '11px', fontStyle: 'bold',
       color: '#fff4d4', stroke: '#315845', strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(7);
+  }
+
+  private drawBench(x: number, y: number, width: number) {
+    const g = this.add.graphics();
+    g.fillStyle(0x65472f, 1).fillRoundedRect(x, y, width, 16, 5);
+    g.fillStyle(0x493526, 1).fillRect(x + 16, y + 14, 10, 38).fillRect(x + width - 26, y + 14, 10, 38);
+  }
+
+  private drawCrates(x: number, y: number, count: number) {
+    const g = this.add.graphics();
+    for (let i = 0; i < count; i += 1) {
+      g.fillStyle(0x9b7449, 1).fillRect(x + i * 34, y - (i % 2) * 18, 30, 30);
+      g.lineStyle(2, 0x5c432e, 0.8).strokeRect(x + i * 34, y - (i % 2) * 18, 30, 30);
+    }
+  }
+
+  private drawInfoBoard(x: number, y: number, label: string) {
+    const g = this.add.graphics();
+    g.fillStyle(0x493526, 1).fillRect(x - 5, y + 34, 10, 90);
+    g.fillStyle(0x24362d, 1).fillRoundedRect(x - 105, y - 25, 210, 70, 8);
+    g.lineStyle(3, 0xf4f1df, 0.45).strokeRoundedRect(x - 105, y - 25, 210, 70, 8);
+    this.add.text(x, y + 10, label + '\nOPEN FIELD · CHOOSE YOUR ROUTE', {
+      fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold',
+      color: '#fff4d4', align: 'center', lineSpacing: 4,
     }).setOrigin(0.5).setDepth(8);
-    this.add.text(x, y + 20, 'ENTER', {
+  }
+
+  private drawTargetStand(x: number, y: number) {
+    const g = this.add.graphics();
+    g.fillStyle(0x493526, 1).fillRect(x - 4, y + 28, 8, 55);
+    g.fillStyle(0xf4f1df, 1).fillRect(x - 34, y - 8, 68, 48);
+    g.fillStyle(0xd66a3d, 1).fillCircle(x, y + 15, 14);
+    g.lineStyle(2, 0x493526, 0.65).strokeRect(x - 34, y - 8, 68, 48);
+  }
+
+  private drawFence(x: number, y: number, width: number, height: number) {
+    const g = this.add.graphics();
+    g.lineStyle(5, 0x315845, 0.8);
+    g.strokeRect(x, y, width, height);
+    for (let px = x; px <= x + width; px += 70) g.fillStyle(0x493526, 1).fillRect(px, y - 8, 8, height + 16);
+  }
+
+  private drawLane(x: number, y: number, width: number, label: string) {
+    const g = this.add.graphics();
+    g.lineStyle(3, 0xf4f1df, 0.35);
+    g.strokeRect(x, y, width, 260);
+    this.add.text(x + width / 2, y + 275, label, {
+      fontFamily: 'monospace', fontSize: '10px', fontStyle: 'bold',
+      color: '#fff4d4', stroke: '#315845', strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(7);
+  }
+
+  private drawCourseFence(x: number, y: number, width: number, height: number) {
+    const g = this.add.graphics();
+    g.lineStyle(4, 0x315845, 0.7).strokeRoundedRect(x, y, width, height, 18);
+    for (let px = x; px <= x + width; px += 80) g.fillStyle(0x493526, 1).fillRect(px - 3, y - 8, 6, height + 16);
+  }
+
+  private drawEquipmentRack(x: number, y: number) {
+    const g = this.add.graphics();
+    g.fillStyle(0x493526, 1).fillRect(x, y, 180, 12);
+    g.fillStyle(0x65472f, 1).fillRect(x + 10, y - 72, 8, 72).fillRect(x + 162, y - 72, 8, 72);
+    for (let i = 0; i < 4; i += 1) {
+      g.fillStyle(0x3f5f4c, 1).fillRoundedRect(x + 30 + i * 36, y - 62, 24, 48, 5);
+    }
+  }
+
+  private drawMediaDesk(x: number, y: number) {
+    const g = this.add.graphics();
+    g.fillStyle(0x65472f, 1).fillRoundedRect(x - 90, y, 180, 18, 5);
+    g.fillStyle(0x493526, 1).fillRect(x - 76, y + 18, 10, 45).fillRect(x + 66, y + 18, 10, 45);
+    this.add.text(x, y - 12, 'RESULTS / COVERAGE', {
       fontFamily: 'monospace', fontSize: '8px', fontStyle: 'bold',
-      color: '#f5d37a', stroke: '#315845', strokeThickness: 3,
+      color: '#fff4d4', stroke: '#315845', strokeThickness: 3,
     }).setOrigin(0.5).setDepth(8);
+  }
+
+  private drawCamera(x: number, y: number) {
+    const g = this.add.graphics();
+    g.lineStyle(5, 0x493526, 1);
+    g.strokeLineShape(new Phaser.Geom.Line(x, y + 8, x - 28, y + 58));
+    g.strokeLineShape(new Phaser.Geom.Line(x, y + 8, x + 28, y + 58));
+    g.strokeLineShape(new Phaser.Geom.Line(x, y + 8, x, y + 58));
+    g.fillStyle(0x2b302d, 1).fillRoundedRect(x - 18, y - 12, 36, 25, 5);
+    g.fillStyle(0x8fb39b, 1).fillCircle(x + 18, y, 8);
+  }
+
+  private drawArenaGate(x: number, y: number) {
+    const g = this.add.graphics();
+    g.fillStyle(0x493526, 1).fillRect(x - 105, y, 14, 120).fillRect(x + 91, y, 14, 120);
+    g.fillStyle(0xd66a3d, 1).fillRect(x - 91, y + 18, 182, 18);
+    g.lineStyle(4, 0xf4f1df, 0.65).strokeRect(x - 91, y + 38, 182, 82);
+    this.add.text(x, y + 27, 'ARENA · GATE 05', {
+      fontFamily: 'monospace', fontSize: '10px', fontStyle: 'bold',
+      color: '#fff4d4', stroke: '#493526', strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(8);
+  }
+
+  private drawArenaField(x: number, y: number, width: number, height: number) {
+    const g = this.add.graphics();
+    g.fillStyle(0x679346, 0.45).fillRoundedRect(x, y, width, height, 18);
+    g.lineStyle(3, 0xd66a3d, 0.55).strokeRoundedRect(x, y, width, height, 18);
+    this.drawBunker(x + 45, y + 58, 100, 44, 0x76563b);
+    this.drawBunker(x + 250, y + 55, 105, 46, 0x5f6e69);
+  }
+
+  private drawSign(x: number, y: number, number: string, label: string, color: number) {
+    const g = this.add.graphics();
+    g.fillStyle(0x493526, 1).fillRect(x - 3, y, 6, 70);
+    g.fillStyle(0xf0dfb6, 1).fillRoundedRect(x - 78, y - 18, 156, 42, 7);
+    g.lineStyle(2, color, 1).strokeRoundedRect(x - 78, y - 18, 156, 42, 7);
+    this.add.text(x, y + 3, number + ' · ' + label, {
+      fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold',
+      color: '#315845', align: 'center',
+    }).setOrigin(0.5).setDepth(9);
   }
 
   private createPlayer(x: number, y: number) {
