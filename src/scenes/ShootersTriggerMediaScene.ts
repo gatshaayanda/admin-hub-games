@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 
 export class ShootersTriggerMediaScene extends Phaser.Scene {
   constructor(){super('ShootersTriggerMediaScene');}
-  create(data:{from?:string;hits?:number}={}){
+  create(_data:{from?:string;hits?:number}={}){
     const {width,height}=this.scale; this.cameras.main.setBackgroundColor('#151a16');
     this.add.text(width/2,height*.12,'MEDIA COVERAGE CENTER',{fontFamily:'monospace',fontSize:'24px',fontStyle:'bold',color:'#e8c95c'}).setOrigin(.5);
     this.add.text(width/2,height*.20,'WHAT YOU DID BECOMES THE STORY',{fontFamily:'monospace',fontSize:'11px',color:'#f4f1df'}).setOrigin(.5);
