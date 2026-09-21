@@ -2179,3 +2179,73 @@ The performance/progression checkpoint is authoritative for the relationship bet
 
 Do not overwrite these contracts with a linear mission/checklist flow. Future implementation should deepen the existing open Home Field model while preserving the player's freedom to choose the order of activities.
 
+
+
+## Shooters Trigger — Current Product Contract (September 21, 2026)
+
+Shooters Trigger is now being built as a **mobile-first, top-down paintball game inside a connected western field town**. The town is the player's physical progression menu. It should feel like a lived-in western game hub: dirt roads, wooden buildings, signs, side landmarks and a clear route through the activities. It is inspired by the *shape* of a western town, not a copied Westworld asset or map.
+
+### Step 3 — Setup / Readiness is now the town progression
+
+The authoritative player route after name entry is:
+
+```
+Shooters Trigger Setup
+      ↓
+Field Town / Home Field
+      ↓
+01 Shooting Range
+      ↓
+02 Evasion Yard
+      ↓
+03 Armory & Outfitter
+      ↓
+04 Media Bureau
+      ↓
+05 Arena Gate
+      ↓
+1v1 First to 3
+```
+
+The town must **teach the order spatially**. The player spawns in the central square and follows the main dirt road. Numbered buildings/signs make the sequence obvious. Locations are not scattered as arbitrary buttons.
+
+### Location ownership
+
+- **Shooting Range** — first real activity. Teaches aim and fire and records shooting performance.
+- **Evasion Yard** — unlocked after a shooting record exists. Teaches movement, bots, projectiles and cover.
+- **Armory & Outfitter** — unlocked after evasion. Checks budget/loadout and allows the player to buy a field upgrade.
+- **Media Bureau** — unlocked after training plus a loadout upgrade. It is the review/input station: it reads shooting, evasion, budget and equipment state and records that the player has reviewed the briefing.
+- **Arena Gate** — unlocked only after the Media Bureau has been reviewed. It is the physical entrance to the match.
+- **Arena** — currently 1v1, first to 3. There must not be an Arena entry button on unrelated locations.
+
+### Flow rules
+
+1. Training sessions return the player to the **Field Town** after saving their result. They do not teleport the player into Media.
+2. Equipment upgrades stay in the **Armory**. Buying an upgrade does not teleport the player elsewhere.
+3. Media review is a separate location. It returns to town and records `shooters-trigger:media-reviewed`.
+4. The Arena is entered from the Arena Gate in town, not from the Media Bureau.
+5. There must be no persistent floating "ENTER ARENA" banner in the town and no instruction banner may overlap mobile analog controls.
+6. The mobile movement joystick belongs bottom-left. Combat aim/fire controls belong to gameplay scenes only. Town interaction UI must not occupy those control zones.
+7. The town's directional signs are part of the world, not HUD overlays.
+
+### Design reference
+
+Hall remains the reference for **phone-first movement feel, analog interaction and connected-world navigation**. Do not copy Hall's visual identity into Shooter Trigger. Shooter Trigger uses a dusty western field-town visual language and paintball-specific buildings/props.
+
+Online game research confirms a useful hub pattern: games commonly use a central safe town/hub with distinct service locations, and progression becomes clearer when destinations are tied to activities and unlocked in order. This project uses that pattern without copying another game's assets or map. See the research context used during this checkpoint: Fields of Mistria's town/service hub and route structure, and Mech Arena's Gear Hub/progression approach.
+
+### Current checkpoint
+
+**September 21, 2026 — Step 3 town/readiness checkpoint.**
+
+This checkpoint specifically fixes the previously arbitrary Shooter Trigger home-field layout. The player now drops into a central western-style town and physically follows:
+
+**TRAIN → EVADE → EQUIP → REVIEW → ARENA**
+
+The previous "ENTER ARENA" shortcut from Media is intentionally removed. Future work must preserve this progression unless the product owner explicitly changes the workflow.
+
+### Next work
+
+Do not jump to Step 4 until the product owner confirms the Step 3 town/readiness experience. The next step should be defined conversationally first, then implemented as one controlled checkpoint.
+
+Unexpected result = STOP → inspect reality → then act.

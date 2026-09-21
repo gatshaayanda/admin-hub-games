@@ -685,7 +685,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       localStorage.setItem('shooters-trigger:last-shooting', JSON.stringify(record));
       localStorage.setItem('shooters-trigger:budget', String(100 + record.budgetEarned));
     } catch {}
-    this.scene.start('ShootersTriggerMediaScene', { from: 'shooting', record });
+    this.scene.start('ShootersTriggerLobbyScene');
   }
 
   private updateHud() {
