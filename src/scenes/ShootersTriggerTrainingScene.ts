@@ -1,49 +1,63 @@
 import Phaser from 'phaser';
-
-type Actor = {
-  body: Phaser.GameObjects.Rectangle;
-  label: Phaser.GameObjects.Text;
-  team: 'green' | 'orange';
-  role: 'player' | 'operator' | 'heavy' | 'runner' | 'anchor';
-  hp: number;
-  maxHp: number;
-  speed: number;
-  startX: number;
-  startY: number;
-  alive: boolean;
-  cooldown: number;
-};
+import { installShootersTriggerMobileControls } from '../shooters-trigger-mobile-controls';
 
 type Paintball = {
   body: Phaser.GameObjects.Arc;
   vx: number;
   vy: number;
-  owner: Actor;
   ttl: number;
 };
 
-const WIDTH = 960;
-const HEIGHT = 540;
-const START = { x: 90, y: HEIGHT / 2 };
+type Target = {
+  body: Phaser.GameObjects.Container;
+  plate: Phaser.GameObjects.Arc;
+  splatter: Phaser.GameObjects.Graphics;
+  kind: 'dummy' | 'bottle';
+  x: number;
+  y: number;
+  hits: number;
+};
 
 export class ShootersTriggerTrainingScene extends Phaser.Scene {
-  private player!: Actor;
-  private teammates: Actor[] = [];
-  private enemies: Actor[] = [];
-  private paintballs: Paintball[] = [];
-  private covers: Phaser.Geom.Rectangle[] = [];
-  private keys!: { up: Phaser.Input.Keyboard.Key; down: Phaser.Input.Keyboard.Key; left: Phaser.Input.Keyboard.Key; right: Phaser.Input.Keyboard.Key; fire: Phaser.Input.Keyboard.Key };
-  private aim = { x: 1, y: 0 };
-  private moveTouch?: { id: number; x: number; y: number };
-  private lastShot = 0;
-  private teamScore = 0;
-  private opponentScore = 0;
-  private statusText!: Phaser.GameObjects.Text;
-  private scoreText!: Phaser.GameObjects.Text;
-  private hintText!: Phaser.GameObjects.Text;
-  private respawnText?: Phaser.GameObjects.Text;
+  public joystickVector = new Phaser.Math.Vector2();
+
+  private player!: Phaser.GameObjects.Container;
+  private playerPoseA!: Phaser.GameObjects.Graphics;
+  private playerPoseB!: Phaser.GameObjects.Graphics;
+  private playerWeapon!: Phaser.GameObjects.Graphics;
+  private playerArms!: Phaser.GameObjects.Graphics;
+  private muzzleFlash!: Phaser.GameObjects.Graphics;
+  private playerMoving = false;
+  private playerFacing = 1;
+  private playerAnimTime = 0;
+  private playerTarget: Phaser.Math.Vector2 | null = null;
   private playerName = 'Player';
-  private startedAt = 0;
+
+  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+  private keys!: Record<string, Phaser.Input.Keyboard.Key>;
+  private paintballs: Paintball[] = [];
+  private targets: Target[] = [];
+  private covers: Phaser.Geom.Rectangle[] = [];
+
+  private speed = 170;
+  private readonly worldWidth = 2400;
+  private readonly worldHeight = 1400;
+  private readonly start = { x: 1180, y: 1080 };
+
+  private aim = new Phaser.Math.Vector2(1, 0);
+  private aimPoint?: Phaser.Math.Vector2;
+  private hasAimInput = false;
+  private fireHeld = false;
+  private fireCooldown = 0;
+  private recoilKick = 0;
+  private muzzleFlashTimer = 0;
+  private aimWasExplicitlySet = false;
+
+  private statusText!: Phaser.GameObjects.Text;
+  private hintText!: Phaser.GameObjects.Text;
+  private nameText!: Phaser.GameObjects.Text;
+  private aimUi!: Phaser.GameObjects.Graphics;
+  private controlsCleanup?: () => void;
 
   constructor() {
     super('ShootersTriggerTrainingScene');
@@ -51,199 +65,196 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
   create() {
     this.playerName = String(this.registry.get('shootersTriggerPlayer') || 'Player');
-    this.startedAt = this.time.now;
-    this.drawArena();
-    this.createUi();
 
-    this.keys = {
-      up: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.W),
-      down: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.S),
-      left: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.A),
-      right: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D),
-      fire: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
-    };
+    this.cameras.main.setBackgroundColor('#6f984b');
+    this.drawField();
 
-    this.player = this.makeActor(START.x, START.y, 'green', 'player', this.playerName, 120);
-    this.teammates = [
-      this.makeActor(START.x + 30, START.y - 75, 'green', 'operator', 'Operator 12', 150),
-      this.makeActor(START.x + 30, START.y + 75, 'green', 'heavy', 'The Heavy', 105),
-    ];
+    this.player = this.createPlayer(this.start.x, this.start.y);
+    this.player.setDepth(30);
 
-    this.enemies = [
-      this.makeActor(780, 180, 'orange', 'runner', 'Runner', 145),
-      this.makeActor(800, 360, 'orange', 'anchor', 'Anchor', 95),
-    ];
+    this.createTargets();
+    this.createHud();
+
+    this.cursors = this.input.keyboard!.createCursorKeys();
+    this.keys = this.input.keyboard!.addKeys('W,A,S,D,SPACE') as Record<string, Phaser.Input.Keyboard.Key>;
+
+    this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
+    this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
+    this.cameras.main.setDeadzone(
+      Math.min(this.scale.width * 0.28, 320),
+      Math.min(this.scale.height * 0.22, 150),
+    );
+
+    this.aimUi = this.add.graphics().setScrollFactor(0).setDepth(80);
+    this.controlsCleanup = installShootersTriggerMobileControls();
 
     this.input.on('pointerdown', this.handlePointerDown, this);
     this.input.on('pointermove', this.handlePointerMove, this);
-    this.input.on('pointerup', this.handlePointerUp, this);
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
       this.input.off('pointerdown', this.handlePointerDown, this);
       this.input.off('pointermove', this.handlePointerMove, this);
-      this.input.off('pointerup', this.handlePointerUp, this);
+      this.controlsCleanup?.();
+      this.controlsCleanup = undefined;
     });
 
-    this.statusText.setText('TRAINING SCRIMMAGE · MOVE WITH YOUR TEAM');
+    window.dispatchEvent(new Event('admin-hub-games:game-ready'));
+  }
+
+  public isPhoneSession() {
+    return window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+  }
+
+  public setMoveVector(x: number, y: number) {
+    this.joystickVector.set(
+      Phaser.Math.Clamp(x, -1, 1),
+      Phaser.Math.Clamp(y, -1, 1),
+    );
+  }
+
+  public setFireHeld(held: boolean) {
+    this.fireHeld = held;
+  }
+
+  public setAimVector(x: number, y: number) {
+    const length = Math.hypot(x, y);
+    if (length < 0.05) return;
+    this.aim.set(x / length, y / length);
+    this.hasAimInput = true;
+    this.aimWasExplicitlySet = true;
+    this.aimPoint = new Phaser.Math.Vector2(
+      this.player.x + this.aim.x * 180,
+      this.player.y + this.aim.y * 180,
+    );
+    this.updateWeaponPose();
   }
 
   update(_time: number, delta: number) {
-    if (!this.player?.alive) return;
-    this.updatePlayer(delta);
-    this.updateTeammates(delta);
-    this.updateEnemies(delta);
+    this.updateMovement(delta);
+    this.updateAimAndFire(delta);
     this.updatePaintballs(delta);
-    this.updateUi();
-
-    if (Phaser.Input.Keyboard.JustDown(this.keys.fire)) {
-      this.fire(this.player, this.aim.x, this.aim.y);
-    }
-
-    if (this.time.now - this.startedAt > 300000) this.finish('TIME');
+    this.updatePlayerAnimation(delta);
+    this.updateWeaponPose();
+    this.updateHud();
   }
 
-  private drawArena() {
-    const g = this.add.graphics();
-    g.fillStyle(0x6b9b4c, 1).fillRect(0, 0, WIDTH, HEIGHT);
-    g.fillStyle(0x75a957, 0.55).fillRect(0, 0, WIDTH, HEIGHT * 0.50);
-    g.fillStyle(0x56883f, 0.48).fillRect(0, HEIGHT * 0.50, WIDTH, HEIGHT * 0.50);
+  private updateMovement(delta: number) {
+    let dx = this.joystickVector.x;
+    let dy = this.joystickVector.y;
 
-    for (let i = 0; i < 24; i += 1) {
-      const x = (i * 173) % WIDTH;
-      const y = 50 + ((i * 97) % (HEIGHT - 100));
-      g.fillStyle(i % 2 ? 0x47733a : 0x86b765, 0.38).fillCircle(x, y, 2 + (i % 3));
+    if (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) {
+      if (this.cursors.left.isDown || this.keys.A.isDown) dx -= 1;
+      if (this.cursors.right.isDown || this.keys.D.isDown) dx += 1;
+      if (this.cursors.up.isDown || this.keys.W.isDown) dy -= 1;
+      if (this.cursors.down.isDown || this.keys.S.isDown) dy += 1;
     }
 
-    const coverDefs = [
-      [220, 120, 115, 32], [390, 235, 150, 34], [610, 120, 110, 32],
-      [235, 380, 120, 34], [500, 395, 140, 34], [700, 285, 120, 34],
-    ];
+    if (dx === 0 && dy === 0 && this.playerTarget) {
+      const distanceToTarget = Phaser.Math.Distance.Between(
+        this.player.x,
+        this.player.y,
+        this.playerTarget.x,
+        this.playerTarget.y,
+      );
 
-    for (const [x, y, w, h] of coverDefs) {
-      g.fillStyle(0xc6b47b, 1).fillRect(x, y, w, h);
-      g.fillStyle(0x9b8a5d, 1).fillRect(x, y + h - 6, w, 6);
-      this.covers.push(new Phaser.Geom.Rectangle(x, y, w, h));
+      if (distanceToTarget < 8) {
+        this.playerTarget = null;
+      } else {
+        dx = this.playerTarget.x - this.player.x;
+        dy = this.playerTarget.y - this.player.y;
+      }
     }
 
-    g.fillStyle(0x315a37, 0.8).fillCircle(470, 270, 52);
-    g.lineStyle(3, 0xe8c95c, 0.8).strokeCircle(470, 270, 52);
+    this.playerMoving = dx !== 0 || dy !== 0;
 
-    this.add.text(470, 270, 'TACTIC\nZONE', {
-      fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold',
-      color: '#f4f1df', align: 'center',
-    }).setOrigin(0.5);
+    // Movement never silently steals the combat direction. The player aims,
+    // then movement remains free to strafe/retreat while the current aim drives fire.
+    // If no explicit aim exists yet, keep the stable initial right-facing direction.
 
-    this.add.text(32, 28, 'GREEN BASE', {
-      fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold', color: '#eff6e8',
-    });
-    this.add.text(WIDTH - 32, 28, 'ORANGE SIDE', {
-      fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold', color: '#fff0dc',
-    }).setOrigin(1, 0);
-  }
-
-  private createUi() {
-    this.scoreText = this.add.text(20, 48, '', {
-      fontFamily: 'monospace', fontSize: '12px', fontStyle: 'bold', color: '#ffffff',
-      backgroundColor: '#1a2c1e', padding: { left: 9, right: 9, top: 7, bottom: 7 },
-    }).setScrollFactor(0).setDepth(50);
-
-    this.statusText = this.add.text(WIDTH / 2, 22, '', {
-      fontFamily: 'monospace', fontSize: '10px', fontStyle: 'bold', color: '#ffffff',
-      backgroundColor: '#1a2c1e', padding: { left: 10, right: 10, top: 7, bottom: 7 },
-    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(50);
-
-    this.hintText = this.add.text(WIDTH / 2, HEIGHT - 22,
-      'DESKTOP: WASD + MOUSE CLICK/SPACE · PHONE: LEFT SIDE MOVE + RIGHT SIDE AIM/FIRE',
-      {
-        fontFamily: 'monospace', fontSize: '8px', color: '#f4f1df',
-        backgroundColor: '#1a2c1e', padding: { left: 9, right: 9, top: 6, bottom: 6 },
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(50);
-  }
-
-  private makeActor(x: number, y: number, team: Actor['team'], role: Actor['role'], name: string, hp: number): Actor {
-    const size = role === 'heavy' || role === 'anchor' ? 26 : 21;
-    const body = this.add.rectangle(x, y, size, size, team === 'green' ? 0x176b4b : 0xd66b32, 1)
-      .setStrokeStyle(2, team === 'green' ? 0xdff6d4 : 0xffe2bf, 0.9)
-      .setDepth(20);
-    const label = this.add.text(x, y - size * 0.9, name, {
-      fontFamily: 'monospace', fontSize: '8px', fontStyle: 'bold',
-      color: '#ffffff', backgroundColor: '#203423', padding: { left: 4, right: 4, top: 2, bottom: 2 },
-    }).setOrigin(0.5, 1).setDepth(21);
-
-    return {
-      body, label, team, role, hp, maxHp: hp,
-      speed: role === 'heavy' ? 82 : role === 'operator' ? 125 : 108,
-      startX: x, startY: y, alive: true, cooldown: 0,
-    };
-  }
-
-  private updatePlayer(delta: number) {
-    const pointer = this.input.activePointer;
-    const keyboardX = (this.keys.right.isDown ? 1 : 0) - (this.keys.left.isDown ? 1 : 0);
-    const keyboardY = (this.keys.down.isDown ? 1 : 0) - (this.keys.up.isDown ? 1 : 0);
-    let moveX = keyboardX;
-    let moveY = keyboardY;
-
-    if (this.moveTouch) {
-      moveX = Phaser.Math.Clamp((pointer.x - this.moveTouch.x) / 65, -1, 1);
-      moveY = Phaser.Math.Clamp((pointer.y - this.moveTouch.y) / 65, -1, 1);
+    if (Math.abs(dx) > 0.08) {
+      this.playerFacing = dx < 0 ? -1 : 1;
     }
 
-    const len = Math.hypot(moveX, moveY);
-    if (len > 0.05) {
-      moveX /= Math.max(1, len);
-      moveY /= Math.max(1, len);
-      this.moveActor(this.player, moveX * this.player.speed * delta / 1000, moveY * this.player.speed * delta / 1000);
-    }
-
-    if (pointer.isDown && pointer.x > this.scale.width * 0.48) {
-      const dx = pointer.x - this.player.body.x;
-      const dy = pointer.y - this.player.body.y;
+    if (dx !== 0 || dy !== 0) {
       const length = Math.hypot(dx, dy) || 1;
-      this.aim = { x: dx / length, y: dy / length };
-      if (this.time.now - this.lastShot > 360) this.fire(this.player, this.aim.x, this.aim.y);
+      const distance = this.speed * (delta / 1000);
+      this.movePlayer((dx / length) * distance, (dy / length) * distance);
+
+      if (
+        this.playerTarget &&
+        Phaser.Math.Distance.Between(this.player.x, this.player.y, this.playerTarget.x, this.playerTarget.y) < 8
+      ) {
+        this.playerTarget = null;
+      }
     }
   }
 
-  private updateTeammates(delta: number) {
-    this.teammates.forEach((mate, index) => {
-      if (!mate.alive) return;
-      const targetX = this.player.body.x - 38;
-      const targetY = this.player.body.y + (index === 0 ? -58 : 58);
-      const dx = targetX - mate.body.x;
-      const dy = targetY - mate.body.y;
-      const len = Math.hypot(dx, dy) || 1;
-      if (len > 30) this.moveActor(mate, dx / len * mate.speed * 0.55 * delta / 1000, dy / len * mate.speed * 0.55 * delta / 1000);
+  private movePlayer(dx: number, dy: number) {
+    const nextX = Phaser.Math.Clamp(this.player.x + dx, 42, this.worldWidth - 42);
+    const nextY = Phaser.Math.Clamp(this.player.y + dy, 90, this.worldHeight - 50);
 
-      mate.cooldown -= delta;
-      const enemy = this.nearestEnemy(mate);
-      if (enemy && mate.cooldown <= 0) {
-        this.fire(mate, enemy.body.x - mate.body.x, enemy.body.y - mate.body.y);
-        mate.cooldown = mate.role === 'operator' ? 950 : 1250;
-      }
-    });
+    if (!this.hitCover(nextX, nextY, 14)) {
+      this.player.x = nextX;
+      this.player.y = nextY;
+    }
   }
 
-  private updateEnemies(delta: number) {
-    this.enemies.forEach((enemy, index) => {
-      if (!enemy.alive) return;
-      enemy.cooldown -= delta;
-      const target = this.nearestGreen(enemy);
-      if (!target) return;
-      const dx = target.body.x - enemy.body.x;
-      const dy = target.body.y - enemy.body.y;
-      const len = Math.hypot(dx, dy) || 1;
+  private updateAimAndFire(delta: number) {
+    this.fireCooldown = Math.max(0, this.fireCooldown - delta);
+    if (this.keys.SPACE.isDown && !this.isPhoneSession()) {
+      this.fire();
+    }
 
-      if (index === 0 || enemy.role === 'runner') {
-        this.moveActor(enemy, dx / len * enemy.speed * 0.30 * delta / 1000, dy / len * enemy.speed * 0.30 * delta / 1000);
-        if (enemy.body.x < 650) this.moveActor(enemy, enemy.speed * 0.20 * delta / 1000, 0);
-      }
+    if (this.fireHeld) this.fire();
+  }
 
-      if (enemy.cooldown <= 0 && len < 460) {
-        this.fire(enemy, dx, dy);
-        enemy.cooldown = enemy.role === 'anchor' ? 1450 : 1050;
-      }
+  private handlePointerDown(pointer: Phaser.Input.Pointer) {
+    if (this.isPhoneSession()) return;
+
+    const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+    this.setAimPoint(point.x, point.y);
+    this.fire();
+  }
+
+  private handlePointerMove(pointer: Phaser.Input.Pointer) {
+    if (this.isPhoneSession()) return;
+    const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+    this.setAimPoint(point.x, point.y);
+  }
+
+  private setAimPoint(x: number, y: number) {
+    this.aimPoint = new Phaser.Math.Vector2(x, y);
+    this.aim.set(x - this.player.x, y - this.player.y).normalize();
+    this.hasAimInput = true;
+    this.aimWasExplicitlySet = true;
+    this.updateWeaponPose();
+  }
+
+  private fire() {
+    if (this.fireCooldown > 0) return;
+    this.fireCooldown = 240;
+    this.recoilKick = 1;
+    this.muzzleFlashTimer = 72;
+    const speed = 520;
+    const muzzleDistance = 42;
+    const ball = this.add.circle(
+      this.player.x + this.aim.x * muzzleDistance,
+      this.player.y + this.aim.y * muzzleDistance,
+      4,
+      0xf0dfb6,
+      1,
+    ).setDepth(25);
+
+    this.paintballs.push({
+      body: ball,
+      vx: this.aim.x * speed,
+      vy: this.aim.y * speed,
+      ttl: 1100,
     });
+
+    this.statusText.setText('PAINTBALL AWAY  ·  AIM LOCKED');
   }
 
   private updatePaintballs(delta: number) {
@@ -253,162 +264,419 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       ball.body.x += ball.vx * delta / 1000;
       ball.body.y += ball.vy * delta / 1000;
 
-      if (ball.ttl <= 0 || ball.body.x < -20 || ball.body.x > WIDTH + 20 || ball.body.y < -20 || ball.body.y > HEIGHT + 20 || this.hitCover(ball.body.x, ball.body.y)) {
+      if (
+        ball.ttl <= 0 ||
+        ball.body.x < 0 ||
+        ball.body.x > this.worldWidth ||
+        ball.body.y < 0 ||
+        ball.body.y > this.worldHeight ||
+        this.hitCover(ball.body.x, ball.body.y)
+      ) {
         ball.body.destroy();
         this.paintballs.splice(i, 1);
         continue;
       }
 
-      const targets = ball.owner.team === 'green' ? this.enemies : [this.player, ...this.teammates];
-      const target = targets.find((actor) => actor.alive && Phaser.Math.Distance.Between(ball.body.x, ball.body.y, actor.body.x, actor.body.y) < 15);
+      const target = this.targets.find((item) =>
+        Phaser.Math.Distance.Between(ball.body.x, ball.body.y, item.x, item.y) < 30,
+      );
+
       if (target) {
+        target.hits += 1;
+        target.plate.setFillStyle(0xe8c95c, 1);
+        this.showTargetSplatter(target);
+        this.time.delayedCall(130, () => {
+          if (target.plate.active) target.plate.setFillStyle(0xe06a3d, 1);
+        });
+        this.statusText.setText(
+          `${target.kind === 'bottle' ? 'BOTTLE HIT' : 'DUMMY HIT'}  ·  PAINT SPLAT  ·  ${target.hits}`,
+        );
         ball.body.destroy();
         this.paintballs.splice(i, 1);
-        this.hitActor(target, ball.owner);
       }
     }
   }
 
-  private hitActor(target: Actor, shooter: Actor) {
-    target.hp -= 40;
-    this.flashActor(target);
+  private updatePlayerAnimation(delta: number) {
+    this.playerAnimTime += delta;
+    this.recoilKick = Math.max(0, this.recoilKick - delta / 95);
+    this.muzzleFlashTimer = Math.max(0, this.muzzleFlashTimer - delta);
 
-    if (target.hp > 0) {
-      this.statusText.setText(target === this.player ? 'PAINT HIT · KEEP MOVING' : target.label.text + ' HIT');
-      return;
-    }
+    const step = this.playerMoving ? 120 : 650;
+    const showB = Math.floor(this.playerAnimTime / step) % 2 === 1;
 
-    if (target === this.player) {
-      this.opponentScore += 1;
-      this.respawnPlayer();
+    this.playerPoseA.setVisible(!showB).setScale(this.playerFacing, 1);
+    this.playerPoseB.setVisible(showB).setScale(this.playerFacing, 1);
+  }
+
+  private createPlayer(x: number, y: number) {
+    const container = this.add.container(x, y);
+    const shadow = this.add.ellipse(0, 34, 27, 10, 0x3d3025, 0.28);
+
+    const makePose = (legOffset: number, bob: number) => {
+      const g = this.add.graphics();
+
+      // The human body is deliberately brighter/separated from the equipment:
+      // head -> mask -> neck -> jersey -> pants -> boots. Gear accents sit on
+      // top of this person instead of becoming the person.
+      g.fillStyle(0x3b2f28, 1).fillEllipse(0, -20 + bob, 24, 18);
+      g.fillStyle(0xd8a66b, 1).fillEllipse(0, -17 + bob, 13, 12);
+      g.fillStyle(0xd4a45d, 1)
+        .fillCircle(-7, -17 + bob, 2.5)
+        .fillCircle(7, -17 + bob, 2.5);
+      g.fillStyle(0x5a7348, 1).fillEllipse(0, -23 + bob, 25, 12);
+      g.fillStyle(0x111715, 1).fillRoundedRect(-13, -17 + bob, 26, 10, 4);
+      g.fillStyle(0x9bb9b1, 0.88).fillRoundedRect(-9, -15 + bob, 18, 6, 2);
+      g.lineStyle(1, 0xe8f2dc, 0.42).strokeRoundedRect(-9, -15 + bob, 18, 6, 2);
+
+      // Neck and shoulders make the human anatomy readable beneath the gear.
+      g.fillStyle(0xd4a45d, 1).fillRoundedRect(-4, -8 + bob, 8, 7, 2);
+      g.fillStyle(0x2f6b4e, 1).fillRoundedRect(-15, -4 + bob, 30, 22, 8);
+      g.fillStyle(0x4f8b65, 1).fillRoundedRect(-10, -1 + bob, 20, 14, 4);
+      g.fillStyle(0x17201c, 0.9)
+        .fillRoundedRect(-15, 0 + bob, 6, 13, 2)
+        .fillRoundedRect(9, 0 + bob, 6, 13, 2);
+
+      // Chest rig / harness: clearly equipment worn by the body.
+      g.fillStyle(0xc1a86c, 1).fillRect(-10, 8 + bob, 20, 4);
+      g.fillStyle(0x1d2923, 1).fillRect(-12, 12 + bob, 24, 5);
+      g.fillStyle(0x5e4936, 1)
+        .fillRoundedRect(-15, 8 + bob, 5, 8, 2)
+        .fillRoundedRect(10, 8 + bob, 5, 8, 2);
+
+      // Hips, separated legs and boots provide the stable ground anchor.
+      g.fillStyle(0x29372f, 1).fillRoundedRect(-11, 16 + bob, 22, 7, 3);
+      g.fillStyle(0x566052, 1)
+        .fillRoundedRect(-10 + legOffset, 20 + bob, 8, 13, 2)
+        .fillRoundedRect(2 - legOffset, 20 + bob, 8, 13, 2);
+      g.fillStyle(0x202522, 1)
+        .fillRoundedRect(-12 + legOffset, 30 + bob, 10, 7, 2)
+        .fillRoundedRect(2 - legOffset, 30 + bob, 10, 7, 2);
+      return g;
+    };
+
+    this.playerPoseA = makePose(0, 0);
+    this.playerPoseB = makePose(2, 1).setVisible(false);
+
+    this.playerArms = this.add.graphics();
+    this.playerWeapon = this.add.graphics();
+    this.muzzleFlash = this.add.graphics();
+
+    container.add([shadow, this.playerPoseA, this.playerPoseB, this.playerArms, this.playerWeapon, this.muzzleFlash]);
+    this.playerWeapon.setDepth(31);
+
+    this.nameText = this.add.text(x, y - 50, this.playerName, {
+      fontFamily: 'monospace',
+      fontSize: '10px',
+      color: '#fff4d4',
+      stroke: '#2d5d35',
+      strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(40);
+
+    return container;
+  }
+
+  private updateWeaponPose() {
+    if (!this.playerWeapon) return;
+
+    const angle = Math.atan2(this.aim.y, this.aim.x);
+    const recoilOffset = this.recoilKick * 7;
+    this.playerWeapon.setRotation(angle);
+    this.playerWeapon.setPosition(5 - recoilOffset, 3);
+
+    const arms = this.playerArms;
+    arms.setRotation(angle);
+    arms.setPosition(0, 0);
+    arms.clear();
+    // Braced forearms: shoulders stay on the torso, hands converge on the
+    // marker. This keeps the gun visibly carried rather than floating.
+    arms.lineStyle(5, 0x314b3c, 1);
+    arms.lineBetween(-8, 5, 5, 2);
+    arms.lineBetween(8, 5, 12, 4);
+    arms.fillStyle(0xd4a45d, 1).fillCircle(5, 2, 3).fillCircle(12, 4, 3);
+
+    const g = this.playerWeapon;
+    g.clear();
+
+    // Hopper, marker body, air line/tank, grip, stock, barrel and sight.
+    g.lineStyle(3, 0x6c806f, 1).lineBetween(10, 5, 2, 12);
+    g.fillStyle(0x151b18, 1).fillEllipse(13, -8, 9, 7);
+    g.fillStyle(0x33423b, 1).fillRoundedRect(7, -4, 18, 9, 3);
+    g.fillStyle(0x111715, 1).fillRect(22, -2, 15, 5);
+    g.fillStyle(0x53635c, 1).fillRect(12, -9, 8, 4);
+    g.fillStyle(0x171d1b, 1).fillRoundedRect(11, 4, 5, 10, 2);
+    g.fillStyle(0x493b31, 1).fillRoundedRect(-5, 4, 10, 5, 2);
+    g.lineStyle(3, 0x2a332f, 1).lineBetween(-2, 6, 8, 5);
+
+    // Short sight line is deliberately subtle; the muzzle and projectile are
+    // the authoritative direction cues.
+    g.lineStyle(1, 0xe8c95c, 0.45).lineBetween(35, 0, 45, 0);
+
+    this.muzzleFlash.clear();
+    this.muzzleFlash.setRotation(angle);
+    this.muzzleFlash.setPosition(42 - recoilOffset, 0);
+    if (this.muzzleFlashTimer > 0) {
+      const pulse = this.muzzleFlashTimer / 72;
+      this.muzzleFlash.fillStyle(0xffe7a3, 0.92 * pulse);
+      this.muzzleFlash.fillTriangle(0, 0, 16 + 5 * pulse, -5, 16 + 5 * pulse, 5);
+      this.muzzleFlash.fillStyle(0xf3a94f, 0.8 * pulse);
+      this.muzzleFlash.fillCircle(5, 0, 4 + 2 * pulse);
+      this.muzzleFlash.setVisible(true);
     } else {
-      if (target.team === 'orange') this.teamScore += 1;
-      this.respawnActor(target, target.startX, target.startY, 900);
-    }
-
-    if (this.teamScore >= 5 || this.opponentScore >= 5) {
-      this.finish(this.teamScore >= 5 ? 'TEAM GREEN' : 'TEAM ORANGE');
-    }
-
-    this.statusText.setText(shooter.label.text + ' TAGGED ' + target.label.text);
-  }
-
-  private respawnPlayer() {
-    this.player.alive = false;
-    this.player.body.setVisible(false);
-    this.player.label.setVisible(false);
-    this.respawnText?.destroy();
-    this.respawnText = this.add.text(WIDTH / 2, HEIGHT / 2, 'HIT · RESETTING TO START', {
-      fontFamily: 'monospace', fontSize: '18px', fontStyle: 'bold', color: '#ffffff',
-      backgroundColor: '#9d3e2b', padding: { left: 14, right: 14, top: 10, bottom: 10 },
-    }).setOrigin(0.5).setDepth(100);
-
-    this.time.delayedCall(850, () => {
-      if (this.teamScore >= 5 || this.opponentScore >= 5) return;
-      this.player.body.setPosition(START.x, START.y);
-      this.player.hp = this.player.maxHp;
-      this.player.alive = true;
-      this.player.body.setVisible(true);
-      this.player.label.setVisible(true);
-      this.respawnText?.destroy();
-      this.respawnText = undefined;
-      this.statusText.setText('BACK IN · WATCH YOUR ANGLE');
-    });
-  }
-
-  private respawnActor(actor: Actor, x: number, y: number, delay: number) {
-    actor.alive = false;
-    actor.body.setVisible(false);
-    actor.label.setVisible(false);
-    this.time.delayedCall(delay, () => {
-      actor.hp = actor.maxHp;
-      actor.alive = true;
-      actor.body.setPosition(x, y);
-      actor.body.setVisible(true);
-      actor.label.setVisible(true);
-    });
-  }
-
-  private finish(winner: string) {
-    this.scene.pause();
-    this.statusText.setText('TRAINING RESULT · ' + winner + ' WINS');
-    this.hintText.setText('TAP / CLICK TO RESTART TRAINING');
-    this.input.once('pointerdown', () => this.scene.restart());
-    this.input.keyboard?.once('keydown', () => this.scene.restart());
-  }
-
-  private fire(owner: Actor, dx: number, dy: number) {
-    const len = Math.hypot(dx, dy) || 1;
-    const vx = dx / len * 410;
-    const vy = dy / len * 410;
-    const ball = this.add.circle(owner.body.x, owner.body.y, 4, owner.team === 'green' ? 0xdff6d4 : 0xffc58d, 1).setDepth(15);
-    this.paintballs.push({ body: ball, vx, vy, owner, ttl: 1250 });
-    this.lastShot = this.time.now;
-  }
-
-  private moveActor(actor: Actor, dx: number, dy: number) {
-    const nextX = Phaser.Math.Clamp(actor.body.x + dx, 18, WIDTH - 18);
-    const nextY = Phaser.Math.Clamp(actor.body.y + dy, 48, HEIGHT - 42);
-    if (!this.hitCover(nextX, nextY, actor.body.width * 0.5)) {
-      actor.body.setPosition(nextX, nextY);
-      actor.label.setPosition(nextX, nextY - actor.body.height * 0.9);
+      this.muzzleFlash.setVisible(false);
     }
   }
 
-  private hitCover(x: number, y: number, radius = 3) {
+  private drawField() {
+    const g = this.add.graphics();
+
+    // Same quiet broad-field philosophy as Hall, but unmistakably a paintball arena.
+    g.fillStyle(0x78a653, 1).fillRect(0, 0, this.worldWidth, this.worldHeight);
+    g.fillStyle(0x86ad5e, 0.42).fillRect(0, 0, this.worldWidth * 0.50, this.worldHeight);
+    g.fillStyle(0x679346, 0.32).fillRect(this.worldWidth * 0.50, 0, this.worldWidth * 0.50, this.worldHeight);
+
+    // Mown lanes.
+    g.fillStyle(0xd1b46c, 0.30).fillRect(0, 510, this.worldWidth, 92);
+    g.fillStyle(0xd1b46c, 0.22).fillRect(870, 0, 100, this.worldHeight);
+
+    // Paintball field perimeter.
+    g.lineStyle(5, 0xf4f1df, 0.48);
+    g.strokeRect(55, 70, this.worldWidth - 110, this.worldHeight - 120);
+
+    this.drawTree(300, 280, 1.15);
+    this.drawTree(2050, 300, 0.95);
+    this.drawTree(350, 1110, 0.90);
+    this.drawTree(2070, 1090, 1.10);
+
+    this.drawBunker(690, 360, 190, 72, 0x76563b);
+    this.drawBunker(1470, 350, 230, 76, 0x5f6e69);
+    this.drawBunker(520, 760, 250, 70, 0x9d754d);
+    this.drawBunker(1570, 760, 220, 68, 0x6e8190);
+    this.drawBunker(850, 1030, 260, 74, 0xb58c58);
+    this.drawBunker(1420, 1080, 240, 72, 0x737b79);
+
+    this.drawTireStack(1080, 300);
+    this.drawTireStack(1900, 650);
+    this.drawTireStack(730, 1170);
+
+    this.drawFlag(1180, 860, 0x2f7775, 'START');
+    this.drawFlag(1830, 930, 0xd66a3d, 'TARGETS');
+
+    this.add.text(this.start.x, this.start.y + 52, 'YOUR START', {
+      fontFamily: 'monospace',
+      fontSize: '11px',
+      color: '#fff4d4',
+      stroke: '#315845',
+      strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(6);
+
+    // Field targets are objects, not extra characters.
+    this.add.text(1880, 820, 'SHOOTING RANGE', {
+      fontFamily: 'monospace',
+      fontSize: '12px',
+      color: '#fff4d4',
+      stroke: '#493526',
+      strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(6);
+  }
+
+  private drawTree(x: number, y: number, scale: number) {
+    const g = this.add.graphics();
+    g.fillStyle(0x65472f, 1).fillRect(x - 6 * scale, y + 18 * scale, 12 * scale, 60 * scale);
+    g.fillStyle(0x405638, 1)
+      .fillCircle(x, y, 34 * scale)
+      .fillCircle(x - 28 * scale, y + 9 * scale, 28 * scale)
+      .fillCircle(x + 28 * scale, y + 9 * scale, 29 * scale);
+    g.fillStyle(0x526d3c, 0.75).fillCircle(x + 5 * scale, y - 16 * scale, 23 * scale);
+  }
+
+  private drawBunker(x: number, y: number, width: number, height: number, color: number) {
+    const g = this.add.graphics();
+    g.fillStyle(0x493526, 0.24).fillRect(x + 8, y + 9, width, height);
+    g.fillStyle(color, 1).fillRoundedRect(x, y, width, height, 10);
+    g.fillStyle(0xffffff, 0.12).fillRect(x + 12, y + 10, width - 24, 5);
+    g.lineStyle(2, 0xf4f1df, 0.28).strokeRoundedRect(x, y, width, height, 10);
+    this.covers.push(new Phaser.Geom.Rectangle(x, y, width, height));
+  }
+
+  private drawTireStack(x: number, y: number) {
+    const g = this.add.graphics();
+    for (let i = 0; i < 4; i += 1) {
+      g.fillStyle(0x2b302d, 1).fillCircle(x + i * 17, y - i * 3, 19);
+      g.fillStyle(0x66706a, 1).fillCircle(x + i * 17, y - i * 3, 7);
+    }
+    this.covers.push(new Phaser.Geom.Rectangle(x - 20, y - 25, 90, 45));
+  }
+
+  private drawFlag(x: number, y: number, color: number, label: string) {
+    const g = this.add.graphics();
+    g.fillStyle(0x594838, 1).fillRect(x, y, 4, 78);
+    g.fillStyle(color, 1).fillTriangle(x + 4, y + 4, x + 64, y + 18, x + 4, y + 32);
+    this.add.text(x + 32, y + 50, label, {
+      fontFamily: 'monospace',
+      fontSize: '9px',
+      color: '#fff4d4',
+      stroke: '#493526',
+      strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(6);
+  }
+
+  private createTargets() {
+    const targets = [
+      { x: 1820, y: 430, kind: 'dummy' as const },
+      { x: 1970, y: 520, kind: 'bottle' as const },
+      { x: 1880, y: 650, kind: 'dummy' as const },
+      { x: 2050, y: 760, kind: 'bottle' as const },
+      { x: 1740, y: 820, kind: 'dummy' as const },
+      { x: 1940, y: 900, kind: 'bottle' as const },
+    ];
+
+    for (const target of targets) {
+      const body = this.add.container(target.x, target.y).setDepth(15);
+      const splatter = this.add.graphics().setDepth(1);
+      const post = this.add.rectangle(0, 30, 7, 60, 0x594838, 1);
+
+      let plate: Phaser.GameObjects.Arc;
+      if (target.kind === 'bottle') {
+        body.add(this.add.rectangle(0, 5, 18, 34, 0xddd8c2, 1));
+        body.add(this.add.rectangle(0, -14, 8, 5, 0x5f6e69, 1));
+        plate = this.add.circle(0, -1, 9, 0xf4f1df, 1).setStrokeStyle(2, 0xd66a3d, 0.9);
+      } else {
+        plate = this.add.circle(0, 0, 24, 0xd66a3d, 1)
+          .setStrokeStyle(3, 0xf4f1df, 0.8);
+        body.add(this.add.circle(0, 0, 8, 0xf4f1df, 1));
+      }
+
+      body.add([post, plate, splatter]);
+      this.targets.push({
+        body,
+        plate,
+        splatter,
+        kind: target.kind,
+        x: target.x,
+        y: target.y,
+        hits: 0,
+      });
+    }
+  }
+
+  private showTargetSplatter(target: Target) {
+    const g = target.splatter;
+    g.clear();
+
+    // Paint remains on the target after the hit. It is feedback, not a
+    // disappearing “hit effect”, so the range visibly records where the
+    // player has been shooting.
+    const marks = [
+      [-8, -5, 4],
+      [5, -7, 3],
+      [10, 2, 2.5],
+      [-4, 7, 2.5],
+      [3, 2, 5],
+    ];
+
+    g.fillStyle(0xe94f46, 0.9);
+    for (const [x, y, radius] of marks) {
+      g.fillCircle(x + Phaser.Math.Between(-2, 2), y + Phaser.Math.Between(-2, 2), radius);
+    }
+
+    g.fillStyle(0xf27b4f, 0.72);
+    g.fillCircle(-12, 8, 2);
+    g.fillCircle(12, -9, 2);
+    g.lineStyle(2, 0xe94f46, 0.72);
+    g.lineBetween(-12, -2, -17, -7);
+    g.lineBetween(10, 6, 16, 10);
+  }
+
+  private hitCover(x: number, y: number, padding = 12) {
     return this.covers.some((cover) =>
-      x >= cover.x - radius && x <= cover.x + cover.width + radius &&
-      y >= cover.y - radius && y <= cover.y + cover.height + radius
+      x >= cover.x - padding &&
+      x <= cover.x + cover.width + padding &&
+      y >= cover.y - padding &&
+      y <= cover.y + cover.height + padding,
     );
   }
 
-  private nearestEnemy(actor: Actor) {
-    return this.enemies.filter((item) => item.alive).sort((a, b) =>
-      Phaser.Math.Distance.Between(actor.body.x, actor.body.y, a.body.x, a.body.y) -
-      Phaser.Math.Distance.Between(actor.body.x, actor.body.y, b.body.x, b.body.y)
-    )[0];
+  private createHud() {
+    const plate = this.add.rectangle(12, 12, 205, 42, 0x2d241e, 0.78)
+      .setOrigin(0)
+      .setScrollFactor(0)
+      .setDepth(70)
+      .setStrokeStyle(1, 0xe7d6a4, 0.35);
+
+    this.statusText = this.add.text(24, 20, 'FIELD TRAINING  ·  MOVE', {
+      fontFamily: 'monospace',
+      fontSize: '10px',
+      color: '#fff4d4',
+      letterSpacing: 0.8,
+    }).setScrollFactor(0).setDepth(71);
+
+    this.hintText = this.add.text(this.scale.width / 2, 18, '', {
+      fontFamily: 'monospace',
+      fontSize: '10px',
+      color: '#fff6dc',
+      stroke: '#2c241d',
+      strokeThickness: 4,
+    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(71);
+
+    this.add.text(this.scale.width - 16, 16, 'SHOOTERS TRIGGER', {
+      fontFamily: 'monospace',
+      fontSize: '10px',
+      color: '#fff4d4',
+      stroke: '#493526',
+      strokeThickness: 4,
+      letterSpacing: 1,
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(71);
+
+    plate.setData('hud', true);
+    this.layoutUi(this.scale.width, this.scale.height);
   }
 
-  private nearestGreen(actor: Actor) {
-    return [this.player, ...this.teammates].filter((item) => item.alive).sort((a, b) =>
-      Phaser.Math.Distance.Between(actor.body.x, actor.body.y, a.body.x, a.body.y) -
-      Phaser.Math.Distance.Between(actor.body.x, actor.body.y, b.body.x, b.body.y)
-    )[0];
+  private updateHud() {
+    const distance = this.playerTarget
+      ? Math.round(Phaser.Math.Distance.Between(this.player.x, this.player.y, this.playerTarget.x, this.playerTarget.y))
+      : 0;
+
+    this.hintText.setText(
+      this.isPhoneSession()
+        ? 'MOVE  ·  DRAG RIGHT TO AIM  ·  FIRE'
+        : distance > 0
+          ? `WALKING TO MARKER  ·  ${distance}`
+          : 'WASD / ARROWS  ·  MOUSE AIM  ·  LEFT CLICK / SPACE FIRE',
+    );
+
+    this.nameText.setPosition(this.player.x, this.player.y - 48);
+    this.updateAimMarker();
   }
 
-  private flashActor(actor: Actor) {
-    actor.body.setFillStyle(0xffffff, 1);
-    this.time.delayedCall(100, () => {
-      if (!actor.body.active) return;
-      actor.body.setFillStyle(actor.team === 'green' ? 0x176b4b : 0xd66b32, 1);
-    });
+  private updateAimMarker() {
+    this.aimUi.clear();
+    if (!this.aimPoint) return;
+
+    const camera = this.cameras.main;
+    const x = (this.aimPoint.x - camera.scrollX) * camera.zoom;
+    const y = (this.aimPoint.y - camera.scrollY) * camera.zoom;
+
+    this.aimUi.lineStyle(1.5, 0xe8c95c, 0.72);
+    this.aimUi.strokeCircle(x, y, 10);
+    this.aimUi.lineBetween(x - 7, y, x - 2, y);
+    this.aimUi.lineBetween(x + 2, y, x + 7, y);
+    this.aimUi.lineBetween(x, y - 7, x, y - 2);
+    this.aimUi.lineBetween(x, y + 2, x, y + 7);
   }
 
-  private updateUi() {
-    this.scoreText.setText('GREEN ' + this.teamScore + ' · ORANGE ' + this.opponentScore + ' · ' + this.playerName);
+  private handleResize(width: number, height: number) {
+    // Same responsive camera contract as Hall: full viewport, smooth follow,
+    // no gameplay zoom or portrait-specific world rewrite.
+    this.cameras.main.setViewport(0, 0, width, height);
+    this.cameras.main.setDeadzone(
+      Math.min(width * 0.28, 320),
+      Math.min(height * 0.22, 150),
+    );
+    this.layoutUi(width, height);
   }
 
-  private handlePointerDown(pointer: Phaser.Input.Pointer) {
-    if (pointer.x < this.scale.width * 0.48) {
-      this.moveTouch = { id: pointer.id, x: pointer.x, y: pointer.y };
-    } else {
-      const dx = pointer.x - this.player.body.x;
-      const dy = pointer.y - this.player.body.y;
-      const len = Math.hypot(dx, dy) || 1;
-      this.aim = { x: dx / len, y: dy / len };
-      this.fire(this.player, this.aim.x, this.aim.y);
-    }
-  }
-
-  private handlePointerMove(pointer: Phaser.Input.Pointer) {
-    if (!this.moveTouch || pointer.id !== this.moveTouch.id) return;
-    const dx = pointer.x - this.player.body.x;
-    const dy = pointer.y - this.player.body.y;
-    const len = Math.hypot(dx, dy) || 1;
-    if (pointer.x > this.scale.width * 0.48) this.aim = { x: dx / len, y: dy / len };
-  }
-
-  private handlePointerUp(pointer: Phaser.Input.Pointer) {
-    if (this.moveTouch?.id === pointer.id) this.moveTouch = undefined;
+  private layoutUi(width: number, _height: number) {
+    this.hintText?.setPosition(width / 2, 18);
   }
 }

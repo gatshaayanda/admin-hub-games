@@ -742,4 +742,613 @@ Do not create a separate Firebase project for any of these concepts merely becau
 Do not add a game to the production library until its first playable prototype exists and passes the same Intro → Setup → Gameplay acceptance discipline used by existing games.
 
 The immediate product question after these briefs are committed is **which existing game foundation to extend first**. This is not a greenfield prototype exercise. The product owner chooses the next game; agents must inspect the current implementation before changing architecture, and reuse the existing PWA, local persistence, JSON content systems, Phaser patterns and Firebase/shared-space patterns where they fit.
-\n## Shooters Trigger — Foundation Checkpoint — September 20, 2026\n\nShooters Trigger is now present in the Admin Hub Games library as an IN DEVELOPMENT playable foundation. It is intentionally not presented as a finished release.\n\n### Product correction\n\nDo not use a character-selection setup such as “Choose your player”. The player enters their own name and then joins a team whose fictional roles include Operator 12 (mobile teammate) and The Heavy (slower, stronger teammate).\n\nThe current foundation is a fictional paintball team-training scrimmage. It grows from the actual field experience that inspired it: outdoor movement, grassy terrain, wooden/concrete-style barriers, natural cover, teammates, opponents, getting tagged, and returning to the starting point after a hit.\n\nThe supplied session description could not be located as an accessible uploaded session.mp4 file in the File Library during this checkpoint. The available description is therefore treated as product-owner evidence, not as a claim that the video itself was inspected.\n\n### Current playable foundation\n\nGame Library → Shooters Trigger Intro → enter player name → Team Training → Green Team: player + Operator 12 + The Heavy → Orange Team: training opponents → move / use cover / aim / fire → paint hit feedback → player hit resets to starting position → short training result → restart training.\n\nThe first build is deliberately offline/local. It does not create a second Firebase project and does not require network access for the core training loop.\n\n### Current control contract\n\nDesktop: WASD to move; mouse/pointer on the field to aim and fire; Space also fires.\n\nPhone: touch on the left side is the movement area; touch on the right side aims/fires; no physical keyboard is required.\n\n### Current design boundary\n\nThis foundation is not yet the final Shooters Trigger match system. Do not prematurely add real-time multiplayer, matchmaking, complex inventories, large character rosters, tournament infrastructure, or server-authoritative networking.\n\nNext product-owner test: movement feel, team readability, phone aiming/firing, whether cover changes positioning, whether hit → reset feels correct, and whether the field creates the intended arena-tactics feeling.\n\n### Catalog status rule\n\nShooters Trigger remains marked IN DEVELOPMENT until the product owner confirms that the training foundation and subsequent match loop are ready for normal release treatment. It is expected that players can enter while development continues so real playtesting guides the next increment.\n\n### Checkpoint acceptance\n\nPreserve Hall and President’s Shoes paths, preserve shared PWA/Firebase architecture, verify the production build, verify Intro → Setup → Training, verify name persistence, verify player-hit reset behaviour, and keep the core training path offline/local.\n\nUnexpected shared-platform changes remain a STOP → inspect → act condition.\n
+\n## Shooters Trigger — Phase A–E Mobile Combat Checkpoint — September 20, 2026
+
+Shooters Trigger is an **IN DEVELOPMENT** game inside the shared Admin Hub Games platform.
+
+### Product correction
+The player enters their own name and joins the fixed fictional Green team:
+- Player
+- Operator 12
+- The Heavy
+
+The first real slice is a fictional paintball team-training scrimmage inspired by outdoor field movement, cover, teammates, opponents, getting tagged and returning to the starting point after a hit. It is arcade gameplay, not real-world weapons training.
+
+### Authoritative mobile controls
+Shooters Trigger uses **the same analog movement interaction model as Hall**.
+
+Phone:
+- fixed left analog joystick;
+- generous touch region;
+- centered knob with Hall-style drag feedback;
+- dead zone and normalized X/Y vector;
+- pointer capture;
+- clean reset on release/cancel;
+- fixed right FIRE action button;
+- obvious FIRE pressed state;
+- movement and FIRE can be held simultaneously with independent touch pointers;
+- tap the playable field to establish or change aim;
+- aim persists until the next aim tap;
+- no second virtual aim stick;
+- controls remain screen-fixed while the world/camera moves underneath;
+- no keyboard is required.
+
+Do not replace Hall-style analog movement with a D-pad or 4/8-direction button cluster.
+
+### Mobile game loop
+**Analog move → tap field to aim → hold FIRE → use cover → re-aim → reposition → react → get tagged → respawn → try a different route.**
+
+The player should understand the interaction by playing, not by reading a manual.
+
+### Visual composition
+The phone is the primary design target. The opening view must read as a deliberate top-down pixel/arcade scene:
+- two green field tones;
+- thin white field boundaries;
+- dark top banner;
+- `GREEN BASE`;
+- `TEAM TRAINING · MOVE WITH YOUR TEAM`;
+- small radar upper-right;
+- tree near/above the opening team;
+- grey platform/cover to the team's right;
+- small white field markers;
+- three readable Green-team characters;
+- Orange opponents deeper in the arena;
+- players, cover and projectiles visually outrank decoration.
+
+Do not fill the phone with competing status boxes or giant tactical labels.
+
+### Character presentation
+The current intermediate sprite system is procedural pixel-style arcade art with separate parts for:
+- helmet and paintball mask/visor;
+- vest/body silhouette;
+- backpack/equipment where appropriate;
+- arms;
+- paintball marker;
+- legs/boots;
+- team accent;
+- role silhouette;
+- nameplate separate from the rotating body.
+
+Animation communicates state rather than simple whole-body bobbing:
+- idle breathing;
+- alternating walk movement;
+- role-specific rhythm;
+- aim/facing rotation;
+- fire recoil;
+- muzzle flash;
+- hit flash/stagger;
+- paint contact burst;
+- respawn return.
+
+Operator/Runner are lighter/faster; Heavy/Anchor are broader/slower. Do not build character customisation or inventory before mobile combat feel is accepted.
+
+### Character refinement checkpoint — September 20, 2026
+
+The previous procedural pass was visually too mechanical and was rejected as the final character read.
+
+The authoritative character rule is now:
+- **Paintball soldier first:** normal human-proportioned top-down figure, not a robot, aircraft, swimming pose or rotating emblem.
+- **Marker is carried normally:** held in front of the torso with both hands/forearms reading around the marker. It must never originate from or visually attach to the helmet/head.
+- **Feet are the ground anchor:** the torso stays planted while walking; legs and boots alternate their placement underneath the body.
+- **Walking is restrained:** no whole-body rocking, exaggerated pitch, airplane-like banking or swimming motion.
+- **Aim changes the facing direction**, while the weapon remains correctly mounted to the chest/arms.
+- **Idle is subtle:** breathing/equipment movement only.
+- **Fire feedback is separate:** recoil and muzzle flash may move the marker briefly, but must not break the carry pose.
+- **Hall remains the movement-input reference**, not a character-animation reference.
+- **Arena ground follows Hall's visual language:** broad, quiet colour fields with simple readable decoration; Shooter Trigger owns its own trees, bunkers, concrete blocks and paintball-field details.
+
+Phaser's current animation model supports frame-based directional character animation and sprite/atlas workflows; this project can move from the procedural template to authored directional sprite sheets without changing the gameplay-facing Actor role contract. See the official Phaser animation guidance: https://docs.phaser.io/phaser/concepts/animations
+
+### Character template checkpoint — September 20, 2026
+
+The Shooter Trigger character pass is now its own explicit contract.
+
+Hall remains the reference for **analog movement input**, but Shooter Trigger characters must look and move as action-game characters rather than reusing Hall's two-pose flip.
+
+Current character template:
+- procedural pixel-style hard-edged silhouette;
+- helmet + paintball mask/visor;
+- torso/vest + belt/pouches;
+- role-sized backpack/equipment;
+- independently animated arms, shoulders, legs and boots;
+- paintball marker + grip + muzzle flash;
+- team accent;
+- ground shadow;
+- separate nameplate.
+
+Role templates must remain visibly distinct:
+- Player/Ayanda — balanced baseline;
+- Operator 12 — compact/light tactical teammate;
+- The Heavy — broad/heavy equipment and slower gait;
+- Runner — lean/light opponent and faster gait;
+- Anchor — broad defensive opponent and steadier gait.
+
+Animation must communicate:
+- idle breathing;
+- alternating walk stride;
+- arm counter-swing;
+- role-specific gait;
+- aim/facing direction;
+- fire recoil/muzzle feedback;
+- hit reaction/paint feedback;
+- existing respawn return.
+
+Do not replace this with a simple whole-body scale bob or a two-frame visibility flip.
+
+Detailed character contract: `docs/shooters-trigger-character-template.md`.
+
+The character system is intentionally procedural for this phase. Authored pixel sprite sheets are a later visual phase and must preserve the same gameplay-facing role contract.
+
+### Arena / Phase E game feel
+The arena must make positioning matter.
+
+Required:
+- field boundaries;
+- tree/natural cover;
+- grey concrete-like platform;
+- secondary wooden/concrete bunkers;
+- cylindrical obstacles;
+- Green starting area;
+- Orange opponent area;
+- visible paintball travel;
+- cover collision;
+- teammate support;
+- enemy pressure;
+- hit → Green Base respawn;
+- short five-point training result.
+
+Tune in this order:
+**movement → aim → fire → hit feedback → cover readability → enemy pressure → respawn timing → match duration.**
+
+### Phase A — foundation cleanup
+- removed the stale Shooter D-pad implementation;
+- moved Shooter-specific mobile controls into a dedicated game module;
+- left Hall's shared controls untouched;
+- replaced the stale resize/UI path with a real responsive layout path;
+- retained Intro → Setup → Training.
+
+### Phase B — arena composition
+The phone opening is now a readable training vignette: team cluster, tree and grey platform are placed together in the first camera composition. Additional cover, markers and the Orange side appear deeper in the arena. The field remains larger than the viewport so movement still discovers new routes.
+
+### Phase C — character presentation
+The character is assembled from independent body parts so legs, arms and marker animate separately. This is the lightweight intermediate art solution; authored sprite sheets remain a later visual phase.
+
+### Phase D — mobile controls
+The game-specific DOM layer provides:
+- Hall-style analog movement on the left;
+- fixed FIRE on the right;
+- simultaneous multitouch;
+- safe-area spacing;
+- visible pressed feedback;
+- tap-to-aim;
+- responsive portrait/landscape sizing.
+
+### Phase E — game feel
+The local training slice now includes:
+- analog player movement;
+- aim-facing;
+- visible paintball projectiles;
+- cover collision;
+- marker recoil/muzzle feedback;
+- hit flashes and paint bursts;
+- teammate support fire;
+- Runner pressure;
+- Anchor lane pressure;
+- fast Green Base respawn;
+- five-point training result.
+
+### Boundaries
+Do not add realtime multiplayer, matchmaking, complex inventory, large character rosters, server-authoritative networking or tournament infrastructure until this phone loop is accepted.
+
+### Offline / PWA
+This Phase A–E bundle changes the game code and its game-specific mobile-control module, so bump the service-worker cache at the release boundary.
+
+True offline acceptance remains:
+online launch → cached/installed app → disable network → reopen → enter Shooter Trigger → play training → restore network.
+
+A GitHub checkpoint or build pass is not proof of device offline acceptance.
+
+### Verification
+Before production promotion:
+1. inspect the branch and changed files;
+2. production build passes;
+3. Intro → Setup → Training works;
+4. desktop WASD + pointer/Space works;
+5. Samsung Android portrait works;
+6. Samsung Android landscape works;
+7. two-finger analog-move + FIRE works;
+8. aim tap → movement → FIRE works;
+9. cover blocks movement and paintballs;
+10. hit → Green Base respawn works;
+11. five-point result works;
+12. offline PWA path works after a prior online launch;
+13. Hall and President's Shoes remain unchanged in behaviour.
+
+### Branch rule
+Develop this pass on `shooters-trigger-hall-feel`. Do not merge or modify `main` unless the product owner explicitly asks for promotion.
+
+### Research references
+- Phaser Input: https://docs.phaser.io/phaser/concepts/input
+- Phaser Pointer API: https://docs.phaser.io/api-documentation/class/input-pointer
+- Rockstar Red Dead Redemption mobile touch layout: https://support.rockstargames.com/articles/CwtYAazPxaxyxtxy868jO/changing-touch-controls-layout-for-red-dead-redemption-on-android-and-ios
+- Twin-stick / touch shooter usability: https://www.gamedeveloper.com/design/a-guide-to-ios-twin-stick-shooter-usability
+- Mobile touch controls case study: https://www.gamedeveloper.com/design/the-challenges-of-developing-for-pc-and-mobile-part-1-controls
+
+
+## Shooters Trigger — Hall-Feel Reset — September 21, 2026
+
+The product owner deliberately reset the first Shooters Trigger gameplay slice to the smallest useful foundation.
+
+### Current direction
+
+Shooters Trigger is now a **single-player field-feel prototype**:
+- the player is the named player themself;
+- there is one player character only;
+- no teammate roster;
+- no enemy character roster;
+- no role system;
+- no AI combat layer;
+- no score race or match result layer yet;
+- paintball targets are static field objects, not characters.
+
+The purpose of this slice is to make movement and presence feel right before rebuilding combat around it.
+
+### Hall is the movement reference
+
+For player movement, camera and walking feel, treat `GameShellScene` as the authoritative reference.
+
+The Shooters Trigger player should preserve Hall's:
+- world-scale feel;
+- movement speed of 170;
+- diagonal normalization;
+- keyboard movement;
+- mobile analog joystick behaviour;
+- smooth camera follow;
+- camera deadzone proportions;
+- full-viewport responsive camera;
+- grounded two-pose walking animation;
+- alternating legs/boots rather than whole-body swimming, pitching or floating;
+- player name floating above the character.
+
+Do not redesign the movement feel while adding Shooters Trigger gameplay. If movement feels different from Hall, inspect Hall first.
+
+### Shooters Trigger presentation boundary
+
+The field is deliberately **not Hall copied visually**.
+
+Keep Hall's quiet broad-field readability and grounded scale, but make the decoration paintball-specific:
+- grass field;
+- mown lanes;
+- paintball bunkers;
+- tire stacks;
+- field flags;
+- shooting-range targets;
+- perimeter markers;
+- natural trees used as cover.
+
+The environment should evolve from this base rather than becoming a second fantasy village or a crowded tactical diagram.
+
+### Historical control slice — superseded by Combat Presentation Refinement
+
+The earlier Hall-Feel reset used click-to-walk and tap-to-aim. That experiment is retained as history only.
+
+The current authoritative control slice is:
+Desktop:
+- WASD / arrow movement;
+- mouse position = independent aim;
+- left click = fire;
+- Space = fire in the current aim direction;
+- no click-to-walk.
+
+Phone:
+- Hall-style analog movement joystick;
+- right-side drag = independent aim;
+- dedicated FIRE control;
+- no keyboard required;
+- movement and aim can be simultaneous on separate touch pointers.
+
+### Current gameplay slice
+
+The player can:
+1. enter the field;
+2. walk around it;
+3. move around/behind field cover;
+4. aim;
+5. fire paintballs;
+6. hit static targets;
+7. continue exploring.
+
+Do not add multiplayer, team AI, character rosters, inventories, matchmaking, tournaments or server-authoritative networking until this single-player movement/presentation slice is explicitly accepted.
+
+### Revision rule
+
+When the next Shooters Trigger change is requested:
+
+**Inspect Hall → preserve Hall movement feel → change only the Shooters Trigger layer → verify the field and player feel → checkpoint.**
+
+Unexpected movement/camera behaviour = **STOP → inspect Hall and the Shooters Trigger diff → then act.**
+
+
+## Shooters Trigger — Combat Presentation Refinement — September 21, 2026
+
+This is the authoritative refinement layer for the current single-player Shooters Trigger slice. The objective is not merely to make the existing controls prettier; the objective is to make the player read as a believable paintball participant and make movement, aim, weapon handling and firing agree frame-by-frame.
+
+### Character clothing / equipment contract
+
+The player must visibly read as a **paintball player**, not a generic green blob or a head with a gun attached.
+
+The procedural character should communicate:
+- full-face paintball mask with visible visor/lens;
+- helmet/mask shell;
+- protective jersey/body layer;
+- chest/shoulder protection;
+- pod harness / equipment belt;
+- gloves/hands;
+- pants separated from torso;
+- boots as the ground anchor;
+- marker with stock, grip, hopper/loader, barrel, sight and air/tank detail;
+- small team accent without turning the player into a mascot.
+
+The body is layered. The torso, legs and feet remain the stable ground-facing mass; combat layers (arms, marker, recoil and muzzle flash) are allowed to respond to aim/fire independently.
+
+### Aim truth
+
+There are two valid aim states:
+
+1. **Movement default:** before the player has supplied an explicit aim input, the current movement vector becomes the aim vector. Therefore diagonal movement produces diagonal facing and diagonal projectile travel instead of a permanently horizontal first shot.
+2. **Explicit combat aim:** after mouse movement or the mobile right-side drag establishes aim, movement and aim become independent. The player can strafe, retreat, circle and fire in another direction.
+
+The projectile, marker barrel, hands/forearms and reticle must all agree with the same normalized aim vector.
+
+Never hard-code a left/right firing axis. Phaser's coordinate system uses radians with 0° pointing right, 90° down, 180° left and -90° up; use atan2(aim.y, aim.x) and the same vector for weapon rotation and projectile velocity.
+
+### Weapon handling / firing animation
+
+Firing is a short animation state, not just a new projectile:
+- marker moves backward along its local barrel axis for a brief recoil pulse;
+- braced forearms remain connected to the marker;
+- muzzle flash appears at the actual muzzle;
+- projectile spawns from that muzzle position;
+- muzzle flash and recoil decay quickly so repeated fire remains readable;
+- the character body does not spin or pitch with the weapon.
+
+The current implementation uses procedural frame-like layers rather than a large authored sprite sheet. This is intentional: it gives us a cheap animation rig now while preserving a stable path to authored directional sprite sheets later. Phaser supports frame-based sprite-sheet/atlas animation when that art phase is justified.
+
+### Animation quality bar
+
+A believable top-down shooter character needs more than whole-body bobbing. Prioritize:
+- grounded feet and alternating stride;
+- stable upper body while aiming;
+- arms/forearms braced around the marker;
+- explicit fire/recoil state;
+- visible muzzle feedback;
+- restrained idle movement;
+- future hit/stagger/reload states as separate additions.
+
+Do not add a giant animation system or skeletal dependency prematurely. Layered procedural parts are the current production solution; authored 4/8-direction sprite sheets are the next visual phase only after this core is accepted.
+
+### Verification scenarios for this refinement
+
+The acceptance test must include all of these, not just “the player can shoot”:
+- stand still and fire right;
+- stand still and fire left;
+- stand still and fire up;
+- stand still and fire down;
+- walk up-right and fire up-right before touching aim;
+- walk down-left and fire down-left before touching aim;
+- move diagonally while holding an explicit opposite aim;
+- strafe while maintaining a fixed aim;
+- fire repeatedly and visually confirm recoil/muzzle flash on every shot;
+- confirm the paintball starts at the barrel muzzle rather than the character centre;
+- confirm cover stops the projectile;
+- phone: left joystick + right drag aim + FIRE simultaneously;
+- phone: diagonal movement without explicit aim still produces diagonal default fire;
+- phone: explicit aim overrides movement direction.
+
+### Research basis
+
+Current top-down/twin-stick references reinforce independent movement and aim as the core combat interaction, with left-side movement and right-side aiming on touch devices. Current character-animation guidance also emphasizes stable upper-body aiming, connected weapon/hand placement, layered body parts, and small readable firing reactions rather than a giant full-body animation. Phaser's documented transform model supports keeping the player container stable while rotating child combat layers and using frame-based sprite animation later.
+
+Reference sources:
+- Phaser Containers: https://docs.phaser.io/phaser/concepts/gameobjects/container
+- Phaser rotation / transform: https://docs.phaser.io/phaser/concepts/actions
+- Phaser frame animations: https://docs.phaser.io/phaser/concepts/animations
+- KIDA twin-stick fundamentals: https://www.kidastudios.com/apps/captain-star/guides/twin-stick-space-shooter-tips.html
+- GameDeveloper mobile twin-stick usability: https://www.gamedeveloper.com/design/a-guide-to-ios-twin-stick-shooter-usability
+- Charios top-down shooter animation: https://charios.com/blog/top-down-shooter-character-animation-guide
+- Paintball equipment reference: https://sportsfoundation.org/paintball-equipment-list/
+
+### Revision rule
+
+When a player-facing combat problem is reported, inspect the actual rendered relationship between feet → torso → arms → marker → muzzle → projectile → reticle before adding another control or visual effect. Fix the shared source of truth rather than patching one direction or one device.
+
+Unexpected direction, animation or weapon alignment = **STOP → inspect vector, transform parent, muzzle origin and rendered layer order → simplify/fix → build → verify all four cardinal directions + diagonals → checkpoint.**
+
+
+## Shooters Trigger — Combat Feel Refinement — September 21, 2026
+
+The next refinement preserves the accepted Hall movement foundation but makes Shooter controls and weapon presentation follow established top-down shooter conventions.
+
+### Input contract
+
+**Desktop**
+- WASD / arrows = movement.
+- Mouse = independent aim.
+- Left click = fire.
+- Space = fire using the current aim.
+- Do not use click-to-walk in the shooter. Hall's movement *feel* is the reference; shooter combat requires movement and aim to remain independent.
+
+**Phone**
+- Left virtual joystick = movement.
+- Right-side drag zone = independent aim.
+- FIRE button = firing.
+- Do not use a world tap as an additional aim control.
+- The right aim gesture should begin under the player's thumb (floating-origin behaviour), then preserve its direction while dragged.
+- Avoid requiring players to look down at a collection of tiny controls.
+
+This follows the established twin-stick principle: movement and aim are independent, allowing retreating, strafing and circling while maintaining fire. Current control research describes left-stick movement + right-stick aim as the standard mobile pattern, while mouse-aim + keyboard movement is a common desktop pattern. See references in the implementation research log if this changes again.
+
+### Character / weapon contract
+
+The player body and weapon are separate render layers.
+
+The body:
+- remains grounded and readable;
+- keeps Hall's two-pose walk rhythm;
+- has visible helmet, face/visor, vest, arms, separate legs and boots;
+- must not rotate the whole character to follow the weapon.
+
+The weapon:
+- rotates continuously toward the independent aim vector;
+- has a stock, grip, marker body, barrel, sight and two hand connection points;
+- muzzle position is the source of the projectile spawn;
+- must visually agree with the projectile direction.
+
+This prevents the old failure where the character appeared to hold a weapon in the walking direction while the projectile travelled somewhere else.
+
+### Aiming presentation
+
+The aim reticle is deliberately restrained:
+- thin crosshair;
+- no permanent centre dot;
+- no oversized target circle;
+- it should help confirm aim without becoming a second gameplay object.
+
+The weapon itself is the primary directional feedback. If the muzzle and projectile disagree, treat that as a bug.
+
+### Projectile contract
+
+Paintballs/projectiles must originate from the weapon muzzle, not from an arbitrary point in front of the player's body.
+
+A fire action must:
+1. use the current aim vector;
+2. position the projectile at the muzzle;
+3. travel on that same vector;
+4. use a visible but restrained projectile;
+5. respect cooldown;
+6. stop at field cover.
+
+### Refinement rule
+
+When improving Shooter Trigger visuals, prefer **small readable sprite layers and animation states** over making the entire character more complicated.
+
+Useful future states:
+- idle;
+- walk A/B;
+- aim;
+- fire recoil;
+- hit;
+- reload;
+- crouch/cover if gameplay eventually needs it.
+
+Do not add all states at once. Add one, verify it, then checkpoint.
+
+### Control-quality rule
+
+If a control can be removed without reducing expressive gameplay, remove it.
+
+Unexpected ambiguity = **STOP → inspect the input path and rendered direction → simplify → verify → checkpoint.**
+
+
+## Shooters Trigger — Person + Aim-First Control Refinement — September 21, 2026
+
+The current refinement makes two product-owner decisions authoritative:
+
+### The player is a person wearing paintball gear
+
+The character must read as a simple human first, paintball player second:
+- visible head/face/skin silhouette;
+- helmet and full-face paintball mask worn around the head;
+- visible neck and shoulders;
+- recognizable torso and hips;
+- separate legs and boots;
+- protective jersey/chest gear and pod harness layered over the body;
+- marker held by visible arms/hands rather than floating beside or above the body.
+
+Do not solve “paintball player” by adding more equipment to an ambiguous silhouette. If the character reads like invisible equipment, simplify the gear and strengthen the human anatomy.
+
+### Aim drives fire
+
+The current shooter uses an aim-first combat contract:
+- movement joystick / WASD controls movement only;
+- mouse position / phone right-side drag controls aim;
+- the current normalized aim vector is the firing direction;
+- firing never silently changes direction because the player is walking;
+- movement and aim remain independent so the player can strafe, retreat or circle while continuing to shoot in the chosen direction;
+- before the first explicit aim input, keep the stable initial aim rather than deriving aim from movement.
+
+This is the intended top-down/twin-stick relationship: independent movement and aim are the core interaction, and the firing system consumes the aim vector.
+
+### Mobile firing control
+
+The mobile firing control is now icon-led rather than text-led:
+- no persistent word “FIRE” inside the button;
+- use a compact target/shoot icon;
+- keep the button large, obvious and thumb-friendly;
+- accessibility label may still describe the action as “Shoot”;
+- hint copy is “MOVE · AIM · SHOOT”.
+
+### Acceptance test for this refinement
+
+- stand still, aim right, shoot right;
+- stand still, aim left/up/down, shoot in the selected direction;
+- walk diagonally while holding a different aim direction; shots must continue along the aim direction;
+- walk/strafe without changing aim; shots must not snap toward movement;
+- phone: left joystick + right aim drag + shoot button simultaneously;
+- verify the player reads as a human in paintball equipment at normal phone scale;
+- verify the marker is held by the person and not attached to the head;
+- verify recoil/muzzle flash remain aligned to the marker and projectile;
+- verify Hall and President's Shoes remain unchanged.
+
+### Revision rule
+
+If the player looks like gear without a person, stop adding equipment. Inspect the head → neck → shoulders → torso → hips → legs → boots silhouette first, then re-layer the paintball equipment around that human base.
+
+
+## Shooters Trigger — Fire-Button Aim Contract — September 21, 2026
+
+The mobile controls are intentionally simple:
+- **Left MOVE stick:** movement only. It must never change aim.
+- **Right FIRE control:** aim + shoot. The player presses/drags from the fire control; drag direction sets the aim vector and holding the control fires along that vector.
+- The separate large right-side AIM zone is no longer the authoritative aiming input.
+- The marker, muzzle flash and projectile must all consume the same aim vector produced by the fire control.
+- Releasing the fire control stops firing; movement continues independently.
+- The fire control should remain icon-led, with no persistent “FIRE” word.
+
+Acceptance test:
+- left stick only = player moves, marker direction does not change;
+- press/drag fire control right = marker aims right and fires right;
+- press/drag fire control up-left = marker aims up-left and fires up-left;
+- hold fire while moving diagonally = player moves diagonally while continuing to aim/fire from the fire control direction;
+- releasing fire stops shooting without stopping movement.
+
+
+## Shooters Trigger — Training Targets + Paint Persistence — September 21, 2026
+
+The training field now uses **shootable static targets** rather than enemies or character opponents.
+
+### Target contract
+- The range contains a mix of upright dummy targets and paintball bottles.
+- Targets are shootable field objects and do not become AI characters.
+- A successful hit leaves a visible paint splatter **on the target**; the splatter remains after the projectile disappears so the player can see accumulated shooting evidence.
+- Targets do not need to disappear for a hit to count. This is a training range, so persistent paint marks are the intended feedback.
+- The player remains the only character in this slice.
+
+### Character readability contract
+The player must read as a visible human wearing paintball gear, not as an equipment silhouette:
+- human head/face area is visually separated from helmet and mask;
+- jersey/torso, pants and boots use distinct visual layers and values;
+- gloves/arms connect the person to the marker;
+- marker remains held in the hands and aligned with the aim vector;
+- equipment should support the human silhouette, not hide it.
+
+### Acceptance test
+- enter the shooting range;
+- fire at a dummy: it visibly receives paint and keeps the splatter;
+- fire at a bottle: it visibly receives paint and keeps the splatter;
+- hit multiple targets and confirm previous splatters remain;
+- confirm no target becomes a character/enemy;
+- confirm the player remains clearly readable as a person at normal phone scale;
+- confirm left MOVE never changes aim;
+- confirm the right FIRE control both aims and shoots;
+- confirm releasing FIRE stops firing while movement continues.
