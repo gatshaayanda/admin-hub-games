@@ -6,7 +6,7 @@ export class ShootersTriggerEvasionScene extends Phaser.Scene {
   private player!: Phaser.GameObjects.Container;
   private bullets: Phaser.GameObjects.Arc[] = [];
   private covers: Phaser.Geom.Rectangle[] = [];
-  private elapsed=0; private hits=0; private cleanup?:()=>void;
+  private elapsed=0; private hits=0; private cleanup?:()=>void; private completed=false;
 
   constructor(){super('ShootersTriggerEvasionScene');}
   create(){
@@ -27,9 +27,9 @@ export class ShootersTriggerEvasionScene extends Phaser.Scene {
     const k=this.input.keyboard; if(!dx&&!dy&&k){const c=k.createCursorKeys();dx=(c.right.isDown?1:0)-(c.left.isDown?1:0);dy=(c.down.isDown?1:0)-(c.up.isDown?1:0);}
     if(dx||dy){const l=Math.hypot(dx,dy)||1;this.player.x=Phaser.Math.Clamp(this.player.x+dx/l*175*delta/1000,40,2360);this.player.y=Phaser.Math.Clamp(this.player.y+dy/l*175*delta/1000,90,1350);}
     for(let i=this.bullets.length-1;i>=0;i--){const b=this.bullets[i];b.x+=b.getData('vx')*delta/1000;b.y+=b.getData('vy')*delta/1000;if(b.x<0||b.x>2400||b.y<0||b.y>1400){b.destroy();this.bullets.splice(i,1);continue;}if(Phaser.Math.Distance.Between(b.x,b.y,this.player.x,this.player.y)<20){this.hits++;b.destroy();this.bullets.splice(i,1);}}
-    if(this.elapsed>=60000)this.finish();
+    if(this.elapsed>=60000&&!this.completed)this.finish();
   }
   private fireIncoming(){for(let i=0;i<3;i++){const x=Phaser.Math.Between(250,2150),y=Phaser.Math.Between(180,600);const b=this.add.circle(x,y,5,0xe44f3d).setDepth(25);const v=new Phaser.Math.Vector2(this.player.x-x,this.player.y-y).normalize();b.setData('vx',v.x*250);b.setData('vy',v.y*250);this.bullets.push(b);}}
-  private finish(){this.cleanup?.();try{localStorage.setItem('shooters-trigger:last-evasion',JSON.stringify({hits:this.hits,survived:60000}));}catch{}this.scene.start('ShootersTriggerMediaScene',{from:'evasion',hits:this.hits});}
+  private finish(){ this.completed=true;this.cleanup?.();try{localStorage.setItem('shooters-trigger:last-evasion',JSON.stringify({hits:this.hits,survived:60000}));}catch{}this.scene.start('ShootersTriggerMediaScene',{from:'evasion',hits:this.hits});}
   private createPlayer(x:number,y:number){const c=this.add.container(x,y).setDepth(30);const g=this.add.graphics();g.fillStyle(0x263a2b,1).fillRoundedRect(-14,-5,28,28,7);g.fillStyle(0xd8a477,1).fillCircle(0,-18,9);g.fillStyle(0x283d2c,1).fillEllipse(0,-24,22,8);g.fillStyle(0x334f35,1).fillRoundedRect(-12,18,9,16,3).fillRoundedRect(3,18,9,16,3);c.add(g);return c;}
 }
