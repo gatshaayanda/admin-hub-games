@@ -48,7 +48,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   private aimPoint?: Phaser.Math.Vector2;
   private hasAimInput = false;
   private fireHeld = false;
-  private fireCooldown = 0;
+  private fireCooldown = 0;\n  private shotsFired = 0;
   private recoilKick = 0;
   private muzzleFlashTimer = 0;
   private aimWasExplicitlySet = false;
@@ -634,7 +634,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
   private finishTraining() {
     const hits = this.targets.reduce((sum, target) => sum + target.hits, 0);
-    const shots = Math.max(1, Math.round((this.fireCooldown === 0 ? 0 : 0) + hits));
+    const shots = Math.max(1, this.shotsFired);
     const record = {
       type: 'shooting',
       player: this.playerName,
