@@ -144,7 +144,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   update(_time: number, delta: number) {
     if (this.sessionFinished) return;
     this.sessionElapsed += delta;
-    if (this.sessionElapsed >= 60000) { this.finishTraining(); return; }
+    if (this.sessionElapsed >= 60000) { this.sessionFinished = true; this.finishButton?.setText('VIEW RESULT'); return; }
     this.updateMovement(delta);
     this.updateAimAndFire(delta);
     this.updatePaintballs(delta);
