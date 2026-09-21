@@ -2202,7 +2202,7 @@ Field Town / Home Field
       ↓
 04 Media Bureau
       ↓
-05 Arena Gate
+05 ARENA
       ↓
 1v1 First to 3
 ```
@@ -2215,7 +2215,7 @@ The town must **teach the order spatially**. The player spawns in the central sq
 - **Evasion Yard** — unlocked after a shooting record exists. Teaches movement, bots, projectiles and cover.
 - **Armory & Outfitter** — unlocked after evasion. Checks budget/loadout and allows the player to buy a field upgrade.
 - **Media Bureau** — unlocked after training plus a loadout upgrade. It is the review/input station: it reads shooting, evasion, budget and equipment state and records that the player has reviewed the briefing.
-- **Arena Gate** — unlocked only after the Media Bureau has been reviewed. It is the physical entrance to the match.
+- **ARENA** — open physical arena field. Preparation affects the match, not access.
 - **Arena** — currently 1v1, first to 3. There must not be an Arena entry button on unrelated locations.
 
 ### Flow rules
@@ -2223,7 +2223,7 @@ The town must **teach the order spatially**. The player spawns in the central sq
 1. Training sessions return the player to the **Field Town** after saving their result. They do not teleport the player into Media.
 2. Equipment upgrades stay in the **Armory**. Buying an upgrade does not teleport the player elsewhere.
 3. Media review is a separate location. It returns to town and records `shooters-trigger:media-reviewed`.
-4. The Arena is entered from the Arena Gate in town, not from the Media Bureau.
+4. The Arena is a physical open field and is never exposed as a Media shortcut or gated entrance.
 5. There must be no persistent floating "ENTER ARENA" banner in the town. When the player is actually beside a location, use one **normal rectangular contextual button**, matching the Hall's simple button treatment. It must sit above the mobile control dock and never overlap the MOVE/AIM/FIRE controls.
 6. The mobile movement joystick belongs bottom-left. Combat aim/fire controls belong to gameplay scenes only. Town interaction UI must not occupy those control zones.
 7. The town's directional signs are part of the world, not HUD overlays.
@@ -2391,7 +2391,7 @@ The lobby uses the same grounded visual vocabulary and player treatment as Shoot
 - **02 Evasion Yard** — irregular cover, tires and movement-course fencing; this is the evasion-specific area.
 - **03 Armory & Outfitter** — equipment shelter, rack and crates; no house/building facade.
 - **04 Media Bureau** — media shelter, results desk and physical camera/reporting setup.
-- **05 Arena Gate** — physical gate and visible arena field beyond it.
+- **05 ARENA** — physical gate and visible arena field beyond it.
 
 These areas should be connected by readable ground space and sightlines so the player can understand the facility by walking through it. The lobby must not simply reproduce the Shooting Training target/bunker arrangement.
 
@@ -2415,7 +2415,7 @@ This is the default visual/interaction rule for future Shooters Trigger world-bu
 The Arena is an **open physical play field**, not a gated building or locked destination.
 
 Permanent rules:
-- Do not draw an Arena gate, doorway, fence opening, or artificial threshold whose purpose is to justify entry.
+- Do not draw a gate, doorway, fence opening, or artificial threshold for the Arena; the open field itself is the destination.
 - The Arena itself is the destination: a recognizable open field with real playing-space objects.
 - The contextual action appears only when the player is physically near the Arena field.
 - The Arena may be visited in any order permitted by the open Home Field contract; preparation affects the match, not access.
