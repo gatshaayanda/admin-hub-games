@@ -318,7 +318,9 @@ export function installShootersTriggerMobileControls(sceneKey = 'ShootersTrigger
   hint.className = 'st-hint';
   hint.textContent = 'MOVE · AIM · SHOOT';
 
-  root.append(joystick);\n  if (fire) root.append(fire);\n  if (combat) root.append(hint);
+  root.append(joystick);
+  if (fire) root.append(fire);
+  if (combat) root.append(hint);
   document.body.appendChild(root);
 
   const sync = () => {
