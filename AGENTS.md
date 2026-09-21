@@ -2045,3 +2045,137 @@ The current Shooter Trigger implementation checkpoint is committed on `main`. Th
 Current source-of-truth HEAD: `42202e8cf508e2cd0e39432f1af2136db47063e8`.
 
 When continuing from here, treat this as the recovery point and continue with controlled gameplay improvements rather than recreating these changes.
+
+## Shooters Trigger — Open Home Field / Guest-Style Player Agency Lock — September 21, 2026
+
+The Home Field is an **open preparation space**, not a mandatory checklist.
+
+After Shooter Intro → Setup → Home Field, the player should feel like a guest arriving at a real training facility: they can walk around, discover places, choose what interests them, and decide how much preparation they want before entering the Arena.
+
+### Freedom of order
+
+The underlying product progression remains intentional:
+
+```
+discover → train / review / prepare → compete → understand → retrain
+```
+
+But the player-facing order should remain flexible.
+
+From Home Field, the player may choose to:
+- go straight to Shooting;
+- go straight to Evasion;
+- visit Media Coverage first;
+- visit the Equipment Store;
+- enter the Arena with little or no preparation;
+- train repeatedly before competing;
+- spend budget aggressively;
+- conserve budget;
+- return to previous activities after seeing Arena results.
+
+Do **not** turn these into hard sequential gates unless a specific gameplay rule genuinely requires one.
+
+### Consequences instead of arbitrary gates
+
+The game should normally **show consequences rather than block choices**.
+
+For example, if the player enters Arena with little training, the game can communicate:
+- limited training history;
+- lower demonstrated readiness;
+- basic equipment;
+- weaker preparation context;
+- relevant opponent readiness.
+
+It should still let the player enter when the product rules allow it.
+
+Likewise, good preparation should be visible through stronger demonstrated readiness and later match effects. The player learns the system by experiencing the difference.
+
+Use readable state such as:
+
+```
+ARENA READINESS
+Training history: 0
+Shooting: Basic
+Evasion: Basic
+Equipment: Basic
+Preparation: Low
+ENTER ARENA
+```
+
+Do not expose hidden formulas merely to justify the result. Media Coverage and result screens should explain the meaningful causes in player-readable language.
+
+### Guest feeling
+
+The intended emotional structure is:
+
+```
+ARRIVE
+  ↓
+LOOK AROUND
+  ↓
+WHAT DO I WANT TO DO?
+  ↓
+CHOOSE A PLACE
+  ↓
+ACT / LEARN / PREPARE
+  ↓
+SEE WHAT CHANGED
+  ↓
+DECIDE WHAT TO DO NEXT
+```
+
+The player should not feel that the game is saying:
+
+> “You must complete Training A, then Training B, then buy Item C, then you may play.”
+
+Instead, it should feel like:
+
+> “This place is open. I decide how I prepare. The game remembers what I did.”
+
+### Design constraint
+
+Freedom does **not** mean removing structure.
+
+The underlying state model, performance-driven progression, budget/equipment effects, opponent preparation and Arena consequences remain locked. What changes is the **presentation of progression**: the world remains open while the player's preparation history determines what happens.
+
+When implementing a new Home Field activity:
+- make it discoverable from the physical world;
+- do not add a menu-only shortcut as the primary interaction;
+- do not require unrelated activities first;
+- preserve explicit save/close/return behavior;
+- make the resulting state visible through Media Coverage and later activities;
+- let the player choose when to return and what to do next.
+
+The core principle is:
+
+**The world is open; preparation determines what happens inside it.**
+
+### Acceptance test
+
+A phone playtest should allow a player to:
+1. enter Home Field;
+2. wander without being forced into a tutorial checklist;
+3. choose any available physical location;
+4. enter Arena before full preparation if the current product rules permit it;
+5. return to training afterward;
+6. retrain and change preparation;
+7. notice meaningful differences in later activity;
+8. understand those differences through results/Media Coverage.
+
+If a new feature requires a hard sequence, document the actual gameplay reason in the code change rather than adding a gate for convenience.
+
+## Shooters Trigger — Current Source Checkpoint — September 21, 2026
+
+The latest documented Shooter Trigger checkpoints include:
+
+- `9864f52` — `fix: make shooters lobby location entry physical`
+- `4d3b1eeeca1be981d01527fd8259960195fdaf22` — `docs: lock shooter performance progression contract`
+- `1826bdbb20e70ed7acd27d517bac2277e5ddadd1` — deployment-rate-limit retry documentation
+- `39f3806` — `fix: move shooters lobby text alpha to game object`
+
+The physical location-entry checkpoint is authoritative for the current Home Field interaction model: contextual entry appears when the player reaches a real location zone, rather than treating the lobby as a list of menu buttons.
+
+The performance/progression checkpoint is authoritative for the relationship between training evidence, skill, budget, equipment, Media Coverage and Arena effectiveness.
+
+Do not overwrite these contracts with a linear mission/checklist flow. Future implementation should deepen the existing open Home Field model while preserving the player's freedom to choose the order of activities.
+
