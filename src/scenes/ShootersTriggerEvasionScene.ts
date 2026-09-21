@@ -21,6 +21,7 @@ export class ShootersTriggerEvasionScene extends Phaser.Scene {
     this.cursors=this.input.keyboard!.createCursorKeys();
     this.cleanup=installShootersTriggerMobileControls();
     this.createSessionButton();
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>{this.cleanup?.();this.sessionButton?.remove();this.sessionButton=undefined;});
     this.time.addEvent({delay:700,loop:true,callback:()=>this.fireIncoming()});
     window.dispatchEvent(new Event('admin-hub-games:game-ready'));
   }
