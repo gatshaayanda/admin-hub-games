@@ -973,3 +973,92 @@ Develop this pass on `shooters-trigger-phone-offline`. Do not merge or modify `m
 - Rockstar Red Dead Redemption mobile touch layout: https://support.rockstargames.com/articles/CwtYAazPxaxyxtxy868jO/changing-touch-controls-layout-for-red-dead-redemption-on-android-and-ios
 - Twin-stick / touch shooter usability: https://www.gamedeveloper.com/design/a-guide-to-ios-twin-stick-shooter-usability
 - Mobile touch controls case study: https://www.gamedeveloper.com/design/the-challenges-of-developing-for-pc-and-mobile-part-1-controls
+
+
+## Shooters Trigger — Hall-Feel Reset — September 21, 2026
+
+The product owner deliberately reset the first Shooters Trigger gameplay slice to the smallest useful foundation.
+
+### Current direction
+
+Shooters Trigger is now a **single-player field-feel prototype**:
+- the player is the named player themself;
+- there is one player character only;
+- no teammate roster;
+- no enemy character roster;
+- no role system;
+- no AI combat layer;
+- no score race or match result layer yet;
+- paintball targets are static field objects, not characters.
+
+The purpose of this slice is to make movement and presence feel right before rebuilding combat around it.
+
+### Hall is the movement reference
+
+For player movement, camera and walking feel, treat `GameShellScene` as the authoritative reference.
+
+The Shooters Trigger player should preserve Hall's:
+- world-scale feel;
+- movement speed of 170;
+- diagonal normalization;
+- keyboard movement;
+- mobile analog joystick behaviour;
+- smooth camera follow;
+- camera deadzone proportions;
+- full-viewport responsive camera;
+- grounded two-pose walking animation;
+- alternating legs/boots rather than whole-body swimming, pitching or floating;
+- player name floating above the character.
+
+Do not redesign the movement feel while adding Shooters Trigger gameplay. If movement feels different from Hall, inspect Hall first.
+
+### Shooters Trigger presentation boundary
+
+The field is deliberately **not Hall copied visually**.
+
+Keep Hall's quiet broad-field readability and grounded scale, but make the decoration paintball-specific:
+- grass field;
+- mown lanes;
+- paintball bunkers;
+- tire stacks;
+- field flags;
+- shooting-range targets;
+- perimeter markers;
+- natural trees used as cover.
+
+The environment should evolve from this base rather than becoming a second fantasy village or a crowded tactical diagram.
+
+### Current control slice
+
+Desktop:
+- WASD / arrow movement;
+- left-side click can set a walk target;
+- right-side click aims and fires;
+- Space fires in the current aim direction.
+
+Phone:
+- Hall-style analog movement joystick;
+- tap the field to aim;
+- dedicated FIRE control;
+- no keyboard required.
+
+### Current gameplay slice
+
+The player can:
+1. enter the field;
+2. walk around it;
+3. move around/behind field cover;
+4. aim;
+5. fire paintballs;
+6. hit static targets;
+7. continue exploring.
+
+Do not add multiplayer, team AI, character rosters, inventories, matchmaking, tournaments or server-authoritative networking until this single-player movement/presentation slice is explicitly accepted.
+
+### Revision rule
+
+When the next Shooters Trigger change is requested:
+
+**Inspect Hall → preserve Hall movement feel → change only the Shooters Trigger layer → verify the field and player feel → checkpoint.**
+
+Unexpected movement/camera behaviour = **STOP → inspect Hall and the Shooters Trigger diff → then act.**
