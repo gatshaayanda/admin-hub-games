@@ -1,17 +1,8 @@
 import Phaser from 'phaser';
-
-export class ShootersTriggerMediaScene extends Phaser.Scene {
-  constructor(){super('ShootersTriggerMediaScene');}
-  create(_data:{from?:string;hits?:number}={}){
-    const {width,height}=this.scale; this.cameras.main.setBackgroundColor('#151a16');
-    this.add.text(width/2,height*.12,'MEDIA COVERAGE CENTER',{fontFamily:'monospace',fontSize:'24px',fontStyle:'bold',color:'#e8c95c'}).setOrigin(.5);
-    this.add.text(width/2,height*.20,'WHAT YOU DID BECOMES THE STORY',{fontFamily:'monospace',fontSize:'11px',color:'#f4f1df'}).setOrigin(.5);
-    let evasion='NOT YET RECORDED'; try{const r=JSON.parse(localStorage.getItem('shooters-trigger:last-evasion')||'null'); if(r)evasion=`${r.hits} incoming hits · 60s survived`;}catch{}
-    let budget='100'; try{budget=localStorage.getItem('shooters-trigger:budget')||'100';}catch{}
-    const lines=['SHOOTING  ·  TRAINING RECORD SAVED','EVASION   ·  '+evasion,'COVER     ·  POSITIONING IS NOW PART OF YOUR READINESS','BUDGET    ·  '+budget,'EQUIPMENT ·  BUY UPGRADES BEFORE ARENA'];
-    lines.forEach((t,i)=>this.add.text(width/2,height*(.33+i*.09),t,{fontFamily:'monospace',fontSize:'12px',color:'#f4f1df',align:'center',wordWrap:{width:width*.82}}).setOrigin(.5));
-    const buttons=[['RETURN TO HOME FIELD',.70,'ShootersTriggerLobbyScene'],['ENTER ARENA',.80,'ShootersTriggerArenaScene']];
-    buttons.forEach(([label,y,scene])=>{const b=this.add.rectangle(width/2,height*(y as number),Math.min(420,width*.78),52,0xe8c95c,1).setInteractive();this.add.text(b.x,b.y,label as string,{fontFamily:'monospace',fontSize:'11px',fontStyle:'bold',color:'#102018'}).setOrigin(.5);b.on('pointerdown',()=>this.scene.start(scene as string));});
-    window.dispatchEvent(new Event('admin-hub-games:game-ready'));
-  }
+export class ShootersTriggerMediaScene extends Phaser.Scene{
+ constructor(){super('ShootersTriggerMediaScene');}
+ create(){const {width,height}=this.scale;this.cameras.main.setBackgroundColor('#151a16');this.add.text(width/2,height*.12,'MEDIA COVERAGE CENTER',{fontFamily:'monospace',fontSize:'24px',fontStyle:'bold',color:'#e8c95c'}).setOrigin(.5);this.add.text(width/2,height*.20,'WHAT YOU DID BECOMES THE STORY',{fontFamily:'monospace',fontSize:'11px',color:'#f4f1df'}).setOrigin(.5);
+ let shooting='NOT YET RECORDED',evasion='NOT YET RECORDED',arena='NOT YET RECORDED',budget='100';try{const s=JSON.parse(localStorage.getItem('shooters-trigger:last-shooting')||'null');if(s)shooting=s.targetHits+' hits · '+s.accuracy+'% accuracy';const e=JSON.parse(localStorage.getItem('shooters-trigger:last-evasion')||'null');if(e)evasion=(e.survived/1000).toFixed(1)+'s · '+e.coverBlocks+' cover blocks · '+e.scrapes+' scrapes';const a=JSON.parse(localStorage.getItem('shooters-trigger:last-arena')||'null');if(a)arena=a.result+' · '+a.score[0]+'-'+a.score[1];budget=localStorage.getItem('shooters-trigger:budget')||'100';}catch{}
+ ['SHOOTING · '+shooting,'EVASION · '+evasion,'ARENA · '+arena,'BUDGET · '+budget,'READINESS · TRAINING PERFORMANCE CARRIES FORWARD'].forEach((t,i)=>this.add.text(width/2,height*(.32+i*.08),t,{fontFamily:'monospace',fontSize:'11px',color:'#f4f1df',align:'center',wordWrap:{width:width*.86}}).setOrigin(.5));
+ [['RETURN TO HOME FIELD',.72,'ShootersTriggerLobbyScene'],['ENTER ARENA',.81,'ShootersTriggerArenaScene']].forEach(([label,y,scene])=>{const b=this.add.rectangle(width/2,height*(y as number),Math.min(420,width*.78),50,0xe8c95c).setInteractive();this.add.text(b.x,b.y,label as string,{fontFamily:'monospace',fontSize:'11px',fontStyle:'bold',color:'#102018'}).setOrigin(.5);b.on('pointerdown',()=>this.scene.start(scene as string));});window.dispatchEvent(new Event('admin-hub-games:game-ready'));}
 }

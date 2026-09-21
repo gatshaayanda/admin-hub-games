@@ -1,42 +1,23 @@
 import Phaser from 'phaser';
 import { installShootersTriggerMobileControls } from '../shooters-trigger-mobile-controls';
 
-export class ShootersTriggerEvasionScene extends Phaser.Scene {
-  public joystickVector = new Phaser.Math.Vector2();
-  private player!: Phaser.GameObjects.Container;
-  private bullets: Phaser.GameObjects.Arc[] = [];
-  private covers: Phaser.Geom.Rectangle[] = [];
-  private elapsed=0; private hits=0; private cleanup?:()=>void; private completed=false; private sessionButton?:HTMLButtonElement;
-  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
-
-  constructor(){super('ShootersTriggerEvasionScene');}
-  create(){
-    this.cameras.main.setBackgroundColor('#5f8a47');
-    const g=this.add.graphics(); g.fillStyle(0x6f984b,1).fillRect(0,0,2400,1400);
-    this.covers=[new Phaser.Geom.Rectangle(500,400,280,70),new Phaser.Geom.Rectangle(1050,720,300,70),new Phaser.Geom.Rectangle(1700,430,260,70),new Phaser.Geom.Rectangle(1500,1000,320,70)];
-    this.covers.forEach(r=>{g.fillStyle(0x6b4930,1).fillRect(r.x,r.y,r.width,r.height);});
-    this.player=this.createPlayer(1200,1120); this.cameras.main.setBounds(0,0,2400,1400); this.cameras.main.startFollow(this.player,true,.08,.08);
-    this.add.text(18,18,'EVASION CAMP · 60s',{fontFamily:'monospace',fontSize:'14px',fontStyle:'bold',color:'#f4f1df'}).setScrollFactor(0).setDepth(90);
-    this.add.text(18,43,'MOVE · COVER · SURVIVE',{fontFamily:'monospace',fontSize:'10px',color:'#e8c95c'}).setScrollFactor(0).setDepth(90);
-    this.cursors=this.input.keyboard!.createCursorKeys();
-    this.cleanup=installShootersTriggerMobileControls();
-    this.createSessionButton();
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>{this.cleanup?.();this.sessionButton?.remove();this.sessionButton=undefined;});
-    this.time.addEvent({delay:700,loop:true,callback:()=>this.fireIncoming()});
-    window.dispatchEvent(new Event('admin-hub-games:game-ready'));
-  }
-  update(_t: number, delta: number){
-    this.elapsed+=delta;
-    let dx=this.joystickVector.x,dy=this.joystickVector.y;
-    if(!dx&&!dy){dx=(this.cursors.right.isDown?1:0)-(this.cursors.left.isDown?1:0);dy=(this.cursors.down.isDown?1:0)-(this.cursors.up.isDown?1:0);}
-    if(dx||dy){const l=Math.hypot(dx,dy)||1;this.player.x=Phaser.Math.Clamp(this.player.x+dx/l*175*delta/1000,40,2360);this.player.y=Phaser.Math.Clamp(this.player.y+dy/l*175*delta/1000,90,1350);}
-    for(let i=this.bullets.length-1;i>=0;i--){const b=this.bullets[i];b.x+=b.getData('vx')*delta/1000;b.y+=b.getData('vy')*delta/1000;if(b.x<0||b.x>2400||b.y<0||b.y>1400){b.destroy();this.bullets.splice(i,1);continue;}if(Phaser.Math.Distance.Between(b.x,b.y,this.player.x,this.player.y)<20){this.hits++;b.destroy();this.bullets.splice(i,1);}}
-    if(this.elapsed>=60000&&!this.completed)this.finish();
-  }
-  private fireIncoming(){for(let i=0;i<3;i++){const x=Phaser.Math.Between(250,2150),y=Phaser.Math.Between(180,600);const b=this.add.circle(x,y,5,0xe44f3d).setDepth(25);const v=new Phaser.Math.Vector2(this.player.x-x,this.player.y-y).normalize();b.setData('vx',v.x*250);b.setData('vy',v.y*250);this.bullets.push(b);}}
-  public setMoveVector(x:number,y:number){this.joystickVector.set(Phaser.Math.Clamp(x,-1,1),Phaser.Math.Clamp(y,-1,1));}
-  public isPhoneSession(){return window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints>0;}
-  private createSessionButton(){const button=document.createElement('button');button.type='button';button.textContent='CLOSE SESSION · SAVE';Object.assign(button.style,{position:'fixed',right:'18px',bottom:'max(18px, env(safe-area-inset-bottom))',minHeight:'48px',padding:'10px 16px',border:'2px solid #f4f1df',borderRadius:'10px',background:'#102018',color:'#f4f1df',fontFamily:'monospace',fontSize:'11px',fontWeight:'800',letterSpacing:'.8px',zIndex:'1450',touchAction:'manipulation'});button.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();this.finish();});document.body.appendChild(button);this.sessionButton=button;}
-  private finish(){ this.completed=true;this.cleanup?.();this.sessionButton?.remove();try{localStorage.setItem('shooters-trigger:last-evasion',JSON.stringify({hits:this.hits,survived:60000}));}catch{}this.scene.start('ShootersTriggerMediaScene',{from:'evasion',hits:this.hits});}
-  private createPlayer(x:number,y:number){const c=this.add.container(x,y).setDepth(30);const g=this.add.graphics();g.fillStyle(0x263a2b,1).fillRoundedRect(-14,-5,28,28,7);g.fillStyle(0xd8a477,1).fillCircle(0,-18,9);g.fillStyle(0x283d2c,1).fillEllipse(0,-24,22,8);g.fillStyle(0x334f35,1).fillRoundedRect(-12,18,9,16,3).fillRoundedRect(3,18,9,16,3);c.add(g);return c;}
+type Bot={body:Phaser.GameObjects.Container;cooldown:number;speed:number};
+type Shot={body:Phaser.GameObjects.Arc;vx:number;vy:number;ttl:number};
+export class ShootersTriggerEvasionScene extends Phaser.Scene{
+ public joystickVector=new Phaser.Math.Vector2();private player!:Phaser.GameObjects.Container;private bots:Bot[]=[];private shots:Shot[]=[];private covers:Phaser.Geom.Rectangle[]=[];
+ private elapsed=0;private incoming=0;private hits=0;private misses=0;private scrapes=0;private coverBlocks=0;private cleanup?:()=>void;private button?:HTMLButtonElement;private cursors!:Phaser.Types.Input.Keyboard.CursorKeys;private done=false;private timerText!:Phaser.GameObjects.Text;
+ constructor(){super('ShootersTriggerEvasionScene');}
+ create(){const g=this.add.graphics();g.fillStyle(0x6f984b,1).fillRect(0,0,2000,1200);this.cameras.main.setBounds(0,0,2000,1200);this.covers=[new Phaser.Geom.Rectangle(500,420,300,75),new Phaser.Geom.Rectangle(1000,700,300,75),new Phaser.Geom.Rectangle(1500,390,280,75),new Phaser.Geom.Rectangle(1450,880,300,75)];this.covers.forEach(r=>{g.fillStyle(0x6b4930,1).fillRoundedRect(r.x,r.y,r.width,r.height,8);});this.player=this.createUnit(1000,1000,0x263a2b,'YOU');this.cameras.main.startFollow(this.player,true,.08,.08);[[260,260],[1740,260],[360,780]].forEach(([x,y],i)=>this.bots.push({body:this.createUnit(x,y,0xd84b42,'BOT '+(i+1)),cooldown:500+i*260,speed:82+i*8}));this.add.text(18,18,'EVASION CAMP · 60s',{fontFamily:'monospace',fontSize:'14px',fontStyle:'bold',color:'#f4f1df'}).setScrollFactor(0).setDepth(90);this.timerText=this.add.text(18,43,'60.0s',{fontFamily:'monospace',fontSize:'12px',color:'#e8c95c'}).setScrollFactor(0).setDepth(90);this.add.text(18,67,'MOVE · COVER · SURVIVE',{fontFamily:'monospace',fontSize:'10px',color:'#f4f1df'}).setScrollFactor(0).setDepth(90);this.cursors=this.input.keyboard!.createCursorKeys();this.cleanup=installShootersTriggerMobileControls();this.createButton();this.time.addEvent({delay:850,loop:true,callback:()=>this.botFire()});this.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>{this.cleanup?.();this.button?.remove();});window.dispatchEvent(new Event('admin-hub-games:game-ready'));}
+ update(_t:number,delta:number){if(this.done)return;this.elapsed+=delta;this.move(delta);this.updateBots(delta);this.updateShots(delta);const remaining=Math.max(0,60000-this.elapsed);this.timerText.setText((remaining/1000).toFixed(1)+'s');if(remaining<=0)this.finish();}
+ public setMoveVector(x:number,y:number){this.joystickVector.set(Phaser.Math.Clamp(x,-1,1),Phaser.Math.Clamp(y,-1,1));}
+ public isPhoneSession(){return window.matchMedia('(pointer: coarse)').matches||navigator.maxTouchPoints>0;}
+ private move(delta:number){let dx=this.joystickVector.x,dy=this.joystickVector.y;if(!dx&&!dy){dx=(this.cursors.right.isDown?1:0)-(this.cursors.left.isDown?1:0);dy=(this.cursors.down.isDown?1:0)-(this.cursors.up.isDown?1:0);}if(!dx&&!dy)return;const l=Math.hypot(dx,dy)||1,nx=Phaser.Math.Clamp(this.player.x+dx/l*180*delta/1000,30,1970),ny=Phaser.Math.Clamp(this.player.y+dy/l*180*delta/1000,100,1170);if(!this.inCover(nx,ny,14)){this.player.x=nx;this.player.y=ny;}}
+ private updateBots(delta:number){for(const bot of this.bots){const dx=this.player.x-bot.body.x,dy=this.player.y-bot.body.y,d=Math.hypot(dx,dy)||1;if(d>260){const nx=bot.body.x+dx/d*bot.speed*delta/1000,ny=bot.body.y+dy/d*bot.speed*delta/1000;if(!this.inCover(nx,ny,14)){bot.body.x=nx;bot.body.y=ny;}}}}
+ private botFire(){if(this.done)return;for(const bot of this.bots){const dx=this.player.x-bot.body.x,dy=this.player.y-bot.body.y,d=Math.hypot(dx,dy);if(d>950)continue;const v=new Phaser.Math.Vector2(dx,dy).normalize();this.incoming++;this.shots.push({body:this.add.circle(bot.body.x+v.x*26,bot.body.y+v.y*26,5,0xe44f3d).setDepth(25),vx:v.x*230,vy:v.y*230,ttl:3200});}}
+ private updateShots(delta:number){for(let i=this.shots.length-1;i>=0;i--){const s=this.shots[i];s.ttl-=delta;const nx=s.body.x+s.vx*delta/1000,ny=s.body.y+s.vy*delta/1000;if(s.ttl<=0||nx<0||nx>2000||ny<0||ny>1200){this.misses++;s.body.destroy();this.shots.splice(i,1);continue;}if(this.inCover(nx,ny)){this.coverBlocks++;s.body.destroy();this.shots.splice(i,1);continue;}s.body.x=nx;s.body.y=ny;const d=Phaser.Math.Distance.Between(s.body.x,s.body.y,this.player.x,this.player.y);if(d<42)this.scrapes++;if(d<20){this.hits++;this.flashPlayer();s.body.destroy();this.shots.splice(i,1);}}}
+ private flashPlayer(){this.player.setScale(1.18);this.time.delayedCall(90,()=>this.player.setScale(1));}
+ private inCover(x:number,y:number,p=0){return this.covers.some(r=>x>=r.x-p&&x<=r.x+r.width+p&&y>=r.y-p&&y<=r.y+r.height+p);}
+ private finish(){if(this.done)return;this.done=true;this.cleanup?.();this.button?.remove();const rec={hits:this.hits,survived:Math.min(60000,Math.round(this.elapsed)),incomingShots:this.incoming,misses:this.misses,scrapes:this.scrapes,coverBlocks:this.coverBlocks,coverUsage:this.coverBlocks>0?'EFFECTIVE':'NOT USED'};try{localStorage.setItem('shooters-trigger:last-evasion',JSON.stringify(rec));const old=Number(localStorage.getItem('shooters-trigger:budget')||100);localStorage.setItem('shooters-trigger:budget',String(old+Math.min(40,Math.floor(rec.survived/6000)+this.coverBlocks*2)));}catch{}this.scene.start('ShootersTriggerMediaScene');}
+ private createButton(){const b=document.createElement('button');b.textContent='CLOSE SESSION · SAVE';Object.assign(b.style,{position:'fixed',right:'18px',bottom:'max(18px, env(safe-area-inset-bottom))',minHeight:'48px',padding:'10px 16px',border:'2px solid #f4f1df',borderRadius:'10px',background:'#102018',color:'#f4f1df',fontFamily:'monospace',fontSize:'11px',fontWeight:'800',zIndex:'1450'});b.onclick=()=>this.finish();document.body.appendChild(b);this.button=b;}
+ private createUnit(x:number,y:number,color:number,label:string){const c=this.add.container(x,y).setDepth(30),g=this.add.graphics();g.fillStyle(color,1).fillCircle(0,0,21);g.fillStyle(0x263a2b,1).fillRoundedRect(-12,-17,24,11,5);c.add(g);this.add.text(x,y+28,label,{fontFamily:'monospace',fontSize:'9px',color:'#f4f1df'}).setOrigin(.5).setDepth(31);return c;}
 }

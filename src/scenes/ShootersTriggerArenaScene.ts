@@ -1,25 +1,43 @@
 import Phaser from 'phaser';
 import { installShootersTriggerMobileControls } from '../shooters-trigger-mobile-controls';
 
-export class ShootersTriggerArenaScene extends Phaser.Scene {
-  public joystickVector=new Phaser.Math.Vector2(); private sessionButton?:HTMLButtonElement; private player!:Phaser.GameObjects.Container; private aim=new Phaser.Math.Vector2(1,0); private fire=false; private bullets:Phaser.GameObjects.Arc[]=[]; private cleanup?:()=>void; private score=0;
-  constructor(){super('ShootersTriggerArenaScene');}
-  create(){
-    this.cameras.main.setBackgroundColor('#557a43'); const g=this.add.graphics();g.fillStyle(0x6f984b,1).fillRect(0,0,2400,1400);g.fillStyle(0x704a31,1).fillRect(850,500,500,80).fillRect(850,850,500,80);g.lineStyle(4,0xf4f1df,.6).lineBetween(1200,80,1200,1320);
-    this.player=this.createPlayer(500,1050); const allies=[[380,1120],[520,1180]]; allies.forEach(p=>this.createUnit(p[0],p[1],0x47a6a1,'ALLY')); [[1850,280],[1950,500],[1750,700]].forEach(p=>this.createUnit(p[0],p[1],0xd84b42,'RIVAL'));
-    this.add.text(18,18,'ARENA · FIRST TO 3 KILLS',{fontFamily:'monospace',fontSize:'14px',fontStyle:'bold',color:'#f4f1df'}).setScrollFactor(0).setDepth(90);
-    this.add.text(18,43,'3v3 · MOVE + AIM + FIRE',{fontFamily:'monospace',fontSize:'10px',color:'#e8c95c'}).setScrollFactor(0).setDepth(90);
-    this.cleanup=installShootersTriggerMobileControls(); this.createExitButton(); this.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>{this.cleanup?.();this.sessionButton?.remove();this.sessionButton=undefined;}); window.dispatchEvent(new Event('admin-hub-games:game-ready'));
-  }
-  update(_t: number, delta: number){
-    let dx=this.joystickVector.x,dy=this.joystickVector.y; if(dx||dy){const l=Math.hypot(dx,dy)||1;this.player.x=Phaser.Math.Clamp(this.player.x+dx/l*175*delta/1000,40,2360);this.player.y=Phaser.Math.Clamp(this.player.y+dy/l*175*delta/1000,90,1350);}
-    if(this.fire){const b=this.add.circle(this.player.x+this.aim.x*35,this.player.y+this.aim.y*35,4,0xf0dfb6);b.setData('vx',this.aim.x*520);b.setData('vy',this.aim.y*520);this.bullets.push(b);this.fire=false;}
-    for(let i=this.bullets.length-1;i>=0;i--){const b=this.bullets[i];b.x+=b.getData('vx')*delta/1000;b.y+=b.getData('vy')*delta/1000;if(b.x>2400||b.y>1400||b.x<0||b.y<0){b.destroy();this.bullets.splice(i,1);}}
-  }
-  setMoveVector(x:number,y:number){this.joystickVector.set(Phaser.Math.Clamp(x,-1,1),Phaser.Math.Clamp(y,-1,1));}
-  isPhoneSession(){return window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints>0;}
-  private createExitButton(){const button=document.createElement('button');button.type='button';button.textContent='EXIT ARENA · HOME FIELD';Object.assign(button.style,{position:'fixed',right:'18px',top:'18px',minHeight:'44px',padding:'9px 14px',border:'2px solid #f4f1df',borderRadius:'10px',background:'#102018',color:'#f4f1df',fontFamily:'monospace',fontSize:'10px',fontWeight:'800',letterSpacing:'.7px',zIndex:'1450',touchAction:'manipulation'});button.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();this.scene.start('ShootersTriggerLobbyScene');});document.body.appendChild(button);this.sessionButton=button;}
-  setFireHeld(v:boolean){this.fire=v;} setAimVector(x:number,y:number){const l=Math.hypot(x,y);if(l>.05)this.aim.set(x/l,y/l);}
-  private createPlayer(x:number,y:number){const c=this.createUnit(x,y,0xe8c95c,'YOU');return c;}
-  private createUnit(x:number,y:number,color:number,label:string){const c=this.add.container(x,y).setDepth(30);const g=this.add.graphics();g.fillStyle(color,1).fillCircle(0,0,22);this.add.text(x,y+30,label,{fontFamily:'monospace',fontSize:'9px',color:'#f4f1df'}).setOrigin(.5).setDepth(31);c.add(g);return c;}
+type Fighter={body:Phaser.GameObjects.Container;hp:number;score:number;speed:number;cooldown:number};
+type Shot={body:Phaser.GameObjects.Arc;vx:number;vy:number;owner:'player'|'bot';ttl:number};
+
+export class ShootersTriggerArenaScene extends Phaser.Scene{
+ public joystickVector=new Phaser.Math.Vector2(); private player!:Fighter;private bot!:Fighter;private shots:Shot[]=[];private covers:Phaser.Geom.Rectangle[]=[];
+ private aim=new Phaser.Math.Vector2(1,0);private fire=false;private cleanup?:()=>void;private exitButton?:HTMLButtonElement;private cursors!:Phaser.Types.Input.Keyboard.CursorKeys;private matchOver=false;private playerSkill=0;private evasionSkill=0;private scoreHud?:Phaser.GameObjects.Text;
+ constructor(){super('ShootersTriggerArenaScene');}
+ create(){
+  const g=this.add.graphics();g.fillStyle(0x6f984b,1).fillRect(0,0,1800,1100);this.cameras.main.setBounds(0,0,1800,1100);
+  this.covers=[new Phaser.Geom.Rectangle(650,350,240,70),new Phaser.Geom.Rectangle(930,680,280,70),new Phaser.Geom.Rectangle(1250,350,230,70)];
+  this.covers.forEach(r=>{g.fillStyle(0x704a31,1).fillRoundedRect(r.x,r.y,r.width,r.height,8);});
+  this.player={body:this.createUnit(300,550,0xe8c95c,'YOU'),hp:3,score:0,speed:185,cooldown:0};
+  this.bot={body:this.createUnit(1500,550,0xd84b42,'RIVAL'),hp:3,score:0,speed:135,cooldown:900};
+  this.loadPreparation();
+  this.add.text(18,18,'ARENA · FIRST TO 3',{fontFamily:'monospace',fontSize:'15px',fontStyle:'bold',color:'#f4f1df'}).setScrollFactor(0).setDepth(90);
+  this.add.text(18,43,'1v1 · MOVE + AIM + FIRE · COVER MATTERS',{fontFamily:'monospace',fontSize:'10px',color:'#e8c95c'}).setScrollFactor(0).setDepth(90);
+  this.scoreHud=this.add.text(this.scale.width/2,18,'',{fontFamily:'monospace',fontSize:'13px',fontStyle:'bold',color:'#f4f1df'}).setOrigin(.5,0).setScrollFactor(0).setDepth(90);
+  this.cursors=this.input.keyboard!.createCursorKeys();this.cleanup=installShootersTriggerMobileControls();this.createExitButton();
+  this.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>{this.cleanup?.();this.exitButton?.remove();});
+  window.dispatchEvent(new Event('admin-hub-games:game-ready'));
+ }
+ update(_t:number,delta:number){if(this.matchOver)return;this.movePlayer(delta);this.updateBot(delta);this.updateShots(delta);this.player.cooldown=Math.max(0,this.player.cooldown-delta);this.bot.cooldown=Math.max(0,this.bot.cooldown-delta);if(this.fire)this.playerFire();this.updateScoreHud();}
+ public setMoveVector(x:number,y:number){this.joystickVector.set(Phaser.Math.Clamp(x,-1,1),Phaser.Math.Clamp(y,-1,1));}
+ public setFireHeld(v:boolean){this.fire=v;}
+ public setAimVector(x:number,y:number){const l=Math.hypot(x,y);if(l>.05)this.aim.set(x/l,y/l);}
+ public isPhoneSession(){return window.matchMedia('(pointer: coarse)').matches||navigator.maxTouchPoints>0;}
+ private loadPreparation(){try{const s=JSON.parse(localStorage.getItem('shooters-trigger:last-shooting')||'null');const e=JSON.parse(localStorage.getItem('shooters-trigger:last-evasion')||'null');this.playerSkill=Number(s?.accuracy||0);this.evasionSkill=Math.min(30,Number(e?.coverBlocks||0)*2+Number(e?.scrapes||0));}catch{}this.player.speed+=this.evasionSkill;this.player.cooldown=Math.max(80,420-this.playerSkill*1.2);}
+ private movePlayer(delta:number){let dx=this.joystickVector.x,dy=this.joystickVector.y;if(!dx&&!dy){dx=(this.cursors.right.isDown?1:0)-(this.cursors.left.isDown?1:0);dy=(this.cursors.down.isDown?1:0)-(this.cursors.up.isDown?1:0);}if(!dx&&!dy)return;const l=Math.hypot(dx,dy)||1,nx=Phaser.Math.Clamp(this.player.body.x+dx/l*this.player.speed*delta/1000,35,1765),ny=Phaser.Math.Clamp(this.player.body.y+dy/l*this.player.speed*delta/1000,100,1065);if(!this.inCover(nx,ny,14)){this.player.body.x=nx;this.player.body.y=ny;}}
+ private updateBot(delta:number){const dx=this.player.body.x-this.bot.body.x,dy=this.player.body.y-this.bot.body.y,d=Math.hypot(dx,dy)||1;if(d>420||d<260){const dir=d<260?-1:1;const nx=this.bot.body.x+dx/d*this.bot.speed*dir*delta/1000,ny=this.bot.body.y+dy/d*this.bot.speed*dir*delta/1000;if(!this.inCover(nx,ny,14)){this.bot.body.x=nx;this.bot.body.y=ny;}}if(this.bot.cooldown<=0&&d<900){const v=new Phaser.Math.Vector2(dx,dy).normalize();this.spawnShot(this.bot.body.x+v.x*28,this.bot.body.y+v.y*28,v,'bot');this.bot.cooldown=900;}}
+ private playerFire(){if(this.player.cooldown>0)return;this.player.cooldown=260;this.spawnShot(this.player.body.x+this.aim.x*30,this.player.body.y+this.aim.y*30,this.aim,'player');}
+ private spawnShot(x:number,y:number,v:Phaser.Math.Vector2,owner:'player'|'bot'){const b=this.add.circle(x,y,5,owner==='player'?0xf0dfb6:0xe44f3d).setDepth(25);this.shots.push({body:b,vx:v.x*500,vy:v.y*500,owner,ttl:1300});}
+ private updateShots(delta:number){for(let i=this.shots.length-1;i>=0;i--){const s=this.shots[i];s.ttl-=delta;const nx=s.body.x+s.vx*delta/1000,ny=s.body.y+s.vy*delta/1000;if(s.ttl<=0||nx<0||nx>1800||ny<0||ny>1100||this.inCover(nx,ny)){s.body.destroy();this.shots.splice(i,1);continue;}s.body.x=nx;s.body.y=ny;const target=s.owner==='player'?this.bot:this.player;if(Phaser.Math.Distance.Between(s.body.x,s.body.y,target.body.x,target.body.y)<25){target.hp--;s.body.destroy();this.shots.splice(i,1);if(target.hp<=0)this.roundPoint(s.owner);else this.flash(target);}}}
+ private roundPoint(winner:'player'|'bot'){if(winner==='player')this.player.score++;else this.bot.score++;this.shots.forEach(s=>s.body.destroy());this.shots=[];if(this.player.score>=3||this.bot.score>=3){this.matchOver=true;this.showResult();return;}this.player.hp=this.bot.hp=3;this.player.body.setPosition(300,550);this.bot.body.setPosition(1500,550);this.bot.cooldown=700;}
+ private showResult(){const won=this.player.score>this.bot.score;const reward=won?25:8;try{const current=Number(localStorage.getItem('shooters-trigger:budget')||100);localStorage.setItem('shooters-trigger:budget',String(current+reward));localStorage.setItem('shooters-trigger:last-arena',JSON.stringify({result:won?'WIN':'LOSS',score:[this.player.score,this.bot.score],budgetEarned:reward,completedAt:Date.now()}));}catch{}const panel=document.createElement('div');Object.assign(panel.style,{position:'fixed',inset:'0',zIndex:'1600',display:'grid',placeItems:'center',background:'rgba(12,18,14,.76)',fontFamily:'monospace'});const card=document.createElement('div');Object.assign(card.style,{width:'min(430px,88vw)',padding:'26px',background:'#151a16',border:'2px solid #e8c95c',borderRadius:'14px',textAlign:'center',color:'#f4f1df'});card.innerHTML='<div style="color:#e8c95c;font-size:20px;font-weight:800">ARENA COMPLETE</div><div style="margin:14px 0;font-size:14px">'+(won?'MATCH WON':'MATCH LOST')+' · YOU '+this.player.score+' — '+this.bot.score+' RIVAL</div><div style="font-size:11px;line-height:1.7">TRAINING READINESS CARRIED INTO THE MATCH.<br>BUDGET EARNED · '+reward+'</div>';const b=document.createElement('button');b.textContent='RETURN TO HOME FIELD';Object.assign(b.style,{marginTop:'20px',minHeight:'48px',padding:'10px 18px',background:'#e8c95c',border:0,borderRadius:'8px',fontFamily:'monospace',fontWeight:'800'});b.onclick=()=>{panel.remove();this.scene.start('ShootersTriggerLobbyScene');};card.appendChild(b);panel.appendChild(card);document.body.appendChild(panel);}
+ private flash(f:Fighter){f.body.setScale(1.2);this.time.delayedCall(100,()=>f.body.setScale(1));}
+ private inCover(x:number,y:number,p=0){return this.covers.some(r=>x>=r.x-p&&x<=r.x+r.width+p&&y>=r.y-p&&y<=r.y+r.height+p);}
+ private createUnit(x:number,y:number,color:number,label:string){const c=this.add.container(x,y).setDepth(30),g=this.add.graphics();g.fillStyle(0x29372f,1).fillEllipse(0,15,24,11);g.fillStyle(color,1).fillCircle(0,-2,20);g.fillStyle(0x263a2b,1).fillRoundedRect(-13,-18,26,13,5);c.add(g);this.add.text(x,y+29,label,{fontFamily:'monospace',fontSize:'9px',color:'#f4f1df'}).setOrigin(.5).setDepth(31);return c;}
+ private updateScoreHud(){if(this.scoreHud)this.scoreHud.setText('YOU '+this.player.score+'  ·  RIVAL '+this.bot.score);}
+ private createExitButton(){const b=document.createElement('button');b.textContent='EXIT ARENA · HOME FIELD';Object.assign(b.style,{position:'fixed',right:'18px',top:'18px',minHeight:'44px',padding:'9px 14px',border:'2px solid #f4f1df',borderRadius:'10px',background:'#102018',color:'#f4f1df',fontFamily:'monospace',fontSize:'10px',fontWeight:'800',zIndex:'1450'});b.onclick=()=>this.scene.start('ShootersTriggerLobbyScene');document.body.appendChild(b);this.exitButton=b;}
 }
