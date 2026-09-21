@@ -384,14 +384,13 @@ export function installShootersTriggerMobileControls() {
   root.id = ROOT_ID;
 
   const joystick = buildJoystick();
-  const aimZone = buildAimZone();
   const fire = buildFireButton();
 
   const hint = document.createElement('div');
   hint.className = 'st-hint';
   hint.textContent = 'MOVE · AIM · SHOOT';
 
-  root.append(joystick, aimZone, fire, hint);
+  root.append(joystick, fire, hint);
   document.body.appendChild(root);
 
   const sync = () => {
