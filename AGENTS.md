@@ -1028,19 +1028,24 @@ Keep Hall's quiet broad-field readability and grounded scale, but make the decor
 
 The environment should evolve from this base rather than becoming a second fantasy village or a crowded tactical diagram.
 
-### Current control slice
+### Historical control slice — superseded by Combat Presentation Refinement
 
+The earlier Hall-Feel reset used click-to-walk and tap-to-aim. That experiment is retained as history only.
+
+The current authoritative control slice is:
 Desktop:
 - WASD / arrow movement;
-- left-side click can set a walk target;
-- right-side click aims and fires;
-- Space fires in the current aim direction.
+- mouse position = independent aim;
+- left click = fire;
+- Space = fire in the current aim direction;
+- no click-to-walk.
 
 Phone:
 - Hall-style analog movement joystick;
-- tap the field to aim;
+- right-side drag = independent aim;
 - dedicated FIRE control;
-- no keyboard required.
+- no keyboard required;
+- movement and aim can be simultaneous on separate touch pointers.
 
 ### Current gameplay slice
 
