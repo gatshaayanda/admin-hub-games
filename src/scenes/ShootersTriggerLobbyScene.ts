@@ -26,11 +26,11 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
   private enterButton?: Phaser.GameObjects.Container;
 
   private locations: Location[] = [
-    { id: 'shooting', name: 'SHOOTING RANGE', subtitle: '01 · AIM · FIRE · TRAIN', x: 1900, y: 720, color: 0xd66a3d },
-    { id: 'evasion', name: 'EVASION YARD', subtitle: '02 · MOVE · COVER · SURVIVE', x: 690, y: 960, color: 0x2f7775 },
-    { id: 'upgrades', name: 'ARMORY & OUTFITTER', subtitle: '03 · GEAR · UPGRADE · PREP', x: 610, y: 330, color: 0xe8c95c },
-    { id: 'media', name: 'MEDIA BUREAU', subtitle: '04 · REVIEW · REPORT · REFLECT', x: 1900, y: 900, color: 0x8fb39b },
-    { id: 'arena', name: 'ARENA GATE', subtitle: '05 · 1v1 · FIRST TO 3', x: 1180, y: 230, color: 0xd66a3d },
+    { id: 'shooting', name: 'SHOOTING RANGE', subtitle: '01 · AIM · FIRE · TRAIN', x: 1750, y: 720, color: 0xd66a3d },
+    { id: 'evasion', name: 'EVASION YARD', subtitle: '02 · MOVE · COVER · SURVIVE', x: 650, y: 720, color: 0x2f7775 },
+    { id: 'upgrades', name: 'ARMORY & OUTFITTER', subtitle: '03 · GEAR · UPGRADE · PREP', x: 650, y: 1080, color: 0xe8c95c },
+    { id: 'media', name: 'MEDIA BUREAU', subtitle: '04 · REVIEW · REPORT · REFLECT', x: 1750, y: 1080, color: 0x8fb39b },
+    { id: 'arena', name: 'ARENA', subtitle: '05 · 1v1 · FIRST TO 3', x: 1180, y: 420, color: 0xd66a3d },
   ];
 
   private playerMoving = false;
@@ -42,7 +42,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor('#78a653');
     this.drawField();
-    this.player = this.createPlayer(1180, 1080);
+    this.player = this.createPlayer(1180, 1040);
     this.player.setDepth(30);
 
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
@@ -232,7 +232,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     };
 
     const upgrade = makeButton(budget >= 20 ? 'UPGRADE LOADOUT · 20' : 'NOT ENOUGH BUDGET');
-    const close = makeButton('BACK TO TOWN');
+    const close = makeButton('CLOSE FIELD STORE');
 
     upgrade.addEventListener('pointerdown', event => {
       event.preventDefault(); event.stopPropagation();
@@ -242,7 +242,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
       localStorage.setItem('shooters-trigger:upgrade-level', String(next));
       this.equipmentModal?.remove();
       this.equipmentModal = undefined;
-      this.showStatus('LOADOUT UPDATED · NOW WALK TO THE MEDIA BUREAU');
+      this.showStatus('LOADOUT UPDATED · WALK THE FIELD WHEN READY');
     });
 
     close.addEventListener('pointerdown', event => {
@@ -333,41 +333,40 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     this.drawInfoBoard(1180, 790, 'FIELD BOARD');
 
     // Shooting station: target stands and a short marked firing lane.
-    this.drawFence(1760, 470, 420, 70);
-    this.drawTargetStand(1900, 455);
-    this.drawTargetStand(2050, 455);
-    this.drawLane(1760, 560, 420, '01 · SHOOTING RANGE');
+    this.drawFence(1570, 470, 420, 70);
+    this.drawTargetStand(1710, 455);
+    this.drawTargetStand(1860, 455);
+    this.drawLane(1570, 560, 420, '01 · SHOOTING RANGE');
 
     // Evasion station: an irregular cover/movement course.
-    this.drawBunker(520, 820, 230, 70, 0x76563b);
-    this.drawBunker(760, 930, 170, 64, 0x5f6e69);
-    this.drawTireStack(560, 1040);
-    this.drawTireStack(790, 1120);
-    this.drawCourseFence(410, 740, 560, 470);
-    this.drawSign(690, 705, '02', 'EVASION YARD', 0x2f7775);
+    this.drawBunker(430, 650, 230, 70, 0x76563b);
+    this.drawBunker(700, 760, 170, 64, 0x5f6e69);
+    this.drawTireStack(470, 870);
+    this.drawTireStack(700, 950);
+    this.drawCourseFence(320, 570, 560, 470);
+    this.drawSign(650, 535, '02', 'EVASION YARD', 0x2f7775);
 
     // Armory: a physical equipment tent/rack area, not a building.
-    this.drawShelter(430, 300, 360, 150, 'ARMORY');
-    this.drawEquipmentRack(430, 500);
-    this.drawCrates(650, 500, 3);
-    this.drawSign(610, 250, '03', 'ARMORY & OUTFITTER', 0xe8c95c);
+    this.drawShelter(430, 1110, 360, 150, 'ARMORY');
+    this.drawEquipmentRack(430, 1310);
+    this.drawCrates(650, 1310, 3);
+    this.drawSign(610, 1060, '03', 'ARMORY & OUTFITTER', 0xe8c95c);
 
     // Media: a small field desk/camera/report station.
-    this.drawShelter(1690, 850, 360, 140, 'MEDIA');
-    this.drawMediaDesk(1690, 1030);
-    this.drawCamera(1880, 1010);
-    this.drawSign(1900, 790, '04', 'MEDIA BUREAU', 0x8fb39b);
+    this.drawShelter(1610, 1110, 360, 140, 'MEDIA');
+    this.drawMediaDesk(1690, 1290);
+    this.drawCamera(1880, 1270);
+    this.drawSign(1750, 1060, '04', 'MEDIA BUREAU', 0x8fb39b);
 
-    // Arena: a real fenced gate with a visible field beyond it.
-    this.drawArenaGate(1180, 230);
-    this.drawArenaField(980, 70, 400, 150);
-    this.drawSign(1180, 300, '05', 'ARENA GATE', 0xd66a3d);
+    // Arena: an open physical play field. There is no gate or artificial entry point.
+    this.drawArenaField(980, 300, 400, 240);
+    this.drawSign(1180, 560, '05', 'ARENA', 0xd66a3d);
 
     // Grounded wayfinding signs replace floating destination markers.
     this.drawSign(1510, 700, '01', 'SHOOTING', 0xd66a3d);
-    this.drawSign(1030, 650, '02', 'EVASION', 0x2f7775);
-    this.drawSign(820, 610, '03', 'ARMORY', 0xe8c95c);
-    this.drawSign(1530, 830, '04', 'MEDIA', 0x8fb39b);
+    this.drawSign(1030, 700, '02', 'EVASION', 0x2f7775);
+    this.drawSign(900, 1030, '03', 'ARMORY', 0xe8c95c);
+    this.drawSign(1460, 1030, '04', 'MEDIA', 0x8fb39b);
 
     this.drawTree(300, 280, 1.15);
     this.drawTree(2110, 330, 0.95);
@@ -505,21 +504,11 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     g.fillStyle(0x8fb39b, 1).fillCircle(x + 18, y, 8);
   }
 
-  private drawArenaGate(x: number, y: number) {
-    const g = this.add.graphics();
-    g.fillStyle(0x493526, 1).fillRect(x - 105, y, 14, 120).fillRect(x + 91, y, 14, 120);
-    g.fillStyle(0xd66a3d, 1).fillRect(x - 91, y + 18, 182, 18);
-    g.lineStyle(4, 0xf4f1df, 0.65).strokeRect(x - 91, y + 38, 182, 82);
-    this.add.text(x, y + 27, 'ARENA · GATE 05', {
-      fontFamily: 'monospace', fontSize: '10px', fontStyle: 'bold',
-      color: '#fff4d4', stroke: '#493526', strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(8);
-  }
-
   private drawArenaField(x: number, y: number, width: number, height: number) {
     const g = this.add.graphics();
     g.fillStyle(0x679346, 0.45).fillRoundedRect(x, y, width, height, 18);
-    g.lineStyle(3, 0xd66a3d, 0.55).strokeRoundedRect(x, y, width, height, 18);
+    g.lineStyle(4, 0xd66a3d, 0.55).strokeRoundedRect(x, y, width, height, 18);
+    g.lineStyle(3, 0x315845, 0.55).strokeRoundedRect(x + 18, y + 18, width - 36, height - 36, 14);
     this.drawBunker(x + 45, y + 58, 100, 44, 0x76563b);
     this.drawBunker(x + 250, y + 55, 105, 46, 0x5f6e69);
   }
