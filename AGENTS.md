@@ -1920,3 +1920,23 @@ The intended player experience is:
 The lobby → focused activity → immediate result → return/review loop is consistent with established game-UX guidance: clear goals, timely feedback, progressive introduction of mechanics, and visible long-term progress help players connect actions to outcomes and learn systems. The Shooter implementation should therefore keep the world/lobby exploratory while keeping each training/combat scene focused on one teachable task, then use Media Coverage as the longer-term interpretation layer.
 
 Research reference: GameDeveloper discussions on cognitive flow and feedback, tutorial progression, player agency/context, and gameplay flow were reviewed while locking this architecture. These are design references, not hard rules; actual player testing remains the acceptance authority.
+
+
+## Shooters Trigger — Location Entry Control Checkpoint — September 21, 2026
+
+The Home Field lobby must expose an obvious contextual interaction control when the player reaches a physical location.
+
+Required behavior:
+- walk/joystick the unarmed player toward a location;
+- show a large touch-friendly contextual action button near the bottom of the phone viewport;
+- keep keyboard **E** as the desktop/keyboard equivalent;
+- hide the action when the player is not close enough;
+- label the action with the actual location, e.g. **ENTER ARENA LOCATION**;
+- Equipment Store must open an explicit purchase confirmation rather than spending budget merely because the player arrived;
+- action scenes must expose their mobile movement controls through the shared Shooter mobile-control layer;
+- Evasion is movement/cover only and must not show a fire button;
+- Arena and Shooting expose movement plus aim/fire controls;
+- action sessions must have an explicit close/save or exit path so a playthrough cannot dead-end.
+
+This is part of the acceptance loop:
+**walk → see location → enter/confirm → play/decide → save/exit → return to Home Field**.
