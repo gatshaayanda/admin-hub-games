@@ -1818,6 +1818,35 @@ Game-design research also supports the intended engagement loop: clear goals, ch
 
 Paintball itself provides a useful conceptual foundation for body/equipment hits, cover and close-range positional play, but Shooter Trigger's hit thresholds are fictional game rules and should remain internally consistent rather than pretending to simulate tournament regulations.
 
+
+### Shooter guidance, telegraph and combat-readability patch — September 21, 2026
+
+The first-playthrough implementation now also requires a small **field-guide + just-in-time combat information layer**.
+
+**Player instruction contract**
+- The Home Field has a reusable **FIELD GUIDE** that explains the full five-place journey, the 60-second shooting/evasion exercises, Media preparation, 3v3 first-to-three match, respawn, reporting and retraining.
+- Shooting, Evasion and Arena each expose a location-specific Field Guide so players can re-open instructions without restarting.
+- Guidance must stay short and action-oriented: tell the player what to do, then let the player do it.
+- Do not replace gameplay with a wall of tutorial text. Contextual guidance should remain available and the field itself should teach.
+
+**Combat telegraph contract**
+- Incoming arena shots are classified as **QUICK**, **STANDARD** or **PRESSURE** and the player receives a short directional warning.
+- When a shot hits cover, the player gets an explicit **COVER BLOCKED** response.
+- Player hits communicate readable outcomes such as **SCRAPE**, **CENTER MASS**, **EXCEPTIONAL HIT** and elimination.
+- Off-screen rivals use an edge-of-screen directional signal when the camera cannot currently see them.
+- These signals must support, not replace, readable enemy movement/aiming and the directional cover game.
+
+This follows the established design principle that avoidance combat must communicate attacks before or as they occur, and that off-screen combat information can be represented with directional visual cues. The research basis includes enemy telegraphing, directional hit indicators and mobile-shooter sound/visual prioritization. See the research notes in the implementation conversation and sources such as Game Developer's telegraphing guidance and Game Design Skills' combat/tutorial guidance.
+
+**Character aim presentation remains locked**
+- Do not rotate the grounded full body to fake aiming.
+- Upper body, arms and marker rotate with the aim vector.
+- The barrel/muzzle and projectile must agree.
+- Recoil and muzzle flash originate from the weapon direction.
+- This is currently implemented in the Shooter training player as a procedural directional combat layer; future authored 4/8-direction sprites remain optional if phone testing shows the procedural result is not enough.
+
+**Promotion gate remains unchanged:** source/branch checks, build, affected flow verification and real phone verification are still required before calling the game live.
+
 ### Direction-lock rule
 
 This section is the current product direction for completing Shooters Trigger.
