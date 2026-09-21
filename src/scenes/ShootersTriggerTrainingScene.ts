@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { installShootersTriggerMobileControls } from '../shooters-trigger-mobile-controls';
 import { loadShootersProgress, recordShooting, finishShooting, saveShootersProgress } from '../shooters-trigger-state';
+import { addFieldGuide, showShotAlert } from '../shooters-trigger-guidance';
 
 type Paintball = {
   body: Phaser.GameObjects.Arc;
@@ -82,6 +83,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
     this.createTargets();
     this.createHud();
+    addFieldGuide(this, 'SHOOTING LOCATION · FIELD GUIDE', ['Use the left MOVE control to walk. Movement never changes where the marker is aiming.','Use the right FIRE control to drag your aim and fire. You can move and shoot at the same time.','Train for 60 seconds. Learn the difference between a scrape, marker-hand hit, center-mass hit and exceptional head-level precision.','Cover can stop a paintball. Standing beside cover is not the same as being behind the useful face of it.','Your result becomes your shooting stat and changes what Media Coverage reports before the arena.']);
 
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.keys = this.input.keyboard!.addKeys('W,A,S,D,SPACE') as Record<string, Phaser.Input.Keyboard.Key>;
@@ -290,6 +292,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
       if (this.hitCover(ball.body.x, ball.body.y)) {
         recordShooting(this.progress, 'coverHits');
+        showShotAlert(this, 'SHOT RESULT · COVER BLOCKED');
         ball.body.destroy();
         this.paintballs.splice(i, 1);
         continue;
@@ -303,6 +306,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         const distance = Phaser.Math.Distance.Between(ball.body.x, ball.body.y, target.x, target.y);
         const hitType = distance < 8 ? 'headshots' : distance < 15 ? 'centerMass' : target.kind === 'bottle' ? 'markerHits' : 'scrapes';
         recordShooting(this.progress, hitType as 'headshots'|'centerMass'|'markerHits'|'scrapes');
+        const readable = hitType === 'headshots' ? 'EXCEPTIONAL HIT' : hitType === 'centerMass' ? 'CENTER-MASS HIT' : hitType === 'markerHits' ? 'MARKER-HAND HIT' : 'SCRAPE';
+        showShotAlert(this, 'SHOT RESULT · '+readable);
         target.hits += 1;
         target.plate.setFillStyle(0xe8c95c, 1);
         this.showTargetSplatter(target);
