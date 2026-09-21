@@ -632,6 +632,25 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     this.layoutUi(this.scale.width, this.scale.height);
   }
 
+  private finishTraining() {
+    const hits = this.targets.reduce((sum, target) => sum + target.hits, 0);
+    const shots = Math.max(1, Math.round((this.fireCooldown === 0 ? 0 : 0) + hits));
+    const record = {
+      type: 'shooting',
+      player: this.playerName,
+      completedAt: Date.now(),
+      shots,
+      targetHits: hits,
+      accuracy: Math.min(100, Math.round((hits / shots) * 100)),
+      budgetEarned: Math.min(50, hits * 5),
+    };
+    try {
+      localStorage.setItem('shooters-trigger:last-shooting', JSON.stringify(record));
+      localStorage.setItem('shooters-trigger:budget', String(100 + record.budgetEarned));
+    } catch {}
+    this.scene.start('ShootersTriggerMediaScene', { from: 'shooting', record });
+  }
+
   private updateHud() {
     const distance = this.playerTarget
       ? Math.round(Phaser.Math.Distance.Between(this.player.x, this.player.y, this.playerTarget.x, this.playerTarget.y))
