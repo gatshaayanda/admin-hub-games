@@ -11,7 +11,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.add.text(18,43,'3v3 · MOVE + AIM + FIRE',{fontFamily:'monospace',fontSize:'10px',color:'#e8c95c'}).setScrollFactor(0).setDepth(90);
     this.cleanup=installShootersTriggerMobileControls(); window.dispatchEvent(new Event('admin-hub-games:game-ready'));
   }
-  update(_t,delta){
+  update(_t: number, delta: number){
     let dx=this.joystickVector.x,dy=this.joystickVector.y; if(dx||dy){const l=Math.hypot(dx,dy)||1;this.player.x+=dx/l*175*delta/1000;this.player.y+=dy/l*175*delta/1000;}
     if(this.fire){const b=this.add.circle(this.player.x+this.aim.x*35,this.player.y+this.aim.y*35,4,0xf0dfb6);b.setData('vx',this.aim.x*520);b.setData('vy',this.aim.y*520);this.bullets.push(b);this.fire=false;}
     for(let i=this.bullets.length-1;i>=0;i--){const b=this.bullets[i];b.x+=b.getData('vx')*delta/1000;b.y+=b.getData('vy')*delta/1000;if(b.x>2400||b.y>1400||b.x<0||b.y<0){b.destroy();this.bullets.splice(i,1);}}
