@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import {installShootersTriggerMobileControls} from '../shooters-trigger-mobile-controls';
 import {clearPendingArena,loadShootersProgress,saveShootersProgress} from '../shooters-trigger-state';
+import {createOffscreenSignal,updateOffscreenSignal,showShotAlert,addFieldGuide} from '../shooters-trigger-guidance';
 type Fighter={body:Phaser.GameObjects.Arc;team:'blue'|'red';hits:number;name:string;alive:boolean;x:number;y:number};type Shot={body:Phaser.GameObjects.Arc;x:number;y:number;vx:number;vy:number;team:'blue'|'red';owner?:'player'|'bot';kind?:'QUICK'|'STANDARD'|'PRESSURE'};
 export class ShootersTriggerArenaScene extends Phaser.Scene{public joystickVector=new Phaser.Math.Vector2();private p=loadShootersProgress();private player!:Fighter;private allies:Fighter[]=[];private enemies:Fighter[]=[];private shots:Shot[]=[];private covers:Phaser.Geom.Rectangle[]=[];private aim=new Phaser.Math.Vector2(1,0);private fire=false;private cd=0;private aiCd=0;private respawn=0;private controls?:()=>void;private hud!:Phaser.GameObjects.Text;private result=false;private specialButton?:Phaser.GameObjects.Text;private offscreenSignal?:ReturnType<typeof createOffscreenSignal>;
 constructor(){super('ShootersTriggerArenaScene')}

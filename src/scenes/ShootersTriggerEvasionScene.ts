@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import {installShootersTriggerMobileControls} from '../shooters-trigger-mobile-controls';
 import {loadShootersProgress,finishEvasion} from '../shooters-trigger-state';
+import {addFieldGuide,showShotAlert} from '../shooters-trigger-guidance';
 export class ShootersTriggerEvasionScene extends Phaser.Scene{
 public joystickVector=new Phaser.Math.Vector2();private player!:Phaser.GameObjects.Arc;private bots:Phaser.GameObjects.Arc[]=[];private bullets:{x:number;y:number;vx:number;vy:number;body:Phaser.GameObjects.Arc}[]=[];private covers:Phaser.Geom.Rectangle[]=[];private p=loadShootersProgress();private elapsed=0;private cooldown=0;private controls?:()=>void;private hud!:Phaser.GameObjects.Text;private keys!:Record<string,Phaser.Input.Keyboard.Key>;
 constructor(){super('ShootersTriggerEvasionScene')}
