@@ -1062,3 +1062,88 @@ When the next Shooters Trigger change is requested:
 **Inspect Hall → preserve Hall movement feel → change only the Shooters Trigger layer → verify the field and player feel → checkpoint.**
 
 Unexpected movement/camera behaviour = **STOP → inspect Hall and the Shooters Trigger diff → then act.**
+
+
+## Shooters Trigger — Combat Feel Refinement — September 21, 2026
+
+The next refinement preserves the accepted Hall movement foundation but makes Shooter controls and weapon presentation follow established top-down shooter conventions.
+
+### Input contract
+
+**Desktop**
+- WASD / arrows = movement.
+- Mouse = independent aim.
+- Left click = fire.
+- Space = fire using the current aim.
+- Do not use click-to-walk in the shooter. Hall's movement *feel* is the reference; shooter combat requires movement and aim to remain independent.
+
+**Phone**
+- Left virtual joystick = movement.
+- Right-side drag zone = independent aim.
+- FIRE button = firing.
+- Do not use a world tap as an additional aim control.
+- The right aim gesture should begin under the player's thumb (floating-origin behaviour), then preserve its direction while dragged.
+- Avoid requiring players to look down at a collection of tiny controls.
+
+This follows the established twin-stick principle: movement and aim are independent, allowing retreating, strafing and circling while maintaining fire. Current control research describes left-stick movement + right-stick aim as the standard mobile pattern, while mouse-aim + keyboard movement is a common desktop pattern. See references in the implementation research log if this changes again.
+
+### Character / weapon contract
+
+The player body and weapon are separate render layers.
+
+The body:
+- remains grounded and readable;
+- keeps Hall's two-pose walk rhythm;
+- has visible helmet, face/visor, vest, arms, separate legs and boots;
+- must not rotate the whole character to follow the weapon.
+
+The weapon:
+- rotates continuously toward the independent aim vector;
+- has a stock, grip, marker body, barrel, sight and two hand connection points;
+- muzzle position is the source of the projectile spawn;
+- must visually agree with the projectile direction.
+
+This prevents the old failure where the character appeared to hold a weapon in the walking direction while the projectile travelled somewhere else.
+
+### Aiming presentation
+
+The aim reticle is deliberately restrained:
+- thin crosshair;
+- no permanent centre dot;
+- no oversized target circle;
+- it should help confirm aim without becoming a second gameplay object.
+
+The weapon itself is the primary directional feedback. If the muzzle and projectile disagree, treat that as a bug.
+
+### Projectile contract
+
+Paintballs/projectiles must originate from the weapon muzzle, not from an arbitrary point in front of the player's body.
+
+A fire action must:
+1. use the current aim vector;
+2. position the projectile at the muzzle;
+3. travel on that same vector;
+4. use a visible but restrained projectile;
+5. respect cooldown;
+6. stop at field cover.
+
+### Refinement rule
+
+When improving Shooter Trigger visuals, prefer **small readable sprite layers and animation states** over making the entire character more complicated.
+
+Useful future states:
+- idle;
+- walk A/B;
+- aim;
+- fire recoil;
+- hit;
+- reload;
+- crouch/cover if gameplay eventually needs it.
+
+Do not add all states at once. Add one, verify it, then checkpoint.
+
+### Control-quality rule
+
+If a control can be removed without reducing expressive gameplay, remove it.
+
+Unexpected ambiguity = **STOP → inspect the input path and rendered direction → simplify → verify → checkpoint.**
