@@ -2365,3 +2365,46 @@ The previous house-style Field Town is retired. The authoritative lobby directio
 The implementation should favor clear staging, readable lanes, distinct cover/landmarks and safe transitions rather than decorative complexity. Paintball field references emphasize deliberate player flow, clear staging/check-in separation, visible field boundaries and recognizable bunker/field callouts.
 
 The product principle is simple: **one believable field, five obvious places, one consistent character, and no invisible doorway logic.**
+
+
+## Shooters Trigger — Home Field Physicality & Lobby Layout Lock — September 21, 2026
+
+The Home Field is now a **physical field headquarters**, not a copy of the Shooting Training arrangement.
+
+### Permanent physical-world rule
+
+Unless the product owner explicitly says otherwise, Shooters Trigger world objects must be represented as grounded physical things:
+
+- the player must visibly stand and walk on the ground; preserve the current walking-step treatment rather than reverting to a sliding/floating character;
+- locations must occupy believable physical space;
+- tents, shelters, racks, benches, gates, fences, targets, cameras, crates, signs and field equipment should be actual environmental objects;
+- do not use generic circles, squares, dots or floating markers as the default representation of a physical destination;
+- geometric shapes are acceptable only when they are genuinely part of the physical object or field marking;
+- contextual entry remains UI and may be rectangular, but it must correspond to the real nearby object/location.
+
+### Lobby layout contract
+
+The lobby uses the same grounded visual vocabulary and player treatment as Shooting Training, but has its own arrangement and purpose:
+
+- **Central staging / Field HQ** — arrival, benches, crates and a physical field information board.
+- **01 Shooting Range** — target stands, firing lane and field boundary; this is the shooting-specific area.
+- **02 Evasion Yard** — irregular cover, tires and movement-course fencing; this is the evasion-specific area.
+- **03 Armory & Outfitter** — equipment shelter, rack and crates; no house/building facade.
+- **04 Media Bureau** — media shelter, results desk and physical camera/reporting setup.
+- **05 Arena Gate** — physical gate and visible arena field beyond it.
+
+These areas should be connected by readable ground space and sightlines so the player can understand the facility by walking through it. The lobby must not simply reproduce the Shooting Training target/bunker arrangement.
+
+### Direction principle
+
+The environment should answer **“where is this?”** through physical landmarks and spatial layout. HUD should answer **“what can I do here?”** only when the player is actually close enough to interact.
+
+The intended relationship is:
+
+**player → ground → physical destination → contextual action**
+
+not:
+
+**player → floating marker → menu button**.
+
+This is the default visual/interaction rule for future Shooters Trigger world-building unless the product owner explicitly overrides it.
