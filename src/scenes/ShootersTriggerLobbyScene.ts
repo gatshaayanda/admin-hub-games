@@ -90,6 +90,21 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     if (next[nearest.id] === 'buy') this.buyUpgrades(); else this.scene.start(next[nearest.id]);
   }
 
+  private installWalkJoystick() {
+    if (!('ontouchstart' in window) && navigator.maxTouchPoints < 1) return;
+    const root=document.createElement('div');
+    Object.assign(root.style,{position:'fixed',left:'18px',bottom:'18px',width:'112px',height:'112px',border:'2px solid rgba(244,241,223,.7)',borderRadius:'50%',background:'rgba(16,32,24,.5)',zIndex:'1400',touchAction:'none'});
+    const knob=document.createElement('div');
+    Object.assign(knob.style,{position:'absolute',left:'50%',top:'50%',width:'48px',height:'48px',margin:'-24px',borderRadius:'50%',background:'#1f6b4b',border:'2px solid #f4f1df'});
+    root.appendChild(knob); document.body.appendChild(root);
+    let id:number|null=null;
+    const reset=()=>{id=null;knob.style.transform='translate(0,0)';this.joystickVector.set(0,0);};
+    const move=(e:PointerEvent)=>{if(id!==e.pointerId)return;const r=root.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,dx=e.clientX-cx,dy=e.clientY-cy,len=Math.hypot(dx,dy)||1,max=38,k=Math.min(1,max/len);knob.style.transform=`translate(${dx*k}px,${dy*k}px)`;this.joystickVector.set(dx/len*Math.min(1,len/max),dy/len*Math.min(1,len/max));};
+    root.onpointerdown=e=>{e.preventDefault();id=e.pointerId;root.setPointerCapture?.(e.pointerId);move(e);};
+    root.onpointermove=move; root.onpointerup=reset; root.onpointercancel=reset; root.onlostpointercapture=reset;
+    this.joystickCleanup=()=>root.remove();
+  }
+
   private showPrompt(l: Location) {
     if (!this.registry.get('shootersLobbyPrompt')) {
       this.registry.set('shootersLobbyPrompt', l.id);
