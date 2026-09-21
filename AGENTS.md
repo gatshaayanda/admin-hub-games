@@ -1811,3 +1811,103 @@ This section is the current product direction for completing Shooters Trigger.
 If a proposed feature does not strengthen:
 **shoot → move → cover → train → learn → prepare → compete → understand → retrain**, 
 it should not enter the first complete release without explicit product-owner approval.
+
+## Shooters Trigger — Lobby / Location Architecture Lock — September 21, 2026
+
+The Shooters Trigger foundation is now explicitly built around the **Hall-style place/lobby model**, not a menu pretending to be a world.
+
+### Lobby rule
+After Shooters Trigger Setup, the player enters **SHOOTERS TRIGGER · HOME FIELD** and can physically walk around the field. The lobby is the player's unarmed home base.
+
+**Critical presentation rule:** the player is **unarmed in the lobby**. The paintball marker/weapon exists only inside action gameplay scenes. Do not put a weapon in the lobby player sprite merely because the action player has one.
+
+The lobby contains the four real locations:
+1. **Shooting Location** — AIM · HIT QUALITY · REWARD
+2. **Evasion Camp** — MOVE · COVER · SURVIVE
+3. **Media Coverage Center** — STATS · THOUGHTS · EQUIPMENT
+4. **Arena Location** — 3v3 · FIRST TO 3 KILLS
+
+The four locations are part of the actual game world, not four buttons on a static home menu.
+
+### Structural model
+
+    Shooter Intro
+       ↓
+    Shooter Setup / player name
+       ↓
+    Shooter Home Field / Lobby
+       ↓
+    walk to a physical location
+       ↓
+    location-specific scene
+       ↓
+    action OR information / decision interaction
+       ↓
+    record result/state
+       ↓
+    return to Home Field
+       ↓
+    latest state is visible in Media Coverage / preparation
+
+**Hall lesson:** the lobby should be enjoyable to walk around and should make the locations feel like places.
+
+**President's Shoes lesson:** non-action locations should use readable scene transitions, information panels, inputs and explicit choices rather than forcing everything into gameplay.
+
+### Scene classification
+
+**Action scenes** use the accepted Shooter combat controls and field presentation:
+- Shooting Location;
+- Evasion Camp;
+- Arena.
+
+**Information / preparation scene:**
+- Media Coverage Center.
+
+Buying equipment, choosing preparation, reading stats, entering a thought/feeling, and reviewing coverage are **not action gameplay**. They should use the President's Shoes-style scene/panel structure: clear information, input where needed, explicit confirmation, then return to the field.
+
+### Training result contract
+
+Shooting and evasion sessions must end with an explicit completion/result action. Do not silently throw the player back into another scene.
+
+A completed action session must:
+1. calculate the session evidence;
+2. save it locally;
+3. update the player's persistent skill breakdown/budget where applicable;
+4. show a readable result/coverage summary;
+5. provide a clear **CLOSE / RETURN TO HOME FIELD** action;
+6. make the new state available to Media Coverage and later Arena preparation.
+
+The next implementation pass must connect the current shooting range's real hit evidence into this contract rather than replacing the accepted shooting feel.
+
+### Current implementation checkpoint
+
+The current main branch now contains the structural Shooter flow:
+
+    Intro → Setup → Home Field Lobby
+                         ↓
+            ┌────────────┼─────────────┐
+            ↓            ↓             ↓
+       Shooting      Evasion        Media
+            ↓            ↓             ↓
+            └────────────┼─────────────┘
+                         ↓
+                       Arena
+
+The current action scenes are still an evolving V1 slice. Do not treat placeholder result math, opponent behaviour or arena logic as final. The next controlled work is to connect the existing accepted shooting mechanics and real session evidence to persistent state/results, then deepen evasion, media preparation and arena combat without destroying the lobby.
+
+### Improvement-over-destruction rule
+
+When continuing Shooters Trigger:
+- preserve the current working shooting feel;
+- preserve the Hall game unchanged;
+- preserve the existing Intro → Setup handoff;
+- improve one scene/contract at a time;
+- never replace the lobby with a static menu just because scene navigation is easier;
+- never arm the lobby player;
+- never add a weapon/fire control to non-action scenes;
+- never throw away working controls to implement a new feature;
+- if an unexpected result appears, STOP → inspect reality → then act.
+
+The intended player experience is:
+
+**walk → discover → enter → act or decide → understand → close → return → see what changed → prepare → act again.**
