@@ -674,15 +674,10 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       ? Math.round(Phaser.Math.Distance.Between(this.player.x, this.player.y, this.playerTarget.x, this.playerTarget.y))
       : 0;
 
-    this.hintText.setText(
-      this.isPhoneSession()
-        ? 'MOVE  ·  DRAG RIGHT TO AIM  ·  FIRE  ·  60s'
-
-        : 'DRILL '+Math.max(0,60-Math.floor(this.sessionElapsed/1000))+'s  ·  HITS '+(this.progress.shootingTraining.scrapes+this.progress.shootingTraining.markerHits+this.progress.shootingTraining.centerMass+this.progress.shootingTraining.headshots)+'  ·  END DRILL'
-        : distance > 0
-          ? `WALKING TO MARKER  ·  ${distance}`
-          : 'WASD / ARROWS  ·  MOUSE AIM  ·  LEFT CLICK / SPACE FIRE',
-    );
+    const hint = this.isPhoneSession()
+      ? 'MOVE  ·  DRAG RIGHT TO AIM  ·  FIRE  ·  60s'
+      : 'DRILL '+Math.max(0,60-Math.floor(this.sessionElapsed/1000))+'s  ·  HITS '+(this.progress.shootingTraining.scrapes+this.progress.shootingTraining.markerHits+this.progress.shootingTraining.centerMass+this.progress.shootingTraining.headshots)+'  ·  END DRILL';
+    this.hintText.setText(hint);
 
     this.nameText.setPosition(this.player.x, this.player.y - 48);
     this.updateAimMarker();
