@@ -111,29 +111,6 @@ function installStyles() {
       pointer-events: none;
     }
 
-    #${ROOT_ID} .st-aim-zone {
-      position: absolute;
-      right: 112px;
-      bottom: 0;
-      width: min(52vw, 360px);
-      height: min(72vh, 520px);
-      pointer-events: auto;
-      touch-action: none;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    #${ROOT_ID} .st-aim-zone::before {
-      content: "AIM";
-      position: absolute;
-      right: 18px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: rgba(244, 241, 223, .18);
-      font: 700 9px/1 monospace;
-      letter-spacing: 1.4px;
-      pointer-events: none;
-    }
-
     #${ROOT_ID} .st-fire {
       position: absolute;
       right: max(16px, env(safe-area-inset-right));
@@ -270,55 +247,6 @@ function buildJoystick() {
   base.addEventListener('lostpointercapture', reset);
 
   return base;
-}
-
-function buildAimZone() {
-  const zone = document.createElement('div');
-  zone.className = 'st-aim-zone';
-  zone.setAttribute('aria-label', 'Aim by dragging');
-
-  let pointerId: number | null = null;
-  let originX = 0;
-  let originY = 0;
-
-  const reset = () => {
-    pointerId = null;
-    originX = 0;
-    originY = 0;
-    getScene()?.setAimVector?.(0, 0);
-  };
-
-  const update = (event: PointerEvent) => {
-    if (pointerId !== event.pointerId) return;
-    const x = event.clientX - originX;
-    const y = event.clientY - originY;
-    const length = Math.hypot(x, y);
-    if (length < 8) return;
-    getScene()?.setAimVector?.(x / length, y / length);
-  };
-
-  zone.addEventListener('pointerdown', (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (!isActive()) return;
-    adminHubAudio.start();
-    pointerId = event.pointerId;
-    originX = event.clientX;
-    originY = event.clientY;
-    zone.setPointerCapture?.(event.pointerId);
-    update(event);
-  });
-  zone.addEventListener('pointermove', update);
-  zone.addEventListener('pointerup', (event) => {
-    event.preventDefault();
-    if (pointerId === event.pointerId) reset();
-  });
-  zone.addEventListener('pointercancel', (event) => {
-    if (pointerId === event.pointerId) reset();
-  });
-  zone.addEventListener('lostpointercapture', reset);
-
-  return zone;
 }
 
 function buildFireButton() {
