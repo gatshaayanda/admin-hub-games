@@ -93,11 +93,28 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     this.scene.start('ShootersTriggerMediaScene', { from: 'equipment', budget: next });
   }
 
+  private getNearbyLocation() {
+    return this.locations
+      .map((location) => ({
+        location,
+        distance: Phaser.Math.Distance.Between(this.player.x, this.player.y, location.x, location.y),
+      }))
+      .sort((a, b) => a.distance - b.distance)[0];
+  }
+
+  private isInsideLocation(location: Location) {
+    const halfWidth = 150;
+    const halfHeight = 72;
+    const entranceDepth = 54;
+    const dx = Math.abs(this.player.x - location.x);
+    const dy = this.player.y - location.y;
+    return dx <= halfWidth + 28 && dy >= -halfHeight - 18 && dy <= halfHeight + entranceDepth;
+  }
+
   private interact() {
-    const nearest = this.locations.reduce((a, b) =>
-      Phaser.Math.Distance.Between(this.player.x,this.player.y,a.x,a.y) <
-      Phaser.Math.Distance.Between(this.player.x,this.player.y,b.x,b.y) ? a : b);
-    if (Phaser.Math.Distance.Between(this.player.x,this.player.y,nearest.x,nearest.y) > 130) return;
+    const nearby = this.getNearbyLocation();
+    if (!nearby || nearby.distance > 230 || !this.isInsideLocation(nearby.location)) return;
+    const nearest = nearby.location;
 
     const next: Record<string,string> = {
       shooting: 'ShootersTriggerTrainingScene',
@@ -226,27 +243,23 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
   }
 
   private updateLocationPrompt() {
-    const distances = this.locations.map((location) => ({
-      location,
-      distance: Phaser.Math.Distance.Between(this.player.x, this.player.y, location.x, location.y),
-    }));
-    distances.sort((a, b) => a.distance - b.distance);
-    const nearest = distances[0];
+    const nearby = this.getNearbyLocation();
 
-    if (!nearest || nearest.distance > 150) {
+    if (!nearby || nearby.distance > 230) {
       if (this.locationPrompt) this.locationPrompt.style.display = 'none';
       this.activeLocationId = null;
       return;
     }
 
-    const action = nearest.location.id === 'upgrades' ? 'OPEN EQUIPMENT STORE' : `ENTER ${nearest.location.name}`;
+    const inside = this.isInsideLocation(nearby.location);
+    const action = nearby.location.id === 'upgrades' ? 'OPEN EQUIPMENT STORE' : `ENTER ${nearby.location.name}`;
     if (this.locationPrompt) {
       this.locationPrompt.textContent = action + '  ·  E';
       this.locationPrompt.style.display = 'block';
-      this.locationPrompt.style.opacity = nearest.distance <= 130 ? '1' : '0.62';
+      this.locationPrompt.style.opacity = inside ? '1' : '0.62';
       this.locationPrompt.style.transform = 'translateX(-50%) translateY(0)';
     }
-    this.activeLocationId = nearest.location.id;
+    this.activeLocationId = nearby.location.id;
   }
 
   private installWalkJoystick() {
