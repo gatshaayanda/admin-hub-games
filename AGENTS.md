@@ -1303,3 +1303,21 @@ The mobile firing control is now icon-led rather than text-led:
 ### Revision rule
 
 If the player looks like gear without a person, stop adding equipment. Inspect the head → neck → shoulders → torso → hips → legs → boots silhouette first, then re-layer the paintball equipment around that human base.
+
+
+## Shooters Trigger — Fire-Button Aim Contract — September 21, 2026
+
+The mobile controls are intentionally simple:
+- **Left MOVE stick:** movement only. It must never change aim.
+- **Right FIRE control:** aim + shoot. The player presses/drags from the fire control; drag direction sets the aim vector and holding the control fires along that vector.
+- The separate large right-side AIM zone is no longer the authoritative aiming input.
+- The marker, muzzle flash and projectile must all consume the same aim vector produced by the fire control.
+- Releasing the fire control stops firing; movement continues independently.
+- The fire control should remain icon-led, with no persistent “FIRE” word.
+
+Acceptance test:
+- left stick only = player moves, marker direction does not change;
+- press/drag fire control right = marker aims right and fires right;
+- press/drag fire control up-left = marker aims up-left and fires up-left;
+- hold fire while moving diagonally = player moves diagonally while continuing to aim/fire from the fire control direction;
+- releasing fire stops shooting without stopping movement.
