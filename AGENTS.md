@@ -965,7 +965,7 @@ Before production promotion:
 13. Hall and President's Shoes remain unchanged in behaviour.
 
 ### Branch rule
-Develop this pass on `shooters-trigger-phone-offline`. Do not merge or modify `main` unless the product owner explicitly asks for promotion.
+Develop this pass on `shooters-trigger-hall-feel`. Do not merge or modify `main` unless the product owner explicitly asks for promotion.
 
 ### Research references
 - Phaser Input: https://docs.phaser.io/phaser/concepts/input
