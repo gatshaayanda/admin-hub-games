@@ -1321,3 +1321,34 @@ Acceptance test:
 - press/drag fire control up-left = marker aims up-left and fires up-left;
 - hold fire while moving diagonally = player moves diagonally while continuing to aim/fire from the fire control direction;
 - releasing fire stops shooting without stopping movement.
+
+
+## Shooters Trigger — Training Targets + Paint Persistence — September 21, 2026
+
+The training field now uses **shootable static targets** rather than enemies or character opponents.
+
+### Target contract
+- The range contains a mix of upright dummy targets and paintball bottles.
+- Targets are shootable field objects and do not become AI characters.
+- A successful hit leaves a visible paint splatter **on the target**; the splatter remains after the projectile disappears so the player can see accumulated shooting evidence.
+- Targets do not need to disappear for a hit to count. This is a training range, so persistent paint marks are the intended feedback.
+- The player remains the only character in this slice.
+
+### Character readability contract
+The player must read as a visible human wearing paintball gear, not as an equipment silhouette:
+- human head/face area is visually separated from helmet and mask;
+- jersey/torso, pants and boots use distinct visual layers and values;
+- gloves/arms connect the person to the marker;
+- marker remains held in the hands and aligned with the aim vector;
+- equipment should support the human silhouette, not hide it.
+
+### Acceptance test
+- enter the shooting range;
+- fire at a dummy: it visibly receives paint and keeps the splatter;
+- fire at a bottle: it visibly receives paint and keeps the splatter;
+- hit multiple targets and confirm previous splatters remain;
+- confirm no target becomes a character/enemy;
+- confirm the player remains clearly readable as a person at normal phone scale;
+- confirm left MOVE never changes aim;
+- confirm the right FIRE control both aims and shoots;
+- confirm releasing FIRE stops firing while movement continues.
