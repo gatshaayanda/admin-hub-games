@@ -1940,3 +1940,12 @@ Required behavior:
 
 This is part of the acceptance loop:
 **walk → see location → enter/confirm → play/decide → save/exit → return to Home Field**.
+
+
+## Shooters Trigger — Git Checkpoint — September 21, 2026
+
+The current Shooter Trigger implementation checkpoint is committed on `main`. The latest source checkpoint includes the mobile location-entry controls, shared action-scene controls, explicit session close/save paths, Arena exit/movement controls, Evasion touch movement/close control, and explicit Equipment Store purchase confirmation. The build-fix for the malformed training source is also part of this history.
+
+Current source-of-truth HEAD: `42202e8cf508e2cd0e39432f1af2136db47063e8`.
+
+When continuing from here, treat this as the recovery point and continue with controlled gameplay improvements rather than recreating these changes.
