@@ -11,10 +11,18 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private interactKey!: Phaser.Input.Keyboard.Key;
   private joystickCleanup?: () => void;
+  private buyUpgrades() {
+    const current = Number(localStorage.getItem('shooters-trigger:budget') || 100);
+    const next = Math.max(0, current - 20);
+    localStorage.setItem('shooters-trigger:budget', String(next));
+    this.scene.start('ShootersTriggerMediaScene', { from: 'equipment', budget: next });
+  }
+
   private locations: Location[] = [
     { id: 'shooting', name: 'SHOOTING LOCATION', subtitle: 'AIM · HIT QUALITY · REWARD', x: 420, y: 620, color: 0x285d35 },
     { id: 'evasion', name: 'EVASION CAMP', subtitle: 'MOVE · COVER · SURVIVE', x: 1160, y: 360, color: 0x3d6332 },
     { id: 'media', name: 'MEDIA COVERAGE CENTER', subtitle: 'STATS · THOUGHTS · EQUIPMENT', x: 1870, y: 610, color: 0x5c5530 },
+    { id: 'upgrades', name: 'EQUIPMENT STORE', subtitle: 'BUY UPGRADES · SPEND BUDGET', x: 430, y: 1110, color: 0x6a5030 },
     { id: 'arena', name: 'ARENA LOCATION', subtitle: '3v3 · FIRST TO 3 KILLS', x: 1190, y: 1080, color: 0x633a31 },
   ];
 
@@ -73,12 +81,13 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
       Phaser.Math.Distance.Between(this.player.x,this.player.y,b.x,b.y) ? a : b);
     if (Phaser.Math.Distance.Between(this.player.x,this.player.y,nearest.x,nearest.y) > 110) return;
     const next: Record<string,string> = {
+      upgrades: 'buy',
       shooting: 'ShootersTriggerTrainingScene',
       evasion: 'ShootersTriggerEvasionScene',
       media: 'ShootersTriggerMediaScene',
       arena: 'ShootersTriggerArenaScene',
     };
-    this.scene.start(next[nearest.id]);
+    if (next[nearest.id] === 'buy') this.buyUpgrades(); else this.scene.start(next[nearest.id]);
   }
 
   private showPrompt(l: Location) {
