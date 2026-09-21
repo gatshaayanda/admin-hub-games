@@ -1371,7 +1371,7 @@ The player should feel:
 
 Do not turn the game into Call of Duty, a loot shooter, a generic military game, or an online-first multiplayer project.
 
-### Four-location / four-scene game structure
+### Five-location / five-place game structure
 
 The intended complete single-player journey is:
 
@@ -1380,7 +1380,7 @@ GAME INTRO
    ↓
 ENTER / SETUP
    ↓
-LOBBY / HOME FIELD
+HOME FIELD / LOBBY
    ↓
 SHOOTING LOCATION
    ↓
@@ -1395,11 +1395,12 @@ MEDIA COVERAGE / RESULT
 REPLAY / RETRAIN / RESET
 ```
 
-The four game locations are:
-1. **Shooting Location** — learn and establish shooting skill.
-2. **Evasion Camp** — learn movement, cover, survival and field positioning.
-3. **Media Coverage Center** — narrative/statistical interpretation, budgets, preparation and pre-match statements.
-4. **Arena Location** — 3v3 culmination where the player's training and choices are tested.
+The five game places are:
+1. **Home Field / Lobby** — the persistent base where the player sees progress and chooses the next place.
+2. **Shooting Location** — learn and establish shooting skill.
+3. **Evasion Camp** — learn movement, cover, survival and field positioning.
+4. **Media Coverage Center** — narrative/statistical interpretation, budgets, equipment buying and pre-match statements.
+5. **Arena Location** — 3v3 culmination where the player's training and choices are tested.
 
 The existing Admin Hub publisher intro and Game Library remain shared infrastructure. Do not duplicate or bypass them.
 
@@ -1734,6 +1735,19 @@ A future Shooter save should conceptually contain:
 
 Training attempts should remain auditable enough to explain later coverage.
 
+### Current implementation patch — five-place first playthrough
+
+The `shooters-trigger-full-playthrough` patch implements the first end-to-end playable loop without waiting for online multiplayer infrastructure:
+- Home Field / Lobby scene with four readable destinations and persistent budget/stats.
+- Shooting Location reuses the accepted existing Shooter field, controls, cover, targets, paint persistence and directional weapon presentation, now with a timed scored drill, hit-quality recording and training reward.
+- Evasion Camp is a one-minute 1v3 survival exercise with directional field cover, incoming paint, survival/cover statistics and a training result.
+- Media Coverage Center communicates shooting/evasion/cover/discipline, opponent readiness, strengths/weaknesses, field expectation, pre-match thought, budget and equipment purchases.
+- Equipment purchases include shooting gear, evasion gear, one offensive special and one defensive special. Purchases spend the earned in-game budget and are not monetisation.
+- Arena is a playable 3v3 first-to-three-team-kills match. The player can move/aim/fire, enemies and teammates shoot, cover blocks shots, body-hit quality affects elimination, and the player respawns at the starting line after being eliminated.
+- Arena results return to Media Coverage and record kills, deaths, preparation spending and whether a special was used.
+- Shooter progress is versioned and local-first, with Firebase persistence attempted when online.
+- The patch is intentionally not online multiplayer, matchmaking or a large loadout system.
+
 ### Completion boundary for the first real game
 
 The first complete Shooters Trigger release does **not** require:
@@ -1748,7 +1762,7 @@ The first complete Shooters Trigger release does **not** require:
 - giant AI armies.
 
 It **does** require:
-1. four locations/scenes;
+1. five locations/places: Home Field / Lobby, Shooting Location, Evasion Camp, Media Coverage Center and Arena;
 2. working shooting training;
 3. working evasion/cover training;
 4. persistent player stats;
@@ -1768,16 +1782,16 @@ Do not jump straight to the 3v3 arena.
 Use this controlled sequence:
 
 ```
-1. LOCK current shooting feel
-2. Build shooting-training state + results
-3. Build lobby return + persistent latest stats
-4. Build evasion/cover training
-5. Build media coverage state + pre-scene statements
-6. Build budget + limited equipment choices
-7. Build arena 3v3 from recorded training state
-8. Build post-match media/results
-9. Add retraining/replay loop
-10. Full phone + offline + regression verification
+1. LOCK current shooting feel — done in the current phone-tested foundation
+2. Build shooting-training state + results — implemented
+3. Build lobby return + persistent latest stats — implemented
+4. Build evasion/cover training — implemented
+5. Build media coverage state + pre-scene statements — implemented
+6. Build budget + equipment choices — implemented
+7. Build arena 3v3 from recorded training state — implemented
+8. Build post-match media/results — implemented
+9. Add retraining/replay loop — first pass implemented; balance and depth remain for phone playtest
+10. Full phone + offline + regression verification — next checkpoint
 ```
 
 At every stage:
