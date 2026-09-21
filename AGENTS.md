@@ -1854,3 +1854,221 @@ This section is the current product direction for completing Shooters Trigger.
 If a proposed feature does not strengthen:
 **shoot → move → cover → train → learn → prepare → compete → understand → retrain**, 
 it should not enter the first complete release without explicit product-owner approval.
+## Agent Execution Discipline — Do Not Repeat Workflow Failure
+
+The product owner controls the requested action. Do not turn a simple requested commit/push into an unnecessary build, deployment investigation, verification ceremony, or repeated explanation.
+
+### Hard execution rule
+
+When the user explicitly says commit and push:
+1. Inspect only what is necessary to make the requested change safely.
+2. Make the requested change.
+3. Commit it to the requested branch.
+4. Push/update the remote branch.
+5. Report the exact commit SHA and branch.
+6. Stop.
+
+Do not automatically:
+- run a production build;
+- start a Vercel deployment;
+- wait for Vercel;
+- investigate unrelated CI;
+- merge a PR;
+- promote to main;
+- repeat the plan after the user has already approved it.
+
+GitHub Actions or Vercel may start automatically after a push. That is platform behavior, not a reason for the agent to perform extra work.
+
+If the user asks for build/verify/deploy, do that explicitly. Otherwise respect the requested scope.
+
+### No fake checkpoint
+
+A checkpoint must contain the actual requested code/documentation change. Do not create an empty commit merely to make GitHub show a newer SHA.
+
+### New-chat continuity
+
+Every agent/chat working on this repository must:
+- read AGENTS.md first;
+- inspect the current branch and actual files before acting;
+- continue from the current remote state rather than reconstructing old work from memory;
+- avoid repeating already-completed fixes;
+- distinguish commit/push, CI verification, Vercel preview, and production promotion as separate actions;
+- never claim a deployment is live without checking the actual deployment;
+- prefer one controlled patch over a long sequence of speculative patches.
+
+The user's time is a product constraint. Execute the requested operation first; verification is only added when requested or when a safety-critical fact must be established.
+
+## Shooters Trigger — Current Product Contract
+
+Game: Shooters Trigger
+Repository: gatshaayanda/admin-hub-games
+Development branch: shooters-trigger-full-playthrough
+Platform: phone-first PWA/browser game; desktop is secondary.
+
+### Product identity
+
+Shooters Trigger is a mobile paintball field game, not a desktop shooter and not a generic military FPS.
+
+The core feel is:
+move → aim independently → fire → read cover → react → reposition
+
+The current phone control contract is:
+- left analog MOVE control;
+- right FIRE control that establishes aim and fires;
+- movement and aim/fire must work simultaneously;
+- no keyboard is required for phone play;
+- preserve the current shooting feel unless playtesting demonstrates a real problem.
+
+### Current five-place journey
+
+Game Intro
+    ↓
+Setup / Player Name
+    ↓
+Home Field / Lobby
+    ├─ Shooting Location
+    ├─ Evasion Camp
+    ├─ Media Coverage Center
+    └─ Arena
+
+The intended complete loop is:
+
+train shooting
+    ↓
+train evasion
+    ↓
+read the resulting media coverage
+    ↓
+write pre-match thought
+    ↓
+spend earned budget on preparation
+    ↓
+3v3 arena
+    ↓
+post-match report
+    ↓
+retrain / change preparation / replay
+
+### What is currently implemented
+
+#### Shooting Location
+- 60-second field drill.
+- Large scrollable field.
+- Player movement and camera follow/deadzone.
+- Independent aim/fire.
+- Paintball projectile simulation.
+- Recoil and muzzle flash.
+- Procedural player upper-body/arms/marker aim presentation.
+- Dummy targets and bottles.
+- Persistent target splatter/hit tracking.
+- Cover objects that can block shots.
+- Hit-quality categories: scrape, marker-hand hit, center-mass hit, exceptional/head-level hit, cover blocked, miss.
+- Shooting result is persisted locally first and used to derive shooting/budget/report data.
+
+#### Evasion Camp
+- 1v3 survival drill.
+- 60-second survival target.
+- Incoming paintballs.
+- Directional incoming warnings.
+- Cover collision.
+- Miss/cover-hit/player-hit tracking.
+- Evasion and cover results feed the next stage.
+
+#### Media Coverage Center
+- Shows shooting/evasion/cover/discipline.
+- Shows opponent readiness.
+- Shows strengths/weakness derived from current stats.
+- Stores a short pre-match thought.
+- Earned budget can be spent on shooting gear, evasion gear, offensive special or defensive special.
+- Preparation affects the game state and later reporting.
+
+#### Arena
+- 3v3: player + two allies vs three rivals.
+- First team to three kills ends the match.
+- Player can be eliminated and respawns at the starting line.
+- Cover blocks paintballs.
+- Player/allied/enemy shots are simulated.
+- Rival shot classes: QUICK, STANDARD, PRESSURE.
+- Incoming shot alerts.
+- Cover-block feedback.
+- Off-screen rival direction signal.
+- Player kills, team kills, deaths and special use are recorded.
+- Match result returns to Media Coverage for reporting.
+
+#### Persistence
+- Shooters Trigger has its own versioned local-first progress record.
+- Local storage is authoritative for immediate play.
+- Firebase sync is attempted through the existing shared Firebase integration.
+- Arena results and coverage survive scene changes/reopen when local storage is available.
+- Do not create a separate Firebase project.
+
+### Important current implementation limitations
+
+These are known playtest questions, not automatic bugs. Do not start adding features simply because they are listed.
+
+1. Arena rivals currently use a simple firing model rather than full tactical movement/positioning.
+2. Allies are simple firing support rather than a full teammate simulation.
+3. Arena equipment effects are intentionally lightweight; validate them by play rather than expanding them blindly.
+4. Evasion is currently about movement, incoming fire and cover rather than a deep AI pursuit system.
+5. Current player/character visuals are procedural and simple. Do not replace them with a large asset pipeline unless phone playtesting proves presentation is the limiting factor.
+6. Online multiplayer, matchmaking, accounts, giant inventories, cosmetics, monetization currencies and huge AI armies are out of scope for this first complete playthrough.
+7. Do not add more mechanics until the owner has played the current full loop and reported what actually feels wrong or missing.
+
+### Current playtest gate
+
+The next product decision comes from the owner's real phone playthrough.
+
+The owner should play the current flow from start to finish and report:
+- what feels good;
+- what feels confusing;
+- where controls feel wrong;
+- whether movement + aim/fire feel natural;
+- whether the field/cover actually changes decisions;
+- whether shooting results feel believable;
+- whether Evasion feels like evasion;
+- whether Media Coverage feels meaningful or like a menu;
+- whether equipment/budget changes the preparation decision;
+- whether the Arena feels like a real match;
+- whether respawn is understandable;
+- whether the post-match report makes previous actions feel connected;
+- anything that breaks, feels unfair, feels boring, or feels unexpectedly fun.
+
+Do not interpret silence as permission to expand the game. Wait for the playtest report before choosing the next gameplay patch.
+
+### Shooters Trigger change boundary
+
+Default Shooter changes should stay inside:
+- src/scenes/ShootersTrigger*
+- src/shooters-trigger*
+
+Shared files may be changed only when genuinely required:
+- src/catalog.ts
+- src/main.ts
+- shared styling/PWA files
+- shared Firebase/config only for a demonstrated requirement.
+
+Never modify Hall or President's Shoes to solve a Shooters Trigger problem unless a clearly demonstrated shared-platform issue exists.
+
+### Shooter verification/promotion boundary
+
+For ordinary Shooter development, commit/push is not the same thing as promotion.
+
+If the owner asks only for a commit/push:
+- commit/push only;
+- do not build or promote.
+
+If the owner asks to verify, verify the affected flow.
+
+If the owner asks to promote/live:
+- confirm the intended branch/commit is what should be promoted;
+- promote only after the owner has completed the relevant phone playtest gate when applicable.
+
+Vercel limitations must not cause agents to invent a deployment state. If Vercel cannot currently be used, report that plainly and leave the code safely committed/pushed.
+
+### Current direction lock
+
+Do not lose the game's identity:
+
+shoot → move → cover → train → learn → prepare → compete → understand → retrain
+
+The goal is not add more shooter features. The goal is to make this field loop feel good on a phone.
