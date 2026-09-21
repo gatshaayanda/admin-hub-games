@@ -59,6 +59,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   private nameText!: Phaser.GameObjects.Text;
   private aimUi!: Phaser.GameObjects.Graphics;
   private controlsCleanup?: () => void;
+  private sessionButton?: HTMLButtonElement;
 
   constructor() {
     super('ShootersTriggerTrainingScene');
@@ -75,6 +76,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
     this.createTargets();
     this.createHud();
+    this.createSessionButton();
 
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.keys = this.input.keyboard!.addKeys('W,A,S,D,SPACE') as Record<string, Phaser.Input.Keyboard.Key>;
@@ -99,6 +101,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       this.input.off('pointermove', this.handlePointerMove, this);
       this.controlsCleanup?.();
       this.controlsCleanup = undefined;
+      this.sessionButton?.remove();
+      this.sessionButton = undefined;
     });
 
     window.dispatchEvent(new Event('admin-hub-games:game-ready'));
@@ -632,6 +636,37 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
     plate.setData('hud', true);
     this.layoutUi(this.scale.width, this.scale.height);
+  }
+
+  private createSessionButton() {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = 'CLOSE SESSION · SAVE';
+    button.setAttribute('aria-label', 'Close shooting session and save results');
+    Object.assign(button.style, {
+      position: 'fixed',
+      right: '18px',
+      bottom: 'max(18px, env(safe-area-inset-bottom))',
+      minHeight: '48px',
+      padding: '10px 16px',
+      border: '2px solid #f4f1df',
+      borderRadius: '10px',
+      background: '#102018',
+      color: '#f4f1df',
+      fontFamily: 'monospace',
+      fontSize: '11px',
+      fontWeight: '800',
+      letterSpacing: '.8px',
+      zIndex: '1450',
+      touchAction: 'manipulation',
+    });
+    button.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      this.finishTraining();
+    });
+    document.body.appendChild(button);
+    this.sessionButton = button;
   }
 
   private finishTraining() {
