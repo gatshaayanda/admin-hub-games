@@ -9,7 +9,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.player=this.createPlayer(500,1050); const allies=[[380,1120],[520,1180]]; allies.forEach(p=>this.createUnit(p[0],p[1],0x47a6a1,'ALLY')); [[1850,280],[1950,500],[1750,700]].forEach(p=>this.createUnit(p[0],p[1],0xd84b42,'RIVAL'));
     this.add.text(18,18,'ARENA · FIRST TO 3 KILLS',{fontFamily:'monospace',fontSize:'14px',fontStyle:'bold',color:'#f4f1df'}).setScrollFactor(0).setDepth(90);
     this.add.text(18,43,'3v3 · MOVE + AIM + FIRE',{fontFamily:'monospace',fontSize:'10px',color:'#e8c95c'}).setScrollFactor(0).setDepth(90);
-    this.cleanup=installShootersTriggerMobileControls(); this.createExitButton(); window.dispatchEvent(new Event('admin-hub-games:game-ready'));
+    this.cleanup=installShootersTriggerMobileControls(); this.createExitButton(); this.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>{this.cleanup?.();this.sessionButton?.remove();this.sessionButton=undefined;}); window.dispatchEvent(new Event('admin-hub-games:game-ready'));
   }
   update(_t: number, delta: number){
     let dx=this.joystickVector.x,dy=this.joystickVector.y; if(dx||dy){const l=Math.hypot(dx,dy)||1;this.player.x=Phaser.Math.Clamp(this.player.x+dx/l*175*delta/1000,40,2360);this.player.y=Phaser.Math.Clamp(this.player.y+dy/l*175*delta/1000,90,1350);}
