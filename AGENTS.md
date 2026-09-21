@@ -2332,3 +2332,36 @@ Before another town redesign, test the live phone build and answer:
 Playtesting is the acceptance authority. Do not add decoration or systems just because the town can support them.
 
 **Correction principle:** the recommended sequence is visible in the world; player agency remains open.
+
+
+## Shooters Trigger — Home Field visual contract (September 21, 2026)
+
+The previous house-style Field Town is retired. The authoritative lobby direction is now a **single shared paintball field**: use the same world footprint, terrain language, bunkers, trees, tires and player proportions already proven in the shooting-range scene, then dress that field as the safe lobby.
+
+### Non-negotiables
+- Lobby and Shooting Training share the same physical field footprint: 2400 × 1400, same grass treatment, lanes, perimeter, trees, bunkers and tire stacks.
+- Do not build separate houses, western-town buildings, floating entrances or decorative landmarks for the lobby.
+- Locations are physical field stations/areas, marked by ground rings, numbered signs, flags and nearby field equipment.
+- The player arrives at the same field start/staging position used by Shooting Training: approximately (1180,1080).
+- The lobby player uses the same human proportions/readability as the shooting-range character, but is out of armor and carries no gun. The lobby character must have a visible walking step rather than appearing to float.
+- The contextual ENTER button remains a normal rectangular button above the mobile controls. It appears only when the player is actually at the corresponding station.
+- Interaction is based on proximity to the visible station marker; there is no hidden building doorway or second center-of-house interaction point.
+- The player remains free to visit Shooting, Evasion, Armory, Media and Arena in any order. Training/readiness/budget/history affect what happens inside those activities, not physical access to the field.
+
+### Station intent
+
+01 SHOOTING RANGE = the same target/shooting side of the field.
+
+02 EVASION YARD = a cover/movement area using the same bunker vocabulary.
+
+03 ARMORY & OUTFITTER = a selective gear/upgrade station integrated into the field, not a building.
+
+04 MEDIA BUREAU = a selective review/report station integrated into the field, not a building.
+
+05 ARENA GATE = a clearly marked physical gate/start area; no persistent arena shortcut from Media.
+
+### Field-design reference
+
+The implementation should favor clear staging, readable lanes, distinct cover/landmarks and safe transitions rather than decorative complexity. Paintball field references emphasize deliberate player flow, clear staging/check-in separation, visible field boundaries and recognizable bunker/field callouts.
+
+The product principle is simple: **one believable field, five obvious places, one consistent character, and no invisible doorway logic.**

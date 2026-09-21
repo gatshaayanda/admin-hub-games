@@ -26,45 +26,23 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
   private enterButton?: Phaser.GameObjects.Container;
 
   private locations: Location[] = [
-    {
-      id: 'shooting',
-      name: 'SHOOTING RANGE',
-      subtitle: '01 · AIM · FIRE · TRAIN',
-      x: 1200, y: 880, color: 0x285d35,
-    },
-    {
-      id: 'evasion',
-      name: 'EVASION YARD',
-      subtitle: '02 · MOVE · COVER · SURVIVE',
-      x: 1200, y: 640, color: 0x3d6332,
-    },
-    {
-      id: 'upgrades',
-      name: 'ARMORY & OUTFITTER',
-      subtitle: '03 · CHECK · UPGRADE · EQUIP',
-      x: 900, y: 410, color: 0x6a5030,
-    },
-    {
-      id: 'media',
-      name: 'MEDIA BUREAU',
-      subtitle: '04 · REVIEW · REPORT · PREPARE',
-      x: 1500, y: 410, color: 0x5c5530,
-    },
-    {
-      id: 'arena',
-      name: 'ARENA GATE',
-      subtitle: '05 · 1v1 · FIRST TO 3',
-      x: 1200, y: 150, color: 0x633a31,
-    },
+    { id: 'shooting', name: 'SHOOTING RANGE', subtitle: '01 · AIM · FIRE · TRAIN', x: 1880, y: 820, color: 0xd66a3d },
+    { id: 'evasion', name: 'EVASION YARD', subtitle: '02 · MOVE · COVER · SURVIVE', x: 1420, y: 1080, color: 0x2f7775 },
+    { id: 'upgrades', name: 'ARMORY & OUTFITTER', subtitle: '03 · GEAR · UPGRADE · PREP', x: 1080, y: 300, color: 0xe8c95c },
+    { id: 'media', name: 'MEDIA BUREAU', subtitle: '04 · REVIEW · REPORT · REFLECT', x: 1900, y: 650, color: 0x8fb39b },
+    { id: 'arena', name: 'ARENA GATE', subtitle: '05 · 1v1 · FIRST TO 3', x: 1180, y: 860, color: 0xd66a3d },
   ];
+
+  private playerMoving = false;
+  private walkClock = 0;
 
   constructor() { super('ShootersTriggerLobbyScene'); }
 
   create() {
     const { width, height } = this.scale;
-    this.cameras.main.setBackgroundColor('#b58a55');
-    this.drawTown();
-    this.player = this.createPlayer(1200, 1120);
+    this.cameras.main.setBackgroundColor('#78a653');
+    this.drawField();
+    this.player = this.createPlayer(1180, 1080);
     this.player.setDepth(30);
 
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
@@ -122,11 +100,14 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
       if (Math.hypot(dx, dy) < 12) this.target = null;
     }
 
+    this.playerMoving = !!(dx || dy);
     if (dx || dy) {
       const len = Math.hypot(dx, dy) || 1;
       this.player.x = Phaser.Math.Clamp(this.player.x + dx / len * 175 * delta / 1000, 70, WORLD_WIDTH - 70);
       this.player.y = Phaser.Math.Clamp(this.player.y + dy / len * 175 * delta / 1000, 120, WORLD_HEIGHT - 70);
     }
+    this.walkClock += delta;
+    this.updatePlayerAnimation();
 
     if (Phaser.Input.Keyboard.JustDown(this.interactKey)) this.interact();
     this.updateLocationHint();
@@ -166,9 +147,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
   }
 
   private isInsideLocation(location: Location) {
-    const dx = Math.abs(this.player.x - location.x);
-    const dy = Math.abs(this.player.y - location.y);
-    return dx <= 155 && dy <= 82;
+    return Phaser.Math.Distance.Between(this.player.x, this.player.y, location.x, location.y) <= 125;
   }
 
   private makeEnterButton(x: number, y: number) {
@@ -188,7 +167,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
 
   private interact() {
     const nearby = this.getNearbyLocation();
-    if (!nearby || nearby.distance > 230 || !this.isInsideLocation(nearby.location)) return;
+    if (!nearby || nearby.distance > 145 || !this.isInsideLocation(nearby.location)) return;
 
     const location = nearby.location;
     switch (location.id) {
@@ -280,7 +259,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
 
   private updateLocationHint() {
     const nearby = this.getNearbyLocation();
-    if (!nearby || nearby.distance > 235) {
+    if (!nearby || nearby.distance > 165) {
       this.activeLocationId = null;
       this.enterButton?.setVisible(false);
       return;
@@ -332,83 +311,141 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     this.joystickCleanup=()=>root.remove();
   }
 
-  private drawTown() {
-    const g=this.add.graphics();
-    g.fillStyle(0xb88b57,1).fillRect(0,0,WORLD_WIDTH,WORLD_HEIGHT);
+  private drawField() {
+    const g = this.add.graphics();
+    g.fillStyle(0x78a653, 1).fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    g.fillStyle(0x86ad5e, 0.42).fillRect(0, 0, WORLD_WIDTH * 0.50, WORLD_HEIGHT);
+    g.fillStyle(0x679346, 0.32).fillRect(WORLD_WIDTH * 0.50, 0, WORLD_WIDTH * 0.50, WORLD_HEIGHT);
+    g.fillStyle(0xd1b46c, 0.30).fillRect(0, 510, WORLD_WIDTH, 92);
+    g.fillStyle(0xd1b46c, 0.22).fillRect(870, 0, 100, WORLD_HEIGHT);
+    g.lineStyle(5, 0xf4f1df, 0.48);
+    g.strokeRect(55, 70, WORLD_WIDTH - 110, WORLD_HEIGHT - 120);
 
-    // Dust, scrub and fences give the field a western town silhouette without
-    // copying a show asset or using a separate art dependency.
-    for (let i=0;i<80;i++) {
-      const x=(i*313)%WORLD_WIDTH, y=(i*197)%WORLD_HEIGHT, r=2+(i%4);
-      g.fillStyle(i%3===0?0x7f8f4e:0x9d7748,.45).fillCircle(x,y,r);
+    this.drawTree(300, 280, 1.15);
+    this.drawTree(2050, 300, 0.95);
+    this.drawTree(350, 1110, 0.90);
+    this.drawTree(2070, 1090, 1.10);
+    this.drawBunker(690, 360, 190, 72, 0x76563b);
+    this.drawBunker(1470, 350, 230, 76, 0x5f6e69);
+    this.drawBunker(520, 760, 250, 70, 0x9d754d);
+    this.drawBunker(1570, 760, 220, 68, 0x6e8190);
+    this.drawBunker(850, 1030, 260, 74, 0xb58c58);
+    this.drawBunker(1420, 1080, 240, 72, 0x737b79);
+    this.drawTireStack(1080, 300);
+    this.drawTireStack(1900, 650);
+    this.drawTireStack(730, 1170);
+
+    this.drawStation(1880, 820, '01', 'SHOOTING RANGE', 0xd66a3d);
+    this.drawStation(1420, 1080, '02', 'EVASION YARD', 0x2f7775);
+    this.drawStation(1080, 300, '03', 'ARMORY', 0xe8c95c);
+    this.drawStation(1900, 650, '04', 'MEDIA', 0x8fb39b);
+    this.drawStation(1180, 860, '05', 'ARENA GATE', 0xd66a3d);
+    this.drawFlag(1180, 860, 0xd66a3d, 'ARENA');
+    this.drawFlag(1830, 930, 0xd66a3d, 'SHOOTING');
+
+    g.fillStyle(0xf4f1df, 0.10).fillCircle(1180, 1080, 74);
+    g.lineStyle(3, 0xf4f1df, 0.38).strokeCircle(1180, 1080, 74);
+    this.add.text(1180, 1132, 'FIELD ENTRY · SAFE AREA', {
+      fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold',
+      color: '#fff4d4', stroke: '#315845', strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(6);
+
+    this.add.text(WORLD_WIDTH / 2, 30, 'SHOOTERS TRIGGER · FIELD', {
+      fontFamily: 'monospace', fontSize: '15px', fontStyle: 'bold',
+      color: '#fff4d4', stroke: '#315845', strokeThickness: 5,
+    }).setOrigin(0.5).setDepth(6);
+    this.add.text(WORLD_WIDTH / 2, 56, 'WALK THE FIELD · CHOOSE WHAT TO DO NEXT', {
+      fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold',
+      color: '#f5d37a', stroke: '#315845', strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(6);
+  }
+
+  private drawTree(x: number, y: number, scale: number) {
+    const g = this.add.graphics();
+    g.fillStyle(0x65472f, 1).fillRect(x - 6 * scale, y + 18 * scale, 12 * scale, 60 * scale);
+    g.fillStyle(0x405638, 1).fillCircle(x, y, 34 * scale).fillCircle(x - 28 * scale, y + 9 * scale, 28 * scale).fillCircle(x + 28 * scale, y + 9 * scale, 29 * scale);
+    g.fillStyle(0x526d3c, 0.75).fillCircle(x + 5 * scale, y - 16 * scale, 23 * scale);
+  }
+
+  private drawBunker(x: number, y: number, width: number, height: number, color: number) {
+    const g = this.add.graphics();
+    g.fillStyle(0x493526, 0.24).fillRect(x + 8, y + 9, width, height);
+    g.fillStyle(color, 1).fillRoundedRect(x, y, width, height, 10);
+    g.fillStyle(0xffffff, 0.12).fillRect(x + 12, y + 10, width - 24, 5);
+    g.lineStyle(2, 0xf4f1df, 0.28).strokeRoundedRect(x, y, width, height, 10);
+  }
+
+  private drawTireStack(x: number, y: number) {
+    const g = this.add.graphics();
+    for (let i = 0; i < 4; i += 1) {
+      g.fillStyle(0x2b302d, 1).fillCircle(x + i * 17, y - i * 3, 19);
+      g.fillStyle(0x66706a, 1).fillCircle(x + i * 17, y - i * 3, 7);
     }
-
-    // Main dirt street: the route itself explains the intended order.
-    g.fillStyle(0x8a643f,1).fillRoundedRect(1020,90,360,1030,90);
-    g.fillStyle(0xa87b4d,1).fillRoundedRect(1060,100,280,1000,70);
-    g.lineStyle(3,0xc49b67,.7).lineBetween(1200,1050,1200,140);
-
-    // Cross streets connect the town naturally but the five required stops stay
-    // on the main progression road.
-
-
-    // Central arrival square. The first destination is visible straight ahead.
-    g.fillStyle(0xc39a61,1).fillCircle(1200,1080,210);
-    g.lineStyle(5,0xe0bd7e,.65).strokeCircle(1200,1080,210);
-    this.add.text(1200,1080,'FIELD TOWN',{fontFamily:'monospace',fontSize:'16px',fontStyle:'bold',color:'#fff4d4',stroke:'#493526',strokeThickness:4}).setOrigin(.5);
-    this.add.text(1200,1130,'YOU ARRIVE HERE',{fontFamily:'monospace',fontSize:'9px',fontStyle:'bold',color:'#fff4d4'}).setOrigin(.5);
-
-    this.locations.forEach((l,index)=>{
-      this.drawTownBuilding(g,l.x,l.y,300,150,l.color,l.name);
-      this.add.text(l.x,l.y+52,l.subtitle,{fontFamily:'monospace',fontSize:'9px',fontStyle:'bold',color:'#f5d37a',align:'center'}).setOrigin(.5);
-      this.add.text(l.x,l.y-92,String(index+1).padStart(2,'0'),{fontFamily:'monospace',fontSize:'12px',fontStyle:'bold',color:'#fff4d4'}).setOrigin(.5);
-    });
-
-    // Directional signs are in-world, not floating HUD banners.
-    const signs=[
-      [1200,770,'01 SHOOTING  ↑'],
-      [1200,530,'02 EVASION  ↑'],
-      [900,300,'03 ARMORY  ←'],
-      [1500,300,'04 MEDIA  →'],
-      [1200,90,'05 ARENA  ↑'],
-    ] as const;
-    signs.forEach(([x,y,text])=>{
-      g.fillStyle(0x4d3827,1).fillRoundedRect(x-78,y-18,156,36,5);
-      g.fillStyle(0xd9bb7a,1).fillRect(x-72,y-13,144,26);
-      this.add.text(x,y,text,{fontFamily:'monospace',fontSize:'8px',fontStyle:'bold',color:'#493526',align:'center'}).setOrigin(.5);
-    });
-
-    this.add.text(1200,70,'FIELD TOWN · WALK THE STREET · CHOOSE YOUR NEXT MOVE',{fontFamily:'monospace',fontSize:'16px',fontStyle:'bold',color:'#fff4d4',stroke:'#493526',strokeThickness:5}).setOrigin(.5);
-    this.add.text(1200,95,'TRAIN · EVADE · EQUIP · REVIEW · ARENA — OPEN ORDER',{fontFamily:'monospace',fontSize:'9px',fontStyle:'bold',color:'#f5d37a',stroke:'#493526',strokeThickness:2}).setOrigin(.5);
-
   }
 
-  private drawTownBuilding(g: Phaser.GameObjects.Graphics, x:number,y:number,w:number,h:number,color:number,label:string) {
-    g.fillStyle(0x5b402d,.22).fillEllipse(x,y+h/2+12,w*.72,24);
-    g.fillStyle(color,1).fillRoundedRect(x-w/2,y-h/2,w,h,12);
-    g.fillStyle(0x493526,1).fillTriangle(x-w/2-8,y-h/2,x,y-h/2-70,x+w/2+8,y-h/2);
-    g.fillStyle(0x2f241c,1).fillRect(x-24,y+8,48,72);
-    g.fillStyle(0xe8c95c,.65).fillRect(x-8,y+22,16,20);
-    this.add.text(x,y-12,label,{fontFamily:'monospace',fontSize:'14px',fontStyle:'bold',color:'#fff4d4',stroke:'#493526',strokeThickness:4,align:'center',wordWrap:{width:w*.82}}).setOrigin(.5);
+  private drawFlag(x: number, y: number, color: number, label: string) {
+    const g = this.add.graphics();
+    g.fillStyle(0x594838, 1).fillRect(x, y, 4, 78);
+    g.fillStyle(color, 1).fillTriangle(x + 4, y + 4, x + 64, y + 18, x + 4, y + 32);
+    this.add.text(x + 32, y + 50, label, {
+      fontFamily: 'monospace', fontSize: '9px', color: '#fff4d4',
+      stroke: '#493526', strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(6);
   }
 
-  private drawSideBuilding(g: Phaser.GameObjects.Graphics,x:number,y:number,w:number,h:number,label:string,color:number) {
-    g.fillStyle(0x5b402d,.22).fillEllipse(x,y+h/2+10,w*.72,20);
-    g.fillStyle(color,1).fillRoundedRect(x-w/2,y-h/2,w,h,10);
-    g.fillStyle(0x3d2a20,1).fillTriangle(x-w/2-6,y-h/2,x,y-h/2-42,x+w/2+6,y-h/2);
-    g.fillStyle(0x2f241c,1).fillRect(x-20,y+4,40,62);
-    this.add.text(x,y-4,label,{fontFamily:'monospace',fontSize:'11px',fontStyle:'bold',color:'#fff4d4',stroke:'#493526',strokeThickness:3,align:'center',wordWrap:{width:w*.82}}).setOrigin(.5);
+  private drawStation(x: number, y: number, number: string, label: string, color: number) {
+    const g = this.add.graphics();
+    g.fillStyle(0x315845, 0.16).fillCircle(x, y, 86);
+    g.lineStyle(3, color, 0.70).strokeCircle(x, y, 64);
+    g.fillStyle(color, 0.95).fillCircle(x, y - 42, 18);
+    this.add.text(x, y - 42, number, {
+      fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold', color: '#1d2923',
+    }).setOrigin(0.5).setDepth(8);
+    this.add.text(x, y + 3, label, {
+      fontFamily: 'monospace', fontSize: '11px', fontStyle: 'bold',
+      color: '#fff4d4', stroke: '#315845', strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(8);
+    this.add.text(x, y + 20, 'ENTER', {
+      fontFamily: 'monospace', fontSize: '8px', fontStyle: 'bold',
+      color: '#f5d37a', stroke: '#315845', strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(8);
   }
 
-  private createPlayer(x:number,y:number) {
-    const c=this.add.container(x,y);
-    const g=this.add.graphics();
-    g.fillStyle(0x493526,1).fillEllipse(0,24,34,12);
-    g.fillStyle(0x263a2b,1).fillRoundedRect(-14,-2,28,31,8);
-    g.fillStyle(0xd8a477,1).fillCircle(0,-22,10);
-    g.fillStyle(0x243322,1).fillEllipse(0,-29,26,8);
-    g.fillStyle(0x334f35,1).fillRoundedRect(-12,25,9,18,4).fillRoundedRect(3,25,9,18,4);
-    c.add(g);
-    return c;
+  private createPlayer(x: number, y: number) {
+    const container = this.add.container(x, y);
+    const shadow = this.add.ellipse(0, 34, 27, 10, 0x3d3025, 0.28);
+    const makePose = (legOffset: number, bob: number) => {
+      const g = this.add.graphics();
+      g.fillStyle(0x3b2f28, 1).fillEllipse(0, -20 + bob, 24, 18);
+      g.fillStyle(0xd8a66b, 1).fillEllipse(0, -17 + bob, 13, 12);
+      g.fillStyle(0xd4a45d, 1).fillCircle(-7, -17 + bob, 2.5).fillCircle(7, -17 + bob, 2.5);
+      g.fillStyle(0x5a7348, 1).fillEllipse(0, -23 + bob, 25, 12);
+      g.fillStyle(0x2f6b4e, 1).fillRoundedRect(-15, -4 + bob, 30, 22, 8);
+      g.fillStyle(0x4f8b65, 1).fillRoundedRect(-10, -1 + bob, 20, 14, 4);
+      g.fillStyle(0xd4a45d, 1).fillRoundedRect(-4, -8 + bob, 8, 7, 2);
+      g.fillStyle(0x29372f, 1).fillRoundedRect(-11, 16 + bob, 22, 7, 3);
+      g.fillStyle(0x566052, 1).fillRoundedRect(-10 + legOffset, 20 + bob, 8, 13, 2).fillRoundedRect(2 - legOffset, 20 + bob, 8, 13, 2);
+      g.fillStyle(0x202522, 1).fillRoundedRect(-12 + legOffset, 30 + bob, 10, 7, 2).fillRoundedRect(2 - legOffset, 30 + bob, 10, 7, 2);
+      return g;
+    };
+    const poseA = makePose(0, 0);
+    const poseB = makePose(2, 1).setVisible(false);
+    container.add([shadow, poseA, poseB]);
+    return container;
+  }
+
+  private updatePlayerAnimation() {
+    const poseA = this.player.getAt(1) as Phaser.GameObjects.Graphics;
+    const poseB = this.player.getAt(2) as Phaser.GameObjects.Graphics;
+    if (!poseA || !poseB) return;
+    if (!this.playerMoving) {
+      poseA.setVisible(true);
+      poseB.setVisible(false);
+      return;
+    }
+    const step = Math.floor(this.walkClock / 120) % 2;
+    poseA.setVisible(step === 0);
+    poseB.setVisible(step === 1);
+  }
   }
 }
