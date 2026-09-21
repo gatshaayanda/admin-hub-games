@@ -1352,3 +1352,462 @@ The player must read as a visible human wearing paintball gear, not as an equipm
 - confirm left MOVE never changes aim;
 - confirm the right FIRE control both aims and shoots;
 - confirm releasing FIRE stops firing while movement continues.
+
+## Shooters Trigger — Full Game Direction Lock — September 21, 2026
+
+The product owner has now completed a real phone playtest of the current live/main Shooter slice. The current field shooting foundation is accepted as a good basis: movement, independent aiming/fire, paintball projectiles, targets and persistent paint feedback are enjoyable enough to build the actual game around. The next pass is therefore **not a controls rewrite** and not a generic mobile-shooter feature dump. It is the completion of a small, replayable, narrative paintball training-to-arena game.
+
+### Product promise
+
+Shooters Trigger is a **phone-first paintball field story about becoming good enough to win through training, positioning, evasion, cover, shooting discipline and decisions**.
+
+The player should feel:
+- “I am the player being trained.”
+- “The field taught me something.”
+- “My training changed my strengths and weaknesses.”
+- “The media coverage remembers what I did.”
+- “The arena match tests what I learned.”
+- “My result is explained by my actions, not a random score.”
+
+Do not turn the game into Call of Duty, a loot shooter, a generic military game, or an online-first multiplayer project.
+
+### Four-location / four-scene game structure
+
+The intended complete single-player journey is:
+
+```
+GAME INTRO
+   ↓
+ENTER / SETUP
+   ↓
+LOBBY / HOME FIELD
+   ↓
+SHOOTING LOCATION
+   ↓
+EVASION CAMP
+   ↓
+MEDIA COVERAGE CENTER
+   ↓
+ARENA
+   ↓
+MEDIA COVERAGE / RESULT
+   ↓
+REPLAY / RETRAIN / RESET
+```
+
+The four game locations are:
+1. **Shooting Location** — learn and establish shooting skill.
+2. **Evasion Camp** — learn movement, cover, survival and field positioning.
+3. **Media Coverage Center** — narrative/statistical interpretation, budgets, preparation and pre-match statements.
+4. **Arena Location** — 3v3 culmination where the player's training and choices are tested.
+
+The existing Admin Hub publisher intro and Game Library remain shared infrastructure. Do not duplicate or bypass them.
+
+### Scene ownership and progression
+
+The current Shooter Intro → Setup → Training path is only the first slice. The final game must preserve the product flow principle:
+
+```
+Publisher Intro → Game Library → Shooters Trigger Intro
+→ Shooter Setup
+→ Lobby
+→ Shooting Training
+→ Lobby / latest stats
+→ Evasion Training
+→ Lobby / latest stats
+→ Media Coverage
+→ Arena
+→ Media Coverage / Results
+```
+
+Training must produce durable player state. Returning to the lobby must visibly acknowledge the latest training result and make the next location available.
+
+### Player progression is skill-based, not level-grinding
+
+The core player model should be a small set of understandable attributes derived from what the player actually did.
+
+At minimum:
+- **Shooting:** hit quality, body/center-mass accuracy, weapon-hand hits and misses/scrapes.
+- **Evasion:** survival, movement under pressure, cover usage, escapes and damage avoided.
+- **Cover / positioning:** how often the player used cover effectively and how often shots struck cover instead of the player.
+- **Combat discipline:** shots fired, meaningful hits, ineffective shots and wasted exposure.
+- **Arena record:** match actions and result, kept separate from raw training skill.
+
+Avoid a single opaque “power” number. The player should be able to understand why each stat moved.
+
+### Shooting model
+
+The shooting training should evolve the current dummy/bottle range rather than discard it.
+
+The game should distinguish hit locations/effects as a readable skill ladder:
+- **scrape / peripheral contact:** common and acceptable at lower skill;
+- **gun/marker-hand hit:** meaningful intermediate success;
+- **center-mass body hit:** strong hit;
+- **two center-mass body hits:** elimination threshold in the intended arena model;
+- **headshot:** exceptional precision and immediate elimination in the intended arena model.
+
+These are gameplay abstractions, not claims about real-world paintball rules. Keep them readable and consistent.
+
+A training session should record enough evidence to calculate:
+- shots fired;
+- shots that miss completely;
+- shots that hit cover;
+- peripheral/body scrapes;
+- marker-hand hits;
+- center-mass hits;
+- exceptional/head hits;
+- hit rate / accuracy;
+- time under pressure where relevant.
+
+The important design principle is **quality of hits**, not simply number of projectiles fired.
+
+### Weapon-hand / body hit presentation
+
+The player's body is the source of readable combat feedback.
+
+When a shot lands:
+- peripheral/body scrape should look and sound different from a strong hit;
+- a marker-hand hit should visibly communicate that the player lost control/was compromised;
+- a strong body hit should create a clear combat consequence;
+- exceptional hits should be rare, highly readable and satisfying.
+
+Do not use gore. Paint, equipment reaction, stagger, marker drop/disable, paint splat and short hit feedback are enough.
+
+### Cover is directional gameplay
+
+Tyre stacks, bunkers/barracks and similar field structures are not just decoration.
+
+They should provide **directional protection**:
+- standing in front of cover does not automatically protect the player;
+- the player must move behind the useful face of the object;
+- incoming shots should be blocked by the physical cover;
+- the result should teach the player to read angles and reposition.
+
+This creates the central tactical loop:
+
+```
+SEE THREAT → MOVE → GET BEHIND COVER → PEEK / AIM → SHOOT → REPOSITION
+```
+
+Do not replace this with a universal shield bubble.
+
+### Evasion training
+
+The second training location is a survival/positioning test.
+
+The intended first challenge is **1 player vs 3 opposing characters** for approximately one minute.
+
+The player succeeds by:
+- surviving the full duration; or
+- learning from the number/quality of incoming shots and how effectively they were avoided.
+
+The result should account for:
+- bullets/paintballs fired at the player;
+- shots that miss completely;
+- peripheral scrapes;
+- stronger hits;
+- cover hits/blocked shots;
+- time survived;
+- effective cover use;
+- escape/reposition behaviour.
+
+The user's proposed bonus for shots hitting cover is retained as a design direction: repeated cover interception is evidence that the player understood positioning. Balance it so players cannot farm score by deliberately standing behind one object forever.
+
+### Training-to-arena character model
+
+The eventual 3v3 arena should not be a random enemy generator.
+
+The first three opposing characters should be connected to the player's training history. Re-training should alter their readiness:
+- one opponent trains well;
+- one trains moderately;
+- one trains less effectively.
+
+The player's own two teammates should be **neutral/supportive**, not hidden stat advantages. They should be useful enough to make a 3v3 match readable, but the player's own skill must remain the decisive agency.
+
+This means the player is never simply handed a guaranteed team advantage.
+
+### Media Coverage is the connective tissue
+
+Media Coverage is not a cosmetic news screen.
+
+It is the game's **memory and explanation layer**.
+
+It should cover:
+- training performances;
+- strengths and weaknesses;
+- opponent readiness;
+- map/field familiarity;
+- budget;
+- equipment preparation;
+- pre-match thoughts/feelings;
+- arena actions;
+- final result;
+- which preparation choices mattered.
+
+Before entering the Evasion and Arena scenes, each relevant player should be able to state a short thought/feeling/preparation line. These statements become part of the match narrative and result coverage.
+
+After each training session, the coverage should say what changed without exposing hidden formulas.
+
+After the arena, the coverage should reconstruct what happened from the recorded match data.
+
+Do not fabricate “journalism” detached from gameplay state.
+
+### Odds / predictions
+
+Media coverage may present **contextual odds or expectations** derived from documented in-game training evidence.
+
+The presentation must be:
+- clearly fictional/in-game;
+- based on the current player/opponent state;
+- explainable;
+- not a hidden random winner selector.
+
+Use phrases such as “field expectation”, “readiness”, “projected edge” or similar game-native language rather than presenting fake real-world certainty.
+
+The player should be able to see why an expectation changed after retraining.
+
+### Budget and equipment
+
+Training performance generates an in-game budget/reward.
+
+Budget is part of the story:
+- better training outcomes can lead to more resources;
+- resources can be spent before the arena;
+- purchases must have understandable effects;
+- equipment can improve a shooting or evasion attribute or provide a limited special move;
+- special moves should be limited per match rather than becoming permanent button spam.
+
+Examples:
+- shooting gear → modest shooting improvement;
+- movement/evasion gear → modest evasion improvement;
+- one special offensive action;
+- one special defensive/counter action.
+
+The important loop is:
+
+```
+TRAIN → EARN → CHOOSE HOW TO SPEND → MATCH → DISCOVER WHETHER IT HELPED
+```
+
+The player's exact special-use outcome should be revealed in the match/results coverage rather than advertised as a guaranteed win.
+
+Do not introduce currencies, shops, monetisation or grind systems unless explicitly requested. This is an in-game budget/story mechanic.
+
+### Retraining and replayability
+
+Retraining is a first-class loop.
+
+The player can:
+- repeat shooting training;
+- repeat evasion training;
+- improve or worsen recorded performance;
+- change media coverage;
+- change opponent readiness;
+- change budget;
+- change arena preparation;
+- replay the arena with a different preparation state.
+
+This creates replayability through **mastery and experimentation**, not artificial energy limits or daily timers.
+
+### Psychology / engagement principles
+
+The game should use a tight feedback loop:
+
+```
+ACTION → IMMEDIATE FEEDBACK → UNDERSTANDING → ADJUSTMENT → RETRY
+```
+
+Research on flow and game-system learning emphasizes concrete goals, appropriately challenging tasks, timely feedback and reduced distraction. Feedback close to the action helps players connect their action to its result. citeturn0search1turn0search9
+
+Apply that directly:
+- shooting hit feedback appears immediately;
+- evasion feedback is immediate enough to understand why a shot was avoided or landed;
+- training summaries explain the change;
+- media coverage gives the longer-term interpretation;
+- the next challenge increases complexity gradually.
+
+Use **mastery** rather than grind:
+- “Can I hit center mass more consistently?”
+- “Can I survive longer?”
+- “Can I use the bunker correctly?”
+- “Can I beat the same opponent after they improve?”
+- “Can I win with less equipment spending?”
+
+Avoid clutter. Mobile action research repeatedly emphasizes independent movement/aim and keeping controls expressive without forcing the player to stare at the interface. citeturn0search0turn0search2turn0search3
+
+### Mobile-first combat presentation
+
+Preserve the accepted phone control model:
+- left MOVE joystick;
+- right FIRE control that establishes aim and fires;
+- simultaneous movement + aim/fire;
+- no keyboard dependency;
+- no giant HUD;
+- no collection of tiny action buttons.
+
+The player should watch the field, not the controls.
+
+The current accepted shooting feel should be protected while the game loop is built around it.
+
+### Character animation / directional depth
+
+The player requested more depth when firing inward, outward and at diagonal angles.
+
+This is a presentation priority, not permission to rotate the whole body.
+
+The intended model:
+- stable grounded human body;
+- upper-body/arms/marker combat layer follows aim;
+- weapon orientation changes continuously;
+- marker/arms can use directional offsets;
+- inward/outward/diagonal aim can alter the apparent side, overlap and depth of the marker/arms;
+- recoil/muzzle flash originate from the actual barrel;
+- future 4/8-direction authored sprite sheets remain an option if procedural layers hit their quality ceiling.
+
+The test is visual truth: **feet → body → arms → marker → muzzle → projectile** must agree.
+
+### Four scene design language
+
+Use the lessons already present in the other Admin Hub Games:
+
+**Hall**
+- establishes the value of a place/lobby;
+- movement and exploration can make a location feel like a world;
+- keep its proven movement/camera feel as reference, not as Shooter art.
+
+**President's Shoes**
+- demonstrates structured setup;
+- stateful progression;
+- consequences;
+- readable stats;
+- narrative result screens;
+- replay and saved local state.
+
+**Shooters Trigger**
+- combines those lessons with action:
+  place → train → record → interpret → prepare → compete → report → replay.
+
+Do not copy Hall's fantasy-world presentation or President's Shoes' decision-story mechanics literally. Reuse the structural lessons.
+
+### Persistence / offline-first contract
+
+Shooter state must be local-first.
+
+Persist enough to survive:
+- app close/reopen;
+- retraining;
+- returning to the lobby;
+- offline play.
+
+Firebase should be used when shared/cloud persistence genuinely adds value:
+- training records;
+- media coverage/history;
+- arena results;
+- syncable player progress where appropriate.
+
+When offline:
+- gameplay must continue;
+- results must save locally;
+- pending shared writes go to the existing outbox/sync mechanism;
+- when connectivity returns, queued records sync;
+- duplicate sync must not create duplicate match/training records.
+
+Do not create a new Firebase project.
+
+### Data model direction
+
+Keep a compact explicit state model. Prefer versioned records over scattered localStorage keys.
+
+A future Shooter save should conceptually contain:
+- player identity;
+- training attempts;
+- current shooting skill breakdown;
+- current evasion/cover skill breakdown;
+- budget;
+- equipment choices;
+- opponent readiness;
+- teammate neutral state;
+- pre-match statements;
+- arena match record;
+- media coverage entries;
+- schema/version metadata.
+
+Training attempts should remain auditable enough to explain later coverage.
+
+### Completion boundary for the first real game
+
+The first complete Shooters Trigger release does **not** require:
+- online multiplayer;
+- matchmaking;
+- accounts;
+- server-authoritative combat;
+- large weapon inventories;
+- cosmetics store;
+- currencies for monetisation;
+- dozens of maps;
+- giant AI armies.
+
+It **does** require:
+1. four locations/scenes;
+2. working shooting training;
+3. working evasion/cover training;
+4. persistent player stats;
+5. meaningful training results;
+6. media coverage before/after the arena;
+7. budget/equipment preparation;
+8. a readable 3v3 arena simulation/gameplay layer;
+9. final match results grounded in recorded actions;
+10. local-first persistence and eventual Firebase sync;
+11. replay/retraining;
+12. real phone verification.
+
+### Build order after this direction lock
+
+Do not jump straight to the 3v3 arena.
+
+Use this controlled sequence:
+
+```
+1. LOCK current shooting feel
+2. Build shooting-training state + results
+3. Build lobby return + persistent latest stats
+4. Build evasion/cover training
+5. Build media coverage state + pre-scene statements
+6. Build budget + limited equipment choices
+7. Build arena 3v3 from recorded training state
+8. Build post-match media/results
+9. Add retraining/replay loop
+10. Full phone + offline + regression verification
+```
+
+At every stage:
+**Inspect → one controlled change → review → run → verify → checkpoint.**
+
+### What is explicitly out of scope until the above works
+
+Do not add:
+- online multiplayer;
+- matchmaking;
+- team management systems;
+- large weapon/loadout trees;
+- cosmetic economy;
+- social accounts;
+- live PvP infrastructure;
+- procedural content generators;
+- excessive HUD controls.
+
+### Research basis for this direction
+
+The mobile control foundation is consistent with established twin-stick design: independent movement and shooting, left-side movement/right-side aiming, forgiving touch interaction and minimizing the need to look at the controls. citeturn0search0turn0search2turn0search3
+
+Game-design research also supports the intended engagement loop: clear goals, challenge matched to skill, immediate feedback, low distraction, learning through repeated system feedback, and meaningful player agency. citeturn0search1turn0search9turn0search11
+
+Paintball itself provides a useful conceptual foundation for body/equipment hits, cover and close-range positional play, but Shooter Trigger's hit thresholds are fictional game rules and should remain internally consistent rather than pretending to simulate tournament regulations. citeturn0search48
+
+### Direction-lock rule
+
+This section is the current product direction for completing Shooters Trigger.
+
+If a proposed feature does not strengthen:
+**shoot → move → cover → train → learn → prepare → compete → understand → retrain**, 
+it should not enter the first complete release without explicit product-owner approval.
