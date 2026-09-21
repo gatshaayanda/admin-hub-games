@@ -23,6 +23,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   private playerPoseA!: Phaser.GameObjects.Graphics;
   private playerPoseB!: Phaser.GameObjects.Graphics;
   private playerWeapon!: Phaser.GameObjects.Graphics;
+  private playerArms!: Phaser.GameObjects.Graphics;
+  private muzzleFlash!: Phaser.GameObjects.Graphics;
   private playerMoving = false;
   private playerFacing = 1;
   private playerAnimTime = 0;
@@ -45,6 +47,9 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   private hasAimInput = false;
   private fireHeld = false;
   private fireCooldown = 0;
+  private recoilKick = 0;
+  private muzzleFlashTimer = 0;
+  private aimWasExplicitlySet = false;
 
   private statusText!: Phaser.GameObjects.Text;
   private hintText!: Phaser.GameObjects.Text;
@@ -116,6 +121,11 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     if (length < 0.05) return;
     this.aim.set(x / length, y / length);
     this.hasAimInput = true;
+    this.aimWasExplicitlySet = true;
+    this.aimPoint = new Phaser.Math.Vector2(
+      this.player.x + this.aim.x * 180,
+      this.player.y + this.aim.y * 180,
+    );
     this.updateWeaponPose();
   }
 
@@ -156,6 +166,18 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     }
 
     this.playerMoving = dx !== 0 || dy !== 0;
+
+    // Before the player explicitly chooses an aim direction, movement provides
+    // an intuitive default. This means a diagonal walk naturally produces a
+    // diagonal shot instead of leaving the marker on its initial horizontal line.
+    if (!this.aimWasExplicitlySet && (dx !== 0 || dy !== 0)) {
+      const length = Math.hypot(dx, dy) || 1;
+      this.aim.set(dx / length, dy / length);
+      this.aimPoint = new Phaser.Math.Vector2(
+        this.player.x + this.aim.x * 180,
+        this.player.y + this.aim.y * 180,
+      );
+    }
 
     if (Math.abs(dx) > 0.08) {
       this.playerFacing = dx < 0 ? -1 : 1;
@@ -203,7 +225,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   }
 
   private handlePointerMove(pointer: Phaser.Input.Pointer) {
-    if (this.isPhoneSession() || !pointer.isDown) return;
+    if (this.isPhoneSession()) return;
     const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
     this.setAimPoint(point.x, point.y);
   }
@@ -212,14 +234,17 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     this.aimPoint = new Phaser.Math.Vector2(x, y);
     this.aim.set(x - this.player.x, y - this.player.y).normalize();
     this.hasAimInput = true;
+    this.aimWasExplicitlySet = true;
     this.updateWeaponPose();
   }
 
   private fire() {
     if (this.fireCooldown > 0) return;
     this.fireCooldown = 240;
+    this.recoilKick = 1;
+    this.muzzleFlashTimer = 72;
     const speed = 520;
-    const muzzleDistance = 34;
+    const muzzleDistance = 42;
     const ball = this.add.circle(
       this.player.x + this.aim.x * muzzleDistance,
       this.player.y + this.aim.y * muzzleDistance,
@@ -277,6 +302,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
   private updatePlayerAnimation(delta: number) {
     this.playerAnimTime += delta;
+    this.recoilKick = Math.max(0, this.recoilKick - delta / 95);
+    this.muzzleFlashTimer = Math.max(0, this.muzzleFlashTimer - delta);
 
     const step = this.playerMoving ? 120 : 650;
     const showB = Math.floor(this.playerAnimTime / step) % 2 === 1;
@@ -292,33 +319,48 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     const makePose = (legOffset: number, bob: number) => {
       const g = this.add.graphics();
 
-      // A readable, grounded top-down player: helmet, face, vest, arms,
-      // separated legs and boots. The weapon is intentionally NOT part of
-      // this body graphic so it can follow the aim direction independently.
-      g.fillStyle(0x18211e, 1).fillEllipse(0, -14 + bob, 18, 13);
-      g.fillStyle(0x5c7448, 1).fillEllipse(0, -19 + bob, 21, 10);
-      g.fillStyle(0x93a26b, 0.72).fillEllipse(-4, -21 + bob, 10, 5);
-      g.fillStyle(0x6e432c, 1).fillEllipse(0, -7 + bob, 13, 10);
-      g.fillStyle(0x17201c, 0.92).fillRect(-7, -4 + bob, 14, 4);
-      g.fillStyle(0x315845, 1).fillRoundedRect(-11, 0 + bob, 22, 19, 6);
-      g.fillStyle(0x466d4f, 1).fillRect(-8, 3 + bob, 16, 4);
-      g.fillStyle(0xb8a06a, 1).fillCircle(-9, 8 + bob, 3).fillCircle(9, 8 + bob, 3);
-      g.fillStyle(0xd4a45d, 1)
-        .fillRoundedRect(-10 + legOffset, 18 + bob, 7, 13, 2)
-        .fillRoundedRect(3 - legOffset, 18 + bob, 7, 13, 2);
-      g.fillStyle(0x171d1b, 1)
-        .fillRoundedRect(-11 + legOffset, 29 + bob, 9, 6, 2)
-        .fillRoundedRect(2 - legOffset, 29 + bob, 9, 6, 2);
+      // Human top-down paintball player: full-face mask, protective jersey,
+      // padded vest/pod harness, gloves, pants and boots. The torso stays
+      // planted while the combat layers aim independently.
+      g.fillStyle(0x18211e, 1).fillEllipse(0, -14 + bob, 20, 14);
+      g.fillStyle(0x536d43, 1).fillEllipse(0, -20 + bob, 23, 11);
+      g.fillStyle(0x6f8c55, 1).fillRect(-9, -22 + bob, 18, 5);
+      g.fillStyle(0x111715, 1).fillRoundedRect(-11, -16 + bob, 22, 10, 4);
+      g.fillStyle(0x9bb9b1, 0.9).fillRoundedRect(-8, -14 + bob, 16, 6, 2);
+      g.fillStyle(0xd4a45d, 1).fillCircle(0, -7 + bob, 4);
+
+      // Protective jersey + chest/shoulder padding.
+      g.fillStyle(0x2f5f4b, 1).fillRoundedRect(-13, -1 + bob, 26, 21, 7);
+      g.fillStyle(0x3e7657, 1).fillRoundedRect(-10, 1 + bob, 20, 13, 4);
+      g.fillStyle(0x17201c, 0.9).fillRoundedRect(-14, 1 + bob, 5, 12, 2);
+      g.fillStyle(0x17201c, 0.9).fillRoundedRect(9, 1 + bob, 5, 12, 2);
+      g.fillStyle(0xc1a86c, 1).fillRect(-10, 9 + bob, 20, 4);
+      g.fillStyle(0x8f7649, 1).fillRect(-8, 14 + bob, 16, 5);
+
+      // Pod harness / equipment and gloves.
+      g.fillStyle(0x1d2923, 1).fillRect(-12, 12 + bob, 24, 5);
+      g.fillStyle(0x5e4936, 1).fillRoundedRect(-15, 8 + bob, 5, 8, 2);
+      g.fillStyle(0x5e4936, 1).fillRoundedRect(10, 8 + bob, 5, 8, 2);
+      g.fillStyle(0x1b2520, 1).fillCircle(-13, 20 + bob, 3).fillCircle(13, 20 + bob, 3);
+
+      // Pants and boots remain the ground anchor.
+      g.fillStyle(0x435044, 1)
+        .fillRoundedRect(-10 + legOffset, 18 + bob, 8, 14, 2)
+        .fillRoundedRect(2 - legOffset, 18 + bob, 8, 14, 2);
+      g.fillStyle(0x202522, 1)
+        .fillRoundedRect(-12 + legOffset, 29 + bob, 10, 7, 2)
+        .fillRoundedRect(2 - legOffset, 29 + bob, 10, 7, 2);
       return g;
     };
 
     this.playerPoseA = makePose(0, 0);
     this.playerPoseB = makePose(2, 1).setVisible(false);
 
+    this.playerArms = this.add.graphics();
     this.playerWeapon = this.add.graphics();
-    this.playerWeapon.setPosition(5, 3);
+    this.muzzleFlash = this.add.graphics();
 
-    container.add([shadow, this.playerPoseA, this.playerPoseB, this.playerWeapon]);
+    container.add([shadow, this.playerPoseA, this.playerPoseB, this.playerArms, this.playerWeapon, this.muzzleFlash]);
     this.playerWeapon.setDepth(31);
 
     this.nameText = this.add.text(x, y - 50, this.playerName, {
@@ -336,30 +378,54 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     if (!this.playerWeapon) return;
 
     const angle = Math.atan2(this.aim.y, this.aim.x);
+    const recoilOffset = this.recoilKick * 7;
     this.playerWeapon.setRotation(angle);
+    this.playerWeapon.setPosition(5 - recoilOffset, 3);
+
+    const arms = this.playerArms;
+    arms.setRotation(angle);
+    arms.setPosition(0, 0);
+    arms.clear();
+    // Braced forearms: shoulders stay on the torso, hands converge on the
+    // marker. This keeps the gun visibly carried rather than floating.
+    arms.lineStyle(5, 0x314b3c, 1);
+    arms.lineBetween(-8, 5, 5, 2);
+    arms.lineBetween(8, 5, 12, 4);
+    arms.fillStyle(0xd4a45d, 1).fillCircle(5, 2, 3).fillCircle(12, 4, 3);
 
     const g = this.playerWeapon;
     g.clear();
 
-    // Paintball marker: stock -> grip -> body -> barrel. Arms connect to
-    // the marker so the hands follow the actual muzzle direction.
-    g.lineStyle(6, 0xb97e55, 1);
-    g.lineBetween(-4, 5, 11, 2);
-    g.lineStyle(4, 0x222925, 1);
-    g.lineBetween(2, 5, 12, 2);
+    // Hopper, marker body, air line/tank, grip, stock, barrel and sight.
+    g.lineStyle(3, 0x6c806f, 1).lineBetween(10, 5, 2, 12);
+    g.fillStyle(0x151b18, 1).fillEllipse(13, -8, 9, 7);
+    g.fillStyle(0x33423b, 1).fillRoundedRect(7, -4, 18, 9, 3);
+    g.fillStyle(0x111715, 1).fillRect(22, -2, 15, 5);
+    g.fillStyle(0x53635c, 1).fillRect(12, -9, 8, 4);
+    g.fillStyle(0x171d1b, 1).fillRoundedRect(11, 4, 5, 10, 2);
+    g.fillStyle(0x493b31, 1).fillRoundedRect(-5, 4, 10, 5, 2);
+    g.lineStyle(3, 0x2a332f, 1).lineBetween(-2, 6, 8, 5);
 
-    g.fillStyle(0x26302c, 1).fillRoundedRect(7, -4, 18, 9, 3);
-    g.fillStyle(0x111715, 1).fillRect(22, -2, 13, 5);
-    g.fillStyle(0x53635c, 1).fillRect(13, -9, 7, 5);
-    g.fillStyle(0x171d1b, 1).fillRect(12, 4, 5, 9);
+    // Short sight line is deliberately subtle; the muzzle and projectile are
+    // the authoritative direction cues.
+    g.lineStyle(1, 0xe8c95c, 0.45).lineBetween(35, 0, 45, 0);
 
-    // Front hand / rear hand.
-    g.fillStyle(0xd4a45d, 1).fillCircle(7, 1, 3).fillCircle(12, 4, 3);
-
-    // Small sight line makes the muzzle direction legible without a permanent
-    // giant aiming dot on the playfield.
-    g.lineStyle(1, 0xe8c95c, 0.35);
-    g.lineBetween(35, 0, 43, 0);
+    this.muzzleFlash.clear();
+    this.muzzleFlash.setRotation(angle);
+    this.muzzleFlash.setPosition(
+      this.player.x + this.aim.x * (42 - recoilOffset),
+      this.player.y + this.aim.y * (42 - recoilOffset),
+    );
+    if (this.muzzleFlashTimer > 0) {
+      const pulse = this.muzzleFlashTimer / 72;
+      this.muzzleFlash.fillStyle(0xffe7a3, 0.92 * pulse);
+      this.muzzleFlash.fillTriangle(0, 0, 16 + 5 * pulse, -5, 16 + 5 * pulse, 5);
+      this.muzzleFlash.fillStyle(0xf3a94f, 0.8 * pulse);
+      this.muzzleFlash.fillCircle(5, 0, 4 + 2 * pulse);
+      this.muzzleFlash.setVisible(true);
+    } else {
+      this.muzzleFlash.setVisible(false);
+    }
   }
 
   private drawField() {
