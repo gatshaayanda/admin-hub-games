@@ -2222,72 +2222,61 @@ Do not overwrite these contracts with a linear mission/checklist flow. Future im
 
 ## Shooters Trigger — Current Product Contract (September 21, 2026)
 
-Shooters Trigger is a **mobile-first, top-down paintball game inside a simple western-style field town**. The "Westworld" reference means the **clarity and ease of moving between places**: the player should immediately understand where the next useful location is. It does NOT mean adding a collection of western attractions, named landmarks, or a literal Westworld recreation. Keep the town focused on the actual game activities.
+Shooters Trigger is a **mobile-first, top-down paintball game built around a physical field hub**. The player arrives as a guest, can walk anywhere, trains to build an evidence-based performance profile, prepares, competes in the Arena, earns budget and returns to improve.
 
-### Step 3 — Setup / Readiness is now the town progression
+### Step 3 — Home Field is open-order preparation
 
-The authoritative player route after name entry is:
+The authoritative route is:
 
 ```
 Shooters Trigger Setup
       ↓
-Field Town / Home Field
+Home Field / Field HQ
       ↓
-01 Shooting Range
+Shooting Range · Evasion Yard · Armory & Outfitter · Arena
       ↓
-02 Evasion Yard
-      ↓
-03 Armory & Outfitter
-      ↓
-04 Media Bureau
-      ↓
-05 ARENA
-      ↓
-1v1 First to 3
+training / preparation / competition in the order the player chooses
 ```
 
-The town must **teach the order spatially**. The player spawns in the central square and can read the main street at a glance: Shooting → Evasion → Armory → Media → Arena. Numbered buildings/signs make the sequence obvious. Locations are not scattered around the map as arbitrary destinations.
+The phone provides a recommended next step, but it never becomes a mission checklist or access gate.
 
 ### Location ownership
 
-- **Shooting Range** — first real activity. Teaches aim and fire and records shooting performance.
-- **Evasion Yard** — unlocked after a shooting record exists. Teaches movement, bots, projectiles and cover.
-- **Armory & Outfitter** — unlocked after evasion. Checks budget/loadout and allows the player to buy a field upgrade.
-- **Media Bureau** — unlocked after training plus a loadout upgrade. It is the review/input station: it reads shooting, evasion, budget and equipment state and records that the player has reviewed the briefing.
-- **ARENA** — open physical arena field. Preparation affects the match, not access.
-- **Arena** — currently 1v1, first to 3. There must not be an Arena entry button on unrelated locations.
+- **Shooting Range** — build shooting evidence: scrapes, marker-hand hits, center-mass hits, exceptional/head hits, misses and accuracy.
+- **Evasion Yard** — build movement, cover, survival, escapes and damage-avoidance evidence.
+- **Armory & Outfitter** — inspect/spend earned in-game budget on preparation.
+- **Arena** — open physical match field. Preparation affects the match, not access.
+- **Phone** — personal guidance, training reminders, performance interpretation and narrative/coverage messages. It is UI, not a fifth physical location.
+
+There is no physical Media Bureau in the Home Field. Media/coverage should remember and interpret actual gameplay through the phone and dedicated result/coverage scenes.
 
 ### Flow rules
 
-1. Training sessions return the player to the **Field Town** after saving their result. They do not teleport the player into Media.
-2. Equipment upgrades stay in the **Armory**. Buying an upgrade does not teleport the player elsewhere.
-3. Media review is a separate location. It returns to town and records `shooters-trigger:media-reviewed`.
-4. The Arena is a physical open field and is never exposed as a Media shortcut or gated entrance.
-5. There must be no persistent floating "ENTER ARENA" banner in the town. When the player is actually beside a location, use one **normal rectangular contextual button**, matching the Hall's simple button treatment. It must sit above the mobile control dock and never overlap the MOVE/AIM/FIRE controls.
-6. The mobile movement joystick belongs bottom-left. Combat aim/fire controls belong to gameplay scenes only. Town interaction UI must not occupy those control zones.
-7. The town's directional signs are part of the world, not HUD overlays.
+1. The player may visit any physical destination in any order.
+2. Training saves durable evidence and returns the player to Home Field.
+3. The Armory never silently spends budget or teleports the player.
+4. The Arena is never gated by Media review or a loadout requirement.
+5. The contextual action appears only near the corresponding physical destination and uses one normal rectangular button above the mobile controls.
+6. The phone is available as a small fixed UI affordance and gives the most useful next recommendation from actual saved state.
+7. There is no persistent floating Arena shortcut and no menu replacement for the physical world.
 
-### Design reference
+### Recommended learning route
 
-Hall is the direct reference for **phone-first movement, physical location discovery and simple contextual buttons**. Copy the useful interaction pattern, not Hall's visual identity. Shooter Trigger should stay a focused western field town: central square, main street, five purposeful locations, readable signs and minimal decoration.
+The phone should naturally recommend:
 
-Online references are used only for **hub clarity and service-location conventions**. The implementation should be adapted to this project's paintball training loop rather than copied from another game's map, landmarks or UI.
+**WELCOME → SHOOTING → EVASION → OPTIONAL ARMORY → ARENA → RETRAIN / PREPARE → ARENA AGAIN**
+
+This is guidance, not a lock. A player who walks directly to Arena is allowed to try it.
+
+### Starting economy
+
+A new player begins with **0 earned budget**. Arena outcomes create the first meaningful opportunity to earn. Existing saved budget is preserved; do not silently reset returning players.
 
 ### Current checkpoint
 
-**September 21, 2026 — Step 3 town/readiness checkpoint.**
+The Home Field must feel like a small physical paintball facility: central Field HQ, clear sightlines, four real destinations, grounded objects and a readable walking route. The phone supplies context without turning the lobby into a list of buttons.
 
-This checkpoint specifically fixes the previously arbitrary Shooter Trigger home-field layout. The player now drops into a central western-style town and physically follows:
-
-**TRAIN → EVADE → EQUIP → REVIEW → ARENA**
-
-The previous "ENTER ARENA" shortcut from Media is intentionally removed. The Arena is a physical destination at the end of the visible street route. Future work must preserve this clear spatial progression unless the product owner explicitly changes the workflow.
-
-### Next work
-
-Do not jump to Step 4 until the product owner confirms the Step 3 town/readiness experience. The next step should be defined conversationally first, then implemented as one controlled checkpoint.
-
-Unexpected result = STOP → inspect reality → then act.
+Unexpected result = STOP → inspect the actual phone playtest and changed source → then act.
 
 
 ## Shooters Trigger — Home Field Wayfinding Correction — September 21, 2026
@@ -2375,35 +2364,33 @@ Playtesting is the acceptance authority. Do not add decoration or systems just b
 
 ## Shooters Trigger — Home Field visual contract (September 21, 2026)
 
-The previous house-style Field Town is retired. The authoritative lobby direction is now a **single shared paintball field**: use the same world footprint, terrain language, bunkers, trees, tires and player proportions already proven in the shooting-range scene, then dress that field as the safe lobby.
+The previous house-style Field Town and five-location Media layout are retired. The authoritative lobby is a **single shared paintball field headquarters** with four physical destinations plus a phone UI.
 
 ### Non-negotiables
-- Lobby and Shooting Training share the same physical field footprint: 2400 × 1400, same grass treatment, lanes, perimeter, trees, bunkers and tire stacks.
-- Do not build separate houses, western-town buildings, floating entrances or decorative landmarks for the lobby.
-- Locations are physical field stations/areas, marked by ground rings, numbered signs, flags and nearby field equipment.
-- The player arrives at the same field start/staging position used by Shooting Training: approximately (1180,1080).
-- The lobby player uses the same human proportions/readability as the shooting-range character, but is out of armor and carries no gun. The lobby character must have a visible walking step rather than appearing to float.
-- The contextual ENTER button remains a normal rectangular button above the mobile controls. It appears only when the player is actually at the corresponding station.
-- Interaction is based on proximity to the visible station marker; there is no hidden building doorway or second center-of-house interaction point.
-- The player remains free to visit Shooting, Evasion, Armory, Media and Arena in any order. Training/readiness/budget/history affect what happens inside those activities, not physical access to the field.
+- Lobby and Shooting Training share the same grounded field vocabulary and world scale.
+- Do not build western-town houses, decorative landmarks, floating entrances or a physical Media Bureau.
+- Do not use generic circles, squares or dots as the default representation of destinations.
+- The player arrives at the Field HQ staging area around the established start position.
+- The lobby player remains a grounded human with a visible walking step and no weapon.
+- Physical destinations must be recognizable through shelters, equipment, lanes, cover, signs and actual field geometry.
+- The contextual ENTER button remains a normal rectangular UI element above the mobile controls and appears only near the corresponding destination.
+- The player remains free to visit Shooting, Evasion, Armory and Arena in any order.
 
-### Station intent
+### Destination intent
 
-01 SHOOTING RANGE = the same target/shooting side of the field.
+01 SHOOTING RANGE = target stands and a distinct firing lane.
 
-02 EVASION YARD = a cover/movement area using the same bunker vocabulary.
+02 EVASION YARD = irregular cover, tires and a movement-course layout.
 
-03 ARMORY & OUTFITTER = a selective gear/upgrade station integrated into the field, not a building.
+03 ARMORY & OUTFITTER = equipment shelter, rack and crates; no house facade.
 
-04 MEDIA BUREAU = a selective review/report station integrated into the field, not a building.
+04 ARENA = open physical arena field; no gate, doorway or artificial threshold.
 
-05 ARENA = a clearly marked physical gate/start area; no persistent arena shortcut from Media.
+### Phone instead of Media
 
-### Field-design reference
+Media/coverage is delivered through the phone and result/coverage scenes. The phone should feel like the player's private field device: short messages, current status and a clear recommended next step based on saved training records. It should never require the player to visit a physical Media location.
 
-The implementation should favor clear staging, readable lanes, distinct cover/landmarks and safe transitions rather than decorative complexity. Paintball field references emphasize deliberate player flow, clear staging/check-in separation, visible field boundaries and recognizable bunker/field callouts.
-
-The product principle is simple: **one believable field, five obvious places, one consistent character, and no invisible doorway logic.**
+The world answers **where?**; the phone answers **what next?**; actual gameplay evidence answers **how good am I?**
 
 
 ## Shooters Trigger — Home Field Physicality & Lobby Layout Lock — September 21, 2026
