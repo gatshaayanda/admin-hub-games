@@ -42,6 +42,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   private aim = new Phaser.Math.Vector2(1, 0);
   private aimPoint?: Phaser.Math.Vector2;
   private fireHeld = false;
+  private fireCooldown = 0;
 
   private statusText!: Phaser.GameObjects.Text;
   private hintText!: Phaser.GameObjects.Text;
@@ -171,7 +172,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     }
   }
 
-  private updateAimAndFire(_delta: number) {
+  private updateAimAndFire(delta: number) {
+    this.fireCooldown = Math.max(0, this.fireCooldown - delta);
     if (this.keys.SPACE.isDown && !this.isPhoneSession()) {
       this.fire();
     }
@@ -206,6 +208,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   }
 
   private fire() {
+    if (this.fireCooldown > 0) return;
+    this.fireCooldown = 240;
     const speed = 520;
     const ball = this.add.circle(
       this.player.x + this.aim.x * 25,
