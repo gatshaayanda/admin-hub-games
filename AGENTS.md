@@ -2262,7 +2262,7 @@ After Shooter Setup, the player arrives at a neutral **Field Town arrival square
 The first useful destination, Shooting Range, should be visible from the arrival area. The main street should make the rest of the town legible without requiring a tutorial checklist:
 
 ```text
-                 ARENA GATE
+                 ARENA
                      ↑
               MEDIA    ARMORY
                 →        ←
@@ -2358,7 +2358,7 @@ The previous house-style Field Town is retired. The authoritative lobby directio
 
 04 MEDIA BUREAU = a selective review/report station integrated into the field, not a building.
 
-05 ARENA GATE = a clearly marked physical gate/start area; no persistent arena shortcut from Media.
+05 ARENA = a clearly marked physical gate/start area; no persistent arena shortcut from Media.
 
 ### Field-design reference
 
@@ -2419,7 +2419,7 @@ Permanent rules:
 - The Arena itself is the destination: a recognizable open field with real playing-space objects.
 - The contextual action appears only when the player is physically near the Arena field.
 - The Arena may be visited in any order permitted by the open Home Field contract; preparation affects the match, not access.
-- Do not call the location **ARENA GATE** anywhere in the lobby. Use **ARENA**.
+- Do not call the location **ARENA** anywhere in the lobby. Use **ARENA**.
 - Do not create world objects solely to support a UI button. The physical place must exist first; UI only describes what can be done there.
 
 ### Corrected Home Field composition
@@ -2431,6 +2431,44 @@ The player's first view should read as a central field headquarters with:
 - clear walking space connecting all five areas.
 
 The layout must be judged from the **phone camera's initial viewport**, not from the full-map diagram alone. The first screen should establish the hub and its major directions without presenting an accidental cluster of destinations.
+
+The permanent visual rule remains:
+
+**physical place first → contextual action second.**
+
+
+## Shooters Trigger — Phone-First Home Field Composition Lock — September 21, 2026
+
+The previous coordinate patch was insufficient because a 2400×1400 world map is not the same thing as a good first phone viewport. This is now the authoritative composition rule.
+
+### Initial phone view
+- Player starts at approximately **(1180,1040)** inside the central **FIELD HQ** staging area.
+- The initial camera should primarily show **Field HQ + open space immediately around it**.
+- Do not place a destination directly on top of the player's first camera view merely to make it visible.
+- **ARENA is ahead/upfield**, reached by walking north from HQ; it becomes legible as the player moves toward it.
+- **SHOOTING RANGE** and **EVASION YARD** are distinct left/right training wings around the upper half of the field.
+- **ARMORY** and **MEDIA** are rear-side support stations around HQ.
+- The first screen should read as a headquarters/staging area first, not five destinations at once.
+
+### Authoritative spatial layout
+```
+                         OPEN ARENA
+                            ↑
+                  SHOOTING       EVASION
+                     ↗             ↖
+                         FIELD HQ
+                       PLAYER START
+                    ↙               ↘
+                ARMORY             MEDIA
+```
+
+This is a spatial relationship, not a locked sequence. Every location remains freely visitable.
+
+### Arena rule
+**ARENA is an open field.** There is no gate, doorway, locked threshold, or artificial entrance object. Never add one just to justify an interaction button.
+
+### Camera acceptance rule
+For every lobby layout change, inspect the actual camera follow/deadzone and judge the composition from a representative phone viewport. Do not validate the layout only from world coordinates or a full-map diagram.
 
 The permanent visual rule remains:
 
