@@ -18,22 +18,27 @@ const TOUCH_DEVICE =
 
 const ROOT_ID = 'shooters-trigger-mobile-controls';
 const STYLE_ID = 'shooters-trigger-mobile-styles';
+const SCENES = [
+  'ShootersTriggerTrainingScene',
+  'ShootersTriggerEvasionScene',
+  'ShootersTriggerArenaScene',
+];
 
 function getManager(): ShooterManager | undefined {
   return (window.__AHG_GAME__ as unknown as { scene?: ShooterManager } | undefined)?.scene;
 }
 
-function getScene() {
-  return getManager()?.getScene?.('ShootersTriggerTrainingScene');
-}
-
-function isActive() {
+function getActiveScene(): { key: string; scene: ShooterScene } | undefined {
   const manager = getManager();
-  const scene = getScene();
-  if (!scene) return false;
-  return manager?.isActive
-    ? manager.isActive('ShootersTriggerTrainingScene') === true
-    : true;
+  if (!manager) return undefined;
+
+  for (const key of SCENES) {
+    const scene = manager.getScene?.(key);
+    if (!scene) continue;
+    const active = manager.isActive ? manager.isActive(key) === true : true;
+    if (active) return { key, scene };
+  }
+  return undefined;
 }
 
 function installStyles() {
@@ -68,9 +73,7 @@ function installStyles() {
       border: 2px solid rgba(244, 241, 223, .76);
       border-radius: 50%;
       background: rgba(16, 32, 24, .56);
-      box-shadow:
-        inset 0 0 0 10px rgba(244, 241, 223, .06),
-        0 6px 18px rgba(0, 0, 0, .22);
+      box-shadow: inset 0 0 0 10px rgba(244, 241, 223, .06), 0 6px 18px rgba(0, 0, 0, .22);
       pointer-events: auto;
       touch-action: none;
       -webkit-tap-highlight-color: transparent;
@@ -120,8 +123,7 @@ function installStyles() {
       padding: 0;
       border: 3px solid rgba(255, 255, 255, .82);
       border-radius: 50%;
-      background:
-        radial-gradient(circle, rgba(232, 201, 92, .95) 0 7%, rgba(16, 32, 24, .96) 8% 48%, rgba(232, 201, 92, .95) 49% 57%, rgba(16, 32, 24, .72) 58% 100%);
+      background: radial-gradient(circle, rgba(232, 201, 92, .95) 0 7%, rgba(16, 32, 24, .96) 8% 48%, rgba(232, 201, 92, .95) 49% 57%, rgba(16, 32, 24, .72) 58% 100%);
       box-shadow: 0 6px 0 rgba(0, 0, 0, .34);
       color: #f4f1df;
       font: 800 clamp(9px, 2.5vw, 12px)/1 monospace;
@@ -166,14 +168,8 @@ function installStyles() {
     }
 
     @media (max-height: 520px) {
-      #${ROOT_ID} .st-joystick {
-        width: 84px;
-        height: 84px;
-      }
-      #${ROOT_ID} .st-fire {
-        width: 62px;
-        height: 62px;
-      }
+      #${ROOT_ID} .st-joystick { width: 84px; height: 84px; }
+      #${ROOT_ID} .st-fire { width: 62px; height: 62px; }
     }
   `;
   document.head.appendChild(style);
@@ -186,26 +182,21 @@ function buildJoystick() {
 
   const knob = document.createElement('div');
   knob.className = 'st-joystick-knob';
-
   const label = document.createElement('div');
   label.className = 'st-joystick-label';
   label.textContent = 'MOVE';
-
   base.append(knob, label);
 
   let pointerId: number | null = null;
-  let originX = 0;
-  let originY = 0;
 
   const reset = () => {
     pointerId = null;
     knob.style.transform = 'translate3d(0,0,0)';
-    getScene()?.setMoveVector?.(0, 0);
+    getActiveScene()?.scene.setMoveVector?.(0, 0);
   };
 
   const update = (event: PointerEvent) => {
     if (pointerId !== event.pointerId) return;
-
     const rect = base.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
@@ -214,28 +205,24 @@ function buildJoystick() {
     const rawY = event.clientY - cy;
     const distance = Math.hypot(rawX, rawY) || 1;
     const scale = Math.min(1, maxRadius / distance);
-    const knobX = rawX * scale;
-    const knobY = rawY * scale;
     const deadZone = Math.min(10, maxRadius * 0.2);
     const active = Math.max(0, distance - deadZone);
     const normalized = Math.min(1, active / Math.max(1, maxRadius - deadZone));
     const x = distance <= deadZone ? 0 : (rawX / distance) * normalized;
     const y = distance <= deadZone ? 0 : (rawY / distance) * normalized;
-
-    knob.style.transform = `translate3d(${knobX}px,${knobY}px,0)`;
-    getScene()?.setMoveVector?.(x, y);
+    knob.style.transform = `translate3d(${rawX * scale}px,${rawY * scale}px,0)`;
+    getActiveScene()?.scene.setMoveVector?.(x, y);
   };
 
   base.addEventListener('pointerdown', (event) => {
     event.preventDefault();
     event.stopPropagation();
-    if (!isActive()) return;
+    if (!getActiveScene()) return;
     adminHubAudio.start();
     pointerId = event.pointerId;
     base.setPointerCapture?.(event.pointerId);
     update(event);
   });
-
   base.addEventListener('pointermove', update);
   base.addEventListener('pointerup', (event) => {
     event.preventDefault();
@@ -245,7 +232,6 @@ function buildJoystick() {
     if (pointerId === event.pointerId) reset();
   });
   base.addEventListener('lostpointercapture', reset);
-
   return base;
 }
 
@@ -265,9 +251,9 @@ function buildFireButton() {
     const y = event.clientY - originY;
     const length = Math.hypot(x, y);
     if (length >= 8) {
-      getScene()?.setAimVector?.(x / length, y / length);
+      getActiveScene()?.scene.setAimVector?.(x / length, y / length);
     }
-    getScene()?.setFireHeld?.(true);
+    getActiveScene()?.scene.setFireHeld?.(true);
   };
 
   const release = (event?: Event) => {
@@ -276,13 +262,14 @@ function buildFireButton() {
     originX = 0;
     originY = 0;
     button.classList.remove('is-held');
-    getScene()?.setFireHeld?.(false);
+    getActiveScene()?.scene.setFireHeld?.(false);
   };
 
   button.addEventListener('pointerdown', (event) => {
     event.preventDefault();
     event.stopPropagation();
-    if (!isActive()) return;
+    const active = getActiveScene();
+    if (!active || !active.scene.setFireHeld) return;
     adminHubAudio.start();
     pointerId = event.pointerId;
     originX = event.clientX;
@@ -291,12 +278,10 @@ function buildFireButton() {
     button.classList.add('is-held');
     update(event);
   });
-
   button.addEventListener('pointermove', update);
   button.addEventListener('pointerup', release);
   button.addEventListener('pointercancel', release);
   button.addEventListener('lostpointercapture', () => release());
-
   return button;
 }
 
@@ -310,39 +295,40 @@ export function installShootersTriggerMobileControls() {
 
   const root = document.createElement('div');
   root.id = ROOT_ID;
-
   const joystick = buildJoystick();
   const fire = buildFireButton();
-
   const hint = document.createElement('div');
   hint.className = 'st-hint';
   hint.textContent = 'MOVE · AIM · SHOOT';
-
   root.append(joystick, fire, hint);
   document.body.appendChild(root);
 
   const sync = () => {
-    const scene = getScene();
-    const active = isActive() && Boolean(scene?.isPhoneSession?.());
+    const active = getActiveScene();
+    const isPhone = Boolean(active?.scene.isPhoneSession?.()) || TOUCH_DEVICE;
+    const hasFire = Boolean(active?.scene.setFireHeld);
+    root.classList.toggle('is-active', Boolean(active) && isPhone);
+    fire.style.display = hasFire ? 'block' : 'none';
 
-    root.classList.toggle('is-active', active);
+    if (active?.key === 'ShootersTriggerEvasionScene') hint.textContent = 'MOVE · COVER · SURVIVE';
+    else if (active?.key === 'ShootersTriggerArenaScene') hint.textContent = 'MOVE · AIM · FIRE';
+    else hint.textContent = 'MOVE · AIM · SHOOT';
 
     if (!active) {
-      scene?.setMoveVector?.(0, 0);
-      scene?.setFireHeld?.(false);
+      getActiveScene()?.scene.setMoveVector?.(0, 0);
     }
   };
 
   sync();
-
   const timer = window.setInterval(sync, 120);
   window.addEventListener('resize', sync, { passive: true });
 
   return () => {
     window.clearInterval(timer);
     window.removeEventListener('resize', sync);
-    getScene()?.setMoveVector?.(0, 0);
-    getScene()?.setFireHeld?.(false);
+    const active = getActiveScene();
+    active?.scene.setMoveVector?.(0, 0);
+    active?.scene.setFireHeld?.(false);
     root.remove();
   };
 }
