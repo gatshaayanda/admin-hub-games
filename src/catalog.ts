@@ -17,8 +17,8 @@ const games: GameMenuItem[] = [
   {
     id: 'shooters-trigger',
     title: 'SHOOTERS TRIGGER',
-    description: 'Paintball team training in development. Enter the field, play with your team and learn the arena.',
-    status: 'IN DEVELOPMENT',
+    description: 'Phone-first paintball field story. Train shooting and evasion, prepare through media coverage, then play the 3v3 arena.',
+    status: 'PLAY NOW',
     playable: true,
   },
   {
@@ -74,7 +74,7 @@ export function renderCatalog(onPlay: (gameId: GameMenuItem['id']) => void) {
 
       <footer class="game-menu-footer">
         <span>ADMIN HUB × PHASER</span>
-        <span>2 RELEASED · 1 IN DEVELOPMENT</span>
+        <span>3 PLAYABLE WORLDS</span>
       </footer>
     </main>
   `);

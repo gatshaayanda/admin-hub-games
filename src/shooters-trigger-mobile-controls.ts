@@ -23,16 +23,16 @@ function getManager(): ShooterManager | undefined {
   return (window.__AHG_GAME__ as unknown as { scene?: ShooterManager } | undefined)?.scene;
 }
 
-function getScene() {
-  return getManager()?.getScene?.('ShootersTriggerTrainingScene');
+function getScene(sceneKey = 'ShootersTriggerTrainingScene') {
+  return getManager()?.getScene?.(sceneKey);
 }
 
-function isActive() {
+function isActive(sceneKey = 'ShootersTriggerTrainingScene') {
   const manager = getManager();
-  const scene = getScene();
+  const scene = getScene(sceneKey);
   if (!scene) return false;
   return manager?.isActive
-    ? manager.isActive('ShootersTriggerTrainingScene') === true
+    ? manager.isActive(sceneKey) === true
     : true;
 }
 
@@ -179,7 +179,7 @@ function installStyles() {
   document.head.appendChild(style);
 }
 
-function buildJoystick() {
+function buildJoystick(sceneKey: string) {
   const base = document.createElement('div');
   base.className = 'st-joystick';
   base.setAttribute('aria-label', 'Analog movement stick');
@@ -200,7 +200,7 @@ function buildJoystick() {
   const reset = () => {
     pointerId = null;
     knob.style.transform = 'translate3d(0,0,0)';
-    getScene()?.setMoveVector?.(0, 0);
+    getScene(sceneKey)?.setMoveVector?.(0, 0);
   };
 
   const update = (event: PointerEvent) => {
@@ -223,13 +223,13 @@ function buildJoystick() {
     const y = distance <= deadZone ? 0 : (rawY / distance) * normalized;
 
     knob.style.transform = `translate3d(${knobX}px,${knobY}px,0)`;
-    getScene()?.setMoveVector?.(x, y);
+    getScene(sceneKey)?.setMoveVector?.(x, y);
   };
 
   base.addEventListener('pointerdown', (event) => {
     event.preventDefault();
     event.stopPropagation();
-    if (!isActive()) return;
+    if (!isActive(sceneKey)) return;
     adminHubAudio.start();
     pointerId = event.pointerId;
     base.setPointerCapture?.(event.pointerId);
@@ -249,7 +249,7 @@ function buildJoystick() {
   return base;
 }
 
-function buildFireButton() {
+function buildFireButton(sceneKey: string) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'st-fire';
@@ -265,9 +265,9 @@ function buildFireButton() {
     const y = event.clientY - originY;
     const length = Math.hypot(x, y);
     if (length >= 8) {
-      getScene()?.setAimVector?.(x / length, y / length);
+      getScene(sceneKey)?.setAimVector?.(x / length, y / length);
     }
-    getScene()?.setFireHeld?.(true);
+    getScene(sceneKey)?.setFireHeld?.(true);
   };
 
   const release = (event?: Event) => {
@@ -276,13 +276,13 @@ function buildFireButton() {
     originX = 0;
     originY = 0;
     button.classList.remove('is-held');
-    getScene()?.setFireHeld?.(false);
+    getScene(sceneKey)?.setFireHeld?.(false);
   };
 
   button.addEventListener('pointerdown', (event) => {
     event.preventDefault();
     event.stopPropagation();
-    if (!isActive()) return;
+    if (!isActive(sceneKey)) return;
     adminHubAudio.start();
     pointerId = event.pointerId;
     originX = event.clientX;
@@ -300,7 +300,7 @@ function buildFireButton() {
   return button;
 }
 
-export function installShootersTriggerMobileControls() {
+export function installShootersTriggerMobileControls(sceneKey = 'ShootersTriggerTrainingScene', combat = true) {
   if (!TOUCH_DEVICE) return () => {};
 
   const existing = document.getElementById(ROOT_ID);
@@ -311,19 +311,19 @@ export function installShootersTriggerMobileControls() {
   const root = document.createElement('div');
   root.id = ROOT_ID;
 
-  const joystick = buildJoystick();
-  const fire = buildFireButton();
+  const joystick = buildJoystick(sceneKey);
+  const fire = combat ? buildFireButton(sceneKey) : undefined;
 
   const hint = document.createElement('div');
   hint.className = 'st-hint';
   hint.textContent = 'MOVE · AIM · SHOOT';
 
-  root.append(joystick, fire, hint);
+  root.append(joystick);\n  if (fire) root.append(fire);\n  if (combat) root.append(hint);
   document.body.appendChild(root);
 
   const sync = () => {
-    const scene = getScene();
-    const active = isActive() && Boolean(scene?.isPhoneSession?.());
+    const scene = getScene(sceneKey);
+    const active = isActive(sceneKey) && Boolean(scene?.isPhoneSession?.());
 
     root.classList.toggle('is-active', active);
 
@@ -341,8 +341,8 @@ export function installShootersTriggerMobileControls() {
   return () => {
     window.clearInterval(timer);
     window.removeEventListener('resize', sync);
-    getScene()?.setMoveVector?.(0, 0);
-    getScene()?.setFireHeld?.(false);
+    getScene(sceneKey)?.setMoveVector?.(0, 0);
+    getScene(sceneKey)?.setFireHeld?.(false);
     root.remove();
   };
 }

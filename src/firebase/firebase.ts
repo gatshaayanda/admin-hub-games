@@ -298,3 +298,13 @@ window.addEventListener('focus', () => { void syncPending(); });
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') void syncPending();
 });
+
+
+export async function saveShootersProgress(progress: unknown): Promise<void> {
+  try {
+    const user = await ensureAnonymousPlayer();
+    await setDoc(doc(firestore, 'shootersTriggerProgress', user.uid), { progress, updatedAt: serverTimestamp() }, { merge: true });
+  } catch {
+    // Shooter gameplay remains local-first; the next online state can retry through local persistence.
+  }
+}

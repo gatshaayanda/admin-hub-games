@@ -43,7 +43,7 @@ export class ShootersTriggerIntroScene extends Phaser.Scene {
         wordWrap: { width: panel.width * 0.82 },
       }).setOrigin(0.5);
 
-    const hint = this.add.text(width / 2, height * 0.88, 'TAP TO ENTER TRAINING', {
+    const hint = this.add.text(width / 2, height * 0.88, 'TAP TO ENTER THE FIELD', {
       fontFamily: 'monospace', fontSize: '12px', fontStyle: 'bold',
       color: '#e8c95c', letterSpacing: 1.4,
     }).setOrigin(0.5);

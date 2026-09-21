@@ -16,6 +16,10 @@ function startHall() {
       { ShootersTriggerIntroScene },
       { ShootersTriggerSetupScene },
       { ShootersTriggerTrainingScene },
+      { ShootersTriggerLobbyScene },
+      { ShootersTriggerEvasionScene },
+      { ShootersTriggerMediaScene },
+      { ShootersTriggerArenaScene },
     ] = await Promise.all([
       import('phaser'),
       import('./pwa'),
@@ -30,6 +34,10 @@ function startHall() {
       import('./scenes/ShootersTriggerIntroScene'),
       import('./scenes/ShootersTriggerSetupScene'),
       import('./scenes/ShootersTriggerTrainingScene'),
+      import('./scenes/ShootersTriggerLobbyScene'),
+      import('./scenes/ShootersTriggerEvasionScene'),
+      import('./scenes/ShootersTriggerMediaScene'),
+      import('./scenes/ShootersTriggerArenaScene'),
     ]);
 
     registerPwa();
@@ -51,7 +59,7 @@ function startHall() {
         min: { width: 320, height: 180 },
         max: { width: 0, height: 0 },
       },
-      scene: [BootScene, PublisherIntroScene, NameEntryScene, HallIntroScene, GameShellScene, PresidentsShoesIntroScene, PresidentsShoesSetupScene, PresidentsShoesGameScene, ShootersTriggerIntroScene, ShootersTriggerSetupScene, ShootersTriggerTrainingScene],
+      scene: [BootScene, PublisherIntroScene, NameEntryScene, HallIntroScene, GameShellScene, PresidentsShoesIntroScene, PresidentsShoesSetupScene, PresidentsShoesGameScene, ShootersTriggerIntroScene, ShootersTriggerSetupScene, ShootersTriggerTrainingScene, ShootersTriggerLobbyScene, ShootersTriggerEvasionScene, ShootersTriggerMediaScene, ShootersTriggerArenaScene],
     };
 
     const game = new Phaser.Game(config);
