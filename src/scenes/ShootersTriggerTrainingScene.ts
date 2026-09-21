@@ -48,7 +48,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   private aimPoint?: Phaser.Math.Vector2;
   private hasAimInput = false;
   private fireHeld = false;
-  private fireCooldown = 0;\n  private shotsFired = 0;
+  private fireCooldown = 0;
+  private shotsFired = 0;
   private recoilKick = 0;
   private muzzleFlashTimer = 0;
   private aimWasExplicitlySet = false;
