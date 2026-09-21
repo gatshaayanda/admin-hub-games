@@ -1821,11 +1821,12 @@ After Shooters Trigger Setup, the player enters **SHOOTERS TRIGGER · HOME FIELD
 
 **Critical presentation rule:** the player is **unarmed in the lobby**. The paintball marker/weapon exists only inside action gameplay scenes. Do not put a weapon in the lobby player sprite merely because the action player has one.
 
-The lobby contains the four real locations:
+The lobby contains the five real locations:
 1. **Shooting Location** — AIM · HIT QUALITY · REWARD
 2. **Evasion Camp** — MOVE · COVER · SURVIVE
 3. **Media Coverage Center** — STATS · THOUGHTS · EQUIPMENT
 4. **Arena Location** — 3v3 · FIRST TO 3 KILLS
+5. **Equipment Store** — BUY UPGRADES · SPEND BUDGET
 
 The four locations are part of the actual game world, not four buttons on a static home menu.
 
@@ -1859,11 +1860,12 @@ The four locations are part of the actual game world, not four buttons on a stat
 - Shooting Location;
 - Evasion Camp;
 - Arena.
+- Equipment Store: a non-action purchasing scene/interaction.
 
-**Information / preparation scene:**
+**Information / preparation scenes:**
 - Media Coverage Center.
 
-Buying equipment, choosing preparation, reading stats, entering a thought/feeling, and reviewing coverage are **not action gameplay**. They should use the President's Shoes-style scene/panel structure: clear information, input where needed, explicit confirmation, then return to the field.
+Buying equipment, choosing preparation, reading stats, entering a thought/feeling, and reviewing coverage are **not action gameplay**. Equipment purchases happen in the physical Equipment Store and spend the player's persistent budget. They should use the President's Shoes-style scene/panel structure: clear information, input where needed, explicit confirmation, then return to the field.
 
 ### Training result contract
 
@@ -1893,7 +1895,7 @@ The current main branch now contains the structural Shooter flow:
                          ↓
                        Arena
 
-The current action scenes are still an evolving V1 slice. Do not treat placeholder result math, opponent behaviour or arena logic as final. The next controlled work is to connect the existing accepted shooting mechanics and real session evidence to persistent state/results, then deepen evasion, media preparation and arena combat without destroying the lobby.
+The current action scenes are still an evolving V1 slice. Do not treat placeholder result math, opponent behaviour or arena logic as final. The next controlled work is to connect the existing accepted shooting mechanics and real session evidence to persistent state/results, make Evasion use the same action foundation as Shooting with movement + cover + incoming bots, then deepen the Equipment Store, media preparation and arena combat without destroying the lobby.
 
 ### Improvement-over-destruction rule
 
