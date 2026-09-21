@@ -21,7 +21,7 @@ export class ShootersTriggerEvasionScene extends Phaser.Scene {
     this.time.addEvent({delay:700,loop:true,callback:()=>this.fireIncoming()});
     window.dispatchEvent(new Event('admin-hub-games:game-ready'));
   }
-  update(_t,delta){
+  update(_t: number, delta: number){
     this.elapsed+=delta;
     let dx=this.joystickVector.x,dy=this.joystickVector.y;
     const k=this.input.keyboard; if(!dx&&!dy&&k){const c=k.createCursorKeys();dx=(c.right.isDown?1:0)-(c.left.isDown?1:0);dy=(c.down.isDown?1:0)-(c.up.isDown?1:0);}
