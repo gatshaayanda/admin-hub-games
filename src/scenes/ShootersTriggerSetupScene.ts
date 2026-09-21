@@ -121,7 +121,7 @@ export class ShootersTriggerSetupScene extends Phaser.Scene {
     this.registry.set('shootersTriggerPlayer', value);
     this.nameInput?.blur();
     this.cameras.main.fadeOut(350, 16, 26, 19);
-    this.time.delayedCall(350, () => this.scene.start('ShootersTriggerTrainingScene'));
+    this.time.delayedCall(350, () => this.scene.start('ShootersTriggerLobbyScene'));
   }
 
   private readName() {
