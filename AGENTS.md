@@ -2183,7 +2183,7 @@ Do not overwrite these contracts with a linear mission/checklist flow. Future im
 
 ## Shooters Trigger — Current Product Contract (September 21, 2026)
 
-Shooters Trigger is now being built as a **mobile-first, top-down paintball game inside a connected western field town**. The town is the player's physical progression menu. It should feel like a lived-in western game hub: dirt roads, wooden buildings, signs, side landmarks and a clear route through the activities. It is inspired by the *shape* of a western town, not a copied Westworld asset or map.
+Shooters Trigger is a **mobile-first, top-down paintball game inside a simple western-style field town**. The "Westworld" reference means the **clarity and ease of moving between places**: the player should immediately understand where the next useful location is. It does NOT mean adding a collection of western attractions, named landmarks, or a literal Westworld recreation. Keep the town focused on the actual game activities.
 
 ### Step 3 — Setup / Readiness is now the town progression
 
@@ -2207,7 +2207,7 @@ Field Town / Home Field
 1v1 First to 3
 ```
 
-The town must **teach the order spatially**. The player spawns in the central square and follows the main dirt road. Numbered buildings/signs make the sequence obvious. Locations are not scattered as arbitrary buttons.
+The town must **teach the order spatially**. The player spawns in the central square and can read the main street at a glance: Shooting → Evasion → Armory → Media → Arena. Numbered buildings/signs make the sequence obvious. Locations are not scattered around the map as arbitrary destinations.
 
 ### Location ownership
 
@@ -2224,15 +2224,15 @@ The town must **teach the order spatially**. The player spawns in the central sq
 2. Equipment upgrades stay in the **Armory**. Buying an upgrade does not teleport the player elsewhere.
 3. Media review is a separate location. It returns to town and records `shooters-trigger:media-reviewed`.
 4. The Arena is entered from the Arena Gate in town, not from the Media Bureau.
-5. There must be no persistent floating "ENTER ARENA" banner in the town and no instruction banner may overlap mobile analog controls.
+5. There must be no persistent floating "ENTER ARENA" banner in the town. When the player is actually beside a location, use one **normal rectangular contextual button**, matching the Hall's simple button treatment. It must sit above the mobile control dock and never overlap the MOVE/AIM/FIRE controls.
 6. The mobile movement joystick belongs bottom-left. Combat aim/fire controls belong to gameplay scenes only. Town interaction UI must not occupy those control zones.
 7. The town's directional signs are part of the world, not HUD overlays.
 
 ### Design reference
 
-Hall remains the reference for **phone-first movement feel, analog interaction and connected-world navigation**. Do not copy Hall's visual identity into Shooter Trigger. Shooter Trigger uses a dusty western field-town visual language and paintball-specific buildings/props.
+Hall is the direct reference for **phone-first movement, physical location discovery and simple contextual buttons**. Copy the useful interaction pattern, not Hall's visual identity. Shooter Trigger should stay a focused western field town: central square, main street, five purposeful locations, readable signs and minimal decoration.
 
-Online game research confirms a useful hub pattern: games commonly use a central safe town/hub with distinct service locations, and progression becomes clearer when destinations are tied to activities and unlocked in order. This project uses that pattern without copying another game's assets or map. See the research context used during this checkpoint: Fields of Mistria's town/service hub and route structure, and Mech Arena's Gear Hub/progression approach.
+Online references are used only for **hub clarity and service-location conventions**. The implementation should be adapted to this project's paintball training loop rather than copied from another game's map, landmarks or UI.
 
 ### Current checkpoint
 
@@ -2242,7 +2242,7 @@ This checkpoint specifically fixes the previously arbitrary Shooter Trigger home
 
 **TRAIN → EVADE → EQUIP → REVIEW → ARENA**
 
-The previous "ENTER ARENA" shortcut from Media is intentionally removed. Future work must preserve this progression unless the product owner explicitly changes the workflow.
+The previous "ENTER ARENA" shortcut from Media is intentionally removed. The Arena is a physical destination at the end of the visible street route. Future work must preserve this clear spatial progression unless the product owner explicitly changes the workflow.
 
 ### Next work
 
