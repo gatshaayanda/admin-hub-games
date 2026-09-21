@@ -24,7 +24,7 @@ Every character uses the same readable top-down structure:
 - ground shadow;
 - separate nameplate.
 
-The body remains a Phaser container so the whole character can face the movement/aim direction while the limbs animate independently.
+The body remains a Phaser container with a stable ground anchor. The upper combat layers (arms, marker, recoil and muzzle flash) rotate toward aim independently; the torso/legs do not spin with the weapon. Before explicit aim input, movement supplies the default facing/shot vector, including diagonals.
 
 ## Role templates
 
@@ -98,17 +98,18 @@ Heavy roles use a slower/reduced gait; Runner uses a quicker/lighter gait.
 
 ### Aim / facing
 
-The whole character faces the current movement/aim direction.
-
-The facing vector is stored separately from movement so the gameplay layer can keep the character looking where the player intends to shoot.
+The feet/torso remain grounded while the combat-facing vector controls the marker and braced arms. Before explicit aim, the normalized movement vector is used so diagonal travel naturally produces diagonal firing. After explicit aim, movement and aim are independent.
 
 ### Fire
 
 The marker provides:
 
-- short recoil;
-- muzzle flash;
-- projectile departure.
+- short backward recoil along its own barrel axis;
+- braced two-arm connection;
+- hopper/loader and air/tank detail;
+- muzzle flash at the actual muzzle;
+- projectile departure from the same muzzle/vector;
+- a restrained fire pulse that returns to the ready pose.
 
 Fire feedback must remain visually connected to the character rather than relying on a detached HUD marker.
 
@@ -176,3 +177,24 @@ The first procedural character pass was too mechanical. The accepted direction i
 - Hall's broad, simple ground treatment is the visual reference for the grass; Shooter Trigger uses different field decoration on top of that language.
 
 Phaser's standard path for a later authored version is directional frame animation via sprite sheets/texture atlases. The current procedural actor API should remain the stable gameplay-facing contract while the art implementation can later move to authored directional walk/idle/fire/hit frames.
+
+## Refinement checkpoint — September 21, 2026
+
+The player presentation was deepened from a simple procedural silhouette into a layered paintball participant. The current procedural body communicates a full-face mask/visor, protective jersey, shoulder/chest protection, pod harness, gloves, pants and boots. The marker communicates a hopper/loader, body, barrel, sight, grip, stock and air/tank detail.
+
+The animation model is now explicitly layered:
+
+- feet and legs remain the ground anchor;
+- torso remains stable while aiming;
+- arms rotate with the marker and converge on the weapon;
+- movement provides the default aim vector before explicit aim;
+- explicit mouse/right-drag aim overrides movement while preserving independent strafe/retreat;
+- recoil shifts the marker backward along its local barrel axis;
+- muzzle flash is attached to the weapon's actual muzzle;
+- projectile origin uses the same muzzle location and aim vector.
+
+This is intentionally a procedural animation rig, not a fake promise of a full sprite-sheet system. Phaser supports authored frame/atlas animation later, and the gameplay-facing character contract should remain stable when that visual upgrade arrives.
+
+### Acceptance examples
+
+The player must visibly and mechanically support right, left, up, down and diagonal shots. Test both diagonal movement/default aim and explicit opposite-direction aim. Fire repeatedly and confirm each shot produces marker recoil and a muzzle flash without moving the torso off its feet.
