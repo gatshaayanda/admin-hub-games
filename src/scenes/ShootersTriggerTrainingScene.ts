@@ -538,12 +538,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
       let plate: Phaser.GameObjects.Arc;
       if (target.kind === 'bottle') {
-        const bottleBody = this.add.roundedRectangle?.(0, 5, 18, 34, 0xddd8c2, 1, 4);
-        if (bottleBody) {
-          body.add(bottleBody);
-        } else {
-          body.add(this.add.rectangle(0, 5, 18, 34, 0xddd8c2, 1));
-        }
+        body.add(this.add.rectangle(0, 5, 18, 34, 0xddd8c2, 1));
         body.add(this.add.rectangle(0, -14, 8, 5, 0x5f6e69, 1));
         plate = this.add.circle(0, -1, 9, 0xf4f1df, 1).setStrokeStyle(2, 0xd66a3d, 0.9);
       } else {
