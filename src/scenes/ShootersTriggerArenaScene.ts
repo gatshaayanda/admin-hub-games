@@ -43,7 +43,7 @@ const clamp = (value: number, min: number, max: number) => Math.max(min, Math.mi
 const ARENA_NEUTRAL_BASELINE = true;
 const ARENA_BASE_SPEED = 170;
 const ARENA_BASE_COOLDOWN = 360;
-const ARENA_AMMO_CAPACITY = 16;
+const ARENA_AMMO_CAPACITY = 24;
 const ARENA_REFILL_DURATION = 2500;
 const ARENA_AMMO_STATION = new Phaser.Geom.Rectangle(1080, 640, 200, 150);
 
@@ -268,6 +268,40 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     }
   }
 
+  private moveRival(desiredX: number, desiredY: number, delta: number) {
+    const length = Math.hypot(desiredX, desiredY);
+    if (length < 0.01) {
+      this.rivalMoving = false;
+      return;
+    }
+    const baseAngle = Math.atan2(desiredY, desiredX);
+    const speed = this.rival.wounded ? this.rival.speed * 0.92 : this.rival.speed;
+    const step = speed * delta / 1000;
+    const offsets = [0, 0.62, -0.62, 1.18, -1.18, 1.7, -1.7, Math.PI];
+    for (const offset of offsets) {
+      const angle = baseAngle + offset;
+      const nx = Phaser.Math.Clamp(this.rival.body.x + Math.cos(angle) * step, 42, 2358);
+      const ny = Phaser.Math.Clamp(this.rival.body.y + Math.sin(angle) * step, 90, 1350);
+      if (this.inCover(nx, ny, 14)) continue;
+      this.rival.body.x = nx;
+      this.rival.body.y = ny;
+      this.rivalMoving = true;
+      if (Math.abs(Math.cos(angle)) > 0.08) this.rivalFacing = Math.cos(angle) < 0 ? -1 : 1;
+      return;
+    }
+    for (const angle of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
+      const nx = Phaser.Math.Clamp(this.rival.body.x + Math.cos(angle) * step, 42, 2358);
+      const ny = Phaser.Math.Clamp(this.rival.body.y + Math.sin(angle) * step, 90, 1350);
+      if (this.inCover(nx, ny, 10)) continue;
+      this.rival.body.x = nx;
+      this.rival.body.y = ny;
+      this.rivalMoving = true;
+      if (Math.abs(Math.cos(angle)) > 0.08) this.rivalFacing = Math.cos(angle) < 0 ? -1 : 1;
+      return;
+    }
+    this.rivalMoving = false;
+  }
+
   private updateRival(delta: number) {
     if (this.rival.weaponDropped) {
       this.rivalMoving = true;
@@ -278,24 +312,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         this.pickupWeapon(this.rival);
         return;
       }
-      const speed = this.rival.speed * (this.rival.wounded ? 0.92 : 1);
-      if (Math.abs(dx) > 0.08) this.rivalFacing = dx < 0 ? -1 : 1;
-      const nx = this.rival.body.x + (dx / distance) * speed * delta / 1000;
-      const ny = this.rival.body.y + (dy / distance) * speed * delta / 1000;
-      if (!this.inCover(nx, ny, 14)) {
-        this.rival.body.x = nx;
-        this.rival.body.y = ny;
-      } else {
-        const sideX = -dy / distance;
-        const sideY = dx / distance;
-        const slide = speed * delta / 1000;
-        const sx = Phaser.Math.Clamp(this.rival.body.x + sideX * slide, 42, 2358);
-        const sy = Phaser.Math.Clamp(this.rival.body.y + sideY * slide, 90, 1350);
-        if (!this.inCover(sx, sy, 14)) {
-          this.rival.body.x = sx;
-          this.rival.body.y = sy;
-        }
-      }
+      this.moveRival(dx, dy, delta);
       return;
     }
 
@@ -344,37 +361,16 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       }
     }
 
-    const moveLength = Math.hypot(moveX, moveY) || 1;
-    this.rivalMoving = Boolean(moveX || moveY);
-    if (Math.abs(moveX) > 0.08) this.rivalFacing = moveX < 0 ? -1 : 1;
-
-    const nextX = Phaser.Math.Clamp(
-      this.rival.body.x + (moveX / moveLength) * (this.rival.wounded ? this.rival.speed * 0.92 : this.rival.speed) * delta / 1000,
-      42,
-      2358,
-    );
-    const nextY = Phaser.Math.Clamp(
-      this.rival.body.y + (moveY / moveLength) * this.rival.speed * delta / 1000,
-      90,
-      1350,
-    );
-
+    let desiredX = moveX;
+    let desiredY = moveY;
     if ((Math.random() * 100) < this.rivalProfile.coverUse * delta / 1000 * 0.9) {
       const cover = this.findUsefulCover();
       if (cover) {
-        const cx = cover.x + cover.width / 2;
-        const cy = cover.y + cover.height / 2;
-        const toCover = new Phaser.Math.Vector2(cx - this.rival.body.x, cy - this.rival.body.y).normalize();
-        if (!this.inCover(nextX, nextY, 14)) {
-          const effectiveSpeed = this.rival.wounded ? this.rival.speed * 0.92 : this.rival.speed;
-          this.rival.body.x += toCover.x * effectiveSpeed * delta / 1000;
-          this.rival.body.y += toCover.y * effectiveSpeed * delta / 1000;
-        }
+        desiredX = cover.x + cover.width / 2 - this.rival.body.x;
+        desiredY = cover.y + cover.height / 2 - this.rival.body.y;
       }
-    } else if (!this.inCover(nextX, nextY, 14)) {
-      this.rival.body.x = nextX;
-      this.rival.body.y = nextY;
     }
+    this.moveRival(desiredX, desiredY, delta);
 
     if (!this.rival.weaponDropped && !this.rival.refilling && this.rival.ammo > 0 && this.rival.cooldown <= 0 && distance < 980) this.rivalFire(direction);
   }
@@ -425,22 +421,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       this.rivalRefillProgressReset();
       if (Math.abs(dx) > 0.08) this.rivalFacing = dx < 0 ? -1 : 1;
       const speed = this.rival.wounded ? this.rival.speed * 0.92 : this.rival.speed;
-      const nx = Phaser.Math.Clamp(this.rival.body.x + dx / distance * speed * delta / 1000, 42, 2358);
-      const ny = Phaser.Math.Clamp(this.rival.body.y + dy / distance * speed * delta / 1000, 90, 1350);
-      if (!this.inCover(nx, ny, 14)) {
-        this.rival.body.x = nx;
-        this.rival.body.y = ny;
-      } else {
-        const sideX = -dy / distance;
-        const sideY = dx / distance;
-        const slide = speed * delta / 1000;
-        const sx = Phaser.Math.Clamp(this.rival.body.x + sideX * slide, 42, 2358);
-        const sy = Phaser.Math.Clamp(this.rival.body.y + sideY * slide, 90, 1350);
-        if (!this.inCover(sx, sy, 14)) {
-          this.rival.body.x = sx;
-          this.rival.body.y = sy;
-        }
-      }
+      this.moveRival(dx, dy, delta);
       return;
     }
 
@@ -1076,19 +1057,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       color: '#f4f1df',
     }).setOrigin(.5, 0).setScrollFactor(0).setDepth(90);
 
-    this.profileHud = this.add.text(18, 43, '', {
-      fontFamily: 'monospace',
-      fontSize: '9px',
-      color: '#e8c95c',
-    }).setScrollFactor(0).setDepth(90);
-
-    this.statusHud = this.add.text(this.scale.width / 2, 43, 'MOVE · AIM · FIRE · USE COVER', {
-      fontFamily: 'monospace',
-      fontSize: '9px',
-      color: '#f4f1df',
-    }).setOrigin(.5, 0).setScrollFactor(0).setDepth(90);
-
-    this.ammoHud = this.add.text(this.scale.width - 18, 18, 'GUN · AMMO 16/16', {
+    this.ammoHud = this.add.text(this.scale.width - 18, 18, 'GUN · 24/24', {
       fontFamily: 'monospace',
       fontSize: '10px',
       fontStyle: 'bold',
@@ -1104,14 +1073,9 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.ammoHud?.setText(
       this.player.refilling
         ? 'REFILL ' + refillPercent + '%'
-        : 'GUN · AMMO ' + this.player.ammo + '/' + this.player.maxAmmo,
+        : 'GUN · ' + this.player.ammo + '/' + this.player.maxAmmo,
     );
-    this.profileHud?.setText(
-      this.rivalProfile.operator + ' · ' +
-      this.rivalProfile.id.toUpperCase() + ' · S ' +
-      Math.round(this.rivalProfile.shooting) + ' · M ' +
-      Math.round(this.rivalProfile.movement),
-    );
+
   }
 
   private createEnemyLocator() {
@@ -1730,7 +1694,6 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       Math.min(height * 0.22, 150),
     );
     this.scoreHud?.setPosition(width / 2, 18);
-    this.statusHud?.setPosition(width / 2, 43);
     this.ammoHud?.setPosition(width - 18, 18);
   }
 
