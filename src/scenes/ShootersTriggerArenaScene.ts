@@ -55,6 +55,10 @@ const ARENA_PLAYER_SPAWN = new Phaser.Math.Vector2(360, 1040);
 const ARENA_RIVAL_SPAWN = new Phaser.Math.Vector2(2040, 330);
 const ARENA_RIVAL_FIRE_RANGE = 720;
 const ARENA_RIVAL_OPENING_DELAY_MS = 2200;
+const ARENA_MAX_BODY_HITS = 2;
+const ARENA_BODY_CORE_RADIUS = 25;
+const ARENA_SCRAPE_RADIUS = 48;
+const ARENA_CLOSE_IMPACT_RANGE = 220;
 
 export class ShootersTriggerArenaScene extends Phaser.Scene {
   public joystickVector = new Phaser.Math.Vector2();
@@ -569,10 +573,10 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       }
 
       const shotLine = new Phaser.Geom.Line(previousX, previousY, shot.body.x, shot.body.y);
-      const targetHead = new Phaser.Geom.Circle(target.body.x, target.body.y - 25, 20);
+      const targetHead = new Phaser.Geom.Circle(target.body.x, target.body.y - 25, 16);
       const targetBody = new Phaser.Geom.Circle(target.body.x, target.body.y + 1, 34);
       const weaponPoint = this.getWeaponPoint(target);
-      const targetWeapon = new Phaser.Geom.Circle(weaponPoint.x, weaponPoint.y, 16);
+      const targetWeapon = new Phaser.Geom.Circle(weaponPoint.x, weaponPoint.y, 14);
       const hitsWeapon = !target.weaponDropped && Phaser.Geom.Intersects.LineToCircle(shotLine, targetWeapon);
       const hitsHead = Phaser.Geom.Intersects.LineToCircle(shotLine, targetHead);
       const hitsBody = Phaser.Geom.Intersects.LineToCircle(shotLine, targetBody);
@@ -590,6 +594,15 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         this.shots.splice(i, 1);
         if (this.matchOver || this.roundTransition || this.resolvingRound) break;
         continue;
+      }
+
+      const nearestBodyPoint = Phaser.Geom.Line.GetNearestPoint(shotLine, new Phaser.Math.Vector2(target.body.x, target.body.y + 1));
+      const nearestHeadPoint = Phaser.Geom.Line.GetNearestPoint(shotLine, new Phaser.Math.Vector2(target.body.x, target.body.y - 25));
+      const nearestBodyDistance = Phaser.Math.Distance.Between(nearestBodyPoint.x, nearestBodyPoint.y, target.body.x, target.body.y + 1);
+      const nearestHeadDistance = Phaser.Math.Distance.Between(nearestHeadPoint.x, nearestHeadPoint.y, target.body.x, target.body.y - 25);
+      const scrapeDistance = Math.min(nearestBodyDistance, nearestHeadDistance);
+      if (scrapeDistance <= ARENA_SCRAPE_RADIUS) {
+        this.recordScrape(shot.owner, nearestBodyPoint.x, nearestBodyPoint.y);
       }
 
       if (this.inCover(nx, ny) || Phaser.Geom.Intersects.LineToRectangle(shotLine, this.covers.find((cover) => Phaser.Geom.Intersects.LineToRectangle(shotLine, cover)) || new Phaser.Geom.Rectangle(-99999, -99999, 0, 0))) {
@@ -665,8 +678,16 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private resolveHit(owner: 'player' | 'rival', headshot: boolean, hitX?: number, hitY?: number) {
     if (this.matchOver || this.roundTransition || this.resolvingRound) return;
     const target = owner === 'player' ? this.rival : this.player;
+    const shooter = owner === 'player' ? this.player : this.rival;
     const x = hitX ?? target.body.x;
     const y = hitY ?? target.body.y;
+    const distance = Phaser.Math.Distance.Between(shooter.body.x, shooter.body.y, target.body.x, target.body.y);
+    const bodyDistance = Phaser.Math.Distance.Between(x, y, target.body.x, target.body.y + 1);
+
+    if (!headshot && bodyDistance > ARENA_BODY_CORE_RADIUS) {
+      this.recordScrape(owner, x, y);
+      return;
+    }
 
     if (owner === 'player') {
       if (headshot) this.playerHeadshots += 1;
@@ -695,18 +716,44 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       if (owner === 'player') this.roundHits += 1;
       else this.roundRivalHits += 1;
       this.flash(target, headshot);
+      this.showCombatHighlight(
+        owner === 'player'
+          ? (target.weaponDropped ? 'GUN DOWN + HEADSHOT!' : 'HEADSHOT!')
+          : (target.weaponDropped ? 'GUN DOWN + HEADSHOT ON YOU' : 'HEADSHOT ON YOU'),
+        '#e8c95c', x, y, 1.15,
+      );
       this.eliminateFighter(target, owner);
       this.roundPoint(owner);
       return;
     }
 
-    target.hp = 0;
+    const closeImpact = distance <= ARENA_CLOSE_IMPACT_RANGE;
+    const decisive = closeImpact || target.weaponDropped;
+    target.hp = Math.max(0, target.hp - (decisive ? target.hp : 1));
     if (owner === 'player') this.roundHits += 1;
     else this.roundRivalHits += 1;
 
     this.flash(target, false);
-    this.eliminateFighter(target, owner);
-    this.roundPoint(owner);
+    if (target.hp <= 0) {
+      this.showCombatHighlight(
+        owner === 'player'
+          ? (target.weaponDropped ? 'GUN DOWN + FINISH' : closeImpact ? 'CLOSE HIT · ELIMINATED' : 'ELIMINATED')
+          : (target.weaponDropped ? 'GUN DOWN + FINISH ON YOU' : closeImpact ? 'CLOSE HIT · ELIMINATED' : 'ELIMINATED'),
+        '#d66a3d', x, y, 1.05,
+      );
+      this.eliminateFighter(target, owner);
+      this.roundPoint(owner);
+      return;
+    }
+
+    this.markFighterWounded(target);
+  }
+
+  private recordScrape(owner: 'player' | 'rival', x: number, y: number) {
+    if (owner === 'player') this.playerScrapes += 1;
+    else this.rivalScrapes += 1;
+    this.addSplatter(x, y, 0.38);
+    this.showCombatHighlight(owner === 'player' ? 'SCRAPE' : 'SCRAPE ON YOU', '#9fbda8', x, y, 0.72);
   }
 
   private addSplatter(x: number, y: number, scale = 1) {
@@ -788,7 +835,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   }
 
   private resetFighter(target: Fighter, x: number, y: number) {
-    target.hp = 1;
+    target.hp = ARENA_MAX_BODY_HITS;
     target.wounded = false;
     target.downed = false;
     target.weaponDropped = false;
@@ -1550,7 +1597,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     container.setData('nameLabel', name);
     return {
       body: container,
-      hp: 1,
+      hp: ARENA_MAX_BODY_HITS,
       wounded: false,
       downed: false,
       damagePaint,
