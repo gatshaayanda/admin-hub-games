@@ -425,6 +425,16 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       if (!this.inCover(nx, ny, 14)) {
         this.rival.body.x = nx;
         this.rival.body.y = ny;
+      } else {
+        const sideX = -dy / distance;
+        const sideY = dx / distance;
+        const slide = speed * delta / 1000;
+        const sx = Phaser.Math.Clamp(this.rival.body.x + sideX * slide, 42, 2358);
+        const sy = Phaser.Math.Clamp(this.rival.body.y + sideY * slide, 90, 1350);
+        if (!this.inCover(sx, sy, 14)) {
+          this.rival.body.x = sx;
+          this.rival.body.y = sy;
+        }
       }
       return;
     }
