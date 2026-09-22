@@ -2519,3 +2519,163 @@ The authoritative implementation is now:
 - Any future change must inspect the actual source and live phone playtest before claiming implementation.
 
 This correction supersedes conflicting historical Shooter Trigger descriptions earlier in this file.
+
+
+## Shooter Trigger — Mandatory Future-Chat / Implementation Discipline — September 22, 2026
+
+This section exists because previous Shooter Trigger work repeatedly created avoidable implementation and workflow mistakes. It is authoritative for **how future work must be handled**, not just what the game should look like.
+
+### 1. Inspect reality before proposing or changing anything
+
+For every Shooter Trigger task, the first step is to inspect the current repository state:
+
+1. Read this `AGENTS.md`.
+2. Inspect the actual current `main` commit and Git state.
+3. Inspect the actual Shooter Trigger source files involved.
+4. Inspect the current registration/routing and PWA/deployment path when relevant.
+5. If the user reports a visual or gameplay problem, inspect the actual current implementation before designing a fix.
+6. If the user says they are testing live, treat the live result as evidence that may contradict assumptions. **STOP → inspect reality → then act.**
+
+Never design from an old screenshot, old commit, remembered implementation, or historical section of this document when current source can be inspected.
+
+### 2. Historical contract sections are not permission to resurrect old designs
+
+This document contains historical Shooter Trigger sections because they record how the product evolved. They are not automatically current requirements.
+
+The latest **Authoritative Source Correction** and later corrections override older Shooter Trigger layout, economy, Media, gate, town and destination descriptions.
+
+Before changing Shooter Trigger, identify the newest authoritative section and reconcile older text against it. If two sections conflict, use the newest correction and the actual source. Do not copy an older section into implementation merely because it appears earlier or is more detailed.
+
+### 3. Do not turn product work into unnecessary workflow ceremony
+
+The required workflow is deliberately small:
+
+**INSPECT → PLAN → ONE CONTROLLED CHANGE → VERIFY → CHECKPOINT**
+
+That means:
+
+- Do not invent a giant DevOps process.
+- Do not create unnecessary branches, PRs, tickets, deployment gymnastics, or documentation work when the task does not require them.
+- Do not make multiple speculative changes before the user can test the first meaningful change.
+- Do not push documentation-only commits as if they were implementation.
+- Do not substitute an `AGENTS.md` description for the actual code change.
+- Do not tell the user to tolerate a workflow because “the process requires it.” The product owner's requested outcome is the priority.
+- If the user asks for a direct fix and the current tooling permits it, make the smallest real fix and push it.
+- If a task genuinely requires multiple changes, group them into one coherent implementation checkpoint rather than manufacturing ceremony.
+
+The workflow is a control system, not a performance ritual.
+
+### 4. Source change ≠ GitHub push ≠ Vercel deployment ≠ live verification
+
+These are four different states and must never be conflated:
+
+**SOURCE IMPLEMENTED** — the actual relevant code changed.
+
+**PUSHED** — the changed commit exists on the intended GitHub branch.
+
+**DEPLOYED** — Vercel built/deployed the intended commit successfully.
+
+**LIVE VERIFIED** — the actual production URL was opened and the affected user flow was exercised successfully.
+
+Only claim the state that has actually been established.
+
+A successful build does **not** prove the UI is correct. A GitHub push does **not** prove Vercel deployed it. A Vercel deployment does **not** prove the production URL contains the expected game state. A successful page load does **not** prove the affected gameplay flow works.
+
+When live visual access is unavailable, say so plainly and do not manufacture a live-verification claim.
+
+### 5. “Implemented” means implemented in the actual source
+
+Never say a feature is implemented merely because:
+
+- it is described in `AGENTS.md`;
+- a plan says it should exist;
+- a screenshot shows it;
+- a coordinate/layout proposal exists;
+- a commit message claims it;
+- a deployment succeeded.
+
+For every requested feature, identify the actual source file/function/state path that implements it. If the implementation is missing, change the implementation. If the source already contains it, verify that it is actually wired into the current route/scene and reachable during play.
+
+### 6. Visual/gameplay claims require the appropriate evidence
+
+For Shooter Trigger, acceptance is player experience first.
+
+When the task changes:
+- **layout/camera/UI:** inspect a real phone-sized viewport or live handset result when available;
+- **controls:** actually exercise touch controls;
+- **gameplay:** play the affected interaction;
+- **state/economy:** perform the relevant sequence and inspect saved state/result;
+- **PWA:** test the relevant installed/offline behavior;
+- **deployment:** verify the expected commit/deployment relationship before calling it deployed.
+
+Do not infer a successful phone experience from TypeScript/build success.
+
+### 7. Preserve the user's locked decisions
+
+Do not reopen decisions the product owner has already settled unless current evidence shows the implementation contradicts them.
+
+Current locked Shooter Trigger principles include:
+- mobile-first;
+- grounded walking player;
+- physical destinations first, UI second;
+- no generic floating destination markers;
+- open-order Home Field;
+- phone guidance instead of a physical Media Bureau;
+- no Arena gate;
+- 0 starting budget;
+- training creates evidence, not cash;
+- Arena wins create the cash source;
+- performance evidence affects consequences without replacing player agency.
+
+If current source conflicts with a locked decision, fix the source rather than asking the user to re-decide a settled product choice.
+
+### 8. Do not overstate what the current simulation measures
+
+The current Shooting simulation does **not** automatically detect every real-world body-part hit category. Current available evidence must be read from the actual implementation.
+
+Do not claim headshots, marker-hand hits, limb hits, or other detailed outcomes unless the current source actually detects and stores them.
+
+If a richer hit-quality model is requested, implement the measurement first, then expose it in the phone/results. Do not fabricate evidence labels from generic target hits.
+
+### 9. Before a future Shooter Trigger checkpoint, answer these internally
+
+- What is the current source of truth?
+- What exact files implement the requested behavior?
+- What is actually changing?
+- What existing behavior must remain untouched?
+- What is the smallest controlled change?
+- How will the affected player flow be verified?
+- What can honestly be claimed after the push?
+
+If those questions cannot be answered from current evidence, inspect more before editing.
+
+### 10. Recovery rule
+
+If the user says **“that did not change,” “it is still the same,” “you did not implement it,”** or gives a live result that contradicts the claimed change:
+
+**STOP. Do not argue from the previous plan or commit message.**
+
+Immediately:
+1. inspect the current branch/source;
+2. identify whether the requested change is actually present;
+3. identify whether the deployed build contains that commit;
+4. identify whether caching/routing/registration could explain the result;
+5. make the smallest correction;
+6. verify again;
+7. report exactly what was established.
+
+The live player result outranks assumptions.
+
+### 11. User communication rule
+
+For Shooter Trigger work, report in plain language:
+
+- **Changed:** what actually changed in source.
+- **Pushed:** commit/branch.
+- **Deployed:** only if confirmed.
+- **Verified:** exactly what was actually tested.
+- **Not verified:** anything that could not be tested.
+
+Do not bury a simple implementation task under workflow narration. Do not claim certainty where the evidence only supports a partial state.
+
+**Core rule: reality first, smallest real change, honest verification.**
