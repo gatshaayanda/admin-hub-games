@@ -94,7 +94,6 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private fire = false;
   private scoreHud?: Phaser.GameObjects.Text;
   private statusHud?: Phaser.GameObjects.Text;
-  private profileHud?: Phaser.GameObjects.Text;
   private playerHeadshots = 0;
   private playerBodyHits = 0;
   private playerMisses = 0;
@@ -420,7 +419,6 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       this.rivalMoving = true;
       this.rivalRefillProgressReset();
       if (Math.abs(dx) > 0.08) this.rivalFacing = dx < 0 ? -1 : 1;
-      const speed = this.rival.wounded ? this.rival.speed * 0.92 : this.rival.speed;
       this.moveRival(dx, dy, delta);
       return;
     }
