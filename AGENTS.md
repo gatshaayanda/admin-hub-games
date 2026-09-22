@@ -19,6 +19,28 @@ This repository contains the Admin Hub Games publisher shell and the games that 
 - VS Code is the local workspace, terminal, file-inspection, Git-review and human-control layer.
 - Do not assume a route, file, service worker, deployment or feature exists. Inspect it.
 
+## Main-Branch Checkpoint & New-Chat Protocol
+
+**Main is the shared source-of-truth checkpoint.** A dedicated development branch is an implementation workspace, not the final product checkpoint.
+
+Every new chat/session working on this repository MUST:
+1. Read `AGENTS.md` first.
+2. Inspect the actual remote state, including `main`, the active development branch, and the files relevant to the task.
+3. Continue from the current remote state. Do not reconstruct work from memory or assume an old branch is current.
+4. Follow **START → BUILD → VERIFY → CHECKPOINT → CONTINUE / RECOVER** and stop on unexpected results to inspect reality.
+5. When the user asks to **push, complete, checkpoint, or push the latest**, the default destination is **`main`** unless the user explicitly names another branch.
+6. If implementation is done on a feature branch, finish the requested checkpoint by bringing the intended changes into `main` and report the resulting `main` commit SHA.
+7. Do not leave completed requested work stranded on a feature branch merely because that branch was used for implementation.
+8. Do not confuse a feature-branch push, PR, CI run, Vercel preview, or deployment with the requested `main` checkpoint.
+
+### Execution discipline
+
+When the user explicitly asks for a commit/push/checkpoint, execute that requested operation without adding unrelated work. Do not automatically start a Vercel investigation, deployment investigation, merge investigation, or repeated explanation unless needed to safely complete the requested main checkpoint.
+
+When a feature branch conflicts with current `main`, **STOP and inspect both sides before changing anything**. Do not force-reset, overwrite newer `main` work, or blindly copy a stale feature branch over `main`. Reconcile only the intended changes against the current `main` state.
+
+A meaningful completed task ends with one coherent checkpoint on `main`. The next chat starts from that `main` checkpoint.
+
 ## Technology Baseline
 - Vite + TypeScript
 - Phaser
