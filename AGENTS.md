@@ -3176,3 +3176,32 @@ This is the authoritative Arena combat contract for the current phone playtest. 
 6. Confirm an ordinary body shot does not automatically become a gun knockout.
 7. Confirm the respawned fighter returns with full ammo/gun while the survivor does not get reset.
 8. Repeat from the opponent's side: the bot can be eliminated and respawned correctly when the player's hit lands.
+
+## Shooters Trigger — Neutral Arena Combat Baseline & Tactical Opening — September 22, 2026
+
+The Arena must be enjoyable as a paintball fight **before** training, equipment, or progression advantages are applied.
+
+### Neutral baseline
+- Both fighters start with the same base movement speed, firing cooldown, ammo capacity and neutral skill values.
+- Arena combat must not silently apply Shooting Training or Evasion Camp performance bonuses while the neutral baseline is active.
+- A confirmed body paint hit eliminates the target for that life; a headshot also eliminates immediately. The prior two-body-hit/wounded trading behavior is not an Arena rule.
+- Only the eliminated fighter respawns on their own side. The surviving fighter keeps their position, gun, ammo and current state.
+- A gun hit is a separate recovery event: the weapon drops visibly and the unarmed fighter must physically reach it before firing again.
+
+### Tactical opening
+- Do not spawn the player and rival in the same firing lane or at the same central coordinate.
+- The player and rival begin on opposite sides of the field with substantial separation so the player has time to move, read the field and choose cover.
+- The rival has a short opening-fire delay after the match starts and after its own respawn; this is an opening window, not a player power-up or invulnerability mechanic.
+- The rival may fire only when it has a valid line of sight to the player and is inside the Arena engagement range. Solid bunkers/cover must therefore break the firing solution.
+- The opening should create an actual positional fight: movement, cover, line-of-sight breaks, flanking/repositioning and deliberate shots should matter before the first elimination.
+- Do not solve poor combat feel by increasing player damage, accuracy, armour or hidden progression. Fix spawn geometry, AI pressure, sight lines and cover interaction first.
+
+### Arena acceptance test
+1. Enter a fresh neutral Arena and confirm neither fighter is immediately in the other's direct firing lane.
+2. Confirm the rival does not fire during the short opening window.
+3. Move to cover and confirm solid cover blocks the rival's firing solution.
+4. Leave cover/reposition and confirm the rival can reacquire and pressure the player.
+5. Confirm one body hit eliminates immediately and no post-death paint exchange occurs.
+6. Confirm only the eliminated fighter respawns on their own side while the survivor remains in place with their current gun/ammo.
+7. Confirm gun-hit recovery remains separate from body elimination.
+8. Repeat multiple rounds and verify the field remains a tactical fight rather than a spawn-to-spawn firing lane or endless paint exchange.
