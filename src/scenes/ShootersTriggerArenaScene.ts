@@ -73,8 +73,6 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private concealments: Phaser.Geom.Circle[] = [];
   private playerLastKnown = new Phaser.Math.Vector2(1180, 1040);
   private playerRevealedUntil = 0;
-  private rivalSearchUntil = 0;
-  private rivalStrafeSign = 1;
   private playerLastFiredAt = 0;
   private cleanup?: () => void;
   private exitButton?: HTMLButtonElement;
