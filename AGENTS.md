@@ -3130,3 +3130,18 @@ This is the current Arena tuning checkpoint after phone playtesting:
 - **HUD:** persistent Arena HUD is reduced to match title, score and gun/ammo. Rival profile stats and control instructions are no longer permanent top-row text; contextual combat messages remain temporary/world-space.
 - **Design intent:** preserve fire → move → cover → decide when to refill → survive the exposed refill → re-enter the fight, while reducing forced downtime and AI deadlocks.
 - **Phone acceptance:** confirm the rival keeps moving around barriers, 24 shots feels like enough fighting without removing ammo discipline, the single station still creates a meaningful risky decision, and the top HUD stays readable during combat.
+
+
+## Shooters Trigger — Arena 1v1 Combat, Reload Routes & Stealth Contract — September 22, 2026
+
+The Arena is a 1v1-first combat experience. It must create positional fights and opportunities rather than a continuous circle around one resource point.
+
+- Use **two mirrored side/rear ammo stations**, not a central reload station. Each station is a tactical route: reachable, exposed on approach, and never a safe zone.
+- Keep **24 rounds** and **2.5s refill** for this checkpoint. Refilling locks the player in place and remains vulnerable to incoming paint.
+- Cover must create real fights: peek/snap, retreat, change angle, push a vulnerable opponent, and relocate. Do not let the rival solve combat by endlessly orbiting the player.
+- Rival movement must be purpose-driven: engage, reposition, use cover, pressure vulnerable states, recover a dropped gun, or route to the nearest refill. Obstacle avoidance prevents wedging but is not itself the combat AI.
+- **Stealth/concealment:** trees provide temporary concealment. A player who is inside concealment, has not fired recently, and is not recovering a dropped weapon is hidden from direct rival targeting. Firing/recovering/revealing breaks stealth; the rival searches from the last known position instead of magically tracking the player.
+- **Gun-drop contract:** a weapon hit must visibly knock the gun down, leave it at a fixed nearby ground position, remove the fighter's active weapon, and require physically walking over it to recover it. A fighter without a gun cannot fire.
+- **Shot reliability:** projectile collision must use the swept projectile segment against weapon/head/body hit circles so a fast projectile cannot skip a target between frames. Weapon hit is resolved before body/head hit; body/head hits resolve damage and round points normally. Phaser's documented line/circle intersection APIs are the intended basis for this collision contract.
+- A 1v1 round should feel like: **find position → snap/engage → move/change angle → exploit vulnerability → recover/reload → re-engage**, with a 60-second-style urgency rather than a stationary duel.
+- Acceptance on phone: the rival does not permanently circle the player or ammo; reload routes pull combat sideways; cover creates opportunities to break line of sight; a hidden player can reposition before reappearing; deliberate shots produce visible hit feedback, gun drops, wounds, and eliminations.
