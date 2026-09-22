@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 
 type Location = {
-  id: 'shooting' | 'evasion' | 'upgrades' | 'media' | 'arena';
+  id: 'shooting' | 'evasion' | 'upgrades' | 'media' |id: 'shooting' | 'evasion' | 'upgrades' | 'arena';
   name: string;
   subtitle: string;
   x: number;
@@ -194,7 +194,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     button.type = 'button';
     button.textContent = 'PHONE';
     Object.assign(button.style, {
-      position: 'fixed', right: '16px', top: '54px', minWidth: '88px', minHeight: '42px',
+      position: 'fixed', right: '18px', bottom: 'max(148px, calc(env(safe-area-inset-bottom) + 132px))', minWidth: '92px', minHeight: '52px',
       padding: '8px 12px', border: '2px solid #f4f1df', borderRadius: '9px',
       background: '#102018', color: '#fff4d4', fontFamily: 'monospace', fontSize: '10px',
       fontWeight: '800', zIndex: '1450', touchAction: 'manipulation',
@@ -208,20 +208,43 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
 
   private openPhone() {
     if (this.phoneModal) return;
-    let shooting = false, evasion = false, arena = false;
+
+    let shooting: any = null, evasion: any = null, arena: any = null;
     try {
-      shooting = !!localStorage.getItem('shooters-trigger:last-shooting');
-      evasion = !!localStorage.getItem('shooters-trigger:last-evasion');
-      arena = !!localStorage.getItem('shooters-trigger:last-arena');
+      shooting = JSON.parse(localStorage.getItem('shooters-trigger:last-shooting') || 'null');
+      evasion = JSON.parse(localStorage.getItem('shooters-trigger:last-evasion') || 'null');
+      arena = JSON.parse(localStorage.getItem('shooters-trigger:last-arena') || 'null');
     } catch {}
 
+    const budget = this.getBudget();
+    const upgradeLevel = Number(localStorage.getItem('shooters-trigger:upgrade-level') || 0);
+    const shootingAccuracy = Number(shooting?.accuracy || 0);
+    const shootingHits = Number(shooting?.targetHits || 0);
+    const shootingSkill = !shooting ? 'UNTRAINED'
+      : shootingAccuracy >= 75 && shootingHits >= 5 ? 'REALLY GOOD'
+      : shootingAccuracy >= 45 && shootingHits >= 3 ? 'GOOD'
+      : 'DEVELOPING';
+    const evasionSurvived = Number(evasion?.survived || 0) / 1000;
+    const evasionCover = Number(evasion?.coverBlocks || 0);
+    const evasionSkill = !evasion ? 'UNTRAINED'
+      : evasionSurvived >= 50 && evasionCover >= 3 ? 'REALLY GOOD'
+      : evasionSurvived >= 30 || evasionCover >= 2 ? 'GOOD'
+      : 'DEVELOPING';
+
+    const readiness = !shooting && !evasion && !arena ? 'NEW PLAYER'
+      : shooting && !evasion ? 'SHOOTING TRAINED'
+      : shooting && evasion && !arena ? 'FIELD READY'
+      : arena?.result === 'WIN' ? 'PROVEN' : 'TESTED';
+
     const next = !shooting
-      ? ['WELCOME TO THE FIELD', 'Start at the Shooting Range. Your shots will be recorded by quality: scrapes, marker-hand hits, center-mass hits and rare exceptional hits.']
+      ? ['WELCOME TO THE FIELD', 'Start at SHOOTING. Build your first shooting record.']
       : !evasion
-        ? ['SHOOTING RECORDED', 'Your first training record is in. Next stop: Evasion Yard. Learn to move, use cover and survive pressure.']
+        ? ['SHOOTING RECORDED', 'Next recommended stop: EVASION. Learn movement, cover and survival under pressure.']
         : !arena
-          ? ['FIELD-READY CHECK', 'Both training records are in. The Arena is open when you want to test yourself. Retrain first or visit the Armory if you have earned budget.']
-          : ['NEW MATCH REPORT', 'Your last Arena result is recorded. Retrain, review your performance, change your preparation, then try the Arena again.'];
+          ? ['FIELD READY', 'The ARENA is open. A win earns cash for upgrades. You can fight now or train again first.']
+          : arena?.result === 'WIN'
+            ? ['ARENA WIN RECORDED', 'You earned cash. Visit ARMORY & OUTFITTER to upgrade, then retrain or return to the Arena.']
+            : ['ARENA RESULT RECORDED', 'No match reward this time. Retrain, improve your evidence, then try the Arena again.'];
 
     const modal = document.createElement('div');
     Object.assign(modal.style, {
@@ -230,23 +253,71 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     });
     const card = document.createElement('div');
     Object.assign(card.style, {
-      width: 'min(430px,92vw)', padding: '22px', background: '#151a16', color: '#f4f1df',
-      border: '2px solid #e8c95c', borderRadius: '12px', boxShadow: '0 12px 34px rgba(0,0,0,.45)',
+      width: 'min(440px,92vw)', maxHeight: '88vh', overflow: 'auto', padding: '22px',
+      background: '#151a16', color: '#f4f1df', border: '2px solid #e8c95c', borderRadius: '12px',
+      boxShadow: '0 12px 34px rgba(0,0,0,.45)',
     });
-    const title = document.createElement('div'); title.textContent = next[0];
-    title.style.cssText = 'font-size:17px;font-weight:800;color:#e8c95c;letter-spacing:1px;margin-bottom:14px;';
-    const message = document.createElement('div'); message.textContent = next[1];
-    message.style.cssText = 'font-size:11px;line-height:1.7;margin-bottom:14px;';
-    const status = document.createElement('div');
-    status.textContent = 'SHOOTING ' + (shooting ? '✓' : '—') + '   EVASION ' + (evasion ? '✓' : '—') + '   ARENA ' + (arena ? '✓' : '—');
-    status.style.cssText = 'font-size:9px;color:#9fbda8;line-height:1.8;margin-bottom:18px;';
+    const title = document.createElement('div');
+    title.textContent = 'FIELD PHONE';
+    title.style.cssText = 'font-size:10px;font-weight:800;color:#9fbda8;letter-spacing:1px;margin-bottom:8px;';
+    const headline = document.createElement('div');
+    headline.textContent = next[0];
+    headline.style.cssText = 'font-size:17px;font-weight:800;color:#e8c95c;letter-spacing:1px;margin-bottom:10px;';
+    const message = document.createElement('div');
+    message.textContent = next[1];
+    message.style.cssText = 'font-size:11px;line-height:1.7;margin-bottom:16px;';
+
+    const state = document.createElement('div');
+    state.innerHTML = [
+      '<b>PLAYER STATE</b>',
+      'READINESS · ' + readiness,
+      'SHOOTING SKILL · ' + shootingSkill,
+      'EVASION SKILL · ' + evasionSkill,
+      'BUDGET · ' + budget,
+      'ARENA · ' + (arena?.result || 'UNTESTED'),
+      'LOADOUT · ' + (upgradeLevel ? 'LEVEL ' + upgradeLevel : 'BASIC'),
+    ].join('<br>');
+    state.style.cssText = 'font-size:10px;line-height:1.8;padding:12px;border:1px solid #496556;border-radius:8px;margin-bottom:12px;';
+
+    const records = document.createElement('div');
+    records.innerHTML = [
+      '<b>TRAINING RECORD</b>',
+      shooting
+        ? 'Shots ' + shooting.shots + ' · Hits ' + shooting.targetHits + ' · Accuracy ' + shooting.accuracy + '%'
+          + '<br>Center-mass ' + Number(shooting.centerMassHits || 0)
+          + ' · Exceptional ' + Number(shooting.exceptionalHits || 0)
+          + ' · Misses ' + Number(shooting.misses || 0)
+          + ' · Cover hits ' + Number(shooting.coverHits || 0)
+        : 'No shooting record yet.',
+      '<br><br><b>EVASION RECORD</b>',
+      evasion
+        ? 'Survived ' + (evasion.survived / 1000).toFixed(1) + 's · Incoming ' + evasion.incomingShots
+          + '<br>Hits ' + evasion.hits + ' · Misses ' + evasion.misses + ' · Scrapes ' + evasion.scrapes
+          + ' · Cover blocks ' + evasion.coverBlocks
+        : 'No evasion record yet.',
+    ].join('<br>');
+    records.style.cssText = 'font-size:10px;line-height:1.8;padding:12px;border:1px solid #38493d;border-radius:8px;margin-bottom:12px;';
+
+    const route = document.createElement('div');
+    route.textContent = [
+      'RECOMMENDED ROUTE',
+      shooting ? 'SHOOTING · RECORDED' : 'SHOOTING · START HERE',
+      evasion ? 'EVASION · RECORDED' : 'EVASION · NEXT',
+      arena ? 'ARENA · ' + arena.result : 'ARENA · WIN TO EARN CASH',
+      'ARMORY · SPEND EARNED CASH ON UPGRADES',
+    ].join('\n');
+    route.style.cssText = 'white-space:pre-line;font-size:10px;line-height:1.8;color:#e8c95c;padding:12px;border:1px solid #695d32;border-radius:8px;margin-bottom:12px;';
+
     const freedom = document.createElement('div');
     freedom.textContent = 'OPEN FIELD · YOU CAN VISIT ANY LOCATION IN ANY ORDER';
-    freedom.style.cssText = 'font-size:9px;color:#e8c95c;line-height:1.6;margin-bottom:18px;';
-    const close = document.createElement('button'); close.type='button'; close.textContent='CLOSE PHONE';
-    Object.assign(close.style,{width:'100%',minHeight:'46px',border:'2px solid #f4f1df',borderRadius:'8px',background:'#102018',color:'#f4f1df',fontFamily:'monospace',fontSize:'10px',fontWeight:'800'});
+    freedom.style.cssText = 'font-size:9px;color:#9fbda8;line-height:1.6;margin-bottom:16px;';
+
+    const close = document.createElement('button');
+    close.type='button'; close.textContent='CLOSE PHONE';
+    Object.assign(close.style,{width:'100%',minHeight:'48px',border:'2px solid #f4f1df',borderRadius:'8px',background:'#102018',color:'#f4f1df',fontFamily:'monospace',fontSize:'10px',fontWeight:'800'});
     close.addEventListener('pointerdown',(event)=>{event.preventDefault();event.stopPropagation();modal.remove();this.phoneModal=undefined;});
-    card.append(title,message,status,freedom,close); modal.appendChild(card); document.body.appendChild(modal); this.phoneModal=modal;
+    card.append(title,headline,message,state,records,route,freedom,close);
+    modal.appendChild(card); document.body.appendChild(modal); this.phoneModal=modal;
   }
 
   private openEquipmentStore() {
