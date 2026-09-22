@@ -4,9 +4,6 @@ import { installShootersTriggerMobileControls } from '../shooters-trigger-mobile
 type Fighter = {
   body: Phaser.GameObjects.Container;
   hp: number;
-  wounded: boolean;
-  downed: boolean;
-  damagePaint: Phaser.GameObjects.Graphics;
   score: number;
   speed: number;
   cooldown: number;
@@ -244,8 +241,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     if (Math.abs(dx) > 0.08) this.playerFacing = dx < 0 ? -1 : 1;
 
     const length = Math.hypot(dx, dy) || 1;
-    const effectiveSpeed = this.player.wounded ? this.player.speed * 0.92 : this.player.speed;
-    const nx = Phaser.Math.Clamp(this.player.body.x + (dx / length) * effectiveSpeed * delta / 1000, 42, 2358);
+    const nx = Phaser.Math.Clamp(this.player.body.x + (dx / length) * this.player.speed * delta / 1000, 42, 2358);
     const ny = Phaser.Math.Clamp(this.player.body.y + (dy / length) * this.player.speed * delta / 1000, 90, 1350);
 
     if (!this.inCover(nx, ny, 14)) {
@@ -300,7 +296,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     if (Math.abs(moveX) > 0.08) this.rivalFacing = moveX < 0 ? -1 : 1;
 
     const nextX = Phaser.Math.Clamp(
-      this.rival.body.x + (moveX / moveLength) * (this.rival.wounded ? this.rival.speed * 0.92 : this.rival.speed) * delta / 1000,
+      this.rival.body.x + (moveX / moveLength) * this.rival.speed * delta / 1000,
       42,
       2358,
     );
@@ -317,9 +313,8 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         const cy = cover.y + cover.height / 2;
         const toCover = new Phaser.Math.Vector2(cx - this.rival.body.x, cy - this.rival.body.y).normalize();
         if (!this.inCover(nextX, nextY, 14)) {
-          const effectiveSpeed = this.rival.wounded ? this.rival.speed * 0.92 : this.rival.speed;
-          this.rival.body.x += toCover.x * effectiveSpeed * delta / 1000;
-          this.rival.body.y += toCover.y * effectiveSpeed * delta / 1000;
+          this.rival.body.x += toCover.x * this.rival.speed * delta / 1000;
+          this.rival.body.y += toCover.y * this.rival.speed * delta / 1000;
         }
       }
     } else if (!this.inCover(nextX, nextY, 14)) {
@@ -416,11 +411,6 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       shot.body.y = ny;
 
       const target = shot.owner === 'player' ? this.rival : this.player;
-      if (target.downed) {
-        shot.body.destroy();
-        this.shots.splice(i, 1);
-        continue;
-      }
       const headDistance = Phaser.Math.Distance.Between(shot.body.x, shot.body.y, target.body.x, target.body.y - 25);
       const bodyDistance = Phaser.Math.Distance.Between(shot.body.x, shot.body.y, target.body.x, target.body.y + 1);
 
@@ -429,7 +419,6 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         this.resolveHit(shot.owner, headshot, shot.body.x, shot.body.y);
         shot.body.destroy();
         this.shots.splice(i, 1);
-        if (this.matchOver || this.roundTransition || this.resolvingRound) break;
       } else if (headDistance < 30 || bodyDistance < 40) {
         if (shot.owner === 'player') this.playerScrapes += 1;
         else this.rivalScrapes += 1;
@@ -480,7 +469,6 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       if (owner === 'player') this.roundHits += 1;
       else this.roundRivalHits += 1;
       this.flash(target, headshot);
-      this.eliminateFighter(target, owner);
       this.roundPoint(owner);
       return;
     }
@@ -491,12 +479,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
 
     this.flash(target, false);
 
-    if (target.hp <= 0) {
-      this.eliminateFighter(target, owner);
-      this.roundPoint(owner);
-    } else {
-      this.markFighterWounded(target);
-    }
+    if (target.hp <= 0) this.roundPoint(owner);
   }
 
   private addSplatter(x: number, y: number, scale = 1) {
@@ -516,80 +499,6 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       splat.fillCircle(Math.cos(angle) * distance, Math.sin(angle) * distance, radius);
     }
     this.splatter.push(splat);
-  }
-
-  private markFighterWounded(target: Fighter) {
-    if (target.wounded || target.downed) return;
-    target.wounded = true;
-    target.damagePaint.clear();
-    target.damagePaint.fillStyle(0xd66a3d, 0.82);
-    target.damagePaint.fillCircle(-9, -2, 5);
-    target.damagePaint.fillCircle(4, 4, 4);
-    target.damagePaint.fillCircle(8, 10, 3);
-    target.damagePaint.fillStyle(0xf0a05f, 0.68);
-    target.damagePaint.fillCircle(-2, 1, 2.5);
-    target.damagePaint.fillCircle(12, 0, 2);
-    target.damagePaint.setVisible(true);
-    target.body.setData('combatState', 'WOUNDED');
-    this.showCombatHighlight(
-      target === this.player ? 'YOU ARE WOUNDED' : 'WOUNDED · ONE MORE',
-      '#f0a05f',
-      target.body.x,
-      target.body.y - 34,
-      0.95,
-    );
-    this.statusHud?.setText(
-      target === this.player ? 'WOUNDED  ·  AVOID THE NEXT BODY HIT' : 'BOT WOUNDED  ·  ONE MORE BODY HIT',
-    );
-  }
-
-  private eliminateFighter(target: Fighter, owner: 'player' | 'rival') {
-    if (target.downed) return;
-    target.downed = true;
-    target.wounded = true;
-    if (!target.damagePaint.visible) {
-      target.damagePaint.fillStyle(0xd66a3d, 0.9);
-      target.damagePaint.fillCircle(-8, -1, 6);
-      target.damagePaint.fillCircle(4, 5, 5);
-      target.damagePaint.fillCircle(10, 10, 3.5);
-    }
-    target.damagePaint.setVisible(true);
-    target.body.setData('combatState', 'DOWNED');
-    target.body.setRotation(owner === 'player' ? -0.28 : 0.28);
-    target.body.y += 10;
-    target.body.setAlpha(0.68);
-    this.updateWeaponVisibility(target, false);
-    const name = target.body.getData('nameLabel') as Phaser.GameObjects.Text | undefined;
-    name?.setAlpha(0.5);
-    this.showCombatHighlight('ELIMINATED', '#f4f1df', target.body.x, target.body.y - 46, 1.28);
-    this.statusHud?.setText(owner === 'player' ? 'ELIMINATED  ·  ROUND POINT' : 'YOU ARE ELIMINATED  ·  ROUND POINT');
-  }
-
-  private updateWeaponVisibility(target: Fighter, visible: boolean) {
-    if (target === this.player) {
-      this.playerArms.setVisible(visible);
-      this.playerWeapon.setVisible(visible);
-      this.playerMuzzle.setVisible(visible);
-    } else {
-      this.rivalArms.setVisible(visible);
-      this.rivalWeapon.setVisible(visible);
-      this.rivalMuzzle.setVisible(visible);
-    }
-  }
-
-  private resetFighter(target: Fighter, x: number, y: number) {
-    target.hp = 2;
-    target.wounded = false;
-    target.downed = false;
-    target.damagePaint.clear();
-    target.damagePaint.setVisible(false);
-    target.body.setData('combatState', 'READY');
-    target.body.setRotation(0);
-    target.body.setAlpha(1);
-    target.body.setPosition(x, y);
-    const name = target.body.getData('nameLabel') as Phaser.GameObjects.Text | undefined;
-    name?.setAlpha(1);
-    this.updateWeaponVisibility(target, true);
   }
 
   private clearSplatter() {
@@ -648,8 +557,10 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.time.delayedCall(700, () => {
       if (this.matchOver || this.paused) return;
       this.clearSplatter();
-      this.resetFighter(this.player, 1180, 1040);
-      this.resetFighter(this.rival, 1180, 330);
+      this.player.hp = 2;
+      this.rival.hp = 2;
+      this.player.body.setPosition(1180, 1040);
+      this.rival.body.setPosition(1180, 330);
       this.rival.cooldown = 700;
       this.roundTransition = false;
       this.statusHud?.setText(
@@ -666,12 +577,9 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   }
 
   private flash(target: Fighter, headshot: boolean) {
-    if (target.downed) return;
     target.body.setScale(headshot ? 1.28 : 1.16);
-    this.time.delayedCall(headshot ? 160 : 90, () => {
-      if (!target.downed) target.body.setScale(1);
-    });
-    this.statusHud?.setText(headshot ? 'HEADSHOT  ·  INSTANT ELIMINATION' : 'BODY HIT  ·  DAMAGE CONFIRMED');
+    this.time.delayedCall(headshot ? 160 : 90, () => target.body.setScale(1));
+    this.statusHud?.setText(headshot ? 'HEADSHOT  ·  ROUND POINT' : 'BODY HIT  ·  ONE MORE TO ELIMINATE');
   }
 
   private showResult() {
@@ -1287,9 +1195,8 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     const arms = this.add.graphics();
     const weapon = this.add.graphics();
     const muzzle = this.add.graphics();
-    const damagePaint = this.add.graphics().setDepth(35).setVisible(false);
 
-    container.add([shadow, poseA, poseB, arms, weapon, muzzle, damagePaint]);
+    container.add([shadow, poseA, poseB, arms, weapon, muzzle]);
 
     const name = this.add.text(x, y - 50, label, {
       fontFamily: 'monospace',
@@ -1314,13 +1221,9 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     }
 
     name.setData('fighter', player ? 'player' : 'rival');
-    container.setData('nameLabel', name);
     return {
       body: container,
       hp: 2,
-      wounded: false,
-      downed: false,
-      damagePaint,
       score: 0,
       speed: 170,
       cooldown: 500,
