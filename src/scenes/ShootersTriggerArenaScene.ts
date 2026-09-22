@@ -652,7 +652,6 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   }
 
   private updateWeaponPose(
-    fighter: Fighter,
     weapon: Phaser.GameObjects.Graphics,
     arms: Phaser.GameObjects.Graphics,
     muzzle: Phaser.GameObjects.Graphics,
