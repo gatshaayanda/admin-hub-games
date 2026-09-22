@@ -83,7 +83,6 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private playerRevealedUntil = 0;
   private playerLastFiredAt = 0;
   private cleanup?: () => void;
-  private exitButton?: HTMLButtonElement;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private matchOver = false;
   private paused = false;
@@ -92,10 +91,6 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private pauseButton?: HTMLButtonElement;
   private pausePanel?: HTMLDivElement;
   private resultPanel?: HTMLDivElement;
-  private locatorPanel?: HTMLDivElement;
-  private locatorCanvas?: HTMLCanvasElement;
-  private locatorCtx?: CanvasRenderingContext2D | null;
-  private locatorArrow?: HTMLDivElement;
   private splatter: Phaser.GameObjects.Graphics[] = [];
   private playerScrapes = 0;
   private rivalScrapes = 0;
@@ -128,6 +123,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private evasionSkill = 0;
   private arenaStartedAt = 0;
   private rivalCanFireAt = 0;
+  private stealthIndicators: Array<{ ring: Phaser.GameObjects.Graphics; label: Phaser.GameObjects.Text; x: number; y: number; radius: number }> = [];
 
   constructor() {
     super('ShootersTriggerArenaScene');
@@ -159,9 +155,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
 
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.cleanup = installShootersTriggerMobileControls();
-    this.createExitButton();
     this.createPauseButton();
-    this.createEnemyLocator();
 
     this.arenaStartedAt = Date.now();
     this.rivalCanFireAt = this.arenaStartedAt + ARENA_RIVAL_OPENING_DELAY_MS;
@@ -171,15 +165,14 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
       this.cleanup?.();
-      this.exitButton?.remove();
       this.pauseButton?.remove();
       this.pausePanel?.remove();
       this.resultPanel?.remove();
-      this.locatorPanel?.remove();
       this.clearSplatter();
       this.player?.droppedWeapon?.destroy();
       this.rival?.droppedWeapon?.destroy();
-      this.locatorArrow?.remove();
+      this.stealthIndicators.forEach(({ ring, label }) => { ring.destroy(); label.destroy(); });
+      this.stealthIndicators = [];
     });
 
     window.dispatchEvent(new Event('admin-hub-games:game-ready'));
@@ -202,8 +195,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.updateAnimations(delta);
     this.updateWeaponPoses();
     this.updateHud();
-    this.updateEnemyLocator();
-  }
+    this.updateStealthIndicators();  }
 
   public setMoveVector(x: number, y: number) {
     this.joystickVector.set(Phaser.Math.Clamp(x, -1, 1), Phaser.Math.Clamp(y, -1, 1));
@@ -1103,200 +1095,21 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   }
 
   private createHud() {
-    this.add.text(18, 18, 'ARENA · FIRST TO 3', {
-      fontFamily: 'monospace',
-      fontSize: '15px',
-      fontStyle: 'bold',
-      color: '#f4f1df',
-    }).setScrollFactor(0).setDepth(90);
-
-    this.scoreHud = this.add.text(this.scale.width / 2, 18, 'YOU 0  ·  RIVAL 0', {
-      fontFamily: 'monospace',
-      fontSize: '13px',
-      fontStyle: 'bold',
-      color: '#f4f1df',
+    // Deliberately minimal: the fight stays visible; HUD only answers score and ammo.
+    this.scoreHud = this.add.text(this.scale.width / 2, 16, 'YOU 0  ·  RIVAL 0', {
+      fontFamily: 'monospace', fontSize: '13px', fontStyle: 'bold', color: '#f4f1df',
+      backgroundColor: 'rgba(16,32,24,.62)', padding: { left: 8, right: 8, top: 5, bottom: 5 },
     }).setOrigin(.5, 0).setScrollFactor(0).setDepth(90);
-
-    this.ammoHud = this.add.text(this.scale.width - 18, 18, 'GUN · 24/24', {
-      fontFamily: 'monospace',
-      fontSize: '10px',
-      fontStyle: 'bold',
-      color: '#e8c95c',
+    this.ammoHud = this.add.text(this.scale.width - 14, 16, 'GUN · 24/24', {
+      fontFamily: 'monospace', fontSize: '10px', fontStyle: 'bold', color: '#e8c95c',
+      backgroundColor: 'rgba(16,32,24,.62)', padding: { left: 7, right: 7, top: 5, bottom: 5 },
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(90);
   }
 
   private updateHud() {
     this.scoreHud?.setText('YOU ' + this.player.score + '  ·  ' + this.rivalProfile.operator + ' ' + this.rival.score);
-    const refillPercent = this.player.refilling
-      ? Math.round((this.player.refillElapsed / ARENA_REFILL_DURATION) * 100)
-      : 0;
-    this.ammoHud?.setText(
-      this.player.refilling
-        ? 'REFILL ' + refillPercent + '%'
-        : 'GUN · ' + this.player.ammo + '/' + this.player.maxAmmo,
-    );
-
-  }
-
-  private createEnemyLocator() {
-    this.locatorPanel?.remove();
-    this.locatorArrow?.remove();
-
-    const panel = document.createElement('div');
-    Object.assign(panel.style, {
-      position: 'fixed',
-      top: '64px',
-      right: 'max(12px, env(safe-area-inset-right, 0px))',
-      width: '112px',
-      height: '112px',
-      padding: '4px',
-      boxSizing: 'border-box',
-      border: '2px solid rgba(244,241,223,.72)',
-      borderRadius: '10px',
-      background: 'rgba(16,32,24,.82)',
-      zIndex: '1440',
-      pointerEvents: 'none',
-      overflow: 'hidden',
-    });
-
-    const canvas = document.createElement('canvas');
-    canvas.width = 104;
-    canvas.height = 104;
-    canvas.style.width = '104px';
-    canvas.style.height = '104px';
-    canvas.setAttribute('aria-label', 'Arena tactical locator');
-    panel.appendChild(canvas);
-
-    const arrow = document.createElement('div');
-    Object.assign(arrow.style, {
-      position: 'fixed',
-      width: '42px',
-      minHeight: '28px',
-      padding: '5px 7px',
-      boxSizing: 'border-box',
-      borderRadius: '7px',
-      background: 'rgba(155,63,63,.94)',
-      border: '2px solid #fff4d4',
-      color: '#fff4d4',
-      font: '800 9px/1 monospace',
-      letterSpacing: '.5px',
-      textAlign: 'center',
-      zIndex: '1435',
-      pointerEvents: 'none',
-      transformOrigin: '50% 50%',
-      display: 'none',
-      whiteSpace: 'pre',
-    });
-    arrow.textContent = 'RIVAL';
-    document.body.appendChild(panel);
-    document.body.appendChild(arrow);
-
-    this.locatorPanel = panel;
-    this.locatorCanvas = canvas;
-    this.locatorCtx = canvas.getContext('2d');
-    this.locatorArrow = arrow;
-    this.updateEnemyLocator();
-  }
-
-  private updateEnemyLocator() {
-    const ctx = this.locatorCtx;
-    const canvas = this.locatorCanvas;
-    if (!ctx || !canvas || !this.player || !this.rival) return;
-
-    const w = canvas.width;
-    const h = canvas.height;
-    ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = '#263c2a';
-    ctx.fillRect(0, 0, w, h);
-    ctx.strokeStyle = 'rgba(244,241,223,.28)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(5, 5, w - 10, h - 10);
-
-    ctx.strokeStyle = 'rgba(234,216,160,.18)';
-    for (const y of [34, 70]) {
-      ctx.beginPath();
-      ctx.moveTo(6, y);
-      ctx.lineTo(w - 6, y);
-      ctx.stroke();
-    }
-    for (const x of [34, 70]) {
-      ctx.beginPath();
-      ctx.moveTo(x, 6);
-      ctx.lineTo(x, h - 6);
-      ctx.stroke();
-    }
-
-    const sx = (w - 12) / 2400;
-    const sy = (h - 12) / 1400;
-    ctx.fillStyle = 'rgba(117,86,59,.8)';
-    for (const cover of this.covers) {
-      ctx.fillRect(6 + cover.x * sx, 6 + cover.y * sy, Math.max(2, cover.width * sx), Math.max(2, cover.height * sy));
-    }
-
-    const px = 6 + this.player.body.x * sx;
-    const py = 6 + this.player.body.y * sy;
-    const rx = 6 + this.rival.body.x * sx;
-    const ry = 6 + this.rival.body.y * sy;
-
-    ctx.fillStyle = '#f4f1df';
-    ctx.beginPath();
-    ctx.moveTo(px + this.aim.x * 6, py + this.aim.y * 6);
-    ctx.lineTo(px - this.aim.y * 4 - this.aim.x * 4, py + this.aim.x * 4 - this.aim.y * 4);
-    ctx.lineTo(px + this.aim.y * 4 - this.aim.x * 4, py - this.aim.x * 4 - this.aim.y * 4);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.fillStyle = '#e44f3d';
-    ctx.beginPath();
-    ctx.moveTo(rx, ry - 4);
-    ctx.lineTo(rx + 4, ry + 4);
-    ctx.lineTo(rx - 4, ry + 4);
-    ctx.closePath();
-    ctx.fill();
-
-    const distance = Phaser.Math.Distance.Between(
-      this.player.body.x,
-      this.player.body.y,
-      this.rival.body.x,
-      this.rival.body.y,
-    );
-
-    const camera = this.cameras.main;
-    const viewLeft = camera.scrollX;
-    const viewTop = camera.scrollY;
-    const viewRight = viewLeft + camera.width;
-    const viewBottom = viewTop + camera.height;
-    const onScreen =
-      this.rival.body.x >= viewLeft &&
-      this.rival.body.x <= viewRight &&
-      this.rival.body.y >= viewTop &&
-      this.rival.body.y <= viewBottom;
-
-    if (onScreen) {
-      if (this.locatorArrow) this.locatorArrow.style.display = 'none';
-      return;
-    }
-
-    const centerX = viewLeft + camera.width / 2;
-    const centerY = viewTop + camera.height / 2;
-    const dx = this.rival.body.x - centerX;
-    const dy = this.rival.body.y - centerY;
-    const scale = 1 / Math.max(
-      Math.abs(dx) / Math.max(1, camera.width / 2 - 34),
-      Math.abs(dy) / Math.max(1, camera.height / 2 - 34),
-      1,
-    );
-
-    const edgeX = camera.width / 2 + dx * scale;
-    const edgeY = camera.height / 2 + dy * scale;
-    const arrow = this.locatorArrow;
-    if (!arrow) return;
-
-    arrow.style.display = 'block';
-    arrow.style.left = Math.max(50, Math.min(window.innerWidth - 50, edgeX - 21)) + 'px';
-    arrow.style.top = Math.max(82, Math.min(window.innerHeight - 92, edgeY - 14)) + 'px';
-    arrow.style.transform = 'rotate(' + (Math.atan2(dy, dx) * 180 / Math.PI + 90) + 'deg)';
-    arrow.textContent = 'RIVAL\\n' + Math.round(distance);
+    const refillPercent = this.player.refilling ? Math.round((this.player.refillElapsed / ARENA_REFILL_DURATION) * 100) : 0;
+    this.ammoHud?.setText(this.player.refilling ? 'REFILL ' + refillPercent + '%' : 'GUN · ' + this.player.ammo + '/' + this.player.maxAmmo);
   }
 
   private createPauseButton() {
@@ -1304,21 +1117,11 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     button.textContent = 'Ⅱ';
     button.setAttribute('aria-label', 'Pause arena');
     Object.assign(button.style, {
-      position: 'fixed',
-      right: '18px',
-      top: '70px',
-      width: '44px',
-      height: '44px',
-      padding: '0',
-      border: '2px solid #f4f1df',
-      borderRadius: '10px',
-      background: '#102018',
-      color: '#f4f1df',
-      fontFamily: 'monospace',
-      fontSize: '16px',
-      fontWeight: '900',
-      zIndex: '1450',
-      touchAction: 'manipulation',
+      position: 'fixed', left: 'max(10px, env(safe-area-inset-left, 0px))', top: '10px',
+      width: '38px', height: '38px', padding: '0', border: '1px solid rgba(244,241,223,.72)',
+      borderRadius: '9px', background: 'rgba(16,32,24,.88)', color: '#f4f1df',
+      fontFamily: 'monospace', fontSize: '14px', fontWeight: '900', zIndex: '1450',
+      touchAction: 'manipulation', boxShadow: '0 2px 8px rgba(0,0,0,.22)',
     });
     button.onclick = () => this.togglePause();
     document.body.appendChild(button);
@@ -1447,30 +1250,6 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.resultPanel = undefined;
     this.paused = false;
     this.scene.start('ShootersTriggerLobbyScene');
-  }
-
-  private createExitButton() {
-    const button = document.createElement('button');
-    button.textContent = 'EXIT ARENA · HOME FIELD';
-    Object.assign(button.style, {
-      position: 'fixed',
-      right: '18px',
-      top: '18px',
-      minHeight: '44px',
-      padding: '9px 14px',
-      border: '2px solid #f4f1df',
-      borderRadius: '10px',
-      background: '#102018',
-      color: '#f4f1df',
-      fontFamily: 'monospace',
-      fontSize: '10px',
-      fontWeight: '800',
-      zIndex: '1450',
-      touchAction: 'manipulation',
-    });
-    button.onclick = () => this.scene.start('ShootersTriggerLobbyScene');
-    document.body.appendChild(button);
-    this.exitButton = button;
   }
 
   private updateAnimations(delta: number) {
@@ -1718,6 +1497,15 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     g.fillStyle(0x526d3c, 0.75).fillCircle(x + 5 * scale, y - 16 * scale, 23 * scale);
     this.concealments.push(new Phaser.Geom.Circle(x, y, ARENA_STEALTH_RADIUS * scale));
     this.covers.push(new Phaser.Geom.Rectangle(x - 8 * scale, y + 14 * scale, 16 * scale, 52 * scale));
+
+    // World-space cue: concealment spots are obvious without adding another HUD/map widget.
+    const ring = this.add.graphics().setDepth(7);
+    ring.lineStyle(3, 0x9fbda8, 0.55).strokeCircle(x, y, Math.max(42, ARENA_STEALTH_RADIUS * scale * 0.72));
+    const label = this.add.text(x, y + 58 * scale, 'HIDE', {
+      fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold',
+      color: '#d8eadf', stroke: '#203326', strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(8);
+    this.stealthIndicators.push({ ring, label, x, y, radius: ARENA_STEALTH_RADIUS * scale });
   }
 
   private drawBunker(x: number, y: number, width: number, height: number, color: number) {
@@ -1757,8 +1545,25 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       Math.min(width * 0.28, 320),
       Math.min(height * 0.22, 150),
     );
-    this.scoreHud?.setPosition(width / 2, 18);
-    this.ammoHud?.setPosition(width - 18, 18);
+    this.scoreHud?.setPosition(width / 2, 16);
+    this.ammoHud?.setPosition(width - 14, 16);
+  }
+
+  private updateStealthIndicators() {
+    if (!this.player) return;
+    const px = this.player.body.x, py = this.player.body.y;
+    for (const indicator of this.stealthIndicators) {
+      const distance = Phaser.Math.Distance.Between(px, py, indicator.x, indicator.y);
+      const proximity = Phaser.Math.Clamp(1 - distance / 340, 0, 1);
+      const concealed = distance <= indicator.radius && this.isPlayerConcealed();
+      const visible = proximity > 0.02;
+      indicator.ring.setVisible(visible);
+      indicator.label.setVisible(visible);
+      indicator.ring.setAlpha(concealed ? 0.9 : 0.18 + proximity * 0.55);
+      indicator.label.setAlpha(concealed ? 1 : 0.25 + proximity * 0.75);
+      indicator.label.setText(concealed ? 'HIDDEN' : 'HIDE');
+      if (visible) indicator.ring.setScale(1 + Math.sin(Date.now() / 220) * 0.035 * proximity);
+    }
   }
 
   private updatePlayerAwareness() {
