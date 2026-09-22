@@ -26,6 +26,12 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
   private enterButton?: Phaser.GameObjects.Container;
   private phoneButton?: HTMLButtonElement;
   private phoneModal?: HTMLDivElement;
+  private phoneHint?: HTMLDivElement;
+  private phoneAlertAnimation?: Animation;
+  private phoneLastSignature = '';
+  private phoneUnread = false;
+  private phonePollClock = 0;
+  private phoneAudioContext?: AudioContext;
 
   private locations: Location[] = [
     { id: 'shooting', name: 'SHOOTING RANGE', subtitle: '01 · AIM · FIRE · TRAIN', x: 1580, y: 690, color: 0xd66a3d },
@@ -80,6 +86,10 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
       this.equipmentModal?.remove();
       this.phoneModal?.remove();
       this.phoneButton?.remove();
+      this.phoneHint?.remove();
+      this.phoneAlertAnimation?.cancel();
+      this.phoneAlertAnimation = undefined;
+      this.phoneHint = undefined;
       this.equipmentModal = undefined;
       this.phoneModal = undefined;
       this.phoneButton = undefined;
@@ -117,6 +127,12 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
 
     if (Phaser.Input.Keyboard.JustDown(this.interactKey)) this.interact();
     this.updateLocationHint();
+
+    this.phonePollClock += delta;
+    if (this.phonePollClock >= 500) {
+      this.phonePollClock = 0;
+      this.refreshPhoneAlert();
+    }
   }
 
   public setMoveVector(x: number, y: number) {
@@ -192,22 +208,195 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
   private createPhoneButton() {
     const button = document.createElement('button');
     button.type = 'button';
-    button.textContent = 'PHONE';
+    button.setAttribute('aria-label', 'Open Field Phone');
     Object.assign(button.style, {
-      position: 'fixed', right: '18px', bottom: 'max(148px, calc(env(safe-area-inset-bottom) + 132px))', minWidth: '92px', minHeight: '52px',
-      padding: '8px 12px', border: '2px solid #f4f1df', borderRadius: '9px',
-      background: '#102018', color: '#fff4d4', fontFamily: 'monospace', fontSize: '10px',
-      fontWeight: '800', zIndex: '1450', touchAction: 'manipulation',
+      position: 'fixed',
+      right: 'max(18px, env(safe-area-inset-right, 0px))',
+      bottom: 'max(18px, env(safe-area-inset-bottom, 0px))',
+      width: '112px',
+      height: '112px',
+      padding: '0',
+      border: '0',
+      background: 'transparent',
+      color: '#fff4d4',
+      zIndex: '1450',
+      touchAction: 'manipulation',
+      display: 'grid',
+      placeItems: 'center',
+      WebkitTapHighlightColor: 'transparent',
     });
+
+    button.innerHTML = `
+      <span aria-hidden="true" style="position:relative;display:block;width:58px;height:88px;border:3px solid #f4f1df;border-radius:12px;background:#17251c;box-shadow:0 8px 18px rgba(0,0,0,.38),0 0 0 2px rgba(16,32,24,.7);">
+        <span style="position:absolute;left:50%;top:8px;transform:translateX(-50%);width:18px;height:3px;border-radius:3px;background:#f4f1df;opacity:.8;"></span>
+        <span style="position:absolute;left:6px;right:6px;top:17px;bottom:17px;border:1px solid #496556;border-radius:5px;background:linear-gradient(#263d2d,#102018);"></span>
+        <span style="position:absolute;left:50%;bottom:6px;transform:translateX(-50%);width:8px;height:8px;border:1px solid #f4f1df;border-radius:50%;opacity:.85;"></span>
+      </span>
+      <span data-phone-badge="true" style="position:absolute;right:10px;top:10px;min-width:24px;height:24px;padding:0 6px;border-radius:12px;border:2px solid #151a16;background:#d66a3d;color:#fff4d4;font:800 11px/20px monospace;text-align:center;display:none;box-shadow:0 4px 10px rgba(0,0,0,.35);">!</span>
+    `;
+
     button.addEventListener('pointerdown', (event) => {
-      event.preventDefault(); event.stopPropagation(); this.openPhone();
+      event.preventDefault();
+      event.stopPropagation();
+      this.openPhone();
     });
     document.body.appendChild(button);
     this.phoneButton = button;
+
+    const hint = document.createElement('div');
+    Object.assign(hint.style, {
+      position: 'fixed',
+      right: 'max(24px, env(safe-area-inset-right, 6px))',
+      bottom: 'calc(max(18px, env(safe-area-inset-bottom, 0px)) + 116px)',
+      minWidth: '108px',
+      maxWidth: '150px',
+      padding: '7px 9px',
+      border: '1px solid #e8c95c',
+      borderRadius: '7px',
+      background: 'rgba(21,26,22,.94)',
+      color: '#e8c95c',
+      fontFamily: 'monospace',
+      fontSize: '8px',
+      fontWeight: '800',
+      lineHeight: '1.35',
+      textAlign: 'center',
+      zIndex: '1449',
+      pointerEvents: 'none',
+      display: 'none',
+      boxShadow: '0 6px 16px rgba(0,0,0,.3)',
+    });
+    document.body.appendChild(hint);
+    this.phoneHint = hint;
+
+    this.refreshPhoneAlert(true);
+  }
+
+  private getPhoneSignature() {
+    const keys = [
+      'shooters-trigger:last-shooting',
+      'shooters-trigger:last-evasion',
+      'shooters-trigger:last-arena',
+      'shooters-trigger:budget',
+      'shooters-trigger:upgrade-level',
+    ];
+    try {
+      return keys.map(key => key + '=' + (localStorage.getItem(key) || '')).join('|');
+    } catch {
+      return 'unavailable';
+    }
+  }
+
+  private getPhoneNextLabel() {
+    let shooting: any = null, evasion: any = null, arena: any = null;
+    try {
+      shooting = JSON.parse(localStorage.getItem('shooters-trigger:last-shooting') || 'null');
+      evasion = JSON.parse(localStorage.getItem('shooters-trigger:last-evasion') || 'null');
+      arena = JSON.parse(localStorage.getItem('shooters-trigger:last-arena') || 'null');
+    } catch {}
+
+    if (!shooting) return 'NEXT · SHOOTING';
+    if (!evasion) return 'NEXT · EVASION';
+    if (!arena) return 'NEXT · ARENA';
+    if (arena?.result === 'WIN') return 'NEXT · ARMORY';
+    return 'NEXT · RETRAIN';
+  }
+
+  private refreshPhoneAlert(initial = false) {
+    const signature = this.getPhoneSignature();
+    if (!signature || signature === 'unavailable') return;
+
+    let seen = '';
+    try { seen = localStorage.getItem('shooters-trigger:phone-seen-signature') || ''; } catch {}
+
+    if (!this.phoneLastSignature) this.phoneLastSignature = signature;
+
+    if (initial) {
+      this.phoneUnread = seen !== signature;
+    } else if (signature !== this.phoneLastSignature) {
+      this.phoneUnread = true;
+      this.playPhoneAlert();
+    }
+
+    this.phoneLastSignature = signature;
+    this.renderPhoneAlert();
+  }
+
+  private renderPhoneAlert() {
+    if (!this.phoneButton) return;
+    const badge = this.phoneButton.querySelector('[data-phone-badge="true"]') as HTMLElement | null;
+    if (badge) {
+      badge.textContent = this.phoneUnread ? '!' : '';
+      badge.style.display = this.phoneUnread ? 'block' : 'none';
+    }
+
+    if (this.phoneHint) {
+      this.phoneHint.textContent = this.phoneUnread ? this.getPhoneNextLabel() : '';
+      this.phoneHint.style.display = this.phoneUnread ? 'block' : 'none';
+    }
+
+    if (this.phoneUnread) {
+      if (!this.phoneAlertAnimation) {
+        this.phoneAlertAnimation = this.phoneButton.animate(
+          [
+            { transform: 'translateX(0) rotate(0deg)' },
+            { transform: 'translateX(-3px) rotate(-4deg)' },
+            { transform: 'translateX(3px) rotate(4deg)' },
+            { transform: 'translateX(-2px) rotate(-2deg)' },
+            { transform: 'translateX(0) rotate(0deg)' },
+          ],
+          { duration: 900, iterations: Infinity, easing: 'ease-in-out' },
+        );
+      }
+    } else {
+      this.phoneAlertAnimation?.cancel();
+      this.phoneAlertAnimation = undefined;
+    }
+  }
+
+  private playPhoneAlert() {
+    // Visual notification always works; sound follows browser autoplay rules.
+    this.phoneButton?.animate(
+      [
+        { transform: 'scale(1)' },
+        { transform: 'scale(1.08)' },
+        { transform: 'scale(1)' },
+      ],
+      { duration: 420, iterations: 2, easing: 'ease-out' },
+    );
+
+    try {
+      const AudioCtor = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtor) return;
+      this.phoneAudioContext ||= new AudioCtor();
+      const ctx = this.phoneAudioContext;
+      if (ctx.state === 'suspended') void ctx.resume();
+      const now = ctx.currentTime;
+      [0, 0.18].forEach(offset => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(offset ? 920 : 760, now + offset);
+        gain.gain.setValueAtTime(0.0001, now + offset);
+        gain.gain.exponentialRampToValueAtTime(0.055, now + offset + 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.12);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(now + offset);
+        osc.stop(now + offset + 0.13);
+      });
+    } catch {}
+  }
+
+  private markPhoneRead() {
+    const signature = this.getPhoneSignature();
+    this.phoneUnread = false;
+    this.phoneLastSignature = signature;
+    try { localStorage.setItem('shooters-trigger:phone-seen-signature', signature); } catch {}
+    this.renderPhoneAlert();
   }
 
   private openPhone() {
     if (this.phoneModal) return;
+    this.markPhoneRead();
 
     let shooting: any = null, evasion: any = null, arena: any = null;
     try {
@@ -248,13 +437,35 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
 
     const modal = document.createElement('div');
     Object.assign(modal.style, {
-      position: 'fixed', inset: '0', zIndex: '1550', display: 'grid', placeItems: 'center',
-      padding: '20px', background: 'rgba(12,18,14,.72)', fontFamily: 'monospace', touchAction: 'manipulation',
+      position: 'fixed',
+      inset: '0',
+      width: '100%',
+      height: '100dvh',
+      zIndex: '1550',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      boxSizing: 'border-box',
+      padding: 'max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px))',
+      background: 'rgba(12,18,14,.72)',
+      fontFamily: 'monospace',
+      touchAction: 'manipulation',
+      overflow: 'hidden',
     });
     const card = document.createElement('div');
     Object.assign(card.style, {
-      width: 'min(440px,92vw)', maxHeight: '88vh', overflow: 'auto', padding: '22px',
-      background: '#151a16', color: '#f4f1df', border: '2px solid #e8c95c', borderRadius: '12px',
+      width: 'min(440px, calc(100vw - 24px))',
+      maxHeight: 'calc(100dvh - 24px)',
+      minHeight: '0',
+      overflowY: 'auto',
+      overscrollBehavior: 'contain',
+      WebkitOverflowScrolling: 'touch',
+      boxSizing: 'border-box',
+      padding: '20px',
+      background: '#151a16',
+      color: '#f4f1df',
+      border: '2px solid #e8c95c',
+      borderRadius: '12px',
       boxShadow: '0 12px 34px rgba(0,0,0,.45)',
     });
     const title = document.createElement('div');
