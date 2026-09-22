@@ -4,7 +4,7 @@ type BeforeInstallPromptEventLike = Event & {
 
 let deferredInstallPrompt: BeforeInstallPromptEventLike | undefined;
 let registration: ServiceWorkerRegistration | undefined;
-let gameReady = false;
+let installSurfaceReady = false;
 
 const dispatchPwaEvent = (name: string, detail?: Record<string, unknown>) => {
   window.dispatchEvent(new CustomEvent(name, { detail }));
@@ -32,8 +32,8 @@ function showUpdateNotice(waiting: ServiceWorker) {
   document.body.append(notice);
 }
 
-function showInstallNotice() {
-  if (!deferredInstallPrompt || !gameReady || document.getElementById('ahg-pwa-install')) return;
+export function showInstallNotice() {
+  if (!deferredInstallPrompt || !installSurfaceReady || document.getElementById('ahg-pwa-install')) return;
 
   const notice = document.createElement('div');
   notice.id = 'ahg-pwa-install';
@@ -104,6 +104,11 @@ async function requestPersistentStorage() {
   }
 }
 
+export function markInstallSurfaceReady() {
+  installSurfaceReady = true;
+  showInstallNotice();
+}
+
 export function isInstallPromptAvailable() {
   return Boolean(deferredInstallPrompt);
 }
@@ -139,11 +144,6 @@ export function registerPwa() {
 
   window.addEventListener('online', () => dispatchPwaEvent('admin-hub-games:connectivity', { online: true }));
   window.addEventListener('offline', () => dispatchPwaEvent('admin-hub-games:connectivity', { online: false }));
-
-  window.addEventListener('admin-hub-games:game-ready', () => {
-    gameReady = true;
-    showInstallNotice();
-  });
 
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (document.getElementById('ahg-pwa-update')) window.location.reload();
