@@ -27,7 +27,9 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
   private prompt?: Phaser.GameObjects.Container;
   private activeLocation?: Location;
   private playerName = 'Player';
-  private progress = loadShootersProgress();\n  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;\n  private keys!: Record<string, Phaser.Input.Keyboard.Key>;
+  private progress = loadShootersProgress();
+  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+  private keys!: Record<string, Phaser.Input.Keyboard.Key>;
 
   constructor() {
     super('ShootersTriggerLobbyScene');
@@ -50,7 +52,9 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
       Math.min(this.scale.height * 0.22, 145),
     );
 
-    this.cursors = this.input.keyboard!.createCursorKeys();\n    this.keys = this.input.keyboard!.addKeys('W,A,S,D') as Record<string, Phaser.Input.Keyboard.Key>;\n    this.createHud();
+    this.cursors = this.input.keyboard!.createCursorKeys();
+    this.keys = this.input.keyboard!.addKeys('W,A,S,D') as Record<string, Phaser.Input.Keyboard.Key>;
+    this.createHud();
     this.controlsCleanup = installShootersTriggerMobileControls('ShootersTriggerLobbyScene', false);
     addFieldGuide(this, 'SHOOTERS TRIGGER · FIELD GUIDE', [
       'This is the Home Field. Walk around it instead of selecting a flat menu.',
@@ -189,7 +193,8 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
 
   private createHud() {
     const status = this.add.text(18, 16,
-      `SHOOTERS TRIGGER · HOME FIELD\n${this.playerName} · BUDGET ${this.progress.budget}`,
+      `SHOOTERS TRIGGER · HOME FIELD
+${this.playerName} · BUDGET ${this.progress.budget}`,
       { fontFamily: 'monospace', fontSize: '10px', fontStyle: 'bold', color: '#fff4d4', backgroundColor: '#183322', padding: { left: 9, right: 9, top: 7, bottom: 7 } },
     ).setScrollFactor(0).setDepth(100);
 
