@@ -3247,7 +3247,7 @@ The Arena must communicate stealth without covering the fight in interface clutt
 - Natural concealment spots are marked in the world with a restrained **HIDE** cue when the player approaches them.
 - Entering an active concealment zone changes that cue to **HIDDEN**, making the player's tactical state obvious without exposing the player to the rival AI.
 - The cue is proximity-based rather than a permanent map overlay, so the field remains readable.
-- Stealth routes should use natural trees/concealment plus hard-cover transitions and alternate approaches. Paintball strategy references consistently distinguish concealment from hard cover and describe concealment as useful for flanking/ambushes, with firing breaking concealment. citeturn0search1turn0search3
+- Stealth routes should use natural trees/concealment plus hard-cover transitions and alternate approaches. Online paintball strategy references reviewed September 22, 2026 distinguish concealment from hard cover and describe concealment as useful for flanking/ambushes, with firing breaking concealment.
 
 ### HUD discipline
 - Arena HUD is intentionally minimal: **score**, **ammo**, and a small **pause** control.
