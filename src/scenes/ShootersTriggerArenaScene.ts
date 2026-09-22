@@ -97,6 +97,13 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.rival.speed = 145 + this.rivalProfile.movement * 0.55;
     this.rival.cooldown = Math.max(360, 930 - this.rivalProfile.shooting * 5.4);
 
+    this.cameras.main.setBounds(0, 0, 2400, 1400);
+    this.cameras.main.startFollow(this.player.body, true, 0.08, 0.08);
+    this.cameras.main.setDeadzone(
+      Math.min(this.scale.width * 0.28, 320),
+      Math.min(this.scale.height * 0.22, 150),
+    );
+
     this.createHud();
 
     this.cursors = this.input.keyboard!.createCursorKeys();
@@ -105,7 +112,10 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
 
     this.arenaStartedAt = Date.now();
 
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
+
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
       this.cleanup?.();
       this.exitButton?.remove();
     });
@@ -818,6 +828,16 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       stroke: '#493526',
       strokeThickness: 4,
     }).setOrigin(0.5).setDepth(6);
+  }
+
+  private handleResize(width: number, height: number) {
+    this.cameras.main.setViewport(0, 0, width, height);
+    this.cameras.main.setDeadzone(
+      Math.min(width * 0.28, 320),
+      Math.min(height * 0.22, 150),
+    );
+    this.scoreHud?.setPosition(width / 2, 18);
+    this.statusHud?.setPosition(width / 2, 43);
   }
 
   private inCover(x: number, y: number, padding = 12) {
