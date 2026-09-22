@@ -1717,6 +1717,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     g.fillStyle(0x405638, 1).fillCircle(x, y, 34 * scale).fillCircle(x - 28 * scale, y + 9 * scale, 28 * scale).fillCircle(x + 28 * scale, y + 9 * scale, 29 * scale);
     g.fillStyle(0x526d3c, 0.75).fillCircle(x + 5 * scale, y - 16 * scale, 23 * scale);
     this.concealments.push(new Phaser.Geom.Circle(x, y, ARENA_STEALTH_RADIUS * scale));
+    this.covers.push(new Phaser.Geom.Rectangle(x - 8 * scale, y + 14 * scale, 16 * scale, 52 * scale));
   }
 
   private drawBunker(x: number, y: number, width: number, height: number, color: number) {
