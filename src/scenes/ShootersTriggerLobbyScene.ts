@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 
 type Location = {
-  id: 'shooting' | 'evasion' | 'upgrades' | 'media' |id: 'shooting' | 'evasion' | 'upgrades' | 'arena';
+  id: 'shooting' | 'evasion' | 'upgrades' | 'arena';
   name: string;
   subtitle: string;
   x: number;
@@ -31,7 +31,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     { id: 'shooting', name: 'SHOOTING RANGE', subtitle: '01 · AIM · FIRE · TRAIN', x: 1580, y: 690, color: 0xd66a3d },
     { id: 'evasion', name: 'EVASION YARD', subtitle: '02 · MOVE · COVER · SURVIVE', x: 780, y: 690, color: 0x2f7775 },
     { id: 'upgrades', name: 'ARMORY & OUTFITTER', subtitle: '03 · GEAR · UPGRADE · PREP', x: 760, y: 1080, color: 0xe8c95c },
-    { id: 'arena', name: 'ARENA', subtitle: '05 · 1v1 · FIRST TO 3', x: 1180, y: 420, color: 0xd66a3d },
+    { id: 'arena', name: 'ARENA', subtitle: '04 · 1v1 · FIRST TO 3', x: 1180, y: 420, color: 0xd66a3d },
   ];
 
   private playerMoving = false;
