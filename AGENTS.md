@@ -3082,3 +3082,25 @@ On a real phone, verify:
 8. a gun hit visibly knocks the gun down and the player must walk over it before firing;
 9. a round reset restores both fighters' ammo and guns;
 10. completed Arena evidence includes shots fired without breaking existing phone reporting.
+
+
+## Shooters Trigger — Arena Ammo & Gun-Drop Reliability Contract — September 22, 2026
+
+- Neutral Arena magazines contain 12 shots per round; empty ammunition disables firing until the ammo station is reached.
+- Refilling requires holding position for 2.5 seconds. The player is vulnerable during refill.
+- The rival must travel to refill when empty and must not permanently stall against cover; blocked paths may slide around cover.
+- Ammo resets on round reset. No reserve inventory or extra reload system is part of this baseline.
+- A confirmed gun/grip hit uses the projectile segment and a phone-readable hit zone.
+- On gun hit, the held gun/arms/muzzle disappear immediately. The dropped gun becomes a separate world object, lands beside the fighter, and stays fixed there until physical pickup.
+- The gun never follows the fighter after it lands, and the fighter cannot fire while unarmed.
+- The armed opponent can continue firing during recovery.
+- Player-facing terminology is **GUN**, not **MARKER**.
+
+### Acceptance
+1. Empty the magazine and confirm firing stops.
+2. Reach the station and hold for 2.5 seconds while vulnerable.
+3. Confirm the rival can reach and refill without getting stuck.
+4. Land a gun/grip hit and confirm the gun visibly leaves the fighter.
+5. Confirm it stays at its landing spot.
+6. Walk over it to recover it while the opponent can still fire.
+7. Confirm round reset restores full ammo and the held gun.
