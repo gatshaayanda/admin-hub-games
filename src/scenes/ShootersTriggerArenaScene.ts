@@ -590,10 +590,8 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         this.shots.splice(i, 1);
         continue;
       }
-        shot.body.destroy();
-        this.shots.splice(i, 1);
-        continue;
-      }
+    }
+  }
 
   private getWeaponPoint(target: Fighter) {
     const aim = target === this.player ? this.aim : new Phaser.Math.Vector2(this.player.body.x - target.body.x, this.player.body.y - target.body.y).normalize();
