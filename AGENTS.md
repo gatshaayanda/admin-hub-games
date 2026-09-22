@@ -3322,3 +3322,16 @@ The current phone playtest exposed two regressions that must not be recreated.
 - **Scope guard:** a combat fix must not alter Publisher Intro, Game Library, Hall, Arena HUD/map, pause, field layout, stealth, weapon-drop rules or other unrelated systems unless the user explicitly asks for that change.
 - **Historical recovery:** if an established visual/game-feel behavior has been replaced accidentally, inspect Git history and restore the known-good behavior rather than inventing a new substitute.
 
+
+
+## Shooters Trigger — Strict Change Boundary — September 22, 2026
+
+This rule exists because Arena behavior was changed in prior chats without the product owner asking for those changes.
+
+- **Do not change established behavior unless requested.** A bug report about shooting, engagement, AI, or paint does not authorize redesigning splatter, projectile visuals, HUD, map, controls, damage rules, cover, stealth, respawn, weapon drops, movement, ammo, or the field.
+- **Preserve approved visuals exactly when possible.** If a visual effect is reported as wrong, use Git history to recover the last approved implementation instead of inventing a replacement.
+- **Arena debugging is side-by-side.** Before changing combat, inspect player input → aim → fire → projectile → collision → hit resolution and rival movement → aim → fire → projectile → collision → hit resolution together. Do not tune only the side that complained.
+- **No invented waiting.** Do not add a rival/player opening delay or movement delay unless the product owner explicitly asks for one. Neutral Arena starts with no rival opening delay.
+- **No unrelated cleanup.** Do not touch Publisher Intro, Game Library, PWA/install behavior, Hall, President's Shoes, or unrelated Arena HUD/layout while fixing a scoped Arena gameplay issue.
+- **Playtest report beats assumption.** If the owner reports that the bot can hit them while their shots do not engage, inspect the actual runtime path and historical changes first; do not dismiss the report because source code appears symmetrical.
+- **Before checkpointing:** review the exact diff and confirm the patch contains only the requested fix plus this contract update. If an unexpected file or behavior changed, STOP and remove it before push.
