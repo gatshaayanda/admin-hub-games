@@ -633,12 +633,12 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   }
 
   private updateWeaponPoses() {
-    this.updateWeaponPose(this.player, this.playerWeapon, this.playerArms, this.playerMuzzle, this.aim);
+    this.updateWeaponPose(this.playerWeapon, this.playerArms, this.playerMuzzle, this.aim);
     const rivalAim = new Phaser.Math.Vector2(
       this.player.body.x - this.rival.body.x,
       this.player.body.y - this.rival.body.y,
     ).normalize();
-    this.updateWeaponPose(this.rival, this.rivalWeapon, this.rivalArms, this.rivalMuzzle, rivalAim);
+    this.updateWeaponPose(this.rivalWeapon, this.rivalArms, this.rivalMuzzle, rivalAim);
   }
 
   private updateWeaponPose(
