@@ -1,3 +1,5 @@
+import { markInstallSurfaceReady } from './pwa';
+
 type GameMenuItem = {
   id: 'hall' | 'presidents-shoes' | 'shooters-trigger';
   title: string;
@@ -78,6 +80,8 @@ export function renderCatalog(onPlay: (gameId: GameMenuItem['id']) => void) {
       </footer>
     </main>
   `);
+
+  markInstallSurfaceReady();
 
   const menu = app.querySelector<HTMLElement>('.game-menu');
   const playButtons = Array.from(menu?.querySelectorAll<HTMLButtonElement>('.menu-play') ?? []);
