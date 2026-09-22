@@ -43,9 +43,9 @@ const clamp = (value: number, min: number, max: number) => Math.max(min, Math.mi
 const ARENA_NEUTRAL_BASELINE = true;
 const ARENA_BASE_SPEED = 170;
 const ARENA_BASE_COOLDOWN = 360;
-const ARENA_AMMO_CAPACITY = 8;
-const ARENA_REFILL_DURATION = 2200;
-const ARENA_AMMO_STATION = new Phaser.Geom.Rectangle(300, 640, 220, 150);
+const ARENA_AMMO_CAPACITY = 12;
+const ARENA_REFILL_DURATION = 2500;
+const ARENA_AMMO_STATION = new Phaser.Geom.Rectangle(1080, 640, 200, 150);
 
 export class ShootersTriggerArenaScene extends Phaser.Scene {
   public joystickVector = new Phaser.Math.Vector2();
@@ -543,7 +543,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       const bodyDistance = Phaser.Math.Distance.Between(shot.body.x, shot.body.y, target.body.x, target.body.y + 1);
       const weaponPoint = this.getWeaponPoint(target);
       const weaponLine = new Phaser.Geom.Line(previousX, previousY, shot.body.x, shot.body.y);
-      const weaponHitCircle = new Phaser.Geom.Circle(weaponPoint.x, weaponPoint.y, 16);
+      const weaponHitCircle = new Phaser.Geom.Circle(weaponPoint.x, weaponPoint.y, 24);
 
       if (!target.weaponDropped && Phaser.Geom.Intersects.LineToCircle(weaponLine, weaponHitCircle)) {
         this.resolveWeaponHit(shot.owner, target, shot.body.x, shot.body.y);
@@ -1603,7 +1603,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       fontStyle: 'bold',
       color: '#e8c95c',
     }).setOrigin(0.5).setDepth(6);
-    this.add.text(station.centerX, station.y + 77, 'REFILL · 2.2 SEC', {
+    this.add.text(station.centerX, station.y + 77, 'REFILL · 2.5 SEC', {
       fontFamily: 'monospace',
       fontSize: '9px',
       color: '#f4f1df',
