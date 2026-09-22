@@ -1854,6 +1854,22 @@ This section is the current product direction for completing Shooters Trigger.
 If a proposed feature does not strengthen:
 **shoot → move → cover → train → learn → prepare → compete → understand → retrain**, 
 it should not enter the first complete release without explicit product-owner approval.
+## Main-Branch Checkpoint Rule — Every Chat
+
+This repository uses **main as the shared source-of-truth checkpoint**. A dedicated development branch may be used temporarily while implementing a controlled change, but it is not the final checkpoint.
+
+For **every new chat/session** working on this repository:
+1. Read `AGENTS.md` first.
+2. Inspect the actual remote state, including the current branch and `main`.
+3. Continue from the current remote state; do not assume an old development branch is the intended destination.
+4. If a change is made on a dedicated branch, the normal completion path is **change → commit → push branch → merge to main → confirm main SHA** when the user has asked to push/complete the work.
+5. Do not leave the user's requested completed work stranded on a feature branch unless the user explicitly asks for branch-only work or a PR for later review.
+6. After a successful merge, treat the resulting `main` commit as the new checkpoint for the next chat.
+
+**Default meaning of “push”, “done”, “checkpoint”, or “push the latest” in this project:** the requested work must reach `main`, not merely a development branch, unless the user explicitly names another branch.
+
+Branch work is an implementation mechanism, not the product checkpoint. Vercel/CI verification remains separate and must not be confused with getting the code onto `main`.
+
 ## Agent Execution Discipline — Do Not Repeat Workflow Failure
 
 The product owner controls the requested action. Do not turn a simple requested commit/push into an unnecessary build, deployment investigation, verification ceremony, or repeated explanation.
