@@ -2763,3 +2763,70 @@ TRAIN → BUILD EVIDENCE → ENTER OPEN ARENA → RANDOM RIVAL → FIGHT A RELAT
 
 The player should never need to choose a difficulty level. The opponent is the difficulty.
 
+
+
+## Shooters Trigger — Arena Reliability & Battlefield Polish Contract — September 22, 2026
+
+The September 22 Arena playtest confirmed that the existing first-to-3 combat loop is fun and must be preserved. Future Arena work should improve reliability, readability and tactical depth without replacing the current controls, field scale, rival model or core combat.
+
+### Reliability is now part of the Arena contract
+
+- A final hit must resolve exactly once. Guard against duplicate round/match resolution while a hit is being processed.
+- On a final round point, combat stops immediately: firing, movement and active projectiles are cleared before the result state is shown.
+- A completed match must enter a stable **MATCH WON / MATCH LOST** result state instead of leaving the combat scene running underneath a result overlay.
+- The result state must offer both **FIGHT AGAIN** and **RETURN TO HOME FIELD**.
+- Scene shutdown must remove Arena DOM controls and result/pause panels so stale UI cannot survive a scene change.
+- Do not rely on a successful build as proof that the match-end flow works; final-hit and scene-transition playtesting are required.
+
+### Pause contract
+
+- Arena has a small upper-right pause control that does not occupy the movement or aim/fire control zones.
+- Pause freezes the Phaser Arena scene, clears held fire/movement input, and presents a mobile-safe overlay over the current field.
+- Pause offers **RESUME MATCH**, **RESTART MATCH**, and **LEAVE ARENA**.
+- Resume clears stale held input before gameplay continues.
+- Pause cannot interrupt an active round-resolution transition or an already completed match.
+
+### Round-flow contract
+
+- The existing first-to-3 structure remains unchanged.
+- A non-final round now has a short, explicit transition: round winner/score feedback, then reset positions and continue.
+- At 2–2, the HUD/status should identify the next round as the **FINAL ROUND**.
+- No round transition should allow movement, firing or AI combat during the reset window.
+
+### Battlefield polish contract
+
+The Arena battlefield remains the Shooting Range clone already approved by the product owner. Do not redesign it into a different game.
+
+Permitted improvements are small, physical and gameplay-readable:
+- clearer field/lane markings;
+- subtle staging or boundary details;
+- existing bunkers, tires and trees remaining meaningful as cover;
+- restrained physical dressing that makes the Arena read as a competition field;
+- no floating destination markers or decorative UI objects masquerading as world objects;
+- no unnecessary new weapons, abilities, enemy swarms or progression systems until the current combat loop has been validated further.
+
+### Combat-feel direction
+
+Keep and deepen the existing rules:
+- head hit = immediate round point;
+- body hit = one of two body-hit points;
+- two body hits = round point;
+- first to 3 rounds;
+- Arena win = 25 budget;
+- Arena loss = 0 budget;
+- player evidence continues to shape the relational rival rather than creating a difficulty selector.
+
+Future polish should make hits, round transitions, cover use and rival identity more legible without changing these rules unless the product owner explicitly requests a rules change.
+
+### Current implementation checkpoint
+
+The Arena source now contains:
+- guarded round/match resolution;
+- explicit projectile cleanup;
+- a real pause/resume/restart/leave flow;
+- stable match result actions including rematch;
+- scene-shutdown cleanup for Arena DOM UI;
+- short round transitions and final-round feedback;
+- restrained physical field/lane detail layered onto the existing battlefield.
+
+The next acceptance test is a real phone match, with special attention to: taking the second body hit, reaching the third round-ending hit, pausing/resuming mid-fight, restarting from pause, rematching after the result screen, and returning to the Home Field without stale controls.
