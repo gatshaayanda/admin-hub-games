@@ -3265,3 +3265,10 @@ The Arena must communicate stealth without covering the fight in interface clutt
 5. While concealed, the nearby cue communicates **HIDDEN**.
 6. The player can still see and use the actual field, cover, flanking routes and opponent without HUD obstruction.
 7. Playtest specifically checks that a scrape/hit/respawn is not caused by accidental interaction with an overlapping HUD control.
+
+
+### Mobile opponent direction cue
+- Mobile Arena retains a compact **RIVAL direction arrow + distance** cue.
+- This is a directional cue only, not a tactical map: it points from the player toward the rival and gives approximate world distance.
+- It must remain small, non-interactive, and separate from the pause control so it cannot interfere with movement/fire controls.
+- The cue is required because the Arena is larger than the phone viewport; removing all opponent direction guidance makes the mobile player navigate blindly.
