@@ -239,6 +239,11 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   }
 
   private movePlayer(delta: number) {
+    if (this.player.refilling) {
+      this.playerMoving = false;
+      return;
+    }
+
     let dx = this.joystickVector.x;
     let dy = this.joystickVector.y;
 
