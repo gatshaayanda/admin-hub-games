@@ -38,7 +38,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   private sessionElapsed = 0;
   private sessionFinished = false;
   private finishButton?: Phaser.GameObjects.Text;
-  private resultSaved = false;\n  private resultSaved = false;
+  private resultSaved = false;
 
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
