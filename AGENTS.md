@@ -3270,6 +3270,18 @@ The Arena must communicate stealth without covering the fight in interface clutt
 8. Playtest specifically checks that a scrape/hit/respawn is not caused by accidental interaction with an overlapping HUD control.
 
 
+## Shooters Trigger — Arena Combat Change Guard — September 22, 2026
+
+This is a hard guard for future Arena changes after the September 22 phone playtest.
+
+- **Inspect before editing:** read the actual current player-fire path, rival-fire path, projectile movement, cover interception, head/body/weapon collision, hit resolution, splatter, movement and respawn code together. Never tune only the side the player complained about.
+- **No invented delays:** do not add or retain a rival opening/movement delay unless the product owner explicitly requests one. The neutral Arena currently uses `ARENA_RIVAL_OPENING_DELAY_MS = 0`.
+- **Player engagement must remain practical:** do not make the player depend on hidden advantages, sluggish projectiles, or unnecessarily tiny hit zones. If engagement feels one-sided, inspect aim input, projectile travel, spread, collision geometry, cover interception, cooldown and rival pressure before changing damage.
+- **Paint means paint:** preserve the established organic splatter. No fire trails, tracer streaks, laser lines, glowing projectile tails or flame-like impact effects. A projectile is a paintball; the impact is an irregular paint splat.
+- **Symmetry check:** after combat changes, verify player → rival and rival → player with the same neutral movement/cadence assumptions. Check a clean body hit, a scrape, a gun hit, a cover block and an elimination/respawn.
+- **Do not redesign while debugging:** preserve the existing field, controls, HUD/map, pause, cover, stealth and weapon-recovery loop unless the user explicitly requests a change.
+- If an observed play result conflicts with source assumptions, **STOP → inspect actual source/deployment/runtime reality → isolate the cause → then make the smallest fix.**
+
 ## Shooters Trigger — Arena Protection Contract
 
 Shooters Trigger Arena is a gameplay system that must be preserved deliberately between chats.

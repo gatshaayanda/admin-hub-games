@@ -56,8 +56,8 @@ const ARENA_RIVAL_SPAWN = new Phaser.Math.Vector2(2040, 330);
 const ARENA_RIVAL_FIRE_RANGE = 720;
 const ARENA_RIVAL_OPENING_DELAY_MS = 0;
 const ARENA_MAX_BODY_HITS = 2;
-const ARENA_BODY_CORE_RADIUS = 25;
-const ARENA_SCRAPE_RADIUS = 48;
+const ARENA_BODY_CORE_RADIUS = 30;
+const ARENA_SCRAPE_RADIUS = 44;
 const ARENA_CLOSE_IMPACT_RANGE = 220;
 
 export class ShootersTriggerArenaScene extends Phaser.Scene {
@@ -400,7 +400,8 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
 
     const canSeePlayer = this.hasLineOfSight(this.rival.body.x, this.rival.body.y, this.player.body.x, this.player.body.y);
     const canSeeLastKnown = this.hasLineOfSight(this.rival.body.x, this.rival.body.y, targetX, targetY);
-    const hasFiringSolution = playerHidden ? canSeeLastKnown : canSeePlayer;
+    const hasFiringSolution = !playerHidden && canSeePlayer;
+    // Concealment is real: once the player is hidden, the rival searches the last-known position but cannot fire at that stale position.
     if (!playerHidden && !this.rival.weaponDropped && !this.rival.refilling && this.rival.ammo > 0 && this.rival.cooldown <= 0 && Date.now() >= this.rivalCanFireAt && distance < ARENA_RIVAL_FIRE_RANGE && hasFiringSolution) this.rivalFire(direction);
   }
 
@@ -535,8 +536,8 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     // Paintball projectile: solid, small and readable — no tracer or fire trail.\n    const ball = this.add.circle(x, y, 4, owner === 'player' ? 0xf0dfb6 : 0xe44f3d).setDepth(25);
     this.shots.push({
       body: ball,
-      vx: direction.x * 520,
-      vy: direction.y * 520,
+      vx: direction.x * 680,
+      vy: direction.y * 680,
       owner,
       ttl: 1100,
     });
