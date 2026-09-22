@@ -43,7 +43,7 @@ const clamp = (value: number, min: number, max: number) => Math.max(min, Math.mi
 const ARENA_NEUTRAL_BASELINE = true;
 const ARENA_BASE_SPEED = 170;
 const ARENA_BASE_COOLDOWN = 360;
-const ARENA_AMMO_CAPACITY = 12;
+const ARENA_AMMO_CAPACITY = 16;
 const ARENA_REFILL_DURATION = 2500;
 const ARENA_AMMO_STATION = new Phaser.Geom.Rectangle(1080, 640, 200, 150);
 
@@ -559,24 +559,38 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         this.shots.splice(i, 1);
         continue;
       }
-      const headDistance = Phaser.Math.Distance.Between(shot.body.x, shot.body.y, target.body.x, target.body.y - 25);
-      const bodyDistance = Phaser.Math.Distance.Between(shot.body.x, shot.body.y, target.body.x, target.body.y + 1);
+      const headPoint = new Phaser.Math.Vector2(target.body.x, target.body.y - 25);
+      const bodyPoint = new Phaser.Math.Vector2(target.body.x, target.body.y + 1);
+      const headLine = new Phaser.Geom.Line(previousX, previousY, shot.body.x, shot.body.y);
+      const bodyLine = new Phaser.Geom.Line(previousX, previousY, shot.body.x, shot.body.y);
+      const headDistance = Phaser.Math.Distance.Between(shot.body.x, shot.body.y, headPoint.x, headPoint.y);
+      const bodyDistance = Phaser.Math.Distance.Between(shot.body.x, shot.body.y, bodyPoint.x, bodyPoint.y);
       const weaponPoint = this.getWeaponPoint(target);
       const weaponLine = new Phaser.Geom.Line(previousX, previousY, shot.body.x, shot.body.y);
       const weaponHitCircle = new Phaser.Geom.Circle(weaponPoint.x, weaponPoint.y, 24);
+      const headHitCircle = new Phaser.Geom.Circle(headPoint.x, headPoint.y, 16);
+      const bodyHitCircle = new Phaser.Geom.Circle(bodyPoint.x, bodyPoint.y, 30);
 
       if (!target.weaponDropped && Phaser.Geom.Intersects.LineToCircle(weaponLine, weaponHitCircle)) {
         this.resolveWeaponHit(shot.owner, target, shot.body.x, shot.body.y);
         shot.body.destroy();
         this.shots.splice(i, 1);
         if (this.matchOver || this.roundTransition || this.resolvingRound) break;
-      } else if (headDistance < 14 || bodyDistance < 24) {
+      } else if (
+        Phaser.Geom.Intersects.LineToCircle(headLine, headHitCircle) &&
+        headDistance < bodyDistance
+      ) {
         const headshot = headDistance < 14 && headDistance < bodyDistance;
-        this.resolveHit(shot.owner, headshot, shot.body.x, shot.body.y);
+        this.resolveHit(shot.owner, true, shot.body.x, shot.body.y);
         shot.body.destroy();
         this.shots.splice(i, 1);
         if (this.matchOver || this.roundTransition || this.resolvingRound) break;
-      } else if (headDistance < 30 || bodyDistance < 40) {
+      } else if (Phaser.Geom.Intersects.LineToCircle(bodyLine, bodyHitCircle)) {
+        this.resolveHit(shot.owner, false, shot.body.x, shot.body.y);
+        shot.body.destroy();
+        this.shots.splice(i, 1);
+        if (this.matchOver || this.roundTransition || this.resolvingRound) break;
+      } else if (headDistance < 38 || bodyDistance < 44) {
         if (shot.owner === 'player') this.playerScrapes += 1;
         else this.rivalScrapes += 1;
         this.addSplatter(shot.body.x, shot.body.y, 0.55);
@@ -1063,20 +1077,13 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       color: '#e8c95c',
     }).setScrollFactor(0).setDepth(90);
 
-    this.ammoHud = this.add.text(this.scale.width - 18, 18, 'GUN · AMMO 12/12', {
-      fontFamily: 'monospace',
-      fontSize: '12px',
-      fontStyle: 'bold',
-      color: '#e8c95c',
-    }).setOrigin(1, 0).setScrollFactor(0).setDepth(90);
-
     this.statusHud = this.add.text(this.scale.width / 2, 43, 'MOVE · AIM · FIRE · USE COVER', {
       fontFamily: 'monospace',
       fontSize: '9px',
       color: '#f4f1df',
     }).setOrigin(.5, 0).setScrollFactor(0).setDepth(90);
 
-    this.ammoHud = this.add.text(this.scale.width - 18, 43, 'GUN 8/8', {
+    this.ammoHud = this.add.text(this.scale.width - 18, 18, 'GUN · AMMO 16/16', {
       fontFamily: 'monospace',
       fontSize: '10px',
       fontStyle: 'bold',
@@ -1086,14 +1093,13 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
 
   private updateHud() {
     this.scoreHud?.setText('YOU ' + this.player.score + '  ·  ' + this.rivalProfile.operator + ' ' + this.rival.score);
-    this.ammoHud?.setText(this.player.refilling ? 'GUN · REFILLING' : 'GUN · AMMO ' + this.player.ammo + '/' + this.player.maxAmmo);
     const refillPercent = this.player.refilling
       ? Math.round((this.player.refillElapsed / ARENA_REFILL_DURATION) * 100)
       : 0;
     this.ammoHud?.setText(
       this.player.refilling
         ? 'REFILL ' + refillPercent + '%'
-        : 'GUN ' + this.player.ammo + '/' + this.player.maxAmmo,
+        : 'GUN · AMMO ' + this.player.ammo + '/' + this.player.maxAmmo,
     );
     this.profileHud?.setText(
       this.rivalProfile.operator + ' · ' +
