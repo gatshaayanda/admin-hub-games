@@ -3040,3 +3040,45 @@ This is the current authoritative Arena test baseline. It intentionally supersed
 10. Verify 700ms reset clears paint and dropped markers and restores both fighters.
 11. Complete a match and verify the phone shows player news plus rival intelligence only after the match.
 12. Verify FIGHT AGAIN creates a clean neutral Arena.
+
+## Shooters Trigger — Arena Ammo Discipline & Mobile Gun Feel Contract — September 22, 2026
+
+The neutral Arena validation now includes limited ammunition and a physical refill decision. This is a tactical extension of the existing fight, not a new weapon/progression system.
+
+### Ammo rules
+- Each fighter starts each round with **8 shots**.
+- Every fired shot consumes one round.
+- When the player reaches 0 ammo, the gun cannot fire until ammunition is restored.
+- The player must physically move to the marked **AMMO** station and remain inside it for **2.2 seconds** to refill.
+- Leaving the station before the timer completes cancels the refill progress.
+- The player remains vulnerable while standing at the refill station.
+- The rival follows the same ammo economy and retreats to the same physical station when empty, so the rule applies to both sides.
+- Ammo resets to a full 8 at the start of every round.
+- The Arena result records shots fired for both sides alongside the existing hit/miss/weapon-knockout evidence.
+- Do not add magazines, inventory screens, ammo pickups, multiple ammo types or new weapons until this simple ammo/refill loop has been phone-tested.
+
+### Gun / marker reliability
+- Player-facing language uses **GUN**, not MARKER.
+- A gun knockout is detected across the projectile's travelled segment rather than only at its final frame position.
+- The dropped gun is physically visible on the field, noticeably larger on phone, briefly moves away from the fighter, and must still be physically reached before firing resumes.
+- An unarmed fighter remains vulnerable during recovery.
+- The existing first-to-3, cover, headshot, two-body-hit and round-reset rules remain unchanged.
+
+### Mobile gun feel
+- The right-side aim/fire control remains the authoritative mobile control.
+- Small aim drags are accepted at a lower threshold so the player's gun responds without requiring an exaggerated thumb movement.
+- Fire cadence is shortened from the previous 520ms neutral cadence to 360ms while keeping ammo scarcity as the counterweight.
+- The player starts each round able to fire immediately; there is no artificial initial half-second wait.
+
+### Acceptance test
+On a real phone, verify:
+1. aim responds to small right-control drags and the gun visibly follows;
+2. repeated firing consumes 8 rounds and stops at 0;
+3. moving into the AMMO station starts a visible refill timer;
+4. leaving early cancels the refill;
+5. remaining exposed for the full 2.2 seconds is tactically vulnerable;
+6. completing the refill restores 8 rounds and firing resumes;
+7. an opponent can hit the player while refilling;
+8. a gun hit visibly knocks the gun down and the player must walk over it before firing;
+9. a round reset restores both fighters' ammo and guns;
+10. completed Arena evidence includes shots fired without breaking existing phone reporting.

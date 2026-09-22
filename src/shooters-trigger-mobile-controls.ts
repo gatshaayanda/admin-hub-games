@@ -250,7 +250,7 @@ function buildFireButton() {
     const x = event.clientX - originX;
     const y = event.clientY - originY;
     const length = Math.hypot(x, y);
-    if (length >= 8) {
+    if (length >= 5) {
       getActiveScene()?.scene.setAimVector?.(x / length, y / length);
     }
     getActiveScene()?.scene.setFireHeld?.(true);

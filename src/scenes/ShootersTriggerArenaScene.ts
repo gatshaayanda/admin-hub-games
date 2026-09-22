@@ -9,6 +9,10 @@ type Fighter = {
   damagePaint: Phaser.GameObjects.Graphics;
   droppedWeapon: Phaser.GameObjects.Graphics;
   weaponDropped: boolean;
+  maxAmmo: number;
+  ammo: number;
+  refilling: boolean;
+  refillElapsed: number;
   score: number;
   speed: number;
   cooldown: number;
@@ -38,7 +42,10 @@ type RivalProfile = {
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 const ARENA_NEUTRAL_BASELINE = true;
 const ARENA_BASE_SPEED = 170;
-const ARENA_BASE_COOLDOWN = 520;
+const ARENA_BASE_COOLDOWN = 360;
+const ARENA_AMMO_CAPACITY = 8;
+const ARENA_REFILL_DURATION = 2200;
+const ARENA_AMMO_STATION = new Phaser.Geom.Rectangle(300, 640, 220, 150);
 
 export class ShootersTriggerArenaScene extends Phaser.Scene {
   public joystickVector = new Phaser.Math.Vector2();
@@ -96,6 +103,9 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private rivalMisses = 0;
   private playerWeaponKnockouts = 0;
   private rivalWeaponKnockouts = 0;
+  private playerShotsFired = 0;
+  private rivalShotsFired = 0;
+  private ammoHud?: Phaser.GameObjects.Text;
   private roundHits = 0;
   private roundRivalHits = 0;
   private playerSkill = 0;
@@ -162,6 +172,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
 
     this.movePlayer(delta);
     this.tryPickupWeapon(this.player);
+    this.updatePlayerRefill(delta);
     this.updateRival(delta);
     this.updateShots(delta);
     this.player.cooldown = Math.max(0, this.player.cooldown - delta);
@@ -272,6 +283,12 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       }
       return;
     }
+
+    if (this.rival.ammo <= 0 || this.rival.refilling) {
+      this.updateRivalRefill(delta);
+      return;
+    }
+
     const dx = this.player.body.x - this.rival.body.x;
     const dy = this.player.body.y - this.rival.body.y;
     const distance = Math.hypot(dx, dy) || 1;
@@ -344,7 +361,81 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       this.rival.body.y = nextY;
     }
 
-    if (!this.rival.weaponDropped && this.rival.cooldown <= 0 && distance < 980) this.rivalFire(direction);
+    if (!this.rival.weaponDropped && !this.rival.refilling && this.rival.ammo > 0 && this.rival.cooldown <= 0 && distance < 980) this.rivalFire(direction);
+  }
+
+  private updatePlayerRefill(delta: number) {
+    if (this.player.downed || this.player.weaponDropped || this.player.ammo > 0) {
+      this.player.refilling = false;
+      this.player.refillElapsed = 0;
+      return;
+    }
+
+    const inStation = ARENA_AMMO_STATION.contains(this.player.body.x, this.player.body.y);
+    if (!inStation) {
+      this.player.refilling = false;
+      this.player.refillElapsed = 0;
+      return;
+    }
+
+    if (!this.player.refilling) {
+      this.player.refilling = true;
+      this.player.refillElapsed = 0;
+      this.fire = false;
+      this.statusHud?.setText('AMMO REFILLING  ·  HOLD POSITION');
+      this.showCombatHighlight('AMMO STATION', '#e8c95c', this.player.body.x, this.player.body.y - 42, 0.9);
+    }
+
+    this.fire = false;
+    this.player.refillElapsed += delta;
+    if (this.player.refillElapsed >= ARENA_REFILL_DURATION) {
+      this.player.ammo = this.player.maxAmmo;
+      this.player.refilling = false;
+      this.player.refillElapsed = 0;
+      this.showCombatHighlight('AMMO REFILLED', '#9fbda8', this.player.body.x, this.player.body.y - 42, 0.95);
+      this.statusHud?.setText('AMMO READY  ·  MOVE · AIM · FIRE');
+    }
+  }
+
+  private updateRivalRefill(delta: number) {
+    if (this.rival.downed || this.rival.weaponDropped) return;
+
+    const station = ARENA_AMMO_STATION;
+    const dx = station.centerX - this.rival.body.x;
+    const dy = station.centerY - this.rival.body.y;
+    const distance = Math.hypot(dx, dy) || 1;
+
+    if (distance > 34) {
+      this.rivalMoving = true;
+      this.rivalRefillProgressReset();
+      if (Math.abs(dx) > 0.08) this.rivalFacing = dx < 0 ? -1 : 1;
+      const speed = this.rival.wounded ? this.rival.speed * 0.92 : this.rival.speed;
+      const nx = Phaser.Math.Clamp(this.rival.body.x + dx / distance * speed * delta / 1000, 42, 2358);
+      const ny = Phaser.Math.Clamp(this.rival.body.y + dy / distance * speed * delta / 1000, 90, 1350);
+      if (!this.inCover(nx, ny, 14)) {
+        this.rival.body.x = nx;
+        this.rival.body.y = ny;
+      }
+      return;
+    }
+
+    this.rivalMoving = false;
+    if (!this.rival.refilling) {
+      this.rival.refilling = true;
+      this.rival.refillElapsed = 0;
+      this.showCombatHighlight('RIVAL REFILLING', '#f0a05f', this.rival.body.x, this.rival.body.y - 42, 0.9);
+    }
+    this.rival.refillElapsed += delta;
+    if (this.rival.refillElapsed >= ARENA_REFILL_DURATION) {
+      this.rival.ammo = this.rival.maxAmmo;
+      this.rival.refilling = false;
+      this.rival.refillElapsed = 0;
+    }
+  }
+
+  private rivalRefillProgressReset() {
+    this.rival.refilling = false;
+    this.rival.refillElapsed = 0;
   }
 
   private findUsefulCover() {
@@ -362,9 +453,11 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   }
 
   private playerFire() {
-    if (this.player.weaponDropped || this.player.cooldown > 0) return;
+    if (this.player.weaponDropped || this.player.refilling || this.player.ammo <= 0 || this.player.cooldown > 0) return;
     const distance = Phaser.Math.Distance.Between(this.player.body.x, this.player.body.y, this.rival.body.x, this.rival.body.y);
     this.player.cooldown = ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(130, 330 - this.playerSkill * 1.15);
+    this.player.ammo -= 1;
+    this.playerShotsFired += 1;
     this.spawnShot(
       this.player.body.x + this.aim.x * 42,
       this.player.body.y + this.aim.y * 42,
@@ -378,6 +471,8 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     const distance = Phaser.Math.Distance.Between(this.player.body.x, this.player.body.y, this.rival.body.x, this.rival.body.y);
     const aim = this.applyDistanceSpread(direction, distance, accuracy);
     this.rival.cooldown = ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(330, 930 - accuracy * 5.4);
+    this.rival.ammo -= 1;
+    this.rivalShotsFired += 1;
     this.spawnShot(
       this.rival.body.x + aim.x * 42,
       this.rival.body.y + aim.y * 42,
@@ -415,8 +510,10 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       const shot = this.shots[i];
       shot.ttl -= delta;
 
-      const nx = shot.body.x + shot.vx * delta / 1000;
-      const ny = shot.body.y + shot.vy * delta / 1000;
+      const previousX = shot.body.x;
+      const previousY = shot.body.y;
+      const nx = previousX + shot.vx * delta / 1000;
+      const ny = previousY + shot.vy * delta / 1000;
 
       if (
         shot.ttl <= 0 ||
@@ -445,9 +542,10 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       const headDistance = Phaser.Math.Distance.Between(shot.body.x, shot.body.y, target.body.x, target.body.y - 25);
       const bodyDistance = Phaser.Math.Distance.Between(shot.body.x, shot.body.y, target.body.x, target.body.y + 1);
       const weaponPoint = this.getWeaponPoint(target);
-      const weaponDistance = Phaser.Math.Distance.Between(shot.body.x, shot.body.y, weaponPoint.x, weaponPoint.y);
+      const weaponLine = new Phaser.Geom.Line(previousX, previousY, shot.body.x, shot.body.y);
+      const weaponHitCircle = new Phaser.Geom.Circle(weaponPoint.x, weaponPoint.y, 16);
 
-      if (!target.weaponDropped && weaponDistance < 10) {
+      if (!target.weaponDropped && Phaser.Geom.Intersects.LineToCircle(weaponLine, weaponHitCircle)) {
         this.resolveWeaponHit(shot.owner, target, shot.body.x, shot.body.y);
         shot.body.destroy();
         this.shots.splice(i, 1);
@@ -485,19 +583,30 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     if (owner === 'player') this.playerWeaponKnockouts += 1;
     else this.rivalWeaponKnockouts += 1;
     this.addSplatter(hitX, hitY, 0.7);
-    this.showCombatHighlight(owner === 'player' ? 'GUN HIT · MARKER DOWN' : 'YOUR GUN IS DOWN', '#e8c95c', hitX, hitY, 0.95);
+    this.showCombatHighlight(owner === 'player' ? 'GUN HIT · GUN DOWN' : 'YOUR GUN IS DOWN', '#e8c95c', hitX, hitY, 0.95);
     this.dropWeapon(target);
-    this.statusHud?.setText(target === this.player ? 'MARKER DOWN  ·  MOVE OVER IT TO PICK IT UP' : 'BOT MARKER DOWN  ·  IT MUST RECOVER');
+    this.statusHud?.setText(target === this.player ? 'GUN DOWN  ·  MOVE OVER IT TO PICK IT UP' : 'RIVAL GUN DOWN  ·  IT MUST RECOVER');
   }
 
   private dropWeapon(target: Fighter) {
     if (target.weaponDropped || target.downed) return;
     target.weaponDropped = true;
     const point = this.getWeaponPoint(target);
+    const aim = target === this.player
+      ? this.aim.clone()
+      : new Phaser.Math.Vector2(this.player.body.x - target.body.x, this.player.body.y - target.body.y).normalize();
     target.droppedWeapon.setPosition(point.x, point.y);
-    target.droppedWeapon.setRotation(Math.random() * Math.PI);
+    target.droppedWeapon.setRotation(Math.atan2(aim.y, aim.x) + Phaser.Math.DegToRad(90));
     target.droppedWeapon.setVisible(true);
     this.updateWeaponVisibility(target, false);
+    this.tweens.add({
+      targets: target.droppedWeapon,
+      x: Phaser.Math.Clamp(point.x + aim.x * 42, 40, 2360),
+      y: Phaser.Math.Clamp(point.y + aim.y * 42, 90, 1350),
+      angle: target.droppedWeapon.angle + Phaser.Math.Between(-70, 70),
+      duration: 180,
+      ease: 'Quad.easeOut',
+    });
     target.body.setData('combatState', target.wounded ? 'WOUNDED · UNARMED' : 'UNARMED');
   }
 
@@ -507,8 +616,8 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     target.droppedWeapon.setVisible(false);
     this.updateWeaponVisibility(target, true);
     target.body.setData('combatState', target.wounded ? 'WOUNDED' : 'READY');
-    this.showCombatHighlight(target === this.player ? 'MARKER RECOVERED' : 'BOT RECOVERED MARKER', '#9fbda8', target.body.x, target.body.y - 36, 0.9);
-    this.statusHud?.setText(target === this.player ? 'MARKER RECOVERED' : 'BOT HAS ITS MARKER');
+    this.showCombatHighlight(target === this.player ? 'GUN RECOVERED' : 'RIVAL GUN RECOVERED', '#9fbda8', target.body.x, target.body.y - 36, 0.9);
+    this.statusHud?.setText(target === this.player ? 'GUN RECOVERED' : 'RIVAL HAS ITS GUN');
   }
 
   private tryPickupWeapon(target: Fighter) {
@@ -652,6 +761,9 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     target.wounded = false;
     target.downed = false;
     target.weaponDropped = false;
+    target.ammo = target.maxAmmo;
+    target.refilling = false;
+    target.refillElapsed = 0;
     target.droppedWeapon.setVisible(false);
     target.damagePaint.clear();
     target.damagePaint.setVisible(false);
@@ -791,6 +903,10 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
             player: this.playerPaintHits,
             rival: this.rivalPaintHits,
           },
+          shotsFired: {
+            player: this.playerShotsFired,
+            rival: this.rivalShotsFired,
+          },
           weaponKnockouts: {
             player: this.playerWeaponKnockouts,
             rival: this.rivalWeaponKnockouts,
@@ -928,10 +1044,25 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       fontSize: '9px',
       color: '#f4f1df',
     }).setOrigin(.5, 0).setScrollFactor(0).setDepth(90);
+
+    this.ammoHud = this.add.text(this.scale.width - 18, 43, 'GUN 8/8', {
+      fontFamily: 'monospace',
+      fontSize: '10px',
+      fontStyle: 'bold',
+      color: '#e8c95c',
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(90);
   }
 
   private updateHud() {
     this.scoreHud?.setText('YOU ' + this.player.score + '  ·  ' + this.rivalProfile.operator + ' ' + this.rival.score);
+    const refillPercent = this.player.refilling
+      ? Math.round((this.player.refillElapsed / ARENA_REFILL_DURATION) * 100)
+      : 0;
+    this.ammoHud?.setText(
+      this.player.refilling
+        ? 'REFILL ' + refillPercent + '%'
+        : 'GUN ' + this.player.ammo + '/' + this.player.maxAmmo,
+    );
     this.profileHud?.setText(
       this.rivalProfile.operator + ' · ' +
       this.rivalProfile.id.toUpperCase() + ' · S ' +
@@ -1366,9 +1497,10 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     const muzzle = this.add.graphics();
     const damagePaint = this.add.graphics().setDepth(35).setVisible(false);
     const droppedWeapon = this.add.graphics().setDepth(22).setVisible(false);
-    droppedWeapon.fillStyle(0x151b18, 1).fillRoundedRect(-18, -3, 36, 7, 3);
-    droppedWeapon.fillStyle(0x53635c, 1).fillRect(-6, -7, 11, 4);
-    droppedWeapon.fillStyle(0x493b31, 1).fillRoundedRect(-16, 4, 10, 5, 2);
+    droppedWeapon.fillStyle(0x151b18, 1).fillRoundedRect(-25, -5, 50, 10, 4);
+    droppedWeapon.fillStyle(0x53635c, 1).fillRect(-9, -10, 14, 5);
+    droppedWeapon.fillStyle(0x493b31, 1).fillRoundedRect(-22, 6, 13, 6, 2);
+    droppedWeapon.lineStyle(2, 0xe8c95c, 0.8).strokeRoundedRect(-25, -5, 50, 10, 4);
 
     container.add([shadow, poseA, poseB, arms, weapon, muzzle, damagePaint]);
 
@@ -1404,9 +1536,13 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       damagePaint,
       droppedWeapon,
       weaponDropped: false,
+      maxAmmo: ARENA_AMMO_CAPACITY,
+      ammo: ARENA_AMMO_CAPACITY,
+      refilling: false,
+      refillElapsed: 0,
       score: 0,
       speed: 170,
-      cooldown: 500,
+      cooldown: 0,
       accuracy: player ? this.playerSkill : this.rivalProfile?.shooting || 0,
       movement: player ? this.evasionSkill : this.rivalProfile?.movement || 0,
       pressure: player ? this.playerSkill : this.rivalProfile?.pressure || 0,
@@ -1449,10 +1585,37 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.drawTireStack(730, 1170);
 
     this.drawFlag(1180, 860, 0x2f7775, 'ARENA');
+    this.drawAmmoStation();
     this.drawFieldDetails();
   }
 
-  private drawFieldDetails() {
+  private drawAmmoStation() {
+    const g = this.add.graphics().setDepth(5);
+    const station = ARENA_AMMO_STATION;
+    g.fillStyle(0x493526, 0.26).fillRoundedRect(station.x + 8, station.y + 10, station.width, station.height, 12);
+    g.fillStyle(0x344b3d, 1).fillRoundedRect(station.x, station.y, station.width, station.height, 12);
+    g.fillStyle(0x1c2922, 1).fillRoundedRect(station.x + 22, station.y + 28, station.width - 44, station.height - 56, 8);
+    g.lineStyle(3, 0xe8c95c, 0.82).strokeRoundedRect(station.x, station.y, station.width, station.height, 12);
+    g.fillStyle(0xe8c95c, 0.9).fillRect(station.x + 30, station.y + 18, station.width - 60, 8);
+    this.add.text(station.centerX, station.y + 48, 'AMMO', {
+      fontFamily: 'monospace',
+      fontSize: '16px',
+      fontStyle: 'bold',
+      color: '#e8c95c',
+    }).setOrigin(0.5).setDepth(6);
+    this.add.text(station.centerX, station.y + 77, 'REFILL · 2.2 SEC', {
+      fontFamily: 'monospace',
+      fontSize: '9px',
+      color: '#f4f1df',
+    }).setOrigin(0.5).setDepth(6);
+    this.add.text(station.centerX, station.y + 103, 'HOLD POSITION', {
+      fontFamily: 'monospace',
+      fontSize: '8px',
+      color: '#9fbda8',
+    }).setOrigin(0.5).setDepth(6);
+  }
+
+  private drawFieldDetails()
     const g = this.add.graphics();
 
     // Small physical field details only: the existing battlefield stays intact.
