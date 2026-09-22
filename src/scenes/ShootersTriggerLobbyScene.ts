@@ -26,6 +26,8 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
   private enterButton?: Phaser.GameObjects.Container;
   private phoneButton?: HTMLButtonElement;
   private phoneModal?: HTMLDivElement;
+  private phoneButton?: HTMLButtonElement;
+  private phoneModal?: HTMLDivElement;
 
   private locations: Location[] = [
     { id: 'shooting', name: 'SHOOTING RANGE', subtitle: '01 · AIM · FIRE · TRAIN', x: 1580, y: 690, color: 0xd66a3d },
@@ -70,6 +72,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
 
     this.enterButton = this.makeEnterButton(width / 2, height - Math.max(170, height * .22));
     this.createPhoneButton();
+    this.createPhoneButton();
     this.add.text(width / 2, 22, 'SHOOTERS TRIGGER · FIELD HQ', {
       fontFamily: 'monospace', fontSize: '12px', fontStyle: 'bold',
       color: '#fff4d4', stroke: '#493526', strokeThickness: 4,
@@ -78,6 +81,10 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.joystickCleanup?.();
       this.equipmentModal?.remove();
+      this.phoneModal?.remove();
+      this.phoneModal = undefined;
+      this.phoneButton?.remove();
+      this.phoneButton = undefined;
       this.equipmentModal = undefined;
       this.phoneModal?.remove();
       this.phoneModal = undefined;
