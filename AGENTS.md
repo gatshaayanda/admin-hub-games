@@ -3145,3 +3145,31 @@ The Arena is a 1v1-first combat experience. It must create positional fights and
 - **Shot reliability:** projectile collision must use the swept projectile segment against weapon/head/body hit circles so a fast projectile cannot skip a target between frames. Weapon hit is resolved before body/head hit; body/head hits resolve damage and round points normally. Phaser's documented line/circle intersection APIs are the intended basis for this collision contract.
 - A 1v1 round should feel like: **find position → snap/engage → move/change angle → exploit vulnerability → recover/reload → re-engage**, with a 60-second-style urgency rather than a stationary duel.
 - Acceptance on phone: the rival does not permanently circle the player or ammo; reload routes pull combat sideways; cover creates opportunities to break line of sight; a hidden player can reposition before reappearing; deliberate shots produce visible hit feedback, gun drops, wounds, and eliminations.
+
+
+## Shooters Trigger — Arena Single-Hit Round Resolution & Gun Visibility Contract — September 22, 2026
+
+This is the authoritative Arena combat contract for the current phone playtest. It supersedes the earlier two-body-hit/WOUNDED→DOWNED contract for Arena.
+
+### Real match feel
+- The Arena is a paintball 1v1 round system: one confirmed body paint hit eliminates the fighter for that round.
+- A confirmed headshot also eliminates immediately.
+- Elimination must visibly stop the fighter, award exactly one round point, clear active shots, and begin the 700ms reset.
+- After the reset both fighters respawn on their normal sides/spawns with full ammo, a held gun, clean paint and a fresh round state.
+- The player must never be able to continue exchanging paint after being eliminated; the fight must not degrade into repeated splattering after a decisive hit.
+
+### Gun-drop distinction
+- A gun/grip hit is a separate non-elimination event. It removes the held gun and forces physical recovery.
+- The gun hit zone is deliberately smaller than the fighter body zone so ordinary body shots do not automatically count as gun shots.
+- The dropped gun is a separate, high-visibility world object, lands beside the fighter, remains fixed there, and cannot follow the fighter.
+- The fighter cannot fire while unarmed and must physically walk over the dropped gun to recover it.
+- The armed opponent remains able to fire while the other fighter is recovering.
+
+### Acceptance test
+1. Shoot the opponent's body once: visible PAINT HIT → ELIMINATED → ROUND POINT → both fighters respawn on their sides after 0.7s.
+2. Confirm no second/in-flight projectile can award another point during the reset.
+3. Hit the opponent's gun deliberately: held gun visibly disappears and the dropped gun is clearly visible on the ground.
+4. Confirm the opponent cannot fire until physically recovering the gun.
+5. Confirm an ordinary body shot does not automatically become a gun knockout.
+6. Confirm the next round starts clean with full ammo and both guns restored.
+7. Repeat from the opponent's side: the bot must also be eliminated and respawn correctly when the player's hit lands.
