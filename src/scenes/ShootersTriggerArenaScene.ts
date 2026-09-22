@@ -54,6 +54,12 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private exitButton?: HTMLButtonElement;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private matchOver = false;
+  private paused = false;
+  private roundTransition = false;
+  private resolvingRound = false;
+  private pauseButton?: HTMLButtonElement;
+  private pausePanel?: HTMLDivElement;
+  private resultPanel?: HTMLDivElement;
   private playerMoving = false;
   private rivalMoving = false;
   private playerFacing = 1;
@@ -109,6 +115,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.cleanup = installShootersTriggerMobileControls();
     this.createExitButton();
+    this.createPauseButton();
 
     this.arenaStartedAt = Date.now();
 
@@ -118,13 +125,16 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
       this.cleanup?.();
       this.exitButton?.remove();
+      this.pauseButton?.remove();
+      this.pausePanel?.remove();
+      this.resultPanel?.remove();
     });
 
     window.dispatchEvent(new Event('admin-hub-games:game-ready'));
   }
 
   update(_time: number, delta: number) {
-    if (this.matchOver) return;
+    if (this.matchOver || this.paused || this.roundTransition || this.resolvingRound) return;
 
     this.movePlayer(delta);
     this.updateRival(delta);
@@ -400,6 +410,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   }
 
   private resolveHit(owner: 'player' | 'rival', headshot: boolean) {
+    if (this.matchOver || this.roundTransition || this.resolvingRound) return;
     const target = owner === 'player' ? this.rival : this.player;
 
     if (owner === 'player') {
@@ -429,24 +440,50 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   }
 
   private roundPoint(winner: 'player' | 'rival') {
+    if (this.matchOver || this.roundTransition || this.resolvingRound) return;
+
+    this.resolvingRound = true;
+    this.fire = false;
+    this.setMoveVector(0, 0);
+
     if (winner === 'player') this.player.score += 1;
     else this.rival.score += 1;
 
-    this.shots.forEach((shot) => shot.body.destroy());
-    this.shots = [];
+    this.clearShots();
 
     if (this.player.score >= 3 || this.rival.score >= 3) {
       this.matchOver = true;
+      this.resolvingRound = false;
       this.showResult();
       return;
     }
 
-    this.player.hp = 2;
-    this.rival.hp = 2;
-    this.player.body.setPosition(1180, 1040);
-    this.rival.body.setPosition(1180, 330);
-    this.rival.cooldown = 700;
-    this.statusHud?.setText('ROUND RESET  ·  FIRST TO 3');
+    this.roundTransition = true;
+    this.resolvingRound = false;
+    this.statusHud?.setText(
+      (winner === 'player' ? 'ROUND WON' : 'ROUND LOST') +
+      '  ·  YOU ' + this.player.score + ' — ' + this.rival.score,
+    );
+
+    this.time.delayedCall(700, () => {
+      if (this.matchOver || this.paused) return;
+      this.player.hp = 2;
+      this.rival.hp = 2;
+      this.player.body.setPosition(1180, 1040);
+      this.rival.body.setPosition(1180, 330);
+      this.rival.cooldown = 700;
+      this.roundTransition = false;
+      this.statusHud?.setText(
+        this.player.score === 2 && this.rival.score === 2
+          ? 'FINAL ROUND  ·  FIRST TO 3'
+          : 'ROUND READY  ·  MOVE · AIM · FIRE',
+      );
+    });
+  }
+
+  private clearShots() {
+    this.shots.forEach((shot) => shot.body.destroy());
+    this.shots = [];
   }
 
   private flash(target: Fighter, headshot: boolean) {
@@ -499,6 +536,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       );
     } catch {}
 
+    this.resultPanel?.remove();
     const panel = document.createElement('div');
     Object.assign(panel.style, {
       position: 'fixed',
@@ -541,12 +579,19 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       '<br>BUDGET EARNED · ' + reward +
       '</div>';
 
-    const button = document.createElement('button');
-    button.textContent = 'RETURN TO HOME FIELD';
-    Object.assign(button.style, {
+    const actions = document.createElement('div');
+    Object.assign(actions.style, {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: '10px',
       marginTop: '20px',
+    });
+
+    const rematch = document.createElement('button');
+    rematch.textContent = 'FIGHT AGAIN';
+    Object.assign(rematch.style, {
       minHeight: '48px',
-      padding: '10px 18px',
+      padding: '10px 12px',
       background: '#e8c95c',
       border: 0,
       borderRadius: '8px',
@@ -554,14 +599,35 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       fontWeight: '800',
       touchAction: 'manipulation',
     });
-    button.onclick = () => {
+    rematch.onclick = () => {
       panel.remove();
-      this.scene.start('ShootersTriggerLobbyScene');
+      this.resultPanel = undefined;
+      this.fire = false;
+      this.setMoveVector(0, 0);
+      this.scene.restart();
     };
 
-    card.appendChild(button);
+    const button = document.createElement('button');
+    button.textContent = 'RETURN TO HOME FIELD';
+    Object.assign(button.style, {
+      minHeight: '48px',
+      padding: '10px 12px',
+      background: '#102018',
+      border: '2px solid #f4f1df',
+      color: '#f4f1df',
+      borderRadius: '8px',
+      fontFamily: 'monospace',
+      fontWeight: '800',
+      touchAction: 'manipulation',
+    });
+    button.onclick = () => this.leaveArena();
+
+    actions.appendChild(rematch);
+    actions.appendChild(button);
+    card.appendChild(actions);
     panel.appendChild(card);
     document.body.appendChild(panel);
+    this.resultPanel = panel;
   }
 
   private createHud() {
@@ -600,6 +666,156 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       Math.round(this.rivalProfile.shooting) + ' · M ' +
       Math.round(this.rivalProfile.movement),
     );
+  }
+
+  private createPauseButton() {
+    const button = document.createElement('button');
+    button.textContent = 'Ⅱ';
+    button.setAttribute('aria-label', 'Pause arena');
+    Object.assign(button.style, {
+      position: 'fixed',
+      right: '18px',
+      top: '70px',
+      width: '44px',
+      height: '44px',
+      padding: '0',
+      border: '2px solid #f4f1df',
+      borderRadius: '10px',
+      background: '#102018',
+      color: '#f4f1df',
+      fontFamily: 'monospace',
+      fontSize: '16px',
+      fontWeight: '900',
+      zIndex: '1450',
+      touchAction: 'manipulation',
+    });
+    button.onclick = () => this.togglePause();
+    document.body.appendChild(button);
+    this.pauseButton = button;
+  }
+
+  private togglePause() {
+    if (this.matchOver || this.roundTransition || this.resolvingRound) return;
+    if (this.paused) {
+      this.resumeArena();
+    } else {
+      this.pauseArena();
+    }
+  }
+
+  private pauseArena() {
+    if (this.paused || this.matchOver) return;
+    this.fire = false;
+    this.setMoveVector(0, 0);
+    this.paused = true;
+    this.scene.pause();
+    this.showPausePanel();
+  }
+
+  private resumeArena() {
+    if (!this.paused) return;
+    this.pausePanel?.remove();
+    this.pausePanel = undefined;
+    this.paused = false;
+    this.fire = false;
+    this.setMoveVector(0, 0);
+    this.scene.resume();
+  }
+
+  private showPausePanel() {
+    this.pausePanel?.remove();
+
+    const panel = document.createElement('div');
+    Object.assign(panel.style, {
+      position: 'fixed',
+      inset: '0',
+      zIndex: '1550',
+      display: 'grid',
+      placeItems: 'center',
+      padding: 'max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px))',
+      background: 'rgba(10,16,12,.72)',
+      backdropFilter: 'blur(2px)',
+      fontFamily: 'monospace',
+      boxSizing: 'border-box',
+    });
+
+    const card = document.createElement('div');
+    Object.assign(card.style, {
+      width: 'min(360px, calc(100vw - 28px))',
+      padding: '24px',
+      background: '#151a16',
+      border: '2px solid #e8c95c',
+      borderRadius: '14px',
+      textAlign: 'center',
+      color: '#f4f1df',
+      boxSizing: 'border-box',
+    });
+
+    const title = document.createElement('div');
+    title.textContent = 'MATCH PAUSED';
+    Object.assign(title.style, {
+      color: '#e8c95c',
+      fontSize: '20px',
+      fontWeight: '900',
+      marginBottom: '8px',
+    });
+
+    const note = document.createElement('div');
+    note.textContent = 'THE FIELD IS FROZEN. YOUR POSITION AND ROUND ARE SAFE.';
+    Object.assign(note.style, {
+      fontSize: '10px',
+      lineHeight: '1.6',
+      opacity: '0.8',
+      marginBottom: '18px',
+    });
+
+    const makeButton = (label: string, primary: boolean, onClick: () => void) => {
+      const button = document.createElement('button');
+      button.textContent = label;
+      Object.assign(button.style, {
+        width: '100%',
+        minHeight: '48px',
+        marginTop: '10px',
+        padding: '10px 14px',
+        background: primary ? '#e8c95c' : '#102018',
+        border: primary ? '0' : '2px solid #f4f1df',
+        borderRadius: '8px',
+        color: primary ? '#151a16' : '#f4f1df',
+        fontFamily: 'monospace',
+        fontWeight: '800',
+        touchAction: 'manipulation',
+      });
+      button.onclick = onClick;
+      return button;
+    };
+
+    card.appendChild(title);
+    card.appendChild(note);
+    card.appendChild(makeButton('RESUME MATCH', true, () => this.resumeArena()));
+    card.appendChild(makeButton('RESTART MATCH', false, () => {
+      this.pausePanel?.remove();
+      this.pausePanel = undefined;
+      this.paused = false;
+      this.fire = false;
+      this.setMoveVector(0, 0);
+      this.scene.restart();
+    }));
+    card.appendChild(makeButton('LEAVE ARENA', false, () => this.leaveArena()));
+
+    panel.appendChild(card);
+    document.body.appendChild(panel);
+    this.pausePanel = panel;
+  }
+
+  private leaveArena() {
+    this.fire = false;
+    this.setMoveVector(0, 0);
+    this.pausePanel?.remove();
+    this.resultPanel?.remove();
+    this.pausePanel = undefined;
+    this.resultPanel = undefined;
+    this.paused = false;
+    this.scene.start('ShootersTriggerLobbyScene');
   }
 
   private createExitButton() {
@@ -789,6 +1005,34 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.drawTireStack(730, 1170);
 
     this.drawFlag(1180, 860, 0x2f7775, 'ARENA');
+    this.drawFieldDetails();
+  }
+
+  private drawFieldDetails() {
+    const g = this.add.graphics();
+
+    // Small physical field details only: the existing battlefield stays intact.
+    // These marks clarify lanes, staging space and the competition boundary
+    // without becoming floating UI or changing the combat layout.
+    g.lineStyle(3, 0xf4f1df, 0.20);
+    g.strokeRoundedRect(930, 145, 500, 230, 24);
+    g.strokeRoundedRect(900, 885, 560, 250, 24);
+
+    g.lineStyle(2, 0xead8a0, 0.28);
+    for (const x of [600, 900, 1200, 1500, 1800]) {
+      g.lineBetween(x, 530, x, 585);
+      g.lineBetween(x, 815, x, 870);
+    }
+
+    g.fillStyle(0x493526, 0.16);
+    g.fillRoundedRect(1090, 405, 180, 36, 8);
+    g.lineStyle(2, 0xf4f1df, 0.22).strokeRoundedRect(1090, 405, 180, 36, 8);
+
+    this.add.text(1180, 423, 'FIELD LINE', {
+      fontFamily: 'monospace',
+      fontSize: '8px',
+      color: '#fff4d4',
+    }).setOrigin(0.5).setDepth(6).setAlpha(0.55);
   }
 
   private drawTree(x: number, y: number, scale: number) {
