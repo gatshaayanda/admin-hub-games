@@ -3309,3 +3309,16 @@ Required combat invariants:
 - Do not add new VFX, HUD elements, buttons, delays or gameplay rules because they seem useful. The user's requested change is the scope boundary.
 - If an unexpected Arena result appears during verification: **STOP → inspect the actual source and runtime behavior → isolate the cause → then make the smallest fix.**
 - After an Arena combat change, verify both directions: player shooting rival and rival shooting player, including at least one cover interaction and one round-resolution path.
+
+
+## Shooters Trigger — Arena Playtest Protection Addendum — September 22, 2026
+
+The current phone playtest exposed two regressions that must not be recreated.
+
+- **Paint VFX is protected:** Arena impacts use the established organic paint-splat treatment: irregular paint blobs with small droplets. Do not replace this with directional streaks, fire-like trails, tracer effects, flame effects, glowing tails, or other projectile VFX unless the product owner explicitly requests a new visual direction.
+- **Player engagement is protected:** a mobile fire tap/hold must immediately produce a usable firing direction toward the current rival when the player has not supplied a manual drag aim. Manual drag aim must override that default immediately. Do not leave the player firing on a stale/default world direction that makes normal phone engagement impractical.
+- **Player and rival must be inspected together:** when a playtest says the rival can reliably kill the player while the player can barely engage, inspect both shot paths, aim input, cooldown, projectile speed/travel, spread, collision geometry, cover interception, firing range, movement pressure and hit resolution before changing damage or adding advantages.
+- **Opening movement:** the rival must not wait for an arbitrary movement delay before engaging. ARENA_RIVAL_OPENING_DELAY_MS is a firing-opening control only and is currently 0; do not reintroduce a movement wait.
+- **Scope guard:** a combat fix must not alter Publisher Intro, Game Library, Hall, Arena HUD/map, pause, field layout, stealth, weapon-drop rules or other unrelated systems unless the user explicitly asks for that change.
+- **Historical recovery:** if an established visual/game-feel behavior has been replaced accidentally, inspect Git history and restore the known-good behavior rather than inventing a new substitute.
+
