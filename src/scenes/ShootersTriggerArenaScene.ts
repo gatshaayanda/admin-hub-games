@@ -60,6 +60,10 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private pauseButton?: HTMLButtonElement;
   private pausePanel?: HTMLDivElement;
   private resultPanel?: HTMLDivElement;
+  private locatorPanel?: HTMLDivElement;
+  private locatorCanvas?: HTMLCanvasElement;
+  private locatorCtx?: CanvasRenderingContext2D | null;
+  private locatorArrow?: HTMLDivElement;
   private playerMoving = false;
   private rivalMoving = false;
   private playerFacing = 1;
@@ -116,6 +120,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.cleanup = installShootersTriggerMobileControls();
     this.createExitButton();
     this.createPauseButton();
+    this.createEnemyLocator();
 
     this.arenaStartedAt = Date.now();
 
@@ -128,6 +133,8 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       this.pauseButton?.remove();
       this.pausePanel?.remove();
       this.resultPanel?.remove();
+      this.locatorPanel?.remove();
+      this.locatorArrow?.remove();
     });
 
     window.dispatchEvent(new Event('admin-hub-games:game-ready'));
@@ -147,6 +154,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.updateAnimations(delta);
     this.updateWeaponPoses();
     this.updateHud();
+    this.updateEnemyLocator();
   }
 
   public setMoveVector(x: number, y: number) {
@@ -604,7 +612,11 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       this.resultPanel = undefined;
       this.fire = false;
       this.setMoveVector(0, 0);
-      this.scene.restart();
+      this.pausePanel?.remove();
+      this.locatorPanel?.remove();
+      this.locatorArrow?.remove();
+      this.scene.stop();
+      window.setTimeout(() => this.scene.start('ShootersTriggerArenaScene'), 0);
     };
 
     const button = document.createElement('button');
@@ -666,6 +678,167 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       Math.round(this.rivalProfile.shooting) + ' · M ' +
       Math.round(this.rivalProfile.movement),
     );
+  }
+
+  private createEnemyLocator() {
+    this.locatorPanel?.remove();
+    this.locatorArrow?.remove();
+
+    const panel = document.createElement('div');
+    Object.assign(panel.style, {
+      position: 'fixed',
+      top: '64px',
+      right: 'max(12px, env(safe-area-inset-right, 0px))',
+      width: '112px',
+      height: '112px',
+      padding: '4px',
+      boxSizing: 'border-box',
+      border: '2px solid rgba(244,241,223,.72)',
+      borderRadius: '10px',
+      background: 'rgba(16,32,24,.82)',
+      zIndex: '1440',
+      pointerEvents: 'none',
+      overflow: 'hidden',
+    });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 104;
+    canvas.height = 104;
+    canvas.style.width = '104px';
+    canvas.style.height = '104px';
+    canvas.setAttribute('aria-label', 'Arena tactical locator');
+    panel.appendChild(canvas);
+
+    const arrow = document.createElement('div');
+    Object.assign(arrow.style, {
+      position: 'fixed',
+      width: '42px',
+      minHeight: '28px',
+      padding: '5px 7px',
+      boxSizing: 'border-box',
+      borderRadius: '7px',
+      background: 'rgba(155,63,63,.94)',
+      border: '2px solid #fff4d4',
+      color: '#fff4d4',
+      font: '800 9px/1 monospace',
+      letterSpacing: '.5px',
+      textAlign: 'center',
+      zIndex: '1435',
+      pointerEvents: 'none',
+      transformOrigin: '50% 50%',
+      display: 'none',
+      whiteSpace: 'pre',
+    });
+    arrow.textContent = 'RIVAL';
+    document.body.appendChild(panel);
+    document.body.appendChild(arrow);
+
+    this.locatorPanel = panel;
+    this.locatorCanvas = canvas;
+    this.locatorCtx = canvas.getContext('2d');
+    this.locatorArrow = arrow;
+    this.updateEnemyLocator();
+  }
+
+  private updateEnemyLocator() {
+    const ctx = this.locatorCtx;
+    const canvas = this.locatorCanvas;
+    if (!ctx || !canvas || !this.player || !this.rival) return;
+
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = '#263c2a';
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = 'rgba(244,241,223,.28)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(5, 5, w - 10, h - 10);
+
+    ctx.strokeStyle = 'rgba(234,216,160,.18)';
+    for (const y of [34, 70]) {
+      ctx.beginPath();
+      ctx.moveTo(6, y);
+      ctx.lineTo(w - 6, y);
+      ctx.stroke();
+    }
+    for (const x of [34, 70]) {
+      ctx.beginPath();
+      ctx.moveTo(x, 6);
+      ctx.lineTo(x, h - 6);
+      ctx.stroke();
+    }
+
+    const sx = (w - 12) / 2400;
+    const sy = (h - 12) / 1400;
+    ctx.fillStyle = 'rgba(117,86,59,.8)';
+    for (const cover of this.covers) {
+      ctx.fillRect(6 + cover.x * sx, 6 + cover.y * sy, Math.max(2, cover.width * sx), Math.max(2, cover.height * sy));
+    }
+
+    const px = 6 + this.player.body.x * sx;
+    const py = 6 + this.player.body.y * sy;
+    const rx = 6 + this.rival.body.x * sx;
+    const ry = 6 + this.rival.body.y * sy;
+
+    ctx.fillStyle = '#f4f1df';
+    ctx.beginPath();
+    ctx.moveTo(px + this.aim.x * 6, py + this.aim.y * 6);
+    ctx.lineTo(px - this.aim.y * 4 - this.aim.x * 4, py + this.aim.x * 4 - this.aim.y * 4);
+    ctx.lineTo(px + this.aim.y * 4 - this.aim.x * 4, py - this.aim.x * 4 - this.aim.y * 4);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#e44f3d';
+    ctx.beginPath();
+    ctx.moveTo(rx, ry - 4);
+    ctx.lineTo(rx + 4, ry + 4);
+    ctx.lineTo(rx - 4, ry + 4);
+    ctx.closePath();
+    ctx.fill();
+
+    const distance = Phaser.Math.Distance.Between(
+      this.player.body.x,
+      this.player.body.y,
+      this.rival.body.x,
+      this.rival.body.y,
+    );
+
+    const camera = this.cameras.main;
+    const viewLeft = camera.scrollX;
+    const viewTop = camera.scrollY;
+    const viewRight = viewLeft + camera.width;
+    const viewBottom = viewTop + camera.height;
+    const onScreen =
+      this.rival.body.x >= viewLeft &&
+      this.rival.body.x <= viewRight &&
+      this.rival.body.y >= viewTop &&
+      this.rival.body.y <= viewBottom;
+
+    if (onScreen) {
+      if (this.locatorArrow) this.locatorArrow.style.display = 'none';
+      return;
+    }
+
+    const centerX = viewLeft + camera.width / 2;
+    const centerY = viewTop + camera.height / 2;
+    const dx = this.rival.body.x - centerX;
+    const dy = this.rival.body.y - centerY;
+    const scale = 1 / Math.max(
+      Math.abs(dx) / Math.max(1, camera.width / 2 - 34),
+      Math.abs(dy) / Math.max(1, camera.height / 2 - 34),
+      1,
+    );
+
+    const edgeX = camera.width / 2 + dx * scale;
+    const edgeY = camera.height / 2 + dy * scale;
+    const arrow = this.locatorArrow;
+    if (!arrow) return;
+
+    arrow.style.display = 'block';
+    arrow.style.left = Math.max(50, Math.min(window.innerWidth - 50, edgeX - 21)) + 'px';
+    arrow.style.top = Math.max(82, Math.min(window.innerHeight - 92, edgeY - 14)) + 'px';
+    arrow.style.transform = 'rotate(' + (Math.atan2(dy, dx) * 180 / Math.PI + 90) + 'deg)';
+    arrow.textContent = 'RIVAL\\n' + Math.round(distance);
   }
 
   private createPauseButton() {

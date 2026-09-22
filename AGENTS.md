@@ -2830,3 +2830,50 @@ The Arena source now contains:
 - restrained physical field/lane detail layered onto the existing battlefield.
 
 The next acceptance test is a real phone match, with special attention to: taking the second body hit, reaching the third round-ending hit, pausing/resuming mid-fight, restarting from pause, rematching after the result screen, and returning to the Home Field without stale controls.
+
+## Shooters Trigger — Arena Top-Down Readability & Rematch Reliability Contract — September 22, 2026
+
+The Arena has now been inspected as a top-down mobile combat game itself, rather than as part of the wider application. Current top-down shooter patterns commonly use a tactical minimap/radar for macro enemy position and an edge-direction marker for an off-screen threat. citeturn2search0turn2search1
+
+### Required Arena locator
+
+The Arena now provides two complementary layers:
+- a compact top-right tactical locator showing the full field, player position/facing, rival position and meaningful cover;
+- an off-screen RIVAL edge indicator that points toward the rival and includes field distance;
+- when the rival is already on-screen, the edge indicator disappears so it does not compete with the actual opponent;
+- the locator is informational only and does not aim, fire or move the player automatically;
+- the locator remains outside the movement and aim/fire touch zones.
+
+This is intentional: the player should be able to find the opponent quickly without turning the battlefield into a wall of floating markers.
+
+### Mobile combat readability
+
+The Arena remains a twin-stick-style mobile experience: left movement, right aim/fire, with pause kept away from those controls. Current mobile shooter references similarly emphasize dedicated touch movement/aim/fire and readable combat spaces. citeturn2search4turn0search7
+
+Do not replace the existing combat controls with a different control scheme unless explicitly requested.
+
+### Rematch reliability
+
+FIGHT AGAIN must fully leave the completed Arena scene before starting a fresh Arena scene.
+
+The rematch path must:
+1. clear result/pause/locator DOM;
+2. stop the completed Arena scene;
+3. start a fresh Arena scene on the next task turn;
+4. recreate mobile controls, HUD, locator and fighter state from scratch.
+
+A rematch must never reuse a completed scene's matchOver, roundTransition, resolvingRound, held-input or DOM state.
+
+### Acceptance
+
+The next phone acceptance test must specifically verify:
+1. finish a match;
+2. tap FIGHT AGAIN;
+3. fresh Arena loads and the player can move/fire immediately;
+4. rival is visible on the tactical locator even before it enters the camera view;
+5. when rival moves off-screen, the edge indicator points toward it;
+6. when rival comes back on-screen, the edge indicator disappears;
+7. pause/resume still works;
+8. returning home leaves no stale locator or controls.
+
+The current combat rules, first-to-3 structure, relational rival profiles, grounded player, field scale and economy are unchanged.
