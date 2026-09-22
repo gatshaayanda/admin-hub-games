@@ -562,13 +562,14 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       const shotLine = new Phaser.Geom.Line(previousX, previousY, shot.body.x, shot.body.y);
       const targetHead = new Phaser.Geom.Circle(target.body.x, target.body.y - 25, 20);
       const targetBody = new Phaser.Geom.Circle(target.body.x, target.body.y + 1, 34);
-      const targetWeapon = new Phaser.Geom.Circle(this.getWeaponPoint(target).x, this.getWeaponPoint(target).y, 30);
+      const weaponPoint = this.getWeaponPoint(target);
+      const targetWeapon = new Phaser.Geom.Circle(weaponPoint.x, weaponPoint.y, 16);
       const hitsWeapon = !target.weaponDropped && Phaser.Geom.Intersects.LineToCircle(shotLine, targetWeapon);
       const hitsHead = Phaser.Geom.Intersects.LineToCircle(shotLine, targetHead);
       const hitsBody = Phaser.Geom.Intersects.LineToCircle(shotLine, targetBody);
 
       if (hitsWeapon || hitsHead || hitsBody) {
-        const hitPoint = Phaser.Geom.Line.GetNearestPoint(shotLine, hitsWeapon ? this.getWeaponPoint(target) : hitsHead ? new Phaser.Math.Vector2(target.body.x, target.body.y - 25) : new Phaser.Math.Vector2(target.body.x, target.body.y + 1));
+        const hitPoint = Phaser.Geom.Line.GetNearestPoint(shotLine, hitsWeapon ? weaponPoint : hitsHead ? new Phaser.Math.Vector2(target.body.x, target.body.y - 25) : new Phaser.Math.Vector2(target.body.x, target.body.y + 1));
         if (hitsWeapon) {
           this.resolveWeaponHit(shot.owner, target, hitPoint.x, hitPoint.y);
         } else {
@@ -593,40 +594,6 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         this.shots.splice(i, 1);
         continue;
       }
-      const headPoint = new Phaser.Math.Vector2(target.body.x, target.body.y - 25);
-      const bodyPoint = new Phaser.Math.Vector2(target.body.x, target.body.y + 1);
-      const headLine = new Phaser.Geom.Line(previousX, previousY, shot.body.x, shot.body.y);
-      const bodyLine = new Phaser.Geom.Line(previousX, previousY, shot.body.x, shot.body.y);
-      const headDistance = Phaser.Math.Distance.Between(shot.body.x, shot.body.y, headPoint.x, headPoint.y);
-      const bodyDistance = Phaser.Math.Distance.Between(shot.body.x, shot.body.y, bodyPoint.x, bodyPoint.y);
-      const weaponPoint = this.getWeaponPoint(target);
-      const weaponLine = new Phaser.Geom.Line(previousX, previousY, shot.body.x, shot.body.y);
-      const weaponHitCircle = new Phaser.Geom.Circle(weaponPoint.x, weaponPoint.y, 24);
-      const headHitCircle = new Phaser.Geom.Circle(headPoint.x, headPoint.y, 16);
-      const bodyHitCircle = new Phaser.Geom.Circle(bodyPoint.x, bodyPoint.y, 30);
-
-      if (!target.weaponDropped && Phaser.Geom.Intersects.LineToCircle(weaponLine, weaponHitCircle)) {
-        this.resolveWeaponHit(shot.owner, target, shot.body.x, shot.body.y);
-        shot.body.destroy();
-        this.shots.splice(i, 1);
-        if (this.matchOver || this.roundTransition || this.resolvingRound) break;
-      } else if (
-        Phaser.Geom.Intersects.LineToCircle(headLine, headHitCircle) &&
-        headDistance < bodyDistance
-      ) {
-        const headshot = headDistance < 14 && headDistance < bodyDistance;
-        this.resolveHit(shot.owner, true, shot.body.x, shot.body.y);
-        shot.body.destroy();
-        this.shots.splice(i, 1);
-        if (this.matchOver || this.roundTransition || this.resolvingRound) break;
-      } else if (Phaser.Geom.Intersects.LineToCircle(bodyLine, bodyHitCircle)) {
-        this.resolveHit(shot.owner, false, shot.body.x, shot.body.y);
-        shot.body.destroy();
-        this.shots.splice(i, 1);
-        if (this.matchOver || this.roundTransition || this.resolvingRound) break;
-
-    }
-  }
 
   private getWeaponPoint(target: Fighter) {
     const aim = target === this.player ? this.aim : new Phaser.Math.Vector2(this.player.body.x - target.body.x, this.player.body.y - target.body.y).normalize();
@@ -655,7 +622,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     target.droppedWeapon.setPosition(bodyX, bodyY + 8);
     target.droppedWeapon.setRotation(angle + Phaser.Math.DegToRad(90));
     target.droppedWeapon.setVisible(true);
-    target.droppedWeapon.setScale(0.75);
+    target.droppedWeapon.setScale(0.95).setDepth(55);
     this.updateWeaponVisibility(target, false);
     this.tweens.add({
       targets: target.droppedWeapon,
@@ -663,8 +630,11 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       y: finalY,
       angle: target.droppedWeapon.angle + Phaser.Math.Between(-110, 110),
       scale: 1,
-      duration: 220,
+      duration: 260,
       ease: 'Quad.easeOut',
+      onComplete: () => {
+        target.droppedWeapon.setDepth(55);
+      },
     });
     target.body.setData('combatState', target.wounded ? 'WOUNDED · UNARMED' : 'UNARMED');
   }
@@ -682,7 +652,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private tryPickupWeapon(target: Fighter) {
     if (!target.weaponDropped || target.downed) return;
     const distance = Phaser.Math.Distance.Between(target.body.x, target.body.y, target.droppedWeapon.x, target.droppedWeapon.y);
-    if (distance <= 42) this.pickupWeapon(target);
+    if (distance <= 54) this.pickupWeapon(target);
   }
 
   private resolveHit(owner: 'player' | 'rival', headshot: boolean, hitX?: number, hitY?: number) {
@@ -723,18 +693,13 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       return;
     }
 
-    target.hp -= 1;
+    target.hp = 0;
     if (owner === 'player') this.roundHits += 1;
     else this.roundRivalHits += 1;
 
     this.flash(target, false);
-
-    if (target.hp <= 0) {
-      this.eliminateFighter(target, owner);
-      this.roundPoint(owner);
-    } else {
-      this.markFighterWounded(target);
-    }
+    this.eliminateFighter(target, owner);
+    this.roundPoint(owner);
   }
 
   private addSplatter(x: number, y: number, scale = 1) {
@@ -816,7 +781,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   }
 
   private resetFighter(target: Fighter, x: number, y: number) {
-    target.hp = 2;
+    target.hp = 1;
     target.wounded = false;
     target.downed = false;
     target.weaponDropped = false;
@@ -1572,7 +1537,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     container.setData('nameLabel', name);
     return {
       body: container,
-      hp: 2,
+      hp: 1,
       wounded: false,
       downed: false,
       damagePaint,
