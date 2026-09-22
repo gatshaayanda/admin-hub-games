@@ -3250,25 +3250,21 @@ The Arena must communicate stealth without covering the fight in interface clutt
 - Stealth routes should use natural trees/concealment plus hard-cover transitions and alternate approaches. Online paintball strategy references reviewed September 22, 2026 distinguish concealment from hard cover and describe concealment as useful for flanking/ambushes, with firing breaking concealment.
 
 ### HUD discipline
-- Arena HUD is intentionally minimal: **score**, **ammo**, and a small **pause** control.
-- Remove the large tactical locator/map overlay from the Arena HUD. The player should read the field itself and use cover/concealment rather than fight through a second map layer.
-- Do not place the pause control over the map or beside another large overlay.
+- Arena HUD stays compact: **score**, **ammo**, **pause**, plus a small tactical **map** for mobile spatial orientation.
+- The tactical map is a single compact corner widget, not a full-screen overlay and not a second gameplay view.
+- The map shows only mission-relevant field structure: major cover, concealment zones, player position/facing and rival position. It must not carry decorative labels or permanent callout panels.
+- The pause control stays isolated in the opposite corner and must never overlap the tactical map.
+- The rival direction arrow is part of the tactical navigation system: it appears at the viewport edge when the rival is outside the phone camera, with approximate distance. It is not a second permanent HUD card.
 - Do not maintain a separate always-visible EXIT button; leaving is available through the pause panel.
 - Combat callouts remain transient world feedback, not permanent HUD panels.
-- Any future Arena HUD addition must justify itself against the core rule: the player should be looking at the paintball fight, not at interface furniture.
+- Any future Arena HUD addition must justify itself against the core rule: the player should be looking at the paintball fight, with the map answering spatial orientation rather than covering the fight.
 
 ### Acceptance
-1. On a phone, the pause button is isolated and does not sit on top of a tactical map.
+1. On a phone, the pause button is isolated and does not sit on top of the tactical map.
 2. Score/ammo remain readable without crowding the top edge.
-3. No permanent enemy locator/map widget is present.
-4. Approaching a tree/concealment route visibly communicates **HIDE**.
-5. While concealed, the nearby cue communicates **HIDDEN**.
-6. The player can still see and use the actual field, cover, flanking routes and opponent without HUD obstruction.
-7. Playtest specifically checks that a scrape/hit/respawn is not caused by accidental interaction with an overlapping HUD control.
-
-
-### Mobile opponent direction cue
-- Mobile Arena retains a compact **RIVAL direction arrow + distance** cue.
-- This is a directional cue only, not a tactical map: it points from the player toward the rival and gives approximate world distance.
-- It must remain small, non-interactive, and separate from the pause control so it cannot interfere with movement/fire controls.
-- The cue is required because the Arena is larger than the phone viewport; removing all opponent direction guidance makes the mobile player navigate blindly.
+3. The tactical map is present but compact and limited to useful field geometry and live player/rival positions.
+4. The rival edge arrow appears when the rival is outside the phone viewport and includes approximate distance.
+5. Approaching a tree/concealment route visibly communicates **HIDE**.
+6. While concealed, the nearby cue communicates **HIDDEN**.
+7. The player can still see and use the actual field, cover, flanking routes and opponent without HUD obstruction.
+8. Playtest specifically checks that a scrape/hit/respawn is not caused by accidental interaction with an overlapping HUD control.

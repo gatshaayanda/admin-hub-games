@@ -124,9 +124,10 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private arenaStartedAt = 0;
   private rivalCanFireAt = 0;
   private stealthIndicators: Array<{ ring: Phaser.GameObjects.Graphics; label: Phaser.GameObjects.Text; x: number; y: number; radius: number }> = [];
-  private rivalArrow?: HTMLDivElement;
-  private rivalArrowIcon?: HTMLDivElement;
-  private rivalArrowText?: HTMLDivElement;
+  private locatorPanel?: HTMLDivElement;
+  private locatorCanvas?: HTMLCanvasElement;
+  private locatorCtx?: CanvasRenderingContext2D | null;
+  private locatorArrow?: HTMLDivElement;
 
   constructor() {
     super('ShootersTriggerArenaScene');
@@ -159,7 +160,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.cleanup = installShootersTriggerMobileControls();
     this.createPauseButton();
-    this.createRivalArrow();
+    this.createEnemyLocator();
 
     this.arenaStartedAt = Date.now();
     this.rivalCanFireAt = this.arenaStartedAt + ARENA_RIVAL_OPENING_DELAY_MS;
@@ -177,10 +178,12 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       this.rival?.droppedWeapon?.destroy();
       this.stealthIndicators.forEach(({ ring, label }) => { ring.destroy(); label.destroy(); });
       this.stealthIndicators = [];
-      this.rivalArrow?.remove();
-      this.rivalArrow = undefined;
-      this.rivalArrowIcon = undefined;
-      this.rivalArrowText = undefined;
+      this.locatorPanel?.remove();
+      this.locatorArrow?.remove();
+      this.locatorPanel = undefined;
+      this.locatorCanvas = undefined;
+      this.locatorCtx = undefined;
+      this.locatorArrow = undefined;
     });
 
     window.dispatchEvent(new Event('admin-hub-games:game-ready'));
@@ -204,7 +207,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.updateWeaponPoses();
     this.updateHud();
     this.updateStealthIndicators();
-    this.updateRivalArrow();  }
+    this.updateEnemyLocator();  }
 
   public setMoveVector(x: number, y: number) {
     this.joystickVector.set(Phaser.Math.Clamp(x, -1, 1), Phaser.Math.Clamp(y, -1, 1));
@@ -1076,6 +1079,10 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       this.pausePanel?.remove();
       this.locatorPanel?.remove();
       this.locatorArrow?.remove();
+      this.locatorPanel = undefined;
+      this.locatorCanvas = undefined;
+      this.locatorCtx = undefined;
+      this.locatorArrow = undefined;
       this.scene.stop();
       window.setTimeout(() => this.scene.start('ShootersTriggerArenaScene'), 0);
     };
@@ -1137,65 +1144,174 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.pauseButton = button;
   }
 
-  private createRivalArrow() {
-    const wrap = document.createElement('div');
-    Object.assign(wrap.style, {
+  private createEnemyLocator() {
+    this.locatorPanel?.remove();
+    this.locatorArrow?.remove();
+
+    const panel = document.createElement('div');
+    Object.assign(panel.style, {
       position: 'fixed',
-      right: '10px',
       top: '56px',
-      width: '78px',
-      minHeight: '48px',
-      display: 'grid',
-      gridTemplateColumns: '26px 1fr',
-      alignItems: 'center',
-      gap: '4px',
-      padding: '4px 6px',
+      right: '10px',
+      width: '108px',
+      height: '108px',
+      padding: '4px',
       boxSizing: 'border-box',
-      border: '1px solid rgba(244,241,223,.48)',
+      border: '1px solid rgba(244,241,223,.52)',
       borderRadius: '10px',
-      background: 'rgba(16,32,24,.72)',
-      color: '#f4f1df',
-      fontFamily: 'monospace',
+      background: 'rgba(16,32,24,.82)',
       zIndex: '1440',
       pointerEvents: 'none',
-      backdropFilter: 'blur(2px)',
+      overflow: 'hidden',
+      boxShadow: '0 2px 10px rgba(0,0,0,.22)',
     });
-    const icon = document.createElement('div');
-    Object.assign(icon.style, {
-      width: '26px',
-      height: '26px',
-      display: 'grid',
-      placeItems: 'center',
-      fontSize: '23px',
-      lineHeight: '1',
-      fontWeight: '900',
-      transformOrigin: 'center',
-    });
-    icon.textContent = '↑';
-    const textEl = document.createElement('div');
-    Object.assign(textEl.style, {
-      fontSize: '8px',
-      lineHeight: '1.05',
-      fontWeight: '900',
-      textAlign: 'left',
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 98;
+    canvas.height = 98;
+    canvas.style.width = '98px';
+    canvas.style.height = '98px';
+    canvas.setAttribute('aria-label', 'Arena tactical map');
+    panel.appendChild(canvas);
+
+    const arrow = document.createElement('div');
+    Object.assign(arrow.style, {
+      position: 'fixed',
+      width: '46px',
+      minHeight: '28px',
+      padding: '5px 6px',
+      boxSizing: 'border-box',
+      borderRadius: '7px',
+      background: 'rgba(155,63,63,.94)',
+      border: '1px solid #fff4d4',
+      color: '#fff4d4',
+      font: '800 8px/1 monospace',
       letterSpacing: '.4px',
+      textAlign: 'center',
+      zIndex: '1445',
+      pointerEvents: 'none',
+      transformOrigin: '50% 50%',
+      display: 'none',
+      whiteSpace: 'pre',
+      boxShadow: '0 2px 8px rgba(0,0,0,.22)',
     });
-    textEl.textContent = 'RIVAL';
-    wrap.append(icon, textEl);
-    document.body.appendChild(wrap);
-    this.rivalArrow = wrap;
-    this.rivalArrowIcon = icon;
-    this.rivalArrowText = textEl;
+    arrow.textContent = 'RIVAL';
+
+    document.body.appendChild(panel);
+    document.body.appendChild(arrow);
+    this.locatorPanel = panel;
+    this.locatorCanvas = canvas;
+    this.locatorCtx = canvas.getContext('2d');
+    this.locatorArrow = arrow;
+    this.updateEnemyLocator();
   }
 
-  private updateRivalArrow() {
-    if (!this.rival || !this.player || !this.rivalArrow || !this.rivalArrowIcon || !this.rivalArrowText) return;
-    const dx = this.rival.body.x - this.player.body.x;
-    const dy = this.rival.body.y - this.player.body.y;
-    const distance = Math.round(Math.sqrt(dx * dx + dy * dy));
-    const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
-    this.rivalArrowIcon.style.transform = 'rotate(' + angle.toFixed(1) + 'deg)';
-    this.rivalArrowText.textContent = 'RIVAL\n' + distance + 'm';
+  private updateEnemyLocator() {
+    const ctx = this.locatorCtx;
+    const canvas = this.locatorCanvas;
+    if (!ctx || !canvas || !this.player || !this.rival) return;
+
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    // Keep the map tactical, not decorative: field boundary, major cover, player,
+    // rival and orientation. No labels or UI furniture inside the map.
+    ctx.fillStyle = '#263c2a';
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = 'rgba(244,241,223,.30)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(4, 4, w - 8, h - 8);
+
+    const sx = (w - 10) / 2400;
+    const sy = (h - 10) / 1400;
+
+    ctx.fillStyle = 'rgba(117,86,59,.82)';
+    for (const cover of this.covers) {
+      ctx.fillRect(
+        5 + cover.x * sx,
+        5 + cover.y * sy,
+        Math.max(1.5, cover.width * sx),
+        Math.max(1.5, cover.height * sy),
+      );
+    }
+
+    for (const zone of this.concealments) {
+      ctx.fillStyle = 'rgba(159,189,168,.10)';
+      ctx.beginPath();
+      ctx.arc(5 + zone.x * sx, 5 + zone.y * sy, Math.max(3, zone.radius * sx), 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const px = 5 + this.player.body.x * sx;
+    const py = 5 + this.player.body.y * sy;
+    const rx = 5 + this.rival.body.x * sx;
+    const ry = 5 + this.rival.body.y * sy;
+
+    ctx.fillStyle = '#f4f1df';
+    ctx.beginPath();
+    ctx.arc(px, py, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = '#f4f1df';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(px, py);
+    ctx.lineTo(px + this.aim.x * 8, py + this.aim.y * 8);
+    ctx.stroke();
+
+    ctx.fillStyle = '#e44f3d';
+    ctx.beginPath();
+    ctx.moveTo(rx, ry - 5);
+    ctx.lineTo(rx + 5, ry + 4);
+    ctx.lineTo(rx - 5, ry + 4);
+    ctx.closePath();
+    ctx.fill();
+
+    const distance = Phaser.Math.Distance.Between(
+      this.player.body.x,
+      this.player.body.y,
+      this.rival.body.x,
+      this.rival.body.y,
+    );
+
+    const camera = this.cameras.main;
+    const viewLeft = camera.scrollX;
+    const viewTop = camera.scrollY;
+    const viewRight = viewLeft + camera.width;
+    const viewBottom = viewTop + camera.height;
+    const onScreen =
+      this.rival.body.x >= viewLeft &&
+      this.rival.body.x <= viewRight &&
+      this.rival.body.y >= viewTop &&
+      this.rival.body.y <= viewBottom;
+
+    // The edge arrow only appears when the rival is outside the phone viewport.
+    // This keeps the map useful without adding another permanent HUD panel.
+    const arrow = this.locatorArrow;
+    if (!arrow) return;
+    if (onScreen) {
+      arrow.style.display = 'none';
+      return;
+    }
+
+    const centerX = viewLeft + camera.width / 2;
+    const centerY = viewTop + camera.height / 2;
+    const dx = this.rival.body.x - centerX;
+    const dy = this.rival.body.y - centerY;
+    const scale = 1 / Math.max(
+      Math.abs(dx) / Math.max(1, camera.width / 2 - 34),
+      Math.abs(dy) / Math.max(1, camera.height / 2 - 34),
+      1,
+    );
+    const edgeX = camera.width / 2 + dx * scale;
+    const edgeY = camera.height / 2 + dy * scale;
+
+    arrow.style.display = 'block';
+    arrow.style.left = Math.max(52, Math.min(window.innerWidth - 52, edgeX - 23)) + 'px';
+    arrow.style.top = Math.max(82, Math.min(window.innerHeight - 90, edgeY - 14)) + 'px';
+    arrow.style.transform = 'rotate(' + (Math.atan2(dy, dx) * 180 / Math.PI + 90) + 'deg)';
+    arrow.textContent = 'RIVAL\\n' + Math.round(distance) + 'm';
   }
 
   private togglePause() {
