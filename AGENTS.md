@@ -3268,3 +3268,32 @@ The Arena must communicate stealth without covering the fight in interface clutt
 6. While concealed, the nearby cue communicates **HIDDEN**.
 7. The player can still see and use the actual field, cover, flanking routes and opponent without HUD obstruction.
 8. Playtest specifically checks that a scrape/hit/respawn is not caused by accidental interaction with an overlapping HUD control.
+
+
+## Shooters Trigger — Arena Protection Contract
+
+Shooters Trigger Arena is a gameplay system that must be preserved deliberately between chats.
+
+### Visual protection
+- Paint impacts must look like **paint**, not fire, lasers, tracer trails or flame effects.
+- Preserve the established organic paint-splatter treatment unless the product owner explicitly asks for a new VFX direction.
+- Do not replace paint splats with persistent trails, glowing streaks, flame-like muzzle effects, or unrelated projectile effects.
+- A projectile should read as a paintball; impact feedback should read as a paint splat.
+
+### Engagement / hit-registration protection
+Before changing Arena combat, inspect the actual current player and rival shot path together. Do not change one side in isolation.
+
+Required combat invariants:
+- Player and rival use the same neutral baseline movement and firing cadence while neutral baseline mode is enabled.
+- The rival must not have an arbitrary opening movement or engagement delay. Any deliberate delay must be explicitly requested.
+- A shot must produce **one** combat event only: miss, scrape, gun hit, body hit, or headshot. A scrape must not later become another hit from the same projectile.
+- Cover must block a projectile before that projectile can register a hit on a fighter behind the cover.
+- Weapon hits must visibly drop the weapon and require physical recovery by walking over it.
+- Body hits, headshots, gun hits, respawns and round scoring must remain mutually consistent for both player and rival.
+- If the player reports that shooting feels wrong, inspect projectile travel, collision geometry, cover interception, weapon-hit detection, damage resolution, cooldown, rival movement and rival firing before changing tuning values.
+
+### Change discipline for Arena
+- **Do not redesign Arena while fixing Arena.** Preserve the existing field, HUD, tactical map, pause control, controls, cover/stealth concept, weapon-drop loop and paint presentation unless the user explicitly asks for those changes.
+- Do not add new VFX, HUD elements, buttons, delays or gameplay rules because they seem useful. The user's requested change is the scope boundary.
+- If an unexpected Arena result appears during verification: **STOP → inspect the actual source and runtime behavior → isolate the cause → then make the smallest fix.**
+- After an Arena combat change, verify both directions: player shooting rival and rival shooting player, including at least one cover interaction and one round-resolution path.
