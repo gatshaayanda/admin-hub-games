@@ -124,6 +124,9 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private arenaStartedAt = 0;
   private rivalCanFireAt = 0;
   private stealthIndicators: Array<{ ring: Phaser.GameObjects.Graphics; label: Phaser.GameObjects.Text; x: number; y: number; radius: number }> = [];
+  private rivalArrow?: HTMLDivElement;
+  private rivalArrowIcon?: HTMLDivElement;
+  private rivalArrowText?: HTMLDivElement;
 
   constructor() {
     super('ShootersTriggerArenaScene');
@@ -156,6 +159,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.cleanup = installShootersTriggerMobileControls();
     this.createPauseButton();
+    this.createRivalArrow();
 
     this.arenaStartedAt = Date.now();
     this.rivalCanFireAt = this.arenaStartedAt + ARENA_RIVAL_OPENING_DELAY_MS;
@@ -173,6 +177,10 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       this.rival?.droppedWeapon?.destroy();
       this.stealthIndicators.forEach(({ ring, label }) => { ring.destroy(); label.destroy(); });
       this.stealthIndicators = [];
+      this.rivalArrow?.remove();
+      this.rivalArrow = undefined;
+      this.rivalArrowIcon = undefined;
+      this.rivalArrowText = undefined;
     });
 
     window.dispatchEvent(new Event('admin-hub-games:game-ready'));
@@ -195,7 +203,8 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.updateAnimations(delta);
     this.updateWeaponPoses();
     this.updateHud();
-    this.updateStealthIndicators();  }
+    this.updateStealthIndicators();
+    this.updateRivalArrow();  }
 
   public setMoveVector(x: number, y: number) {
     this.joystickVector.set(Phaser.Math.Clamp(x, -1, 1), Phaser.Math.Clamp(y, -1, 1));
@@ -1126,6 +1135,67 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     button.onclick = () => this.togglePause();
     document.body.appendChild(button);
     this.pauseButton = button;
+  }
+
+  private createRivalArrow() {
+    const wrap = document.createElement('div');
+    Object.assign(wrap.style, {
+      position: 'fixed',
+      right: '10px',
+      top: '56px',
+      width: '78px',
+      minHeight: '48px',
+      display: 'grid',
+      gridTemplateColumns: '26px 1fr',
+      alignItems: 'center',
+      gap: '4px',
+      padding: '4px 6px',
+      boxSizing: 'border-box',
+      border: '1px solid rgba(244,241,223,.48)',
+      borderRadius: '10px',
+      background: 'rgba(16,32,24,.72)',
+      color: '#f4f1df',
+      fontFamily: 'monospace',
+      zIndex: '1440',
+      pointerEvents: 'none',
+      backdropFilter: 'blur(2px)',
+    });
+    const icon = document.createElement('div');
+    Object.assign(icon.style, {
+      width: '26px',
+      height: '26px',
+      display: 'grid',
+      placeItems: 'center',
+      fontSize: '23px',
+      lineHeight: '1',
+      fontWeight: '900',
+      transformOrigin: 'center',
+    });
+    icon.textContent = '↑';
+    const textEl = document.createElement('div');
+    Object.assign(textEl.style, {
+      fontSize: '8px',
+      lineHeight: '1.05',
+      fontWeight: '900',
+      textAlign: 'left',
+      letterSpacing: '.4px',
+    });
+    textEl.textContent = 'RIVAL';
+    wrap.append(icon, textEl);
+    document.body.appendChild(wrap);
+    this.rivalArrow = wrap;
+    this.rivalArrowIcon = icon;
+    this.rivalArrowText = textEl;
+  }
+
+  private updateRivalArrow() {
+    if (!this.rival || !this.player || !this.rivalArrow || !this.rivalArrowIcon || !this.rivalArrowText) return;
+    const dx = this.rival.body.x - this.player.body.x;
+    const dy = this.rival.body.y - this.player.body.y;
+    const distance = Math.round(Math.sqrt(dx * dx + dy * dy));
+    const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+    this.rivalArrowIcon.style.transform = 'rotate(' + angle.toFixed(1) + 'deg)';
+    this.rivalArrowText.textContent = 'RIVAL\n' + distance + 'm';
   }
 
   private togglePause() {
