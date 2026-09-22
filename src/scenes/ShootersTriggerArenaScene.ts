@@ -51,6 +51,10 @@ const ARENA_AMMO_STATIONS = [
 ];
 const ARENA_STEALTH_RADIUS = 78;
 const ARENA_STEALTH_BREAK_MS = 1200;
+const ARENA_PLAYER_SPAWN = new Phaser.Math.Vector2(360, 1040);
+const ARENA_RIVAL_SPAWN = new Phaser.Math.Vector2(2040, 330);
+const ARENA_RIVAL_FIRE_RANGE = 720;
+const ARENA_RIVAL_OPENING_DELAY_MS = 2200;
 
 export class ShootersTriggerArenaScene extends Phaser.Scene {
   public joystickVector = new Phaser.Math.Vector2();
@@ -119,6 +123,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private playerSkill = 0;
   private evasionSkill = 0;
   private arenaStartedAt = 0;
+  private rivalCanFireAt = 0;
 
   constructor() {
     super('ShootersTriggerArenaScene');
@@ -131,8 +136,8 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.loadPreparation();
     this.rivalProfile = this.chooseRivalProfile();
 
-    this.player = this.createFighter(1180, 1040, 0x2f6b4e, 'YOU', true);
-    this.rival = this.createFighter(1180, 330, 0x9b3f3f, this.rivalProfile.operator, false);
+    this.player = this.createFighter(ARENA_PLAYER_SPAWN.x, ARENA_PLAYER_SPAWN.y, 0x2f6b4e, 'YOU', true);
+    this.rival = this.createFighter(ARENA_RIVAL_SPAWN.x, ARENA_RIVAL_SPAWN.y, 0x9b3f3f, this.rivalProfile.operator, false);
 
     this.player.speed = ARENA_NEUTRAL_BASELINE ? ARENA_BASE_SPEED : 170 + this.evasionSkill * 0.45;
     this.player.cooldown = ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(130, 330 - this.playerSkill * 1.15);
@@ -155,6 +160,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.createEnemyLocator();
 
     this.arenaStartedAt = Date.now();
+    this.rivalCanFireAt = this.arenaStartedAt + ARENA_RIVAL_OPENING_DELAY_MS;
 
     this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
 
@@ -384,7 +390,10 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     }
     this.moveRival(desiredX, desiredY, delta);
 
-    if (!playerHidden && !this.rival.weaponDropped && !this.rival.refilling && this.rival.ammo > 0 && this.rival.cooldown <= 0 && distance < 980) this.rivalFire(direction);
+    const canSeePlayer = this.hasLineOfSight(this.rival.body.x, this.rival.body.y, this.player.body.x, this.player.body.y);
+    const canSeeLastKnown = this.hasLineOfSight(this.rival.body.x, this.rival.body.y, targetX, targetY);
+    const hasFiringSolution = playerHidden ? canSeeLastKnown : canSeePlayer;
+    if (!playerHidden && !this.rival.weaponDropped && !this.rival.refilling && this.rival.ammo > 0 && this.rival.cooldown <= 0 && Date.now() >= this.rivalCanFireAt && distance < ARENA_RIVAL_FIRE_RANGE && hasFiringSolution) this.rivalFire(direction);
   }
 
   private updatePlayerRefill(delta: number) {
@@ -857,11 +866,12 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       if (this.matchOver || this.paused) return;
       this.clearSplatter();
       if (eliminated === this.player) {
-        this.resetFighter(this.player, 1180, 1040);
+        this.resetFighter(this.player, ARENA_PLAYER_SPAWN.x, ARENA_PLAYER_SPAWN.y);
       } else {
-        this.resetFighter(this.rival, 1180, 330);
+        this.resetFighter(this.rival, ARENA_RIVAL_SPAWN.x, ARENA_RIVAL_SPAWN.y);
       }
       eliminated.cooldown = 700;
+      if (eliminated === this.rival) this.rivalCanFireAt = Date.now() + ARENA_RIVAL_OPENING_DELAY_MS;
       this.roundTransition = false;
       this.statusHud?.setText(
         this.player.score === 2 && this.rival.score === 2
@@ -1724,6 +1734,11 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     return ARENA_AMMO_STATIONS
       .slice()
       .sort((a, b) => Phaser.Math.Distance.Between(x, y, a.centerX, a.centerY) - Phaser.Math.Distance.Between(x, y, b.centerX, b.centerY))[0];
+  }
+
+  private hasLineOfSight(fromX: number, fromY: number, toX: number, toY: number) {
+    const line = new Phaser.Geom.Line(fromX, fromY, toX, toY);
+    return !this.covers.some((cover) => Phaser.Geom.Intersects.LineToRectangle(line, cover));
   }
 
   private inCover(x: number, y: number, padding = 12) {
