@@ -2912,3 +2912,49 @@ The Field Phone is the persistent **field report**: after an Arena result change
 ### Creative design principle
 
 The Arena should feel like a place that remembers a fight briefly, while the player's phone remembers the evidence longer. Do not add persistent progression, new weapons, extra enemies or new match rules merely to create spectacle. First make the existing one-on-one fight increasingly readable, tactile and consequential.
+
+
+## Shooters Trigger — Arena Damage-State & Atomic Elimination Contract — September 22, 2026
+
+The Arena keeps its current two body-hit rule for now, but the combat loop must communicate damage as visible fighter states rather than as an invisible HP counter.
+
+### Body-hit state model
+
+- Fresh fighter = READY.
+- First confirmed body hit = WOUNDED: one body-hit point remains, persistent paint remains visibly on the fighter, a short hit reaction plays, and the fighter continues fighting.
+- Wounded fighters have a subtle 8% movement reduction. This is a tactical consequence, not a hard stun or accuracy penalty.
+- Second confirmed body hit = DOWNED / ELIMINATED: the fighter receives a stronger final reaction, becomes visually disabled/tilted, weapon effects stop, and the round resolves immediately.
+- Headshot remains an immediate elimination and does not require a prior wounded state.
+- Do not add a conventional HP bar unless explicitly requested. Paint, fighter state and combat reactions are the primary immediate health evidence.
+
+### Combat feedback
+
+- First body hit must read as damage, not merely as another splatter particle.
+- Persistent paint/damage state remains on the fighter until the round reset.
+- Final body hit must read differently from an ordinary hit: ELIMINATED and ROUND POINT are distinct from PAINT HIT.
+- A downed fighter cannot continue moving, firing or accepting additional hits.
+- Existing field-report evidence is preserved exactly: headshots, body hits, scrapes, paint-hit counts, misses, score and reward remain recorded.
+
+### Atomic round resolution
+
+- The first confirmed final hit owns the round.
+- Once a fighter becomes downed or roundPoint() begins, remaining projectiles cannot award another point in that round.
+- Active shots are cleared before the next round or match result.
+- Existing 700ms clean-field respawn transition remains.
+- Respawn must reset both fighters to READY, restore weapons/labels, clear persistent fighter paint and preserve match score/evidence.
+- Do not change two-hit body combat to three hits merely because the number is larger. First validate whether the new WOUNDED → DOWNED experience creates the intended tension on a real phone. A later hit-count change requires a separate gameplay decision.
+
+### Scope lock
+
+This checkpoint changes Arena combat readability and reliability only. Do not add new weapons, enemies, progression systems, health bars, new match rules or unrelated Home Field/Phone changes as part of this contract.
+
+### Acceptance test
+
+On a real phone, verify:
+1. clean fighter takes body hit → visible persistent paint + WOUNDED feedback;
+2. wounded fighter remains controllable but moves slightly slower;
+3. second body hit → fighter visibly becomes DOWNED, weapons stop, ELIMINATED/ROUND POINT appears;
+4. simultaneous/in-flight shots cannot reverse or double-award the round;
+5. 700ms transition cleans the field and both fighters return READY at their normal spawns;
+6. headshot still immediately ends the round;
+7. final Field Phone report remains unchanged and still receives the match evidence.
