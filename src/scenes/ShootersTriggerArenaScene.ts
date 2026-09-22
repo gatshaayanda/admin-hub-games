@@ -844,24 +844,29 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       return;
     }
 
+    const eliminated = winner === 'player' ? this.rival : this.player;
     this.roundTransition = true;
     this.resolvingRound = false;
     this.statusHud?.setText(
-      (winner === 'player' ? 'ROUND WON' : 'ROUND LOST') +
-      '  ·  YOU ' + this.player.score + ' — ' + this.rival.score,
+      (winner === 'player' ? 'ELIMINATED  ·  YOU ' : 'YOU ARE ELIMINATED  ·  YOU ') +
+      this.player.score + ' — ' + this.rival.score +
+      '  ·  RESPAWN',
     );
 
     this.time.delayedCall(700, () => {
       if (this.matchOver || this.paused) return;
       this.clearSplatter();
-      this.resetFighter(this.player, 1180, 1040);
-      this.resetFighter(this.rival, 1180, 330);
-      this.rival.cooldown = 700;
+      if (eliminated === this.player) {
+        this.resetFighter(this.player, 1180, 1040);
+      } else {
+        this.resetFighter(this.rival, 1180, 330);
+      }
+      eliminated.cooldown = 700;
       this.roundTransition = false;
       this.statusHud?.setText(
         this.player.score === 2 && this.rival.score === 2
-          ? 'FINAL ROUND  ·  FIRST TO 3'
-          : 'ROUND READY  ·  MOVE · AIM · FIRE',
+          ? 'FINAL POINT  ·  FIRST TO 3'
+          : 'FIGHT CONTINUES  ·  MOVE · AIM · FIRE',
       );
     });
   }
