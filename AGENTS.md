@@ -2958,3 +2958,63 @@ On a real phone, verify:
 5. 700ms transition cleans the field and both fighters return READY at their normal spawns;
 6. headshot still immediately ends the round;
 7. final Field Phone report remains unchanged and still receives the match evidence.
+
+
+## Shooters Trigger — Arena Neutral Baseline, Distance Combat & Marker Recovery Contract — September 22, 2026
+
+This is the current authoritative Arena test baseline. It intentionally supersedes the earlier relational-rival behaviour for the current validation phase.
+
+### Neutral baseline
+- Arena currently runs in NEUTRAL mode.
+- Previous Shooting/Evasion records, upgrade level and other preparation evidence do not modify Arena fighter combat values while this baseline is active.
+- Player and rival use the same base movement speed, firing cadence and 50-point baseline skill.
+- Rival identity remains randomized among OPERATOR 12 / 07 / 21 for presentation, but their combat values are equal in this baseline.
+- Training/Evasion/Armory integration is deliberately deferred until the neutral fight is validated on a real phone.
+- The purpose is to establish whether the underlying fight is fun, readable, reliable and tactically coherent before progression modifies it.
+
+### Distance and shooting
+- Shot accuracy is distance-sensitive for both player and rival.
+- Close range is easier to connect than medium range; long range introduces more angular spread.
+- Player and rival use the same distance-spread model at neutral skill.
+- This is the foundation for a later Shooting skill system: training should improve measurable shot behaviour rather than simply granting arbitrary damage or HP bonuses.
+- Distance changes the difficulty of placing the projectile, not its damage.
+
+### Combat reliability
+- Projectile iteration stops immediately after a hit begins round resolution.
+- roundPoint() is atomic: the first confirmed final hit owns the round, clears active projectiles and prevents another projectile from awarding a point.
+- Downed fighters cannot move, fire or receive additional hits.
+- Round reset remains 700ms, clears field splatter, resets fighter state and returns both players to their normal spawns.
+- Headshot remains instant elimination.
+- Body hits remain two-stage: first hit = WOUNDED, second = DOWNED/ELIMINATED.
+- Persistent paint/damage state remains until round reset; no conventional HP bar.
+
+### Marker / gun recovery
+- Each fighter has a physical dropped marker state.
+- A precise hit on the opponent's marker/grip area knocks the marker out without consuming a body-hit point.
+- The knocked-out marker is placed physically on the field and the fighter's weapon presentation disappears.
+- An unarmed player must walk over the dropped marker to recover it before firing again.
+- An unarmed rival moves toward its dropped marker and must recover it before firing again.
+- A player can therefore be temporarily exposed while recovering the marker and can be shot/eliminated before recovering it.
+- Marker knockout/recovery counts are stored in the Arena result for the Field Phone.
+- Dropped markers are cleared on round reset and scene shutdown.
+
+### Field Phone
+- Phone content before a completed Arena match is player-centric: the player's training/evasion/arena state, records, readiness and next guidance.
+- Rival intelligence is post-match only.
+- After a completed match, the phone may show the selected rival operator/profile, combat values and comparison evidence, including marker knockouts.
+- Do not expose live rival stats as phone news before a match result exists.
+- The Field Phone remains the persistent memory of the player's own field evidence and post-match rival report.
+
+### Current acceptance sequence
+1. Enter Arena after previous training/evasion data exists and confirm the match still behaves as a neutral baseline.
+2. Fight at close, medium and long distances and compare how reliably shots connect.
+3. Land a marker/grip hit and verify the gun visibly drops.
+4. Try firing while unarmed; it must not fire.
+5. Walk over the marker and verify recovery.
+6. While a marker is down, allow the armed opponent to pressure the recovery.
+7. Verify first body hit produces WOUNDED state and persistent paint.
+8. Verify second body hit produces DOWNED/ELIMINATED and one round point.
+9. Verify simultaneous/in-flight shots cannot double-award the round or crash.
+10. Verify 700ms reset clears paint and dropped markers and restores both fighters.
+11. Complete a match and verify the phone shows player news plus rival intelligence only after the match.
+12. Verify FIGHT AGAIN creates a clean neutral Arena.

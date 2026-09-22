@@ -294,9 +294,9 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
       arena = JSON.parse(localStorage.getItem('shooters-trigger:last-arena') || 'null');
     } catch {}
 
-    if (!shooting) return 'NEXT · SHOOTING';
-    if (!evasion) return 'NEXT · EVASION';
-    if (!arena) return 'NEXT · ARENA';
+    if (!shooting) return 'PLAYER NEWS · START SHOOTING';
+    if (!evasion) return 'PLAYER NEWS · BUILD EVASION RECORD';
+    if (!arena) return 'PLAYER NEWS · ARENA IS OPEN';
     if (arena?.result === 'WIN') return 'NEXT · ARMORY';
     return 'NEXT · RETRAIN';
   }
@@ -478,6 +478,15 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     message.textContent = next[1];
     message.style.cssText = 'font-size:11px;line-height:1.7;margin-bottom:16px;';
 
+    const playerNews = document.createElement('div');
+    playerNews.innerHTML = [
+      '<b>PLAYER NEWS</b>',
+      shooting ? 'Latest shooting record · ' + shooting.accuracy + '% accuracy · ' + shooting.targetHits + ' target hits.' : 'No shooting record yet · your first field report starts at SHOOTING.',
+      evasion ? 'Latest evasion record · survived ' + (evasion.survived / 1000).toFixed(1) + 's · ' + evasion.coverBlocks + ' cover blocks.' : 'No evasion record yet · your next evidence comes from EVASION.',
+      arena ? 'Latest Arena · ' + arena.result + ' · score ' + arena.score.join(' — ') + ' · budget earned ' + Number(arena.budgetEarned || 0) + '.' : 'No Arena result yet · your phone is tracking your progress, not a rival.'
+    ].join('<br>');
+    playerNews.style.cssText = 'font-size:10px;line-height:1.8;padding:12px;border:1px solid #496556;border-radius:8px;margin-bottom:12px;';
+
     const state = document.createElement('div');
     state.innerHTML = [
       '<b>PLAYER STATE</b>',
@@ -519,6 +528,18 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
           ' · Budget earned ' + Number(arena.budgetEarned || 0)
         : 'No Arena field report yet.',
     ].join('<br>');
+    records.innerHTML += [
+      '<br><br><b>RIVAL INTEL · POST-MATCH ONLY</b>',
+      arena
+        ? 'Operator ' + arena.rival?.operator +
+          ' · Profile ' + String(arena.rival?.profile || '').toUpperCase() +
+          '<br>Shooting ' + Number(arena.rival?.shooting || 0) +
+          ' · Movement ' + Number(arena.rival?.movement || 0) +
+          '<br>Pressure ' + Number(arena.rival?.pressure || 0) +
+          ' · Cover use ' + Number(arena.rival?.coverUse || 0) +
+          '<br>Weapon knockouts you landed ' + Number(arena.weaponKnockouts?.player || 0)
+        : 'Rival information appears only after a completed Arena match.',
+    ].join('<br>');
     records.style.cssText = 'font-size:10px;line-height:1.8;padding:12px;border:1px solid #38493d;border-radius:8px;margin-bottom:12px;';
 
     const route = document.createElement('div');
@@ -539,7 +560,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     close.type='button'; close.textContent='CLOSE PHONE';
     Object.assign(close.style,{width:'100%',minHeight:'48px',border:'2px solid #f4f1df',borderRadius:'8px',background:'#102018',color:'#f4f1df',fontFamily:'monospace',fontSize:'10px',fontWeight:'800'});
     close.addEventListener('pointerdown',(event)=>{event.preventDefault();event.stopPropagation();modal.remove();this.phoneModal=undefined;});
-    card.append(title,headline,message,state,records,route,freedom,close);
+    card.append(title,headline,message,playerNews,state,records,route,freedom,close);
     modal.appendChild(card); document.body.appendChild(modal); this.phoneModal=modal;
   }
 
