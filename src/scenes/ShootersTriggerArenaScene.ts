@@ -280,6 +280,16 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       if (!this.inCover(nx, ny, 14)) {
         this.rival.body.x = nx;
         this.rival.body.y = ny;
+      } else {
+        const sideX = -dy / distance;
+        const sideY = dx / distance;
+        const slide = speed * delta / 1000;
+        const sx = Phaser.Math.Clamp(this.rival.body.x + sideX * slide, 42, 2358);
+        const sy = Phaser.Math.Clamp(this.rival.body.y + sideY * slide, 90, 1350);
+        if (!this.inCover(sx, sy, 14)) {
+          this.rival.body.x = sx;
+          this.rival.body.y = sy;
+        }
       }
       return;
     }
@@ -591,20 +601,24 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private dropWeapon(target: Fighter) {
     if (target.weaponDropped || target.downed) return;
     target.weaponDropped = true;
-    const point = this.getWeaponPoint(target);
-    const aim = target === this.player
-      ? this.aim.clone()
-      : new Phaser.Math.Vector2(this.player.body.x - target.body.x, this.player.body.y - target.body.y).normalize();
-    target.droppedWeapon.setPosition(point.x, point.y);
-    target.droppedWeapon.setRotation(Math.atan2(aim.y, aim.x) + Phaser.Math.DegToRad(90));
+    const bodyX = target.body.x;
+    const bodyY = target.body.y;
+    const side = target === this.player ? (this.aim.y >= 0 ? -1 : 1) : (this.player.body.y >= bodyY ? -1 : 1);
+    const angle = target === this.player ? Math.atan2(this.aim.y, this.aim.x) : Math.atan2(this.player.body.y - bodyY, this.player.body.x - bodyX);
+    const finalX = Phaser.Math.Clamp(bodyX + side * 34, 40, 2360);
+    const finalY = Phaser.Math.Clamp(bodyY + 24, 90, 1350);
+    target.droppedWeapon.setPosition(bodyX, bodyY + 8);
+    target.droppedWeapon.setRotation(angle + Phaser.Math.DegToRad(90));
     target.droppedWeapon.setVisible(true);
+    target.droppedWeapon.setScale(0.75);
     this.updateWeaponVisibility(target, false);
     this.tweens.add({
       targets: target.droppedWeapon,
-      x: Phaser.Math.Clamp(point.x + aim.x * 42, 40, 2360),
-      y: Phaser.Math.Clamp(point.y + aim.y * 42, 90, 1350),
-      angle: target.droppedWeapon.angle + Phaser.Math.Between(-70, 70),
-      duration: 180,
+      x: finalX,
+      y: finalY,
+      angle: target.droppedWeapon.angle + Phaser.Math.Between(-110, 110),
+      scale: 1,
+      duration: 220,
       ease: 'Quad.easeOut',
     });
     target.body.setData('combatState', target.wounded ? 'WOUNDED · UNARMED' : 'UNARMED');
@@ -1039,6 +1053,13 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       color: '#e8c95c',
     }).setScrollFactor(0).setDepth(90);
 
+    this.ammoHud = this.add.text(this.scale.width - 18, 18, 'GUN · AMMO 12/12', {
+      fontFamily: 'monospace',
+      fontSize: '12px',
+      fontStyle: 'bold',
+      color: '#e8c95c',
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(90);
+
     this.statusHud = this.add.text(this.scale.width / 2, 43, 'MOVE · AIM · FIRE · USE COVER', {
       fontFamily: 'monospace',
       fontSize: '9px',
@@ -1055,6 +1076,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
 
   private updateHud() {
     this.scoreHud?.setText('YOU ' + this.player.score + '  ·  ' + this.rivalProfile.operator + ' ' + this.rival.score);
+    this.ammoHud?.setText(this.player.refilling ? 'GUN · REFILLING' : 'GUN · AMMO ' + this.player.ammo + '/' + this.player.maxAmmo);
     const refillPercent = this.player.refilling
       ? Math.round((this.player.refillElapsed / ARENA_REFILL_DURATION) * 100)
       : 0;
@@ -1688,6 +1710,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     );
     this.scoreHud?.setPosition(width / 2, 18);
     this.statusHud?.setPosition(width / 2, 43);
+    this.ammoHud?.setPosition(width - 18, 18);
   }
 
   private inCover(x: number, y: number, padding = 12) {
