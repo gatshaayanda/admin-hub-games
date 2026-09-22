@@ -3147,16 +3147,18 @@ The Arena is a 1v1-first combat experience. It must create positional fights and
 - Acceptance on phone: the rival does not permanently circle the player or ammo; reload routes pull combat sideways; cover creates opportunities to break line of sight; a hidden player can reposition before reappearing; deliberate shots produce visible hit feedback, gun drops, wounds, and eliminations.
 
 
-## Shooters Trigger — Arena Single-Hit Round Resolution & Gun Visibility Contract — September 22, 2026
+## Shooters Trigger — Arena Single-Hit Elimination & Dead-Fighter Respawn Contract — September 22, 2026
 
-This is the authoritative Arena combat contract for the current phone playtest. It supersedes the earlier two-body-hit/WOUNDED→DOWNED contract for Arena.
+This is the authoritative Arena combat contract for the current phone playtest. It supersedes the earlier two-body-hit/WOUNDED→DOWNED contract and the mistaken later interpretation that both fighters respawn together.
 
 ### Real match feel
-- The Arena is a paintball 1v1 round system: one confirmed body paint hit eliminates the fighter for that round.
-- A confirmed headshot also eliminates immediately.
-- Elimination must visibly stop the fighter, award exactly one round point, clear active shots, and begin the 700ms reset.
-- After the reset both fighters respawn on their normal sides/spawns with full ammo, a held gun, clean paint and a fresh round state.
-- The player must never be able to continue exchanging paint after being eliminated; the fight must not degrade into repeated splattering after a decisive hit.
+- The Arena is a paintball 1v1 fight scored by eliminations.
+- One confirmed body paint hit eliminates the target for that life. A confirmed headshot also eliminates immediately.
+- Elimination visibly stops only the hit fighter, awards exactly one point to the shooter, clears active shots, and starts a short 700ms respawn transition.
+- **Only the eliminated/dead fighter respawns.** The surviving shooter does not reset, teleport, lose their position, lose their gun, or refill their ammo.
+- The eliminated fighter respawns back at that fighter's own side/spawn with full ammo, a held gun, clean paint and READY state.
+- After the respawn, the fight continues. It is not a simultaneous round reset and not a return of both fighters to their starting sides.
+- A fighter cannot continue exchanging paint after being eliminated; there must be no post-death splattering.
 
 ### Gun-drop distinction
 - A gun/grip hit is a separate non-elimination event. It removes the held gun and forces physical recovery.
@@ -3166,10 +3168,11 @@ This is the authoritative Arena combat contract for the current phone playtest. 
 - The armed opponent remains able to fire while the other fighter is recovering.
 
 ### Acceptance test
-1. Shoot the opponent's body once: visible PAINT HIT → ELIMINATED → ROUND POINT → both fighters respawn on their sides after 0.7s.
-2. Confirm no second/in-flight projectile can award another point during the reset.
-3. Hit the opponent's gun deliberately: held gun visibly disappears and the dropped gun is clearly visible on the ground.
-4. Confirm the opponent cannot fire until physically recovering the gun.
-5. Confirm an ordinary body shot does not automatically become a gun knockout.
-6. Confirm the next round starts clean with full ammo and both guns restored.
-7. Repeat from the opponent's side: the bot must also be eliminated and respawn correctly when the player's hit lands.
+1. Shoot the opponent's body once: visible PAINT HIT → ELIMINATED → one point → only the eliminated fighter respawns at their side after 0.7s.
+2. Confirm the surviving shooter remains where they were, with their current gun/ammo/state intact.
+3. Confirm no second/in-flight projectile can award another point during the respawn transition.
+4. Hit the opponent's gun deliberately: held gun visibly disappears and the dropped gun is clearly visible on the ground.
+5. Confirm the opponent cannot fire until physically recovering the gun.
+6. Confirm an ordinary body shot does not automatically become a gun knockout.
+7. Confirm the respawned fighter returns with full ammo/gun while the survivor does not get reset.
+8. Repeat from the opponent's side: the bot can be eliminated and respawned correctly when the player's hit lands.
