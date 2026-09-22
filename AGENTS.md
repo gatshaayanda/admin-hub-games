@@ -2499,3 +2499,23 @@ For every lobby layout change, inspect the actual camera follow/deadzone and jud
 The permanent visual rule remains:
 
 **physical place first → contextual action second.**
+
+
+## Shooters Trigger — Authoritative Source Correction — September 22, 2026
+
+The older Shooter Trigger sections above contain historical town layouts and economy experiments. They are **not** the current implementation contract.
+
+The authoritative implementation is now:
+- Home Field has exactly four physical destinations: Shooting Range, Evasion Yard, Armory & Outfitter, Arena.
+- There is no physical Media Bureau in the lobby.
+- Arena is an open physical field with no gate or threshold.
+- Player starts with 0 budget. Shooting and Evasion create performance evidence only; they do not award cash.
+- Arena wins award 25 budget; Arena losses award 0.
+- Phone replaces the physical Media location and is a right-side fixed utility control positioned above the mobile movement/combat dock.
+- Phone guidance is state-driven and recommends WELCOME → SHOOTING → EVASION → ARENA → ARMORY/UPGRADE → RETRAIN/RETURN, while preserving open-order access.
+- Phone shows readiness, Shooting/Evasion skill labels, budget, Arena result and available training evidence.
+- Shooting records distinguish available target evidence (center-mass/dummy hits and exceptional/bottle hits), misses and cover hits; do not invent body-part categories that the current simulation does not actually detect.
+- Returning players' existing budget is preserved. No training activity silently creates money.
+- Any future change must inspect the actual source and live phone playtest before claiming implementation.
+
+This correction supersedes conflicting historical Shooter Trigger descriptions earlier in this file.
