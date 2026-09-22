@@ -3104,3 +3104,18 @@ On a real phone, verify:
 5. Confirm it stays at its landing spot.
 6. Walk over it to recover it while the opponent can still fire.
 7. Confirm round reset restores full ammo and the held gun.
+
+
+## Shooters Trigger — Arena Combat Reliability & Refill Contract — September 22, 2026
+
+The current neutral Arena baseline has been tightened around readable phone combat:
+
+- **Ammo capacity:** 16 shots per gun. This is intentionally higher than the previous 12-shot baseline so a player has room to maneuver and fight before being forced to refill.
+- **Recharge stations:** exactly **one** ammo station in the Arena. It remains a deliberate exposed tactical objective rather than a distributed convenience system.
+- **Refill:** 2.5 seconds. The player cannot fire or move while the refill is active; leaving the station cancels the refill. The rival also remains committed to the station while refilling.
+- **Vulnerability:** refill is a genuine commitment. The opponent can continue shooting, so reaching the station is not a safe reset.
+- **Hit registration:** player/rival paint hits use swept projectile-line checks against readable head/body hit circles rather than relying only on the projectile's final frame position. Body hits are intentionally easier to register than the previous scrape-heavy threshold. Headshots remain instant eliminations.
+- **Scrapes:** near misses remain recorded as scrapes, but a projectile crossing the body hit zone must resolve as a confirmed body hit.
+- **Arena HUD:** one ammo readout only. The top row is reserved for title, score and ammo; the second row carries rival profile/status. Do not stack duplicate ammo/status text in the same top-right area.
+- **Round reset:** confirmed elimination still awards the round, and the next round resets fighters after 700ms. 700ms means **0.7 seconds**.
+- **Do not add more ammo stations or reserve ammo by default.** The current test target is whether the 16-shot magazine plus one dangerous refill station produces meaningful bullet discipline and positioning.
