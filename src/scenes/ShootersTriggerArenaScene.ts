@@ -64,6 +64,11 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private locatorCanvas?: HTMLCanvasElement;
   private locatorCtx?: CanvasRenderingContext2D | null;
   private locatorArrow?: HTMLDivElement;
+  private splatter: Phaser.GameObjects.Graphics[] = [];
+  private playerScrapes = 0;
+  private rivalScrapes = 0;
+  private playerPaintHits = 0;
+  private rivalPaintHits = 0;
   private playerMoving = false;
   private rivalMoving = false;
   private playerFacing = 1;
@@ -134,6 +139,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       this.pausePanel?.remove();
       this.resultPanel?.remove();
       this.locatorPanel?.remove();
+      this.clearSplatter();
       this.locatorArrow?.remove();
     });
 
@@ -410,25 +416,54 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
 
       if (headDistance < 14 || bodyDistance < 24) {
         const headshot = headDistance < 14 && headDistance < bodyDistance;
-        this.resolveHit(shot.owner, headshot);
+        this.resolveHit(shot.owner, headshot, shot.body.x, shot.body.y);
+        shot.body.destroy();
+        this.shots.splice(i, 1);
+      } else if (headDistance < 30 || bodyDistance < 40) {
+        if (shot.owner === 'player') this.playerScrapes += 1;
+        else this.rivalScrapes += 1;
+        this.addSplatter(shot.body.x, shot.body.y, 0.55);
+        this.showCombatHighlight(
+          shot.owner === 'player' ? 'SCRAPE' : 'SCRAPED YOU',
+          '#9fbda8',
+          shot.body.x,
+          shot.body.y,
+          0.8,
+        );
         shot.body.destroy();
         this.shots.splice(i, 1);
       }
     }
   }
 
-  private resolveHit(owner: 'player' | 'rival', headshot: boolean) {
+  private resolveHit(owner: 'player' | 'rival', headshot: boolean, hitX?: number, hitY?: number) {
     if (this.matchOver || this.roundTransition || this.resolvingRound) return;
     const target = owner === 'player' ? this.rival : this.player;
+    const x = hitX ?? target.body.x;
+    const y = hitY ?? target.body.y;
 
     if (owner === 'player') {
       if (headshot) this.playerHeadshots += 1;
       else this.playerBodyHits += 1;
+      this.playerPaintHits += 1;
     } else if (headshot) {
       this.rivalHeadshots += 1;
+      this.rivalPaintHits += 1;
     } else {
       this.rivalBodyHits += 1;
+      this.rivalPaintHits += 1;
     }
+
+    this.addSplatter(x, y, headshot ? 1.25 : 1);
+    this.showCombatHighlight(
+      owner === 'player'
+        ? (headshot ? 'HEADSHOT!' : 'PAINT HIT')
+        : (headshot ? 'HEADSHOT ON YOU' : 'PAINT HIT ON YOU'),
+      headshot ? '#e8c95c' : '#d66a3d',
+      x,
+      y,
+      headshot ? 1.12 : 1,
+    );
 
     if (headshot) {
       if (owner === 'player') this.roundHits += 1;
@@ -445,6 +480,52 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.flash(target, false);
 
     if (target.hp <= 0) this.roundPoint(owner);
+  }
+
+  private addSplatter(x: number, y: number, scale = 1) {
+    const splat = this.add.graphics();
+    splat.setDepth(12);
+    splat.x = x;
+    splat.y = y;
+    const colors = [0xd66a3d, 0xb94d36, 0xe08a54];
+    const base = 7 * scale;
+    splat.fillStyle(colors[Math.floor(Math.random() * colors.length)], 0.86);
+    splat.fillCircle(0, 0, base);
+    const drops = 5 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < drops; i += 1) {
+      const angle = Math.random() * Math.PI * 2;
+      const distance = base * (1.4 + Math.random() * 2.5);
+      const radius = base * (0.16 + Math.random() * 0.28);
+      splat.fillCircle(Math.cos(angle) * distance, Math.sin(angle) * distance, radius);
+    }
+    this.splatter.push(splat);
+  }
+
+  private clearSplatter() {
+    this.splatter.forEach((splat) => splat.destroy());
+    this.splatter = [];
+  }
+
+  private showCombatHighlight(text: string, color: string, x: number, y: number, scale = 1) {
+    const label = this.add.text(x, y - 34, text, {
+      fontFamily: 'monospace',
+      fontSize: Math.round(12 * scale) + 'px',
+      fontStyle: 'bold',
+      color,
+      stroke: '#151a16',
+      strokeThickness: 4,
+      align: 'center',
+    }).setOrigin(.5).setDepth(150);
+
+    this.tweens.add({
+      targets: label,
+      y: y - 62,
+      alpha: 0,
+      scale: 0.92,
+      duration: text.includes('HEADSHOT') ? 520 : 380,
+      ease: 'Quad.easeOut',
+      onComplete: () => label.destroy(),
+    });
   }
 
   private roundPoint(winner: 'player' | 'rival') {
@@ -475,6 +556,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
 
     this.time.delayedCall(700, () => {
       if (this.matchOver || this.paused) return;
+      this.clearSplatter();
       this.player.hp = 2;
       this.rival.hp = 2;
       this.player.body.setPosition(1180, 1040);
@@ -537,6 +619,14 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
             player: this.playerMisses,
             rival: this.rivalMisses,
           },
+          scrapes: {
+            player: this.playerScrapes,
+            rival: this.rivalScrapes,
+          },
+          paintCoverage: {
+            player: this.playerPaintHits,
+            rival: this.rivalPaintHits,
+          },
           completedAt,
           durationMs: Math.max(0, completedAt - this.arenaStartedAt),
           budgetEarned: reward,
@@ -584,6 +674,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       ' · MOVEMENT ' + Math.round(this.rivalProfile.movement) +
       '<br>HEADSHOTS YOU ' + this.playerHeadshots +
       ' · BODY HITS YOU ' + this.playerBodyHits +
+      '<br>SCRAPES YOU ' + this.playerScrapes + ' · PAINT ' + this.playerPaintHits +
       '<br>BUDGET EARNED · ' + reward +
       '</div>';
 

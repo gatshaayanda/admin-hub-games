@@ -2877,3 +2877,38 @@ The next phone acceptance test must specifically verify:
 8. returning home leaves no stale locator or controls.
 
 The current combat rules, first-to-3 structure, relational rival profiles, grounded player, field scale and economy are unchanged.
+
+
+## Shooters Trigger — Arena Paint Evidence, Hit Highlights & Field Reporting Contract — September 22, 2026
+
+The Arena combat loop is intentionally gaining **evidence**, not new combat complexity. Current shooter-design references emphasize immediate hit/headshot/kill feedback and persistent combat consequences because players need to understand what their shots actually accomplished. Paintball itself also makes visible marks a natural part of the fiction.
+
+### Paint and impact feedback
+
+- Confirmed body/head hits create restrained paint splatter in the physical Arena.
+- Near-miss shots that pass close to a fighter count as **SCRAPE** evidence and leave a smaller ground mark.
+- Headshots, paint hits and scrapes receive short world-space combat highlights.
+- Player and rival feedback is directional in wording: the player can tell whether the event was caused by their shot or happened to them.
+- Effects are deliberately brief and local; they must not become full-screen VFX noise or obscure the mobile controls.
+
+### Respawn / round cleanup
+
+A completed round cleans the Arena's accumulated paint before both fighters are reset. This creates a visible before/after combat story without permanently dirtying the field or changing the existing first-to-3 structure.
+
+Final match results still preserve the evidence in local state for the Field Phone.
+
+### Field Phone / coverage
+
+The Arena result now records:
+- player/rival headshots;
+- player/rival body hits;
+- player/rival scrapes;
+- player/rival paint-hit counts;
+- misses;
+- score and reward.
+
+The Field Phone is the persistent **field report**: after an Arena result changes, the phone alert points the player back to the report. The phone can show the combat evidence rather than only WIN/LOSS, so the player can understand what happened and use it to decide whether to retrain, upgrade or fight again.
+
+### Creative design principle
+
+The Arena should feel like a place that remembers a fight briefly, while the player's phone remembers the evidence longer. Do not add persistent progression, new weapons, extra enemies or new match rules merely to create spectacle. First make the existing one-on-one fight increasingly readable, tactile and consequential.

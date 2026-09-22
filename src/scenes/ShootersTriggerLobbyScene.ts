@@ -432,8 +432,8 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
         : !arena
           ? ['FIELD READY', 'The ARENA is open. A win earns cash for upgrades. You can fight now or train again first.']
           : arena?.result === 'WIN'
-            ? ['ARENA WIN RECORDED', 'You earned cash. Visit ARMORY & OUTFITTER to upgrade, then retrain or return to the Arena.']
-            : ['ARENA RESULT RECORDED', 'No match reward this time. Retrain, improve your evidence, then try the Arena again.'];
+            ? ['ARENA WIN · FIELD REPORT READY', 'Match complete. Review your headshots, paint hits and scrapes on the phone, then visit ARMORY & OUTFITTER or fight again.']
+            : ['ARENA LOSS · FIELD REPORT READY', 'Match complete. Review what landed, what scraped and where you took hits, then retrain before the next Arena fight.'];
 
     const modal = document.createElement('div');
     Object.assign(modal.style, {
@@ -506,6 +506,18 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
           + '<br>Hits ' + evasion.hits + ' · Misses ' + evasion.misses + ' · Scrapes ' + evasion.scrapes
           + ' · Cover blocks ' + evasion.coverBlocks
         : 'No evasion record yet.',
+      '<br><br><b>ARENA FIELD REPORT</b>',
+      arena
+        ? 'Result ' + arena.result + ' · Score ' + arena.score.join(' — ') +
+          '<br>Headshots you ' + Number(arena.headshots?.player || 0) +
+          ' · Body hits you ' + Number(arena.bodyHits?.player || 0) +
+          '<br>Scrapes you ' + Number(arena.scrapes?.player || 0) +
+          ' · Paint landed ' + Number(arena.paintCoverage?.player || 0) +
+          '<br>Headshots received ' + Number(arena.headshots?.rival || 0) +
+          ' · Body hits received ' + Number(arena.bodyHits?.rival || 0) +
+          '<br>Rival scrapes ' + Number(arena.scrapes?.rival || 0) +
+          ' · Budget earned ' + Number(arena.budgetEarned || 0)
+        : 'No Arena field report yet.',
     ].join('<br>');
     records.style.cssText = 'font-size:10px;line-height:1.8;padding:12px;border:1px solid #38493d;border-radius:8px;margin-bottom:12px;';
 
