@@ -679,11 +679,16 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       shots,
       targetHits: hits,
       accuracy: Math.min(100, Math.round((hits / shots) * 100)),
-      budgetEarned: Math.min(50, hits * 5),
+      centerMassHits: this.targets.filter(target => target.kind === 'dummy').reduce((sum, target) => sum + target.hits, 0),
+      exceptionalHits: this.targets.filter(target => target.kind === 'bottle').reduce((sum, target) => sum + target.hits, 0),
+      misses: Math.max(0, shots - hits),
+      coverHits: 0,
+      budgetEarned: 0,
     };
     try {
       localStorage.setItem('shooters-trigger:last-shooting', JSON.stringify(record));
-      localStorage.setItem('shooters-trigger:budget', String(100 + record.budgetEarned));
+      const existingBudget = Number(localStorage.getItem('shooters-trigger:budget') || 0);
+      localStorage.setItem('shooters-trigger:budget', String(existingBudget));
     } catch {}
     this.scene.start('ShootersTriggerLobbyScene');
   }
