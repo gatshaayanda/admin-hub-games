@@ -2679,3 +2679,87 @@ For Shooter Trigger work, report in plain language:
 Do not bury a simple implementation task under workflow narration. Do not claim certainty where the evidence only supports a partial state.
 
 **Core rule: reality first, smallest real change, honest verification.**
+
+
+## Shooters Trigger — Arena Relational Rival Contract — September 22, 2026
+
+The Arena is now the combat continuation of the Shooting Range, not a separate simplified mini-game.
+
+### Arena field
+
+- Arena uses the Shooting Training field's world scale, ground treatment, lanes, perimeter, trees, bunkers and tire stacks.
+- The player uses the same grounded human presentation, walking-step animation, weapon presentation, aim/fire controls and mobile control relationship as Shooting Training.
+- Arena removes the target stands and bottles/dummies. The only combat opponent is one rival operator.
+- Decoration may be minimally different so the field reads as competition space, but do not redesign it into a different game.
+
+### Rival selection
+
+Each Arena entry randomly selects exactly one of three relational rival profiles:
+
+| Operator | Profile | Relative behaviour |
+|---|---|---|
+| OPERATOR 12 | MARKSMAN | Better shooting than the player's current shooting evidence; lower movement pressure. |
+| OPERATOR 07 | RUNNER | Better movement/evasion than the player's current evidence; less accurate shooting. |
+| OPERATOR 21 | ALL-ROUNDER | Balanced improvement over the player's combined shooting and movement evidence. |
+
+These are NOT Easy / Medium / Hard settings.
+
+The rival is generated from the player's actual saved Shooting and Evasion evidence. The better the player trains, the stronger the relational opponent becomes. The three profiles differ by where they are stronger, not by an arbitrary difficulty selector.
+
+### Rival skill inputs
+
+Current Arena derives player evidence from:
+- Shooting accuracy;
+- Evasion survival time;
+- Evasion cover blocks;
+- Evasion scrapes.
+
+The selected rival receives relational values for:
+- shooting;
+- movement;
+- pressure;
+- cover use.
+
+The rival's behaviour must express the selected profile rather than simply changing HP or projectile speed.
+
+### Arena hit rules
+
+The Arena now measures actual combat hit zones rather than inventing target evidence:
+
+- Head hit: immediate round point.
+- Body hit: removes one of two body-hit points.
+- Two body hits: round point.
+- Misses are recorded separately.
+- Player and rival headshots/body hits/misses are stored in shooters-trigger:last-arena.
+- Match remains first to 3 rounds.
+- Arena win earns 25 budget.
+- Arena loss earns 0 budget.
+- Training continues to create evidence, not cash.
+
+Headshot skill is therefore an actual gameplay mechanic: the player's training evidence influences the opponent's shooting ability, while the player's own headshots are determined by where the player actually aims and hits the rival.
+
+### Arena result record
+
+A completed match records:
+- result;
+- score;
+- selected operator;
+- selected profile;
+- rival shooting/movement/pressure/cover-use values;
+- player's shooting/movement evidence;
+- player/rival headshots;
+- player/rival body hits;
+- player/rival misses;
+- match duration;
+- budget earned.
+
+The phone can use this evidence for subsequent state guidance and future Arena balancing.
+
+### Acceptance intent
+
+The intended player experience is:
+
+TRAIN → BUILD EVIDENCE → ENTER OPEN ARENA → RANDOM RIVAL → FIGHT A RELATIONAL OPPONENT → EARN CASH ON WIN → UPGRADE → TRAIN/FIGHT AGAIN
+
+The player should never need to choose a difficulty level. The opponent is the difficulty.
+
