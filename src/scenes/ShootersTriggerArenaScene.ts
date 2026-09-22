@@ -45,7 +45,12 @@ const ARENA_BASE_SPEED = 170;
 const ARENA_BASE_COOLDOWN = 360;
 const ARENA_AMMO_CAPACITY = 24;
 const ARENA_REFILL_DURATION = 2500;
-const ARENA_AMMO_STATION = new Phaser.Geom.Rectangle(1080, 640, 200, 150);
+const ARENA_AMMO_STATIONS = [
+  new Phaser.Geom.Rectangle(250, 640, 190, 130),
+  new Phaser.Geom.Rectangle(1960, 640, 190, 130),
+];
+const ARENA_STEALTH_RADIUS = 78;
+const ARENA_STEALTH_BREAK_MS = 1200;
 
 export class ShootersTriggerArenaScene extends Phaser.Scene {
   public joystickVector = new Phaser.Math.Vector2();
@@ -65,6 +70,12 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private rivalMuzzle!: Phaser.GameObjects.Graphics;
   private shots: Shot[] = [];
   private covers: Phaser.Geom.Rectangle[] = [];
+  private concealments: Phaser.Geom.Circle[] = [];
+  private playerLastKnown = new Phaser.Math.Vector2(1180, 1040);
+  private playerRevealedUntil = 0;
+  private rivalSearchUntil = 0;
+  private rivalStrafeSign = 1;
+  private playerLastFiredAt = 0;
   private cleanup?: () => void;
   private exitButton?: HTMLButtonElement;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -178,6 +189,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.rival.cooldown = Math.max(0, this.rival.cooldown - delta);
 
     if (this.fire) this.playerFire();
+    this.updatePlayerAwareness();
 
     this.updateAnimations(delta);
     this.updateWeaponPoses();
@@ -320,8 +332,11 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       return;
     }
 
-    const dx = this.player.body.x - this.rival.body.x;
-    const dy = this.player.body.y - this.rival.body.y;
+    const playerHidden = this.isPlayerConcealed();
+    const targetX = playerHidden ? this.playerLastKnown.x : this.player.body.x;
+    const targetY = playerHidden ? this.playerLastKnown.y : this.player.body.y;
+    const dx = targetX - this.rival.body.x;
+    const dy = targetY - this.rival.body.y;
     const distance = Math.hypot(dx, dy) || 1;
     const direction = new Phaser.Math.Vector2(dx / distance, dy / distance);
 
@@ -371,7 +386,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     }
     this.moveRival(desiredX, desiredY, delta);
 
-    if (!this.rival.weaponDropped && !this.rival.refilling && this.rival.ammo > 0 && this.rival.cooldown <= 0 && distance < 980) this.rivalFire(direction);
+    if (!playerHidden && !this.rival.weaponDropped && !this.rival.refilling && this.rival.ammo > 0 && this.rival.cooldown <= 0 && distance < 980) this.rivalFire(direction);
   }
 
   private updatePlayerRefill(delta: number) {
@@ -381,7 +396,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       return;
     }
 
-    const inStation = ARENA_AMMO_STATION.contains(this.player.body.x, this.player.body.y);
+    const inStation = this.isInAmmoStation(this.player.body.x, this.player.body.y);
     if (!inStation) {
       this.player.refilling = false;
       this.player.refillElapsed = 0;
@@ -410,12 +425,12 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private updateRivalRefill(delta: number) {
     if (this.rival.downed || this.rival.weaponDropped) return;
 
-    const station = ARENA_AMMO_STATION;
+    const station = this.getNearestAmmoStation(this.rival.body.x, this.rival.body.y);
     const dx = station.centerX - this.rival.body.x;
     const dy = station.centerY - this.rival.body.y;
     const distance = Math.hypot(dx, dy) || 1;
 
-    if (distance > 34) {
+    if (distance > 42) {
       this.rivalMoving = true;
       this.rivalRefillProgressReset();
       if (Math.abs(dx) > 0.08) this.rivalFacing = dx < 0 ? -1 : 1;
@@ -443,17 +458,18 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   }
 
   private findUsefulCover() {
+    const playerX = this.isPlayerConcealed() ? this.playerLastKnown.x : this.player.body.x;
+    const playerY = this.isPlayerConcealed() ? this.playerLastKnown.y : this.player.body.y;
     return this.covers
-      .map((cover) => ({
-        cover,
-        distance: Phaser.Math.Distance.Between(
-          this.rival.body.x,
-          this.rival.body.y,
-          cover.x + cover.width / 2,
-          cover.y + cover.height / 2,
-        ),
-      }))
-      .sort((a, b) => a.distance - b.distance)[0]?.cover;
+      .map((cover) => {
+        const centerX = cover.x + cover.width / 2;
+        const centerY = cover.y + cover.height / 2;
+        const distance = Phaser.Math.Distance.Between(this.rival.body.x, this.rival.body.y, centerX, centerY);
+        const toPlayer = Phaser.Math.Distance.Between(playerX, playerY, centerX, centerY);
+        const tooClose = Phaser.Math.Distance.Between(this.rival.body.x, this.rival.body.y, playerX, playerY) < 360 && distance < 100;
+        return { cover, score: distance + toPlayer * 0.18 + (tooClose ? 260 : 0) };
+      })
+      .sort((a, b) => a.score - b.score)[0]?.cover;
   }
 
   private playerFire() {
@@ -462,6 +478,8 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.player.cooldown = ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(130, 330 - this.playerSkill * 1.15);
     this.player.ammo -= 1;
     this.playerShotsFired += 1;
+    this.playerLastFiredAt = Date.now();
+    this.playerRevealedUntil = Date.now() + 1800;
     this.spawnShot(
       this.player.body.x + this.aim.x * 42,
       this.player.body.y + this.aim.y * 42,
@@ -524,8 +542,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         nx < 0 ||
         nx > 2400 ||
         ny < 0 ||
-        ny > 1400 ||
-        this.inCover(nx, ny)
+        ny > 1400
       ) {
         if (shot.owner === 'player') this.playerMisses += 1;
         else this.rivalMisses += 1;
@@ -539,6 +556,41 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
 
       const target = shot.owner === 'player' ? this.rival : this.player;
       if (target.downed) {
+        shot.body.destroy();
+        this.shots.splice(i, 1);
+        continue;
+      }
+
+      const shotLine = new Phaser.Geom.Line(previousX, previousY, shot.body.x, shot.body.y);
+      const targetHead = new Phaser.Geom.Circle(target.body.x, target.body.y - 25, 20);
+      const targetBody = new Phaser.Geom.Circle(target.body.x, target.body.y + 1, 34);
+      const targetWeapon = new Phaser.Geom.Circle(this.getWeaponPoint(target).x, this.getWeaponPoint(target).y, 30);
+      const hitsWeapon = !target.weaponDropped && Phaser.Geom.Intersects.LineToCircle(shotLine, targetWeapon);
+      const hitsHead = Phaser.Geom.Intersects.LineToCircle(shotLine, targetHead);
+      const hitsBody = Phaser.Geom.Intersects.LineToCircle(shotLine, targetBody);
+
+      if (hitsWeapon || hitsHead || hitsBody) {
+        const hitPoint = Phaser.Geom.Line.GetNearestPoint(shotLine, hitsWeapon ? this.getWeaponPoint(target) : hitsHead ? new Phaser.Math.Vector2(target.body.x, target.body.y - 25) : new Phaser.Math.Vector2(target.body.x, target.body.y + 1));
+        if (hitsWeapon) {
+          this.resolveWeaponHit(shot.owner, target, hitPoint.x, hitPoint.y);
+        } else {
+          const headDistance = Phaser.Math.Distance.Between(hitPoint.x, hitPoint.y, target.body.x, target.body.y - 25);
+          const bodyDistance = Phaser.Math.Distance.Between(hitPoint.x, hitPoint.y, target.body.x, target.body.y + 1);
+          this.resolveHit(shot.owner, headDistance <= bodyDistance, hitPoint.x, hitPoint.y);
+        }
+        shot.body.destroy();
+        this.shots.splice(i, 1);
+        if (this.matchOver || this.roundTransition || this.resolvingRound) break;
+        continue;
+      }
+
+      if (this.inCover(nx, ny) || Phaser.Geom.Intersects.LineToRectangle(shotLine, this.covers.find((cover) => Phaser.Geom.Intersects.LineToRectangle(shotLine, cover)) || new Phaser.Geom.Rectangle(-99999, -99999, 0, 0))) {
+        if (shot.owner === 'player') this.playerMisses += 1;
+        else this.rivalMisses += 1;
+        shot.body.destroy();
+        this.shots.splice(i, 1);
+        continue;
+      }
         shot.body.destroy();
         this.shots.splice(i, 1);
         continue;
@@ -574,20 +626,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         shot.body.destroy();
         this.shots.splice(i, 1);
         if (this.matchOver || this.roundTransition || this.resolvingRound) break;
-      } else if (headDistance < 38 || bodyDistance < 44) {
-        if (shot.owner === 'player') this.playerScrapes += 1;
-        else this.rivalScrapes += 1;
-        this.addSplatter(shot.body.x, shot.body.y, 0.55);
-        this.showCombatHighlight(
-          shot.owner === 'player' ? 'SCRAPE' : 'SCRAPED YOU',
-          '#9fbda8',
-          shot.body.x,
-          shot.body.y,
-          0.8,
-        );
-        shot.body.destroy();
-        this.shots.splice(i, 1);
-      }
+
     }
   }
 
@@ -603,7 +642,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.addSplatter(hitX, hitY, 0.7);
     this.showCombatHighlight(owner === 'player' ? 'GUN HIT · GUN DOWN' : 'YOUR GUN IS DOWN', '#e8c95c', hitX, hitY, 0.95);
     this.dropWeapon(target);
-    this.statusHud?.setText(target === this.player ? 'GUN DOWN  ·  MOVE OVER IT TO PICK IT UP' : 'RIVAL GUN DOWN  ·  IT MUST RECOVER');
+    this.statusHud?.setText(target === this.player ? 'GUN DOWN  ·  RECOVER OR REPOSITION' : 'RIVAL GUN DOWN  ·  PRESS THE RECOVERY');
   }
 
   private dropWeapon(target: Fighter) {
@@ -613,8 +652,8 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     const bodyY = target.body.y;
     const side = target === this.player ? (this.aim.y >= 0 ? -1 : 1) : (this.player.body.y >= bodyY ? -1 : 1);
     const angle = target === this.player ? Math.atan2(this.aim.y, this.aim.x) : Math.atan2(this.player.body.y - bodyY, this.player.body.x - bodyX);
-    const finalX = Phaser.Math.Clamp(bodyX + side * 34, 40, 2360);
-    const finalY = Phaser.Math.Clamp(bodyY + 24, 90, 1350);
+    const finalX = Phaser.Math.Clamp(bodyX + side * 46, 40, 2360);
+    const finalY = Phaser.Math.Clamp(bodyY + 30, 90, 1350);
     target.droppedWeapon.setPosition(bodyX, bodyY + 8);
     target.droppedWeapon.setRotation(angle + Phaser.Math.DegToRad(90));
     target.droppedWeapon.setVisible(true);
@@ -1595,29 +1634,31 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   }
 
   private drawAmmoStation() {
-    const g = this.add.graphics().setDepth(5);
-    const station = ARENA_AMMO_STATION;
-    g.fillStyle(0x493526, 0.26).fillRoundedRect(station.x + 8, station.y + 10, station.width, station.height, 12);
-    g.fillStyle(0x344b3d, 1).fillRoundedRect(station.x, station.y, station.width, station.height, 12);
-    g.fillStyle(0x1c2922, 1).fillRoundedRect(station.x + 22, station.y + 28, station.width - 44, station.height - 56, 8);
-    g.lineStyle(3, 0xe8c95c, 0.82).strokeRoundedRect(station.x, station.y, station.width, station.height, 12);
-    g.fillStyle(0xe8c95c, 0.9).fillRect(station.x + 30, station.y + 18, station.width - 60, 8);
-    this.add.text(station.centerX, station.y + 48, 'AMMO', {
-      fontFamily: 'monospace',
-      fontSize: '16px',
-      fontStyle: 'bold',
-      color: '#e8c95c',
-    }).setOrigin(0.5).setDepth(6);
-    this.add.text(station.centerX, station.y + 77, 'REFILL · 2.5 SEC', {
-      fontFamily: 'monospace',
-      fontSize: '9px',
-      color: '#f4f1df',
-    }).setOrigin(0.5).setDepth(6);
-    this.add.text(station.centerX, station.y + 103, 'HOLD POSITION', {
-      fontFamily: 'monospace',
-      fontSize: '8px',
-      color: '#9fbda8',
-    }).setOrigin(0.5).setDepth(6);
+    for (let index = 0; index < ARENA_AMMO_STATIONS.length; index += 1) {
+      const station = ARENA_AMMO_STATIONS[index];
+      const g = this.add.graphics().setDepth(5);
+      g.fillStyle(0x493526, 0.26).fillRoundedRect(station.x + 8, station.y + 10, station.width, station.height, 12);
+      g.fillStyle(0x344b3d, 1).fillRoundedRect(station.x, station.y, station.width, station.height, 12);
+      g.fillStyle(0x1c2922, 1).fillRoundedRect(station.x + 18, station.y + 24, station.width - 36, station.height - 48, 8);
+      g.lineStyle(3, 0xe8c95c, 0.82).strokeRoundedRect(station.x, station.y, station.width, station.height, 12);
+      g.fillStyle(0xe8c95c, 0.9).fillRect(station.x + 26, station.y + 16, station.width - 52, 8);
+      this.add.text(station.centerX, station.y + 42, 'AMMO', {
+        fontFamily: 'monospace',
+        fontSize: '15px',
+        fontStyle: 'bold',
+        color: '#e8c95c',
+      }).setOrigin(0.5).setDepth(6);
+      this.add.text(station.centerX, station.y + 68, 'REFILL · 2.5 SEC', {
+        fontFamily: 'monospace',
+        fontSize: '8px',
+        color: '#f4f1df',
+      }).setOrigin(0.5).setDepth(6);
+      this.add.text(station.centerX, station.y + 92, index === 0 ? 'LEFT ROUTE' : 'RIGHT ROUTE', {
+        fontFamily: 'monospace',
+        fontSize: '8px',
+        color: '#9fbda8',
+      }).setOrigin(0.5).setDepth(6);
+    }
   }
 
   private drawFieldDetails() {
@@ -1652,6 +1693,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     g.fillStyle(0x65472f, 1).fillRect(x - 6 * scale, y + 18 * scale, 12 * scale, 60 * scale);
     g.fillStyle(0x405638, 1).fillCircle(x, y, 34 * scale).fillCircle(x - 28 * scale, y + 9 * scale, 28 * scale).fillCircle(x + 28 * scale, y + 9 * scale, 29 * scale);
     g.fillStyle(0x526d3c, 0.75).fillCircle(x + 5 * scale, y - 16 * scale, 23 * scale);
+    this.concealments.push(new Phaser.Geom.Circle(x, y, ARENA_STEALTH_RADIUS * scale));
   }
 
   private drawBunker(x: number, y: number, width: number, height: number, color: number) {
@@ -1693,6 +1735,29 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     );
     this.scoreHud?.setPosition(width / 2, 18);
     this.ammoHud?.setPosition(width - 18, 18);
+  }
+
+  private updatePlayerAwareness() {
+    if (!this.isPlayerConcealed()) {
+      this.playerLastKnown.set(this.player.body.x, this.player.body.y);
+      this.playerRevealedUntil = Math.max(this.playerRevealedUntil, Date.now());
+    }
+  }
+
+  private isPlayerConcealed() {
+    if (this.player.downed || this.player.weaponDropped || Date.now() < this.playerRevealedUntil) return false;
+    if (Date.now() - this.playerLastFiredAt < ARENA_STEALTH_BREAK_MS) return false;
+    return this.concealments.some((zone) => Phaser.Math.Distance.Between(this.player.body.x, this.player.body.y, zone.x, zone.y) <= zone.radius);
+  }
+
+  private isInAmmoStation(x: number, y: number) {
+    return ARENA_AMMO_STATIONS.some((station) => station.contains(x, y));
+  }
+
+  private getNearestAmmoStation(x: number, y: number) {
+    return ARENA_AMMO_STATIONS
+      .slice()
+      .sort((a, b) => Phaser.Math.Distance.Between(x, y, a.centerX, a.centerY) - Phaser.Math.Distance.Between(x, y, b.centerX, b.centerY))[0];
   }
 
   private inCover(x: number, y: number, padding = 12) {
