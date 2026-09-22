@@ -1133,7 +1133,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     button.textContent = 'Ⅱ';
     button.setAttribute('aria-label', 'Pause arena');
     Object.assign(button.style, {
-      position: 'fixed', left: 'max(10px, env(safe-area-inset-left, 0px))', top: '10px',
+      position: 'fixed', left: 'max(10px, env(safe-area-inset-left, 0px))', top: 'max(10px, env(safe-area-inset-top, 0px))',
       width: '38px', height: '38px', padding: '0', border: '1px solid rgba(244,241,223,.72)',
       borderRadius: '9px', background: 'rgba(16,32,24,.88)', color: '#f4f1df',
       fontFamily: 'monospace', fontSize: '14px', fontWeight: '900', zIndex: '1450',
@@ -1151,8 +1151,8 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     const panel = document.createElement('div');
     Object.assign(panel.style, {
       position: 'fixed',
-      top: '56px',
-      right: '10px',
+      top: 'calc(60px + env(safe-area-inset-top, 0px))',
+      right: 'max(10px, env(safe-area-inset-right, 0px))',
       width: '108px',
       height: '108px',
       padding: '4px',
