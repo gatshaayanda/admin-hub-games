@@ -3119,3 +3119,14 @@ The current neutral Arena baseline has been tightened around readable phone comb
 - **Arena HUD:** one ammo readout only. The top row is reserved for title, score and ammo; the second row carries rival profile/status. Do not stack duplicate ammo/status text in the same top-right area.
 - **Round reset:** confirmed elimination still awards the round, and the next round resets fighters after 700ms. 700ms means **0.7 seconds**.
 - **Do not add more ammo stations or reserve ammo by default.** The current test target is whether the 16-shot magazine plus one dangerous refill station produces meaningful bullet discipline and positioning.
+
+
+## Shooters Trigger — Arena Movement, Ammo & HUD Pass — September 22, 2026
+
+This is the current Arena tuning checkpoint after phone playtesting:
+- **Ammo capacity:** 24 shots per gun. The neutral baseline now gives enough firing room for movement, misses, cover fights and gun-drop recovery before a refill becomes necessary.
+- **Ammo station:** exactly one station remains at the existing central/lower-central field position. It is a tactical destination, not a safe reset. Refill remains 2.5 seconds; the player cannot move or fire while committed.
+- **Rival movement:** normal movement, refill travel and dropped-gun recovery now share obstacle-avoidance steering. The rival tests multiple steering angles plus cardinal escape directions when a preferred vector is blocked, so it must not remain welded to a bunker/barrier.
+- **HUD:** persistent Arena HUD is reduced to match title, score and gun/ammo. Rival profile stats and control instructions are no longer permanent top-row text; contextual combat messages remain temporary/world-space.
+- **Design intent:** preserve fire → move → cover → decide when to refill → survive the exposed refill → re-enter the fight, while reducing forced downtime and AI deadlocks.
+- **Phone acceptance:** confirm the rival keeps moving around barriers, 24 shots feels like enough fighting without removing ammo discipline, the single station still creates a meaningful risky decision, and the top HUD stays readable during combat.
