@@ -1615,7 +1615,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(6);
   }
 
-  private drawFieldDetails()
+  private drawFieldDetails() {
     const g = this.add.graphics();
 
     // Small physical field details only: the existing battlefield stays intact.
