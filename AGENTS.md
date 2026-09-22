@@ -3205,3 +3205,35 @@ The Arena must be enjoyable as a paintball fight **before** training, equipment,
 6. Confirm only the eliminated fighter respawns on their own side while the survivor remains in place with their current gun/ammo.
 7. Confirm gun-hit recovery remains separate from body elimination.
 8. Repeat multiple rounds and verify the field remains a tactical fight rather than a spawn-to-spawn firing lane or endless paint exchange.
+
+
+## Shooters Trigger — Arena Damage Levels, Scrapes & Stealth Finish Contract — September 22, 2026
+
+This is the latest Arena combat tuning contract. It supersedes the earlier **single body hit = elimination** wording for the neutral Arena while preserving the rule that there must never be endless post-hit paint trading.
+
+### Hit levels
+- **SCRAPE:** a near-miss/grazing projectile around the fighter that does not enter the core body hit zone. It records as a scrape, gives light visual feedback, and does not consume a life or create a wounded state.
+- **SOLID BODY HIT:** a confirmed core body hit removes one body-hit level. The first solid body hit wounds the fighter and visibly marks them; a second solid body hit eliminates them.
+- **CLOSE IMPACT:** a core body hit at close engagement range is decisive and eliminates immediately. This makes a successful close/stealth attack materially more dangerous without creating automatic multi-shot splatter.
+- **HEADSHOT:** the head hit zone is deliberately smaller than the body zone and is always an immediate elimination. Higher shooting skill affects spread/precision, so skilled players are more likely to land the difficult head or gun zones rather than receiving hidden damage bonuses.
+- **GUN HIT:** a deliberate gun/grip hit is a separate disarm event. The gun drops visibly and the fighter must recover it physically. A follow-up body hit while unarmed is decisive; a follow-up headshot is the explicit **GUN DOWN + HEADSHOT** finish.
+- A fighter who is wounded is slower and visibly marked, but is still dangerous. There is no automatic paint-trading loop: every projectile produces at most one scrape, disarm, wound, or elimination event and then disappears.
+
+### Close-range and stealth intent
+- Close distance is not a reason to spray paint repeatedly. It is a tactical risk/reward change: a clean core hit at close range is decisive, so a successful flank or ambush can end a life quickly.
+- Trees now provide both **concealment and a small solid trunk cover zone**. Concealment hides the player from direct rival targeting while the player remains quiet; firing or the recent reveal window breaks stealth.
+- A concealed player may move through the concealment zone and reposition. The rival searches from the player's last known position rather than tracking the hidden player directly.
+- The Arena must contain practical stealth routes: side trees/natural concealment, hard cover transitions, and alternate approaches around the main firing lanes. Stealth should create an opportunity to change angle and set up a close decisive shot, not become permanent invisibility.
+- The enemy locator may show the rival, but it must not reveal a concealed player's position to the rival AI.
+
+### Combat acceptance
+1. Near miss around the fighter records **SCRAPE** without damaging the life state.
+2. First solid core body hit produces **WOUNDED** and leaves the fighter alive.
+3. Second solid body hit eliminates; there is no third/fourth/fifth-shot paint exchange.
+4. A clean close-range core hit can eliminate immediately.
+5. A headshot can eliminate immediately from any legal range.
+6. A gun hit drops the weapon; walking over it recovers it; gun-down plus a follow-up body/head hit can finish decisively.
+7. Entering tree concealment after breaking sight prevents the rival from directly targeting the player; leaving concealment or firing reveals the player again.
+8. Repositioning through concealment can produce a flank/ambush rather than forcing a head-on duel.
+9. Only the eliminated fighter respawns; the survivor keeps their position, gun, ammo and state.
+10. Repeat the fight at neutral baseline before testing any progression or equipment advantages.
