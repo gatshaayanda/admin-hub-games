@@ -3237,3 +3237,31 @@ This is the latest Arena combat tuning contract. It supersedes the earlier **sin
 8. Repositioning through concealment can produce a flank/ambush rather than forcing a head-on duel.
 9. Only the eliminated fighter respawns; the survivor keeps their position, gun, ammo and state.
 10. Repeat the fight at neutral baseline before testing any progression or equipment advantages.
+
+
+## Shooters Trigger — Arena Stealth Readability & HUD Clean-up Contract — September 22, 2026
+
+The Arena must communicate stealth without covering the fight in interface clutter.
+
+### Stealth readability
+- Natural concealment spots are marked in the world with a restrained **HIDE** cue when the player approaches them.
+- Entering an active concealment zone changes that cue to **HIDDEN**, making the player's tactical state obvious without exposing the player to the rival AI.
+- The cue is proximity-based rather than a permanent map overlay, so the field remains readable.
+- Stealth routes should use natural trees/concealment plus hard-cover transitions and alternate approaches. Paintball strategy references consistently distinguish concealment from hard cover and describe concealment as useful for flanking/ambushes, with firing breaking concealment. citeturn0search1turn0search3
+
+### HUD discipline
+- Arena HUD is intentionally minimal: **score**, **ammo**, and a small **pause** control.
+- Remove the large tactical locator/map overlay from the Arena HUD. The player should read the field itself and use cover/concealment rather than fight through a second map layer.
+- Do not place the pause control over the map or beside another large overlay.
+- Do not maintain a separate always-visible EXIT button; leaving is available through the pause panel.
+- Combat callouts remain transient world feedback, not permanent HUD panels.
+- Any future Arena HUD addition must justify itself against the core rule: the player should be looking at the paintball fight, not at interface furniture.
+
+### Acceptance
+1. On a phone, the pause button is isolated and does not sit on top of a tactical map.
+2. Score/ammo remain readable without crowding the top edge.
+3. No permanent enemy locator/map widget is present.
+4. Approaching a tree/concealment route visibly communicates **HIDE**.
+5. While concealed, the nearby cue communicates **HIDDEN**.
+6. The player can still see and use the actual field, cover, flanking routes and opponent without HUD obstruction.
+7. Playtest specifically checks that a scrape/hit/respawn is not caused by accidental interaction with an overlapping HUD control.
