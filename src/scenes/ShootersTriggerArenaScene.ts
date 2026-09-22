@@ -54,7 +54,7 @@ const ARENA_STEALTH_BREAK_MS = 1200;
 const ARENA_PLAYER_SPAWN = new Phaser.Math.Vector2(360, 1040);
 const ARENA_RIVAL_SPAWN = new Phaser.Math.Vector2(2040, 330);
 const ARENA_RIVAL_FIRE_RANGE = 720;
-const ARENA_RIVAL_OPENING_DELAY_MS = 2200;
+const ARENA_RIVAL_OPENING_DELAY_MS = 0;
 const ARENA_MAX_BODY_HITS = 2;
 const ARENA_BODY_CORE_RADIUS = 25;
 const ARENA_SCRAPE_RADIUS = 48;
@@ -532,7 +532,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     direction: Phaser.Math.Vector2,
     owner: 'player' | 'rival',
   ) {
-    const ball = this.add.circle(x, y, 4, owner === 'player' ? 0xf0dfb6 : 0xe44f3d).setDepth(25);
+    // Paintball projectile: solid, small and readable — no tracer or fire trail.\n    const ball = this.add.circle(x, y, 4, owner === 'player' ? 0xf0dfb6 : 0xe44f3d).setDepth(25);
     this.shots.push({
       body: ball,
       vx: direction.x * 520,
@@ -577,6 +577,15 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       }
 
       const shotLine = new Phaser.Geom.Line(previousX, previousY, shot.body.x, shot.body.y);
+      // Cover must intercept the paintball before it can hit a fighter behind it.
+      if (this.covers.some((cover) => Phaser.Geom.Intersects.LineToRectangle(shotLine, cover))) {
+        if (shot.owner === 'player') this.playerMisses += 1;
+        else this.rivalMisses += 1;
+        shot.body.destroy();
+        this.shots.splice(i, 1);
+        continue;
+      }
+
       const targetHead = new Phaser.Geom.Circle(target.body.x, target.body.y - 25, 16);
       const targetBody = new Phaser.Geom.Circle(target.body.x, target.body.y + 1, 34);
       const weaponPoint = this.getWeaponPoint(target);
@@ -606,12 +615,8 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       const nearestHeadDistance = Phaser.Math.Distance.Between(nearestHeadPoint.x, nearestHeadPoint.y, target.body.x, target.body.y - 25);
       const scrapeDistance = Math.min(nearestBodyDistance, nearestHeadDistance);
       if (scrapeDistance <= ARENA_SCRAPE_RADIUS) {
+        // One paintball = one event. A scrape cannot later become another hit.
         this.recordScrape(shot.owner, nearestBodyPoint.x, nearestBodyPoint.y);
-      }
-
-      if (this.inCover(nx, ny) || Phaser.Geom.Intersects.LineToRectangle(shotLine, this.covers.find((cover) => Phaser.Geom.Intersects.LineToRectangle(shotLine, cover)) || new Phaser.Geom.Rectangle(-99999, -99999, 0, 0))) {
-        if (shot.owner === 'player') this.playerMisses += 1;
-        else this.rivalMisses += 1;
         shot.body.destroy();
         this.shots.splice(i, 1);
         continue;
@@ -1491,8 +1496,9 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
 
     muzzle.clear();
     muzzle.setRotation(angle).setPosition(42, 0);
-    muzzle.fillStyle(0xffe7a3, 0.7);
-    muzzle.fillTriangle(0, 0, 13, -4, 13, 4);
+    // No flame/tracer visual — the weapon fires paintballs.
+    muzzle.fillStyle(0xf0dfb6, 0.72);
+    muzzle.fillCircle(0, 0, 3);
   }
 
   private createFighter(x: number, y: number, color: number, label: string, player: boolean) {
