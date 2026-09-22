@@ -104,7 +104,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private rivalAnimTime = 0;
   private aim = new Phaser.Math.Vector2(1, 0);
   private fire = false;
-  private manualAimAt = 0;
+  private manualAim = false;
   private scoreHud?: Phaser.GameObjects.Text;
   private statusHud?: Phaser.GameObjects.Text;
   private playerHeadshots = 0;
@@ -201,6 +201,12 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.player.cooldown = Math.max(0, this.player.cooldown - delta);
     this.rival.cooldown = Math.max(0, this.rival.cooldown - delta);
 
+    if (this.fire && !this.manualAim && !this.player.weaponDropped && !this.player.downed && this.rival) {
+      const dx = this.rival.body.x - this.player.body.x;
+      const dy = this.rival.body.y - this.player.body.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance > 1) this.aim.set(dx / distance, dy / distance);
+    }
     if (this.fire) this.playerFire();
     this.updatePlayerAwareness();
 
@@ -215,15 +221,13 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   }
 
   public setFireHeld(value: boolean) {
-    if (value && !this.player.weaponDropped && !this.player.downed && this.rival) {
-      // A plain tap/hold on the mobile fire control must produce a usable
-      // engagement. A drag immediately overrides this aim through setAimVector().
-      if (Date.now() - this.manualAimAt > 300) {
-        const dx = this.rival.body.x - this.player.body.x;
-        const dy = this.rival.body.y - this.player.body.y;
-        const distance = Math.hypot(dx, dy);
-        if (distance > 1) this.aim.set(dx / distance, dy / distance);
-      }
+    if (!value) {
+      this.manualAim = false;
+    } else if (!this.manualAim && !this.player.weaponDropped && !this.player.downed && this.rival) {
+      const dx = this.rival.body.x - this.player.body.x;
+      const dy = this.rival.body.y - this.player.body.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance > 1) this.aim.set(dx / distance, dy / distance);
     }
     this.fire = value;
   }
@@ -232,7 +236,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     const length = Math.hypot(x, y);
     if (length > 0.05) {
       this.aim.set(x / length, y / length);
-      this.manualAimAt = Date.now();
+      this.manualAim = true;
     }
   }
 
@@ -781,31 +785,21 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   }
 
   private addSplatter(x: number, y: number, scale = 1) {
-    const splat = this.add.graphics().setDepth(12);
-    splat.setPosition(x, y);
-
-    // Organic paint mark: irregular blobs and small droplets, matching the
-    // established shooting-range paint rather than a directional/trail effect.
-    const marks = [
-      [-8, -5, 4.2],
-      [5, -7, 3.2],
-      [10, 2, 2.5],
-      [-4, 7, 2.8],
-      [3, 2, 5.2],
-    ];
-    const mainColor = Phaser.Utils.Array.GetRandom([0xd66a3d, 0xb94d36, 0xe08a54]);
-    splat.fillStyle(mainColor, 0.9);
-    for (const [markX, markY, radius] of marks) {
-      splat.fillCircle(
-        (markX + Phaser.Math.Between(-2, 2)) * scale,
-        (markY + Phaser.Math.Between(-2, 2)) * scale,
-        radius * scale,
-      );
+    const splat = this.add.graphics();
+    splat.setDepth(12);
+    splat.x = x;
+    splat.y = y;
+    const colors = [0xd66a3d, 0xb94d36, 0xe08a54];
+    const base = 7 * scale;
+    splat.fillStyle(colors[Math.floor(Math.random() * colors.length)], 0.86);
+    splat.fillCircle(0, 0, base);
+    const drops = 5 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < drops; i += 1) {
+      const angle = Math.random() * Math.PI * 2;
+      const distance = base * (1.4 + Math.random() * 2.5);
+      const radius = base * (0.16 + Math.random() * 0.28);
+      splat.fillCircle(Math.cos(angle) * distance, Math.sin(angle) * distance, radius);
     }
-
-    splat.fillStyle(0xf27b4f, 0.72);
-    splat.fillCircle(-12 * scale, 8 * scale, 2 * scale);
-    splat.fillCircle(12 * scale, -9 * scale, 2 * scale);
     this.splatter.push(splat);
   }
 
