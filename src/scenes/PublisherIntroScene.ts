@@ -183,6 +183,7 @@ export class PublisherIntroScene extends Phaser.Scene {
         if (gameId === 'hall') this.scene.start('HallIntroScene');
         if (gameId === 'presidents-shoes') this.scene.start('PresidentsShoesIntroScene');
         if (gameId === 'shooters-trigger') this.scene.start('ShootersTriggerIntroScene');
+        if (gameId === 'wardrobe') this.scene.start('WardrobeIntroScene');
       });
     });
   }
