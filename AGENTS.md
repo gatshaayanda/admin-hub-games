@@ -3642,3 +3642,18 @@ Do not implement all of these modes together. Complete, verify and checkpoint on
 - PWA installation is never a game-flow gate.
 - Android/Chrome and other Chromium browsers may decide independently when `beforeinstallprompt` is available; iOS Safari uses its own Add to Home Screen flow.
 - A GitHub/Vercel build alone does not prove installability. A release candidate must be tested in a real supported browser/device, including the homepage install surface and installed launch.
+
+
+## Shooters Trigger — Session Transactions and Field Phone Alerts — September 23, 2026
+
+- A Shooting Range, Evasion Camp or Arena session is treated as a local transaction.
+- On session start, the current local player profile/results/budget/loadout state is snapshotted in `sessionStorage`.
+- A completed session commits its result and clears the active-session snapshot.
+- Quitting a session without completing it restores the pre-session local state and clears the active-session snapshot.
+- If the browser/page is interrupted during an active session, the next Shooters Trigger Field HQ visit recovers the snapshot, discards the incomplete session, and reports that results were not saved.
+- Incomplete sessions must never overwrite `last-shooting`, `last-evasion` or `last-arena`, and must not award money or upgrades.
+- Completed Arena/Training/Evasion sessions create a single unread Field Phone alert.
+- The Field Phone alert is read when the phone is opened; the unread badge/notification is then removed. Do not repeatedly re-alert for the same unread event every polling tick.
+- Completion alerts identify that results were saved. Quit/interruption alerts explicitly say results were not saved and the previous field state was restored.
+- The current local reset must also clear any active local session snapshot and unread Field Phone alert.
+- Firebase is not involved in this transaction layer. Shared profile persistence/reset remains a later multiplayer feature.
