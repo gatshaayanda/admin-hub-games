@@ -3525,3 +3525,7 @@ When describing or testing Arena, do not call this a chance-based “headshot ra
 - The paintball moves directly each update like Shooting Training. Fighter collision is resolved from the paintball's actual current point against the protected weapon/head/body geometry.
 - Keep the existing organic Arena splatter, muzzle response, recoil, movement, cover, stealth, weapon drops and respawn behavior unless a separate request explicitly changes them.
 - If close engagement regresses, compare Arena shot creation and per-frame projectile movement directly against ShootersTriggerTrainingScene.ts before changing damage, AI, or visuals.
+
+## Push Probe — September 23, 2026
+
+This checkpoint exists solely to probe whether the current Vercel deployment rate limit has cleared. No gameplay or product behavior is changed by this note.
