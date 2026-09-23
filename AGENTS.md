@@ -3387,3 +3387,20 @@ Acceptance for future skill tuning: name the skill, identify every code path it 
 - Actual shots should produce a brief muzzle firing response so a player can tell that a tap/hold resulted in a shot. This is firing feedback only and must not become a projectile trail.
 - Arena paint impacts must remain visible as the established organic paint splatter. Fighter-hit splats render above the fighter so confirmed paint impacts are actually visible; ground scrapes remain field splats.
 - If a playtest reports that either gun feels jammed, inspect input -> aim acquisition -> LOS/cover -> cooldown -> projectile creation/travel -> collision -> hit/scrape/disarm resolution for both player and rival before changing damage or adding advantages.
+
+
+## Shooters Trigger — Explicit Arena Visual Baseline — September 23, 2026
+
+The product owner has explicitly approved the following Arena firing presentation in the current checkpoint. Treat these as established behavior, not optional polish:
+- Keep the visible paintball projectile treatment: solid, readable 5px paintballs with the current speed/TTL behavior (740px/s neutral baseline, 1200ms TTL). Do not replace this with invisible shots, tracer streaks, fire trails, glowing tails, or another projectile style unless explicitly requested.
+- Keep the brief muzzle firing response on both player and rival shots. It is a short firing cue, not a projectile trail.
+- Keep existing firing recoil. Do not remove or redesign recoil while fixing projectile, aim, AI, or hit-resolution issues unless explicitly requested.
+- If a future chat/session finds an older Arena implementation that differs from this approved baseline, do not automatically restore the old version. Inspect the current main checkpoint and the owner's latest explicit instruction first.
+
+## Shooters Trigger — No Surprise Regression Rule — September 23, 2026
+
+- A historical implementation is not automatically the desired implementation. Git history is for recovery and comparison; the current main checkpoint plus the product owner's explicit latest decisions are authoritative.
+- Once the owner explicitly says a behavior is fine/approved, mark it as protected and do not change it merely because another implementation looks cleaner, newer, simpler, or more technically elegant.
+- When changing Arena combat, compare the requested change against the protected baseline: projectile presentation, muzzle flash, recoil, paint splatter, aim/LOS, firing cadence, movement, cover, stealth, weapon drops, respawn, ammo, damage and controls.
+- If the requested task does not mention one of those behaviors, leave it alone. Do not bundle “while I'm here” edits.
+- Before pushing, inspect the final diff for accidental regressions or unrequested behavior changes. If found, remove them before checkpointing.
