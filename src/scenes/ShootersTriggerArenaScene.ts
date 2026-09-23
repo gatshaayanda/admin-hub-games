@@ -53,7 +53,8 @@ const ARENA_STEALTH_RADIUS = 78;
 const ARENA_STEALTH_BREAK_MS = 1200;
 const ARENA_PLAYER_SPAWN = new Phaser.Math.Vector2(360, 1040);
 const ARENA_RIVAL_SPAWN = new Phaser.Math.Vector2(2040, 430);
-const ARENA_RIVAL_FIRE_RANGE = 720;
+const ARENA_BASE_AIM_RANGE = 720;
+const ARENA_BASE_RIVAL_FIRE_RANGE = 720;
 const ARENA_RIVAL_OPENING_DELAY_MS = 0;
 const ARENA_MAX_BODY_HITS = 2;
 const ARENA_BODY_CORE_RADIUS = 30;
@@ -211,7 +212,10 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       const dx = this.rival.body.x - this.player.body.x;
       const dy = this.rival.body.y - this.player.body.y;
       const distance = Math.hypot(dx, dy);
-      if (distance > 1) this.aim.set(dx / distance, dy / distance);
+      const aimRange = this.getPlayerAimRange();
+      if (distance > 1 && distance <= aimRange && this.hasLineOfSight(this.player.body.x, this.player.body.y, this.rival.body.x, this.rival.body.y)) {
+        this.aim.set(dx / distance, dy / distance);
+      }
     }
     if (this.fire) this.playerFire();
     this.updatePlayerAwareness();
@@ -233,7 +237,10 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       const dx = this.rival.body.x - this.player.body.x;
       const dy = this.rival.body.y - this.player.body.y;
       const distance = Math.hypot(dx, dy);
-      if (distance > 1) this.aim.set(dx / distance, dy / distance);
+      const aimRange = this.getPlayerAimRange();
+      if (distance > 1 && distance <= aimRange && this.hasLineOfSight(this.player.body.x, this.player.body.y, this.rival.body.x, this.rival.body.y)) {
+        this.aim.set(dx / distance, dy / distance);
+      }
     }
     this.fire = value;
   }
@@ -399,7 +406,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     }
     const rivalHidden = this.isRivalConcealed();
     const nowDistance = Phaser.Math.Distance.Between(this.player.body.x, this.player.body.y, this.rival.body.x, this.rival.body.y);
-    if (!rivalHidden && !playerHidden && canSeePlayer && this.rival.cooldown <= 0 && now >= this.rivalCanFireAt && nowDistance < ARENA_RIVAL_FIRE_RANGE) {
+    if (!rivalHidden && !playerHidden && canSeePlayer && this.rival.cooldown <= 0 && now >= this.rivalCanFireAt && nowDistance < this.getRivalFireRange()) {
       const direction = new Phaser.Math.Vector2(this.player.body.x - this.rival.body.x, this.player.body.y - this.rival.body.y).normalize();
       this.rivalFire(direction);
     }
@@ -511,6 +518,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.playerShotsFired += 1;
     this.playerLastFiredAt = Date.now();
     this.playerRevealedUntil = Date.now() + 1800;
+    this.flashMuzzle(this.playerMuzzle);
     this.spawnShot(
       this.player.body.x + this.aim.x * 42,
       this.player.body.y + this.aim.y * 42,
@@ -528,12 +536,32 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.rivalShotsFired += 1;
     this.rivalLastFiredAt = Date.now();
     this.rivalRevealedUntil = Date.now() + 1800;
+    this.flashMuzzle(this.rivalMuzzle);
     this.spawnShot(
       this.rival.body.x + aim.x * 42,
       this.rival.body.y + aim.y * 42,
       aim,
       'rival',
     );
+  }
+
+  private getPlayerAimRange() {
+    return ARENA_NEUTRAL_BASELINE ? ARENA_BASE_AIM_RANGE : clamp(620 + this.playerSkill * 2, 600, 840);
+  }
+
+  private getRivalFireRange() {
+    return ARENA_NEUTRAL_BASELINE ? ARENA_BASE_RIVAL_FIRE_RANGE : clamp(560 + this.rivalProfile.shooting * 3.2, 600, 880);
+  }
+
+  private getProjectileSpeed(owner: 'player' | 'rival') {
+    const skill = owner === 'player' ? this.playerSkill : this.rivalProfile.shooting;
+    return ARENA_NEUTRAL_BASELINE ? 740 : clamp(650 + skill * 1.8, 650, 830);
+  }
+
+  private flashMuzzle(muzzle: Phaser.GameObjects.Graphics) {
+    muzzle.setVisible(true).setAlpha(1).setScale(1.9);
+    this.tweens.killTweensOf(muzzle);
+    this.tweens.add({ targets: muzzle, alpha: 0.2, scale: 1, duration: 90, ease: 'Quad.easeOut' });
   }
 
   private applyDistanceSpread(direction: Phaser.Math.Vector2, distance: number, skill: number) {
@@ -551,13 +579,13 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     owner: 'player' | 'rival',
   ) {
     // Paintball projectile: solid, small and readable — no tracer or fire trail.
-    const ball = this.add.circle(x, y, 4, owner === 'player' ? 0xf0dfb6 : 0xe44f3d).setDepth(25);
+    const ball = this.add.circle(x, y, 5, owner === 'player' ? 0xf0dfb6 : 0xe44f3d).setDepth(25);
     this.shots.push({
       body: ball,
-      vx: direction.x * 680,
-      vy: direction.y * 680,
+      vx: direction.x * this.getProjectileSpeed(owner),
+      vy: direction.y * this.getProjectileSpeed(owner),
       owner,
-      ttl: 1100,
+      ttl: 1200,
     });
   }
 
@@ -652,7 +680,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     if (this.matchOver || this.roundTransition || this.resolvingRound || target.weaponDropped || target.downed) return;
     if (owner === 'player') this.playerWeaponKnockouts += 1;
     else this.rivalWeaponKnockouts += 1;
-    this.addSplatter(hitX, hitY, 0.7);
+    this.addSplatter(hitX, hitY, 0.7, 46);
     this.showCombatHighlight(owner === 'player' ? 'GUN HIT · GUN DOWN' : 'YOUR GUN IS DOWN', '#e8c95c', hitX, hitY, 0.95);
     this.dropWeapon(target);
     this.statusHud?.setText(target === this.player ? 'GUN DOWN  ·  RECOVER OR REPOSITION' : 'RIVAL GUN DOWN  ·  PRESS THE RECOVERY');
@@ -729,7 +757,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       this.rivalPaintHits += 1;
     }
 
-    this.addSplatter(x, y, headshot ? 1.25 : 1);
+    this.addSplatter(x, y, headshot ? 1.25 : 1, 46);
     this.showCombatHighlight(
       owner === 'player'
         ? (headshot ? 'HEADSHOT!' : 'PAINT HIT')
@@ -784,21 +812,23 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.showCombatHighlight(owner === 'player' ? 'SCRAPE' : 'SCRAPE ON YOU', '#9fbda8', x, y, 0.72);
   }
 
-  private addSplatter(x: number, y: number, scale = 1) {
-    const splat = this.add.graphics().setDepth(12);
+  private addSplatter(x: number, y: number, scale = 1, depth = 12) {
+    const splat = this.add.graphics().setDepth(depth);
     splat.setPosition(x, y);
 
     // Organic paint mark: irregular blobs and small droplets, matching the
     // established shooting-range paint rather than a directional/trail effect.
     const marks = [
-      [-8, -5, 4.2],
-      [5, -7, 3.2],
-      [10, 2, 2.5],
-      [-4, 7, 2.8],
-      [3, 2, 5.2],
+      [-10, -6, 5.2],
+      [-3, -9, 3.8],
+      [5, -5, 4.4],
+      [11, 1, 3.2],
+      [7, 8, 3.8],
+      [-3, 8, 4.8],
+      [-11, 5, 3.4],
     ];
     const mainColor = Phaser.Utils.Array.GetRandom([0xd66a3d, 0xb94d36, 0xe08a54]);
-    splat.fillStyle(mainColor, 0.9);
+    splat.fillStyle(mainColor, 0.92);
     for (const [markX, markY, radius] of marks) {
       splat.fillCircle(
         (markX + Phaser.Math.Between(-2, 2)) * scale,
@@ -806,9 +836,10 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         radius * scale,
       );
     }
-    splat.fillStyle(0xf27b4f, 0.72);
-    splat.fillCircle(-12 * scale, 8 * scale, 2 * scale);
-    splat.fillCircle(12 * scale, -9 * scale, 2 * scale);
+    splat.fillStyle(0xf27b4f, 0.78);
+    for (const [dropX, dropY, dropRadius] of [[-15, 9, 2.4], [15, -10, 2.2], [12, 11, 1.8], [-14, -11, 1.7]]) {
+      splat.fillCircle(dropX * scale, dropY * scale, dropRadius * scale);
+    }
     this.splatter.push(splat);
   }
 
