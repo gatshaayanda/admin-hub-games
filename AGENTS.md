@@ -3404,3 +3404,17 @@ The product owner has explicitly approved the following Arena firing presentatio
 - When changing Arena combat, compare the requested change against the protected baseline: projectile presentation, muzzle flash, recoil, paint splatter, aim/LOS, firing cadence, movement, cover, stealth, weapon drops, respawn, ammo, damage and controls.
 - If the requested task does not mention one of those behaviors, leave it alone. Do not bundle “while I'm here” edits.
 - Before pushing, inspect the final diff for accidental regressions or unrequested behavior changes. If found, remove them before checkpointing.
+
+
+## Arena Combat Fix — Sep 23, 2026: Visible Paintballs + Hidden-Player Patrol
+
+- Keep the established Arena projectile physical baseline unchanged: **4px visible paintball, 520px/s neutral baseline, 1100ms lifetime**.
+- A fired paintball must render for at least one frame before an immediate close-range collision is resolved, so shooting directly at a nearby rival does not make the projectile visually disappear in the same update tick.
+- Paintballs must remain solid/readable paintballs. No tracer, flame, glowing trail, fire streak, or projectile redesign.
+- Projectile render depth may keep the small paintball visible over fighter artwork; this is a visibility fix, not a change to projectile physics.
+- When the player is concealed, the rival must **not bombard the concealment** or repeatedly walk directly into the tree/cover as though the exact player position is known.
+- Hidden-player behavior is: remember last-known area → search it briefly → patrol around that area using changing distances/angles → continue changing patrol points while the player remains hidden → immediately switch back to active engagement when the player becomes visible.
+- While the player remains concealed, rival firing remains disabled. Once the player exits concealment and has line of sight, normal firing/engagement resumes.
+- Patrol must use different nearby routes/patterns so the player cannot rely on one predictable exit timing or direction.
+- Do not change paint splatter, recoil, muzzle flash, damage rules, weapon drops, ammo, movement baseline, or other Arena behavior while fixing this issue.
+- This is a requested gameplay fix only. Inspect player and rival firing/visibility/AI together before any further Arena change.
