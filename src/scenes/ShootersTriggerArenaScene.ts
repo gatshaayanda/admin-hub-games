@@ -1035,26 +1035,28 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       return;
     }
 
-    // Restore the proven Arena engagement rule: a clean body paint hit is decisive.
-    // The later wounded/two-hit exchange made close engagements devolve into repeated
-    // paint trades without a clear finish. Paint is the evidence; the hit itself ends
-    // the fighter's round unless the shot was only a scrape.
-    target.hp = 0;
+    // Arena body damage is exactly two clean body hits.
+    // Headshots remain instant eliminations. Scrapes never reduce HP.
+    target.hp = Math.max(0, target.hp - 1);
     if (owner === 'player') this.roundHits += 1;
     else this.roundRivalHits += 1;
 
     this.flash(target, false);
-    this.showCombatHighlight(
-      owner === 'player'
-        ? (target.weaponDropped ? 'GUN DOWN + FINISH' : 'ELIMINATED')
-        : (target.weaponDropped ? 'GUN DOWN + FINISH ON YOU' : 'ELIMINATED'),
-      '#d66a3d',
-      x,
-      y,
-      1.05,
-    );
-    this.eliminateFighter(target, owner);
-    this.roundPoint(owner);
+    if (target.hp <= 0) {
+      this.showCombatHighlight(
+        owner === 'player'
+          ? (target.weaponDropped ? 'GUN DOWN + FINISH' : 'ELIMINATED')
+          : (target.weaponDropped ? 'GUN DOWN + FINISH ON YOU' : 'ELIMINATED'),
+        '#d66a3d',
+        x,
+        y,
+        1.05,
+      );
+      this.eliminateFighter(target, owner);
+      this.roundPoint(owner);
+    } else {
+      this.markFighterWounded(target);
+    }
   }
 
   private recordScrape(owner: 'player' | 'rival', x: number, y: number) {
