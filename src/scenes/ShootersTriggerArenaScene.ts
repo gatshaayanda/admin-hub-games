@@ -563,7 +563,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
 
   private getProjectileSpeed(owner: 'player' | 'rival') {
     const skill = owner === 'player' ? this.playerSkill : this.rivalProfile.shooting;
-    return ARENA_NEUTRAL_BASELINE ? 740 : clamp(650 + skill * 1.8, 650, 830);
+    return ARENA_NEUTRAL_BASELINE ? 520 : clamp(650 + skill * 1.8, 650, 830);
   }
 
   private flashMuzzle(muzzle: Phaser.GameObjects.Graphics) {
@@ -579,13 +579,13 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     owner: 'player' | 'rival',
   ) {
     // Paintball projectile: solid, small and readable — no tracer or fire trail.
-    const ball = this.add.circle(x, y, 5, owner === 'player' ? 0xf0dfb6 : 0xe44f3d).setDepth(25);
+    const ball = this.add.circle(x, y, 4, owner === 'player' ? 0xf0dfb6 : 0xe44f3d).setDepth(25);
     this.shots.push({
       body: ball,
       vx: direction.x * this.getProjectileSpeed(owner),
       vy: direction.y * this.getProjectileSpeed(owner),
       owner,
-      ttl: 1200,
+      ttl: 1100,
     });
   }
 
