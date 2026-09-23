@@ -550,7 +550,8 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     direction: Phaser.Math.Vector2,
     owner: 'player' | 'rival',
   ) {
-    // Paintball projectile: solid, small and readable — no tracer or fire trail.\n    const ball = this.add.circle(x, y, 4, owner === 'player' ? 0xf0dfb6 : 0xe44f3d).setDepth(25);
+    // Paintball projectile: solid, small and readable — no tracer or fire trail.
+    const ball = this.add.circle(x, y, 4, owner === 'player' ? 0xf0dfb6 : 0xe44f3d).setDepth(25);
     this.shots.push({
       body: ball,
       vx: direction.x * 680,

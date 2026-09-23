@@ -3359,3 +3359,20 @@ This rule exists because Arena behavior was changed in prior chats without the p
 - Preserve existing paint VFX, field, HUD/map layout, pause, controls, damage, weapon drops, respawn rules, Hall, and shared shell. This is an AI/engagement fix only.
 - For future AI complaints, inspect movement, cover collision, tactical state, LOS, firing, stealth and player engagement together. Online paintball references reviewed September 23, 2026 reinforce dynamic cover rotation, flanking, and concealment as ways to avoid static firing lanes; the implementation remains deliberately lightweight for this game.
 - Acceptance: fresh round -> rival moves; player respawn -> rival moves/changes angle; rival can flank; rival can hide; hidden rival disappears from tactical map/locator; firing reveals rival; player fire tap/hold still auto-aims at a visible rival; manual drag aim overrides auto-aim.
+
+
+## Shooters Trigger — Skill Scaling Inspection Contract — September 23, 2026
+
+When increasing Arena/player/rival skills, do not treat a skill number as cosmetic. Inspect the complete gameplay effect of the skill before changing its value.
+
+For each skill change, review side-by-side:
+- **Shooting / accuracy:** distance spread, hit reliability, cooldown/fire rate, and whether higher skill creates meaningful but fair improvement.
+- **Movement / evasion:** movement speed, strafe/flank behavior, wounded movement penalty, and whether the fighter can actually reposition around cover.
+- **Pressure:** decision frequency, pressure distance, flank frequency, search behavior, and whether the rival creates engagements instead of merely becoming faster/more accurate.
+- **Cover use:** whether the skill actually changes cover selection/positioning/line-of-sight behavior, not just a stored stat.
+- **Player progression:** training results from Shooting/Evasion must produce observable Arena consequences without silently changing the neutral baseline.
+- **Ammo/refill:** ensure skill changes do not accidentally make ammunition, refill timing, or sustained engagement trivial.
+- **Combat feedback:** preserve the approved paint, hit, scrape, knockdown, weapon-drop and respawn feedback while tuning skill effects.
+- **Fairness:** inspect the player and rival paths together. A skill increase on one side must not create an untested asymmetry in aim, projectile behavior, hit resolution, or concealment.
+
+Acceptance for future skill tuning: name the skill, identify every code path it affects, playtest the resulting behavior at low/mid/high values, and verify the improvement is felt through gameplay rather than only through a numeric HUD/stat.
