@@ -30,6 +30,7 @@ type Shot = {
   ttl: number;
   ageMs: number;
   impactHoldMs: number;
+  closeImpactAtFire: boolean;
 };
 
 type RivalProfile = {
@@ -768,6 +769,13 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       ttl: 1100,
       ageMs: 0,
       impactHoldMs: 0,
+      closeImpactAtFire:
+        Phaser.Math.Distance.Between(
+          this[owner].body.x,
+          this[owner].body.y,
+          owner === 'player' ? this.rival.body.x : this.player.body.x,
+          owner === 'player' ? this.rival.body.y : this.player.body.y,
+        ) <= ARENA_CLOSE_IMPACT_RANGE,
     });
   }
 
@@ -863,7 +871,13 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
             target.body.x,
             target.body.y + 1,
           );
-          this.resolveHit(shot.owner, headDistance <= bodyDistance, hitPoint.x, hitPoint.y);
+          this.resolveHit(
+            shot.owner,
+            headDistance <= bodyDistance,
+            hitPoint.x,
+            hitPoint.y,
+            shot.closeImpactAtFire,
+          );
         }
 
         if (this.matchOver || this.roundTransition || this.resolvingRound) {
@@ -982,13 +996,18 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     if (distance <= 54) this.pickupWeapon(target);
   }
 
-  private resolveHit(owner: 'player' | 'rival', headshot: boolean, hitX?: number, hitY?: number) {
+  private resolveHit(
+    owner: 'player' | 'rival',
+    headshot: boolean,
+    hitX?: number,
+    hitY?: number,
+    closeImpactAtFire = false,
+  ) {
     if (this.matchOver || this.roundTransition || this.resolvingRound) return;
     const target = owner === 'player' ? this.rival : this.player;
     const shooter = owner === 'player' ? this.player : this.rival;
     const x = hitX ?? target.body.x;
     const y = hitY ?? target.body.y;
-    const distance = Phaser.Math.Distance.Between(shooter.body.x, shooter.body.y, target.body.x, target.body.y);
     const bodyDistance = Phaser.Math.Distance.Between(x, y, target.body.x, target.body.y + 1);
 
     if (!headshot && bodyDistance > ARENA_BODY_CORE_RADIUS) {
@@ -1034,8 +1053,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       return;
     }
 
-    const closeImpact = distance <= ARENA_CLOSE_IMPACT_RANGE;
-    const decisive = closeImpact || target.weaponDropped;
+    const decisive = closeImpactAtFire || target.weaponDropped;
     target.hp = Math.max(0, target.hp - (decisive ? target.hp : 1));
     if (owner === 'player') this.roundHits += 1;
     else this.roundRivalHits += 1;
@@ -1044,8 +1062,16 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     if (target.hp <= 0) {
       this.showCombatHighlight(
         owner === 'player'
-          ? (target.weaponDropped ? 'GUN DOWN + FINISH' : closeImpact ? 'CLOSE HIT · ELIMINATED' : 'ELIMINATED')
-          : (target.weaponDropped ? 'GUN DOWN + FINISH ON YOU' : closeImpact ? 'CLOSE HIT · ELIMINATED' : 'ELIMINATED'),
+          ? (target.weaponDropped
+              ? 'GUN DOWN + FINISH'
+              : closeImpactAtFire
+                ? 'CLOSE HIT · ELIMINATED'
+                : 'ELIMINATED')
+          : (target.weaponDropped
+              ? 'GUN DOWN + FINISH ON YOU'
+              : closeImpactAtFire
+                ? 'CLOSE HIT · ELIMINATED'
+                : 'ELIMINATED'),
         '#d66a3d', x, y, 1.05,
       );
       this.eliminateFighter(target, owner);
