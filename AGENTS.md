@@ -3461,3 +3461,17 @@ The following current-state rules supersede older historical notes in this docum
 - **Respawn:** after a round point, only the eliminated fighter respawns after the existing 700ms transition. The other fighter remains in place. Active shots are cleared before the next round state.
 - **Hidden-player AI:** entering concealment should cause a one-time SEARCH transition, not repeated SEARCH resets. If the player remains hidden, the rival searches briefly, then withdraws to a genuine REGROUP position away from the last-known area and only then patrols that new area. Regroup/patrol movement must avoid concealment zones. Reappearance immediately returns the rival to active engagement.
 - Do not reintroduce the removed random HIDE state for the rival in response to a concealed player unless the product owner explicitly requests it.
+
+
+## Shooters Trigger — Arena Paint Engagement Restoration — September 23, 2026
+
+The arena combat reference is the previously proven paintball engagement from commit `9f8ae905b5065724c454b359b2cd7fb696faa26d`. The current Arena must preserve that readable, organic paintball interaction while retaining the newer weapon-drop, cover, stealth, patrol and two-body-hit systems.
+
+- A paintball that intersects the fighter body hit circle is a **body hit**. Do not add a second, smaller inner body-core gate that turns an already-intersecting body shot into a scrape.
+- Arena body collision remains a 34px circle centered at fighter body Y + 1; the intersection itself is the hit authority.
+- Head hit radius is 20px and weapon hit radius is 16px, matching the proven engagement geometry.
+- Scrape is reserved for paintballs that pass outside the body/head hit geometry but within the 44px near-miss band.
+- Preserve the two-body-hit damage model unless the product owner explicitly changes it: first clean body hit wounds; second clean body hit eliminates. Headshot remains immediate elimination. A close-impact shot recorded at fire time may still be decisive.
+- **Organic splatter is protected:** use the proven random circular paint mark with 5–8 surrounding droplets. Do not replace it with directional marks, streaks, trails, fire-like effects, glow or other invented VFX.
+- Paintball remains a visible 4px solid circle at 520px/s with no tracer, trail, glow or skill-scaled speed.
+- When diagnosing an engagement problem, inspect player and rival firing, swept projectile movement, cover interception, weapon/head/body hit geometry, hit resolution, splatter and respawn together. Do not compensate for hit-registration problems by adding more damage rules first.
