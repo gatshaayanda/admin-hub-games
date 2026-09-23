@@ -3418,3 +3418,15 @@ The product owner has explicitly approved the following Arena firing presentatio
 - Patrol must use different nearby routes/patterns so the player cannot rely on one predictable exit timing or direction.
 - Do not change paint splatter, recoil, muzzle flash, damage rules, weapon drops, ammo, movement baseline, or other Arena behavior while fixing this issue.
 - This is a requested gameplay fix only. Inspect player and rival firing/visibility/AI together before any further Arena change.
+
+
+## Arena Correction — Sep 23, 2026
+
+- Arena paintballs are locked to the proven Shooting Range presentation: **solid 4px visible paintball, 520px/s, 1100ms lifetime**.
+- Do not substitute the range projectile with tracers, trails, glowing/fire effects, skill-scaled projectile speed, or other projectile treatment.
+- If Arena shots are not visually readable against a fighter, inspect projectile origin, depth, travel, collision timing and target geometry before changing the projectile design.
+- Hidden-player AI must behave like a **real patrol**, not a puppy circling the concealment and not a waiting/hiding state.
+- Do not randomly send the rival into concealment as the default response to a hidden player.
+- After searching the last-known area, the rival patrols around that area using changing angles and distances, stays outside the concealment rather than hiding inside it, and walks continuously at a deliberately slower patrol speed than active engagement.
+- Patrol must keep moving through multiple nearby routes while the player remains hidden. On reacquisition/LOS, return to active engagement.
+- No surprise changes to paint splatter, recoil, muzzle flash, damage, weapon drops, ammo, controls, or other Arena systems while fixing projectile visibility or patrol behavior.
