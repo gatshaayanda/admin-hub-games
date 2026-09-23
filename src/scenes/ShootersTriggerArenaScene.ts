@@ -775,7 +775,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         shot.body.x > 2400 ||
         shot.body.y < 0 ||
         shot.body.y > 1400 ||
-        this.hitCover(shot.body.x, shot.body.y)
+        this.inCover(shot.body.x, shot.body.y, 0)
       ) {
         if (shot.owner === 'player') this.playerMisses += 1;
         else this.rivalMisses += 1;
