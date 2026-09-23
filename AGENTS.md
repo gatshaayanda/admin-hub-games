@@ -3515,3 +3515,13 @@ Shooting, Evasion and Armory progression must ultimately have gameplay effects t
 When describing or testing Arena, do not call this a chance-based “headshot rate” or a one-hit body-kill system. The important distinction is where the paintball actually lands.
 
 
+
+
+## Shooters Trigger — Arena Shooting-Range Engagement Contract — September 23, 2026
+
+- The Arena projectile/engagement implementation uses the proven Shooting Training mechanics as its physical reference: visible 4px paintball, 42px muzzle spawn offset, 520px/s travel, 1100ms lifetime, direct aim direction, and 240ms neutral fire cooldown.
+- Arena keeps its newer combat rules on top: cover blocks; gun hit drops the weapon; head hit eliminates immediately; clean body hit removes 1 of 2 body-hit points; scrape is paint only; true miss does nothing.
+- Do not reintroduce Arena-specific distance spread, swept-line hit resolution, close-impact heuristics, or other projectile behavior that makes close engagement behave differently from Shooting Training unless explicitly requested.
+- The paintball moves directly each update like Shooting Training. Fighter collision is resolved from the paintball's actual current point against the protected weapon/head/body geometry.
+- Keep the existing organic Arena splatter, muzzle response, recoil, movement, cover, stealth, weapon drops and respawn behavior unless a separate request explicitly changes them.
+- If close engagement regresses, compare Arena shot creation and per-frame projectile movement directly against ShootersTriggerTrainingScene.ts before changing damage, AI, or visuals.
