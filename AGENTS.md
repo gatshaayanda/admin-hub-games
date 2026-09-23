@@ -3720,6 +3720,7 @@ The Wardrobe action lab provides discrete, inspectable character states:
 - `RESPAWN`
 
 The **NEXT ACTION** control advances one state at a time and labels the exact action being inspected. **FLOW THROUGH ALL** plays the full sequence so movement, combat, hit reactions and death/recovery can be judged as one character performance.
+- Wardrobe is phone-first like the other games: on narrow/portrait screens the preview stays prominent, action controls collapse into a compact multi-column touch strip, and HUD/action labels must remain readable without desktop-width overflow.
 
 Wardrobe is the experimentation surface. Future improvements may add:
 - additional frames between existing states rather than only changing endpoints;
