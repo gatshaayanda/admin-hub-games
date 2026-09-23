@@ -408,6 +408,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
 
   private openPhone() {
     if (this.phoneModal) return;
+    const fieldAlert = getShootersTriggerPhoneAlert();
     this.markPhoneRead();
 
     let shooting: any = null, evasion: any = null, arena: any = null;
