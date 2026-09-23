@@ -31,6 +31,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
   private phoneAlertAnimation?: Animation;
   private phoneLastSignature = '';
   private phoneUnread = false;
+  private phoneLastAlertCreatedAt = 0;
   private phonePollClock = 0;
   private phoneAudioContext?: AudioContext;
 
@@ -308,10 +309,13 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     const explicitAlert = getShootersTriggerPhoneAlert();
     if (explicitAlert) {
       this.phoneUnread = true;
-      if (!initial) this.playPhoneAlert();
+      const createdAt = Number(explicitAlert.createdAt || 0);
+      if (!initial && createdAt !== this.phoneLastAlertCreatedAt) this.playPhoneAlert();
+      this.phoneLastAlertCreatedAt = createdAt;
       this.renderPhoneAlert();
       return;
     }
+    this.phoneLastAlertCreatedAt = 0;
 
     const signature = this.getPhoneSignature();
     if (!signature || signature === 'unavailable') return;
@@ -400,6 +404,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
   private markPhoneRead() {
     const signature = this.getPhoneSignature();
     markShootersTriggerPhoneAlertRead();
+    this.phoneLastAlertCreatedAt = 0;
     this.phoneUnread = false;
     this.phoneLastSignature = signature;
     try { localStorage.setItem('shooters-trigger:phone-seen-signature', signature); } catch {}
