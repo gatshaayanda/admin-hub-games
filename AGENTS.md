@@ -3335,3 +3335,12 @@ This rule exists because Arena behavior was changed in prior chats without the p
 - **No unrelated cleanup.** Do not touch Publisher Intro, Game Library, PWA/install behavior, Hall, President's Shoes, or unrelated Arena HUD/layout while fixing a scoped Arena gameplay issue.
 - **Playtest report beats assumption.** If the owner reports that the bot can hit them while their shots do not engage, inspect the actual runtime path and historical changes first; do not dismiss the report because source code appears symmetrical.
 - **Before checkpointing:** review the exact diff and confirm the patch contains only the requested fix plus this contract update. If an unexpected file or behavior changed, STOP and remove it before push.
+
+
+## Arena — Requested-Change-Only Patch Rule — September 23, 2026
+
+- **Do not change, remove, replace, or “improve” anything the product owner did not request.** A gameplay complaint is not permission to alter established VFX, HUD, map, controls, field layout, ammo, damage rules, stealth, weapon drops, respawn, or other approved behavior.
+- **Paint is protected.** Keep the approved organic paint-splatter presentation. Never substitute directional trails, fire-like effects, tracer effects, or other new impact styling unless explicitly requested.
+- **Inspect before changing.** For a reported combat problem, inspect the player path and rival path side-by-side, plus the relevant Git history. Recover a known-good implementation when the complaint is about previously approved behavior; do not invent a replacement.
+- **No silent removals.** Do not remove a feature because it appears unnecessary, cleaner, or easier to implement. Removal requires an explicit product-owner request.
+- **Patch boundary:** the final diff must contain only the requested gameplay fix and the contract/documentation needed to prevent recurrence. Unexpected files or unrelated behavior = STOP, inspect, and revert the unrelated part before checkpointing.
