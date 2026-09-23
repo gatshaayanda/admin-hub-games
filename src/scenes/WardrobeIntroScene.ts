@@ -79,8 +79,7 @@ export class WardrobeIntroScene extends Phaser.Scene {
     }).setOrigin(0.5).setInteractive({ useHandCursor: false });
 
     const continueLab = () => this.openLab();
-    enter.on('pointerdown', (event: Phaser.Input.EventData) => {
-      event.stopPropagation();
+    enter.on('pointerdown', () => {
       continueLab();
     });
     this.input.keyboard?.on('keydown-ENTER', continueLab);
