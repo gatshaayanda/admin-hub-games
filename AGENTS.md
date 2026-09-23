@@ -3430,3 +3430,19 @@ The product owner has explicitly approved the following Arena firing presentatio
 - After searching the last-known area, the rival patrols around that area using changing angles and distances, stays outside the concealment rather than hiding inside it, and walks continuously at a deliberately slower patrol speed than active engagement.
 - Patrol must keep moving through multiple nearby routes while the player remains hidden. On reacquisition/LOS, return to active engagement.
 - No surprise changes to paint splatter, recoil, muzzle flash, damage, weapon drops, ammo, controls, or other Arena systems while fixing projectile visibility or patrol behavior.
+
+
+## Shooters Trigger — Explicit Projectile Scope Correction — September 23, 2026
+
+The product owner has explicitly clarified that the Arena paintball should behave like a real paintball projectile and should not inherit generic video-game projectile effects.
+
+Protected interpretation:
+- **No tracer:** the paintball itself is visible in flight, but it must not leave a persistent line, streak, tracer beam, or trail behind it.
+- **No fire trail:** do not add flames, smoke, burning streaks, comet tails, or any other fire-like effect to a paintball.
+- **No glowing projectile:** do not render paintballs as glowing energy orbs, lasers, sci-fi projectiles, or other luminous projectile effects. This is a paintball game, not a space/energy-weapon game.
+- **No skill-scaled projectile speed:** the current neutral Arena projectile speed is 520px/s. Skill must not silently make the physical paintball travel faster. Any future skill effect must be explicitly inspected and approved rather than inferred.
+- These effects were **not requested improvements**. Do not infer them from generic game-development patterns, online examples, or words such as “improve,” “readable,” “feedback,” or “projectile.”
+- The intended visual chain is: **gun → visible paintball → physical travel → paint impact/splatter**.
+- Paintball visibility does **not** mean adding a trail. The ball itself should be readable during flight and then produce the established organic paint splatter on impact.
+- Do not add, restore, or experiment with these effects during unrelated combat fixes. If a future visual change is wanted, get an explicit product-owner request for that visual direction first.
+- The product owner's latest explicit projectile decisions override any earlier chat interpretation that introduced these effects.
