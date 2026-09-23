@@ -122,7 +122,8 @@ export class WardrobeIntroScene extends Phaser.Scene {
   update(_time: number, delta: number) {
     this.poseClock += delta;
     if (!this.player) return;
-    this.player.setY(this.player.y + Math.sin(this.poseClock / 420) * 0.015);
+    const baseY = this.scale.height * 0.49 + Math.min(this.scale.height * 0.58, 410) * 0.12;
+    this.player.setY(baseY + Math.sin(this.poseClock / 420) * 1.2);
   }
 
   private openLab() {
@@ -559,8 +560,7 @@ export class WardrobeLabScene extends Phaser.Scene {
       callback: () => {
         if (!this.playing) return;
         this.actionIndex = (this.actionIndex + 1) % ACTIONS.length;
-        this.showAction(this.actionIndex);
-        this.playing = true;
+        this.showAction(this.actionIndex, false);
       },
     });
   }
