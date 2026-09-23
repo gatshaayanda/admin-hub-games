@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { installShootersTriggerMobileControls } from '../shooters-trigger-mobile-controls';
+import { abandonShootersTriggerSession, beginShootersTriggerSession, completeShootersTriggerSession } from '../shooters-trigger-session';
 
 type Fighter = {
   body: Phaser.GameObjects.Container;
@@ -149,6 +150,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   }
 
   create() {
+    beginShootersTriggerSession('ARENA');
     this.cameras.main.setBackgroundColor('#6f984b');
     this.drawField();
 
@@ -1235,6 +1237,11 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         }),
       );
     } catch {}
+    completeShootersTriggerSession(
+      won
+        ? 'ARENA WIN · RESULTS SAVED · BUDGET ADDED · FIELD PHONE UPDATED'
+        : 'ARENA COMPLETE · RESULTS SAVED · FIELD PHONE UPDATED',
+    );
 
     this.resultPanel?.remove();
     const panel = document.createElement('div');
@@ -1659,6 +1666,9 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   }
 
   private leaveArena() {
+    if (!this.matchOver) {
+      abandonShootersTriggerSession('ARENA QUIT · RESULTS NOT SAVED · PREVIOUS FIELD STATE RESTORED');
+    }
     this.fire = false;
     this.setMoveVector(0, 0);
     this.pausePanel?.remove();
