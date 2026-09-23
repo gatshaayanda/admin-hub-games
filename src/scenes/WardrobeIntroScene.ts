@@ -552,7 +552,7 @@ export class WardrobeLabScene extends Phaser.Scene {
 
     this.playing = true;
     button.setText('■ STOP FLOW');
-    this.showAction(this.actionIndex);
+    this.showAction(this.actionIndex, false);
 
     this.playTimer = this.time.addEvent({
       delay: 850,
