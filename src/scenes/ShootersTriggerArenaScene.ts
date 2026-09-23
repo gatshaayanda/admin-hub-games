@@ -518,6 +518,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.playerShotsFired += 1;
     this.playerLastFiredAt = Date.now();
     this.playerRevealedUntil = Date.now() + 1800;
+    this.flashMuzzle(this.playerMuzzle);
     this.spawnShot(
       this.player.body.x + this.aim.x * 42,
       this.player.body.y + this.aim.y * 42,
@@ -535,6 +536,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.rivalShotsFired += 1;
     this.rivalLastFiredAt = Date.now();
     this.rivalRevealedUntil = Date.now() + 1800;
+    this.flashMuzzle(this.rivalMuzzle);
     this.spawnShot(
       this.rival.body.x + aim.x * 42,
       this.rival.body.y + aim.y * 42,
@@ -559,6 +561,17 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     return new Phaser.Math.Vector2(Math.cos(angle), Math.sin(angle));
   }
 
+  private getProjectileSpeed(owner: 'player' | 'rival') {
+    const skill = owner === 'player' ? this.playerSkill : this.rivalProfile.shooting;
+    return ARENA_NEUTRAL_BASELINE ? 740 : clamp(650 + skill * 1.8, 650, 830);
+  }
+
+  private flashMuzzle(muzzle: Phaser.GameObjects.Graphics) {
+    muzzle.setVisible(true).setAlpha(1).setScale(1.9);
+    this.tweens.killTweensOf(muzzle);
+    this.tweens.add({ targets: muzzle, alpha: 0.2, scale: 1, duration: 90, ease: 'Quad.easeOut' });
+  }
+
   private spawnShot(
     x: number,
     y: number,
@@ -566,13 +579,13 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     owner: 'player' | 'rival',
   ) {
     // Paintball projectile: solid, small and readable — no tracer or fire trail.
-    const ball = this.add.circle(x, y, 4, owner === 'player' ? 0xf0dfb6 : 0xe44f3d).setDepth(25);
+    const ball = this.add.circle(x, y, 5, owner === 'player' ? 0xf0dfb6 : 0xe44f3d).setDepth(25);
     this.shots.push({
       body: ball,
-      vx: direction.x * 520,
-      vy: direction.y * 520,
+      vx: direction.x * this.getProjectileSpeed(owner),
+      vy: direction.y * this.getProjectileSpeed(owner),
       owner,
-      ttl: 1100,
+      ttl: 1200,
     });
   }
 
