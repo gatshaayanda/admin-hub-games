@@ -1,5 +1,32 @@
 import Phaser from 'phaser';
 
+type WardrobeAction =
+  | 'IDLE'
+  | 'WALK'
+  | 'WALK LEFT'
+  | 'WALK RIGHT'
+  | 'AIM LEFT'
+  | 'AIM RIGHT'
+  | 'FIRE'
+  | 'BODY HIT'
+  | 'HEADSHOT'
+  | 'DEATH'
+  | 'RESPAWN';
+
+const ACTIONS: WardrobeAction[] = [
+  'IDLE',
+  'WALK',
+  'WALK LEFT',
+  'WALK RIGHT',
+  'AIM LEFT',
+  'AIM RIGHT',
+  'FIRE',
+  'BODY HIT',
+  'HEADSHOT',
+  'DEATH',
+  'RESPAWN',
+];
+
 export class WardrobeIntroScene extends Phaser.Scene {
   private player!: Phaser.GameObjects.Container;
   private poseClock = 0;
@@ -46,7 +73,7 @@ export class WardrobeIntroScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     this.add.text(panel.x, panel.y - panel.height * 0.22,
-      'This is a safe copy of the Shooters Trigger lobby character.\n\nWe will use this room to inspect sprite sheets, frames, poses,\nanimations and free/open art tools before changing the real game.',
+      'Exact Home Field copy first.\n\nNow the lab can play the character through discrete actions\nso we can judge the movement before touching the real game.',
       {
         fontFamily: 'monospace',
         fontSize: Math.max(11, Math.min(15, Math.min(width, height) * 0.024)) + 'px',
@@ -56,11 +83,11 @@ export class WardrobeIntroScene extends Phaser.Scene {
         wordWrap: { width: panelW * 0.82 },
       }).setOrigin(0.5);
 
-    this.player = this.createPlayer(panel.x, panel.y + panel.height * 0.12);
+    this.player = this.createCharacter(panel.x, panel.y + panel.height * 0.12);
     this.player.setScale(Math.min(2.8, Math.max(1.8, Math.min(width, height) / 220)));
 
     const toolLine = this.add.text(panel.x, panel.y + panel.height * 0.36,
-      'READY TO INSPECT · NO NEW ART PACKAGE INSTALLED',
+      'REFERENCE COPY · OPEN THE LAB TO PLAY ACTIONS',
       {
         fontFamily: 'monospace',
         fontSize: '10px',
@@ -79,9 +106,7 @@ export class WardrobeIntroScene extends Phaser.Scene {
     }).setOrigin(0.5).setInteractive({ useHandCursor: false });
 
     const continueLab = () => this.openLab();
-    enter.on('pointerdown', () => {
-      continueLab();
-    });
+    enter.on('pointerdown', continueLab);
     this.input.keyboard?.on('keydown-ENTER', continueLab);
     this.input.keyboard?.on('keydown-SPACE', continueLab);
 
@@ -96,10 +121,8 @@ export class WardrobeIntroScene extends Phaser.Scene {
 
   update(_time: number, delta: number) {
     this.poseClock += delta;
-    const pose = this.player?.getAt(1) as Phaser.GameObjects.Graphics | undefined;
-    if (!pose) return;
-    const bob = Math.sin(this.poseClock / 420) * 1.2;
-    pose.setY(bob);
+    if (!this.player) return;
+    this.player.setY(this.player.y + Math.sin(this.poseClock / 420) * 0.015);
   }
 
   private openLab() {
@@ -108,37 +131,128 @@ export class WardrobeIntroScene extends Phaser.Scene {
     this.scene.start('WardrobeLabScene');
   }
 
-  private createPlayer(x: number, y: number) {
+  private createCharacter(x: number, y: number) {
     const container = this.add.container(x, y);
     const shadow = this.add.ellipse(0, 40, 34, 12, 0x000000, 0.28);
-    const g = this.add.graphics();
-
-    // Deliberate copy of the current Shooters Trigger Home Field character.
-    g.fillStyle(0x3b2f28, 1).fillEllipse(0, -20, 24, 18);
-    g.fillStyle(0xd8a66b, 1).fillEllipse(0, -17, 13, 12);
-    g.fillStyle(0xd4a45d, 1).fillCircle(-7, -17, 2.5).fillCircle(7, -17, 2.5);
-    g.fillStyle(0x5a7348, 1).fillEllipse(0, -23, 25, 12);
-    g.fillStyle(0xd4a45d, 1).fillRoundedRect(-4, -8, 8, 7, 2);
-    g.fillStyle(0x2f6b4e, 1).fillRoundedRect(-15, -4, 30, 22, 8);
-    g.fillStyle(0x4f8b65, 1).fillRoundedRect(-10, -1, 20, 14, 4);
-    g.fillStyle(0x2f6b4e, 1)
-      .fillRoundedRect(-17, 0, 7, 15, 3)
-      .fillRoundedRect(10, 0, 7, 15, 3);
-    g.fillStyle(0xd4a45d, 1)
-      .fillCircle(-14, 15, 3)
-      .fillCircle(14, 15, 3);
-    g.fillStyle(0x29372f, 1).fillRoundedRect(-11, 16, 22, 7, 3);
-    g.fillStyle(0x566052, 1).fillRoundedRect(-10, 20, 8, 13, 2).fillRoundedRect(2, 20, 8, 13, 2);
-    g.fillStyle(0x202522, 1).fillRoundedRect(-12, 30, 10, 7, 2).fillRoundedRect(2, 30, 10, 7, 2);
-
-    container.add([shadow, g]);
+    const body = this.drawCharacter('IDLE');
+    container.add([shadow, body]);
     return container;
+  }
+
+  private drawCharacter(action: WardrobeAction): Phaser.GameObjects.Graphics {
+    const g = this.add.graphics();
+    const walking = action === 'WALK' || action === 'WALK LEFT' || action === 'WALK RIGHT';
+    const step = walking ? 2 : 0;
+    const lean = action === 'WALK LEFT' ? -2 : action === 'WALK RIGHT' ? 2 : 0;
+    const aim = action === 'AIM LEFT' || action === 'AIM RIGHT' || action === 'FIRE';
+    const aimDir = action === 'AIM LEFT' ? -1 : 1;
+    const hit = action === 'BODY HIT';
+    const headshot = action === 'HEADSHOT';
+    const dead = action === 'DEATH';
+
+    const bob = walking ? 1 : 0;
+    const legOffset = walking ? step : 0;
+    const armDrop = aim ? -7 : 0;
+
+    if (!dead) {
+      g.fillStyle(0x3b2f28, 1).fillEllipse(0 + lean, -20 + bob, 24, 18);
+      g.fillStyle(0xd8a66b, 1).fillEllipse(0 + lean, -17 + bob, 13, 12);
+      g.fillStyle(0xd4a45d, 1)
+        .fillCircle(-7 + lean, -17 + bob, 2.5)
+        .fillCircle(7 + lean, -17 + bob, 2.5);
+      g.fillStyle(0x5a7348, 1).fillEllipse(0 + lean, -23 + bob, 25, 12);
+
+      g.fillStyle(0xd4a45d, 1).fillRoundedRect(-4 + lean, -8 + bob, 8, 7, 2);
+      g.fillStyle(0x2f6b4e, 1).fillRoundedRect(-15 + lean, -4 + bob, 30, 22, 8);
+      g.fillStyle(0x4f8b65, 1).fillRoundedRect(-10 + lean, -1 + bob, 20, 14, 4);
+
+      if (aim) {
+        g.fillStyle(0x2f6b4e, 1)
+          .fillRoundedRect(-16 + lean, -2 + bob, 7, 17, 3)
+          .fillRoundedRect(9 + lean, -9 + armDrop + bob, 7, 20, 3);
+        g.fillStyle(0xd4a45d, 1)
+          .fillCircle(-13 + lean, 14 + bob, 3)
+          .fillCircle(15 + lean, -11 + armDrop + bob, 3);
+        this.drawMarker(g, aimDir, 15 + lean, -12 + armDrop + bob, action === 'FIRE');
+      } else {
+        g.fillStyle(0x2f6b4e, 1)
+          .fillRoundedRect(-17 + lean, 0 + bob, 7, 15, 3)
+          .fillRoundedRect(10 + lean, 0 + bob, 7, 15, 3);
+        g.fillStyle(0xd4a45d, 1)
+          .fillCircle(-14 + lean, 15 + bob, 3)
+          .fillCircle(14 + lean, 15 + bob, 3);
+      }
+
+      g.fillStyle(0x29372f, 1).fillRoundedRect(-11 + lean, 16 + bob, 22, 7, 3);
+      g.fillStyle(0x566052, 1)
+        .fillRoundedRect(-10 + lean + legOffset, 20 + bob, 8, 13, 2)
+        .fillRoundedRect(2 + lean - legOffset, 20 + bob, 8, 13, 2);
+      g.fillStyle(0x202522, 1)
+        .fillRoundedRect(-12 + lean + legOffset, 30 + bob, 10, 7, 2)
+        .fillRoundedRect(2 + lean - legOffset, 30 + bob, 10, 7, 2);
+    } else {
+      g.setRotation(-0.95);
+      g.fillStyle(0x3b2f28, 1).fillEllipse(0, -20, 24, 18);
+      g.fillStyle(0xd8a66b, 1).fillEllipse(0, -17, 13, 12);
+      g.fillStyle(0x5a7348, 1).fillEllipse(0, -23, 25, 12);
+      g.fillStyle(0x2f6b4e, 1).fillRoundedRect(-15, -4, 30, 22, 8);
+      g.fillStyle(0x566052, 1)
+        .fillRoundedRect(-10, 20, 8, 13, 2)
+        .fillRoundedRect(2, 20, 8, 13, 2);
+      g.fillStyle(0x202522, 1)
+        .fillRoundedRect(-12, 30, 10, 7, 2)
+        .fillRoundedRect(2, 30, 10, 7, 2);
+    }
+
+    if (hit) {
+      g.fillStyle(0xd66a3d, 0.9).fillCircle(-10, 2, 5).fillCircle(9, 7, 4);
+      g.lineStyle(2, 0xf0dfb6, 0.9);
+      g.strokeCircle(-10, 2, 8);
+      g.strokeCircle(9, 7, 7);
+    }
+
+    if (headshot) {
+      g.fillStyle(0xd66a3d, 0.95).fillCircle(3, -20, 5);
+      g.fillStyle(0xf0dfb6, 0.85).fillCircle(3, -20, 2);
+    }
+
+    return g;
+  }
+
+  private drawMarker(
+    g: Phaser.GameObjects.Graphics,
+    direction: number,
+    x: number,
+    y: number,
+    firing: boolean,
+  ) {
+    const markerLength = firing ? 30 : 25;
+    const endX = x + direction * markerLength;
+    g.fillStyle(0x202522, 1).fillRoundedRect(x, y - 3, direction * markerLength, 6, 2);
+    g.fillStyle(0x566052, 1).fillRoundedRect(endX - direction * 5, y - 5, 6, 10, 2);
+
+    if (firing) {
+      g.fillStyle(0xf0dfb6, 1).fillTriangle(
+        endX + direction * 12, y,
+        endX + direction * 2, y - 7,
+        endX + direction * 2, y + 7,
+      );
+      g.fillStyle(0xd66a3d, 0.9).fillCircle(endX + direction * 5, y, 4);
+    }
   }
 }
 
 export class WardrobeLabScene extends Phaser.Scene {
   private character!: Phaser.GameObjects.Container;
-  private selected = 'BASE COPY';
+  private preview!: Phaser.GameObjects.Graphics;
+  private shadow!: Phaser.GameObjects.Ellipse;
+  private actionText!: Phaser.GameObjects.Text;
+  private detailText!: Phaser.GameObjects.Text;
+  private stepText!: Phaser.GameObjects.Text;
+  private actionIndex = 0;
+  private playing = false;
+  private playTimer?: Phaser.Time.TimerEvent;
+  private actionButtons: Phaser.GameObjects.Rectangle[] = [];
 
   constructor() {
     super('WardrobeLabScene');
@@ -148,91 +262,316 @@ export class WardrobeLabScene extends Phaser.Scene {
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor('#101512');
 
-    this.add.text(26, 22, 'WARDROBE · LAB BENCH', {
+    this.add.text(26, 22, 'WARDROBE · ACTION LAB', {
       fontFamily: 'monospace', fontSize: '15px', fontStyle: 'bold', color: '#f4f1df'
     });
 
-    this.add.text(26, 52, 'CURRENT ASSET · SHOOTERS TRIGGER LOBBY CHARACTER COPY', {
+    this.add.text(26, 52, 'SHOOTERS TRIGGER · HOME FIELD CHARACTER COPY · SAFE EXPERIMENT AREA', {
       fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold', color: '#8fb39b'
     });
 
-    const bench = this.add.rectangle(width * 0.5, height * 0.52, Math.min(width * 0.5, 360), Math.min(height * 0.58, 330), 0x202a24, 1)
+    this.actionText = this.add.text(width / 2, 86, '', {
+      fontFamily: 'monospace', fontSize: '18px', fontStyle: 'bold', color: '#e8c95c'
+    }).setOrigin(0.5);
+
+    this.stepText = this.add.text(width / 2, 110, '', {
+      fontFamily: 'monospace', fontSize: '9px', color: '#8fb39b'
+    }).setOrigin(0.5);
+
+    const benchW = Math.min(width * 0.72, 560);
+    const benchH = Math.min(height * 0.54, 380);
+    const benchX = width * 0.43;
+    const benchY = height * 0.47;
+
+    this.add.rectangle(benchX, benchY, benchW, benchH, 0x202a24, 1)
       .setStrokeStyle(2, 0x526d5d, 1);
 
-    this.character = this.createCharacter(bench.x, bench.y);
-    this.character.setScale(Math.min(3.8, Math.max(2.2, Math.min(width, height) / 170)));
+    this.add.text(benchX, benchY - benchH / 2 + 18, 'LIVE PREVIEW · PROCEDURAL BASELINE', {
+      fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold', color: '#8fb39b'
+    }).setOrigin(0.5);
 
-    this.add.text(bench.x, bench.y + bench.height * 0.42, 'BASE COPY', {
+    this.shadow = this.add.ellipse(benchX, benchY + 125, 92, 28, 0x000000, 0.28);
+    this.character = this.add.container(benchX, benchY + 82);
+    this.preview = this.add.graphics();
+    this.character.add(this.preview);
+    this.character.setScale(Math.min(5.2, Math.max(3.2, Math.min(width, height) / 145)));
+
+    this.detailText = this.add.text(benchX, benchY + benchH / 2 - 22, '', {
+      fontFamily: 'monospace', fontSize: '9px', color: '#d8dfd8', align: 'center'
+    }).setOrigin(0.5);
+
+    const controlsX = Math.min(width - 155, benchX + benchW / 2 + 135);
+    this.add.text(controlsX, 146, 'ACTION STRIP', {
       fontFamily: 'monospace', fontSize: '10px', fontStyle: 'bold', color: '#e8c95c'
     }).setOrigin(0.5);
 
-    const rightX = Math.min(width - 190, bench.x + bench.width * 0.5 + 150);
-    const options = [
-      ['BASE COPY', 'Current procedural character'],
-      ['SPRITESHEET', 'Frame grid / atlas inspection'],
-      ['POSES', 'Idle · walk · aim · fire'],
-      ['EQUIPMENT', 'Mask · marker · clothing layers'],
-      ['EXPORT', 'Phaser-ready PNG / JSON'],
-    ];
-
-    options.forEach(([title, detail], index) => {
-      const y = 130 + index * 72;
-      const item = this.add.rectangle(rightX, y, 280, 58, index === 0 ? 0x315845 : 0x202a24, 1)
+    ACTIONS.forEach((action, index) => {
+      const y = 174 + index * 39;
+      const button = this.add.rectangle(controlsX, y, 235, 32, 0x202a24, 1)
         .setStrokeStyle(1, 0x526d5d, 1)
         .setInteractive({ useHandCursor: false });
-      this.add.text(rightX - 122, y - 10, title, {
-        fontFamily: 'monospace', fontSize: '10px', fontStyle: 'bold', color: '#f4f1df'
-      });
-      this.add.text(rightX - 122, y + 9, detail, {
-        fontFamily: 'monospace', fontSize: '8px', color: '#8fb39b'
-      });
-      item.on('pointerdown', () => this.select(title, item));
+      this.add.text(controlsX - 101, y, String(index + 1).padStart(2, '0') + ' · ' + action, {
+        fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold', color: '#f4f1df'
+      }).setOrigin(0, 0.5);
+      button.on('pointerdown', () => this.showAction(index));
+      this.actionButtons.push(button);
     });
 
-    this.add.text(26, height - 52,
-      'FREE-FIRST PIPELINE · INSPECT TOOLS BEFORE INSTALLING PACKAGES · NO SHOOTERS RUNTIME CHANGES',
-      {
-        fontFamily: 'monospace', fontSize: '8px', fontStyle: 'bold', color: '#8fb39b',
-        wordWrap: { width: width - 52 }
-      });
+    const next = this.makeButton(width / 2 - 100, height - 55, 190, 'NEXT ACTION →');
+    next.on('pointerdown', () => this.showAction((this.actionIndex + 1) % ACTIONS.length));
+
+    const play = this.makeButton(width / 2 + 105, height - 55, 190, '▶ FLOW THROUGH ALL');
+    play.on('pointerdown', () => this.toggleFlow(play));
+
+    const reset = this.add.text(26, height - 28, 'RESET · BASE COPY', {
+      fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold', color: '#f4f1df'
+    }).setOrigin(0, 1).setInteractive({ useHandCursor: false });
+    reset.on('pointerdown', () => this.showAction(0));
 
     const back = this.add.text(width - 26, height - 28, 'BACK TO GAME LIBRARY', {
       fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold', color: '#f4f1df'
-    }).setOrigin(1).setInteractive({ useHandCursor: false });
+    }).setOrigin(1, 1).setInteractive({ useHandCursor: false });
     back.on('pointerdown', () => window.location.href = '/');
 
+    this.input.keyboard?.on('keydown-RIGHT', () => this.showAction((this.actionIndex + 1) % ACTIONS.length));
+    this.input.keyboard?.on('keydown-SPACE', () => this.toggleFlow(play));
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.stopFlow();
+      this.input.keyboard?.removeAllListeners();
+    });
+
+    this.showAction(0);
     window.dispatchEvent(new Event('admin-hub-games:game-ready'));
   }
 
-  private select(label: string, item: Phaser.GameObjects.Rectangle) {
-    this.selected = label;
-    this.add.text(this.scale.width / 2, 84, 'SELECTED · ' + this.selected, {
-      fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold', color: '#e8c95c'
-    }).setOrigin(0.5).setDepth(10);
-    item.setFillStyle(0x315845, 1);
+  private makeButton(x: number, y: number, width: number, label: string) {
+    const button = this.add.text(x, y, label, {
+      fontFamily: 'monospace',
+      fontSize: '10px',
+      fontStyle: 'bold',
+      color: '#f4f1df',
+      backgroundColor: '#315845',
+      padding: { left: 15, right: 15, top: 10, bottom: 10 },
+      align: 'center',
+      fixedWidth: width,
+    }).setOrigin(0.5).setInteractive({ useHandCursor: false });
+    return button;
   }
 
-  private createCharacter(x: number, y: number) {
-    const container = this.add.container(x, y);
-    const shadow = this.add.ellipse(0, 40, 34, 12, 0x000000, 0.28);
-    const g = this.add.graphics();
-    g.fillStyle(0x3b2f28, 1).fillEllipse(0, -20, 24, 18);
-    g.fillStyle(0xd8a66b, 1).fillEllipse(0, -17, 13, 12);
-    g.fillStyle(0xd4a45d, 1).fillCircle(-7, -17, 2.5).fillCircle(7, -17, 2.5);
-    g.fillStyle(0x5a7348, 1).fillEllipse(0, -23, 25, 12);
-    g.fillStyle(0xd4a45d, 1).fillRoundedRect(-4, -8, 8, 7, 2);
-    g.fillStyle(0x2f6b4e, 1).fillRoundedRect(-15, -4, 30, 22, 8);
-    g.fillStyle(0x4f8b65, 1).fillRoundedRect(-10, -1, 20, 14, 4);
-    g.fillStyle(0x2f6b4e, 1)
-      .fillRoundedRect(-17, 0, 7, 15, 3)
-      .fillRoundedRect(10, 0, 7, 15, 3);
-    g.fillStyle(0xd4a45d, 1)
-      .fillCircle(-14, 15, 3)
-      .fillCircle(14, 15, 3);
-    g.fillStyle(0x29372f, 1).fillRoundedRect(-11, 16, 22, 7, 3);
-    g.fillStyle(0x566052, 1).fillRoundedRect(-10, 20, 8, 13, 2).fillRoundedRect(2, 20, 8, 13, 2);
-    g.fillStyle(0x202522, 1).fillRoundedRect(-12, 30, 10, 7, 2).fillRoundedRect(2, 30, 10, 7, 2);
-    container.add([shadow, g]);
-    return container;
+  private showAction(index: number) {
+    this.actionIndex = (index + ACTIONS.length) % ACTIONS.length;
+    const action = ACTIONS[this.actionIndex];
+
+    this.stopFlow();
+    this.actionText.setText(action);
+    this.stepText.setText(
+      'DISCRETE ACTION ' + String(this.actionIndex + 1).padStart(2, '0') +
+      ' / ' + String(ACTIONS.length).padStart(2, '0')
+    );
+
+    this.actionButtons.forEach((button, i) => {
+      button.setFillStyle(i === this.actionIndex ? 0x315845 : 0x202a24, 1);
+      button.setStrokeStyle(i === this.actionIndex ? 2 : 1, i === this.actionIndex ? 0xe8c95c : 0x526d5d, 1);
+    });
+
+    this.preview.clear();
+    this.drawPreview(action);
+    this.detailText.setText(this.describe(action));
+
+    this.playActionMotion(action);
   }
+
+  private drawPreview(action: WardrobeAction) {
+    const walking = action === 'WALK' || action === 'WALK LEFT' || action === 'WALK RIGHT';
+    const step = walking ? 2 : 0;
+    const lean = action === 'WALK LEFT' ? -2 : action === 'WALK RIGHT' ? 2 : 0;
+    const aim = action === 'AIM LEFT' || action === 'AIM RIGHT' || action === 'FIRE';
+    const aimDir = action === 'AIM LEFT' ? -1 : 1;
+    const bob = walking ? 1 : 0;
+
+    if (action !== 'DEATH') {
+      this.preview.fillStyle(0x3b2f28, 1).fillEllipse(lean, -20 + bob, 24, 18);
+      this.preview.fillStyle(0xd8a66b, 1).fillEllipse(lean, -17 + bob, 13, 12);
+      this.preview.fillStyle(0xd4a45d, 1)
+        .fillCircle(-7 + lean, -17 + bob, 2.5)
+        .fillCircle(7 + lean, -17 + bob, 2.5);
+      this.preview.fillStyle(0x5a7348, 1).fillEllipse(lean, -23 + bob, 25, 12);
+      this.preview.fillStyle(0xd4a45d, 1).fillRoundedRect(-4 + lean, -8 + bob, 8, 7, 2);
+      this.preview.fillStyle(0x2f6b4e, 1).fillRoundedRect(-15 + lean, -4 + bob, 30, 22, 8);
+      this.preview.fillStyle(0x4f8b65, 1).fillRoundedRect(-10 + lean, -1 + bob, 20, 14, 4);
+
+      if (aim) {
+        this.preview.fillStyle(0x2f6b4e, 1)
+          .fillRoundedRect(-16 + lean, -2 + bob, 7, 17, 3)
+          .fillRoundedRect(9 + lean, -9 + bob, 7, 20, 3);
+        this.preview.fillStyle(0xd4a45d, 1)
+          .fillCircle(-13 + lean, 14 + bob, 3)
+          .fillCircle(15 + lean, -11 + bob, 3);
+        this.drawMarkerPreview(aimDir, 15 + lean, -12 + bob, action === 'FIRE');
+      } else {
+        this.preview.fillStyle(0x2f6b4e, 1)
+          .fillRoundedRect(-17 + lean, 0 + bob, 7, 15, 3)
+          .fillRoundedRect(10 + lean, 0 + bob, 7, 15, 3);
+        this.preview.fillStyle(0xd4a45d, 1)
+          .fillCircle(-14 + lean, 15 + bob, 3)
+          .fillCircle(14 + lean, 15 + bob, 3);
+      }
+
+      this.preview.fillStyle(0x29372f, 1).fillRoundedRect(-11 + lean, 16 + bob, 22, 7, 3);
+      this.preview.fillStyle(0x566052, 1)
+        .fillRoundedRect(-10 + lean + step, 20 + bob, 8, 13, 2)
+        .fillRoundedRect(2 + lean - step, 20 + bob, 8, 13, 2);
+      this.preview.fillStyle(0x202522, 1)
+        .fillRoundedRect(-12 + lean + step, 30 + bob, 10, 7, 2)
+        .fillRoundedRect(2 + lean - step, 30 + bob, 10, 7, 2);
+    } else {
+      this.preview.setRotation(-0.95);
+      this.preview.fillStyle(0x3b2f28, 1).fillEllipse(0, -20, 24, 18);
+      this.preview.fillStyle(0xd8a66b, 1).fillEllipse(0, -17, 13, 12);
+      this.preview.fillStyle(0x5a7348, 1).fillEllipse(0, -23, 25, 12);
+      this.preview.fillStyle(0x2f6b4e, 1).fillRoundedRect(-15, -4, 30, 22, 8);
+      this.preview.fillStyle(0x566052, 1).fillRoundedRect(-10, 20, 8, 13, 2).fillRoundedRect(2, 20, 8, 13, 2);
+      this.preview.fillStyle(0x202522, 1).fillRoundedRect(-12, 30, 10, 7, 2).fillRoundedRect(2, 30, 10, 7, 2);
+    }
+
+    if (action === 'BODY HIT') {
+      this.preview.fillStyle(0xd66a3d, 0.9).fillCircle(-10, 2, 5).fillCircle(9, 7, 4);
+      this.preview.lineStyle(2, 0xf0dfb6, 0.9).strokeCircle(-10, 2, 8).strokeCircle(9, 7, 7);
+    }
+
+    if (action === 'HEADSHOT') {
+      this.preview.fillStyle(0xd66a3d, 0.95).fillCircle(3, -20, 5);
+      this.preview.fillStyle(0xf0dfb6, 0.85).fillCircle(3, -20, 2);
+    }
+  }
+
+  private drawMarkerPreview(direction: number, x: number, y: number, firing: boolean) {
+    const length = firing ? 30 : 25;
+    const endX = x + direction * length;
+    this.preview.fillStyle(0x202522, 1).fillRoundedRect(x, y - 3, direction * length, 6, 2);
+    this.preview.fillStyle(0x566052, 1).fillRoundedRect(endX - direction * 5, y - 5, 6, 10, 2);
+
+    if (firing) {
+      this.preview.fillStyle(0xf0dfb6, 1).fillTriangle(
+        endX + direction * 12, y,
+        endX + direction * 2, y - 7,
+        endX + direction * 2, y + 7,
+      );
+      this.preview.fillStyle(0xd66a3d, 0.9).fillCircle(endX + direction * 5, y, 4);
+    }
+  }
+
+  private describe(action: WardrobeAction) {
+    const descriptions: Record<WardrobeAction, string> = {
+      'IDLE': 'REFERENCE · neutral standing pose',
+      'WALK': 'LOCOMOTION · alternating leg step',
+      'WALK LEFT': 'DIRECTION · body leans left while walking',
+      'WALK RIGHT': 'DIRECTION · body leans right while walking',
+      'AIM LEFT': 'COMBAT · marker raised toward left',
+      'AIM RIGHT': 'COMBAT · marker raised toward right',
+      'FIRE': 'COMBAT · aim + marker + paintball muzzle flash',
+      'BODY HIT': 'DAMAGE · visible paint impact on torso',
+      'HEADSHOT': 'DAMAGE · visible paint impact on head',
+      'DEATH': 'STATE CHANGE · character falls and rotates',
+      'RESPAWN': 'RECOVERY · returns upright to neutral',
+    };
+    return descriptions[action];
+  }
+
+  private playActionMotion(action: WardrobeAction) {
+    this.tweens.killTweensOf(this.character);
+    this.tweens.killTweensOf(this.shadow);
+
+    this.character.setRotation(0).setAlpha(1).setScale(
+      Math.min(5.2, Math.max(3.2, Math.min(this.scale.width, this.scale.height) / 145))
+    );
+    this.shadow.setScale(1).setAlpha(0.28);
+
+    if (action === 'WALK' || action === 'WALK LEFT' || action === 'WALK RIGHT') {
+      this.tweens.add({
+        targets: [this.character, this.shadow],
+        x: '+=18',
+        duration: 360,
+        ease: 'Sine.inOut',
+        yoyo: true,
+        repeat: 1,
+      });
+    } else if (action === 'FIRE') {
+      this.tweens.add({
+        targets: this.character,
+        x: '+=7',
+        duration: 80,
+        ease: 'Quad.out',
+        yoyo: true,
+        repeat: 1,
+      });
+    } else if (action === 'BODY HIT' || action === 'HEADSHOT') {
+      this.tweens.add({
+        targets: this.character,
+        x: '+=5',
+        duration: 70,
+        yoyo: true,
+        repeat: 2,
+      });
+    } else if (action === 'DEATH') {
+      this.tweens.add({
+        targets: this.character,
+        y: '+=28',
+        rotation: -0.95,
+        alpha: 0.9,
+        duration: 520,
+        ease: 'Quad.in',
+      });
+      this.tweens.add({
+        targets: this.shadow,
+        scaleX: 1.25,
+        scaleY: 0.75,
+        duration: 520,
+        ease: 'Quad.in',
+      });
+    } else if (action === 'RESPAWN') {
+      this.character.setAlpha(0).setY(benchCenterY(this.scale.height));
+      this.tweens.add({
+        targets: this.character,
+        alpha: 1,
+        y: benchCenterY(this.scale.height) - 8,
+        duration: 380,
+        ease: 'Back.out',
+      });
+    }
+  }
+
+  private toggleFlow(button: Phaser.GameObjects.Text) {
+    if (this.playing) {
+      this.stopFlow();
+      button.setText('▶ FLOW THROUGH ALL');
+      return;
+    }
+
+    this.playing = true;
+    button.setText('■ STOP FLOW');
+    this.showAction(this.actionIndex);
+
+    this.playTimer = this.time.addEvent({
+      delay: 850,
+      loop: true,
+      callback: () => {
+        if (!this.playing) return;
+        this.actionIndex = (this.actionIndex + 1) % ACTIONS.length;
+        this.showAction(this.actionIndex);
+        this.playing = true;
+      },
+    });
+  }
+
+  private stopFlow() {
+    this.playing = false;
+    this.playTimer?.remove(false);
+    this.playTimer = undefined;
+  }
+}
+
+function benchCenterY(height: number) {
+  return height * 0.47 + 82;
 }
