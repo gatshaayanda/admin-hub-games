@@ -28,7 +28,6 @@ type Shot = {
   vy: number;
   owner: 'player' | 'rival';
   ttl: number;
-  ageMs: number;
 };
 
 type RivalProfile = {
@@ -129,7 +128,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private rivalLastFiredAt = 0;
   private rivalRevealedUntil = 0;
   private rivalDecisionAt = 0;
-  private rivalMode: 'PRESSURE' | 'FLANK' | 'HIDE' | 'SEARCH' | 'PATROL' = 'PRESSURE';
+  private rivalMode: 'PRESSURE' | 'FLANK' | 'SEARCH' | 'PATROL' = 'PRESSURE';
   private rivalTargetPoint = new Phaser.Math.Vector2(0, 0);
   private rivalHiddenPatrolCenter = new Phaser.Math.Vector2(0, 0);
   private readonly rivalPatrolSpeed = 92;
@@ -388,13 +387,6 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         const angle = Math.atan2(this.player.body.y - this.rival.body.y, this.player.body.x - this.rival.body.x) + (Math.random() < 0.5 ? Math.PI / 2 : -Math.PI / 2);
         const flankDistance = Phaser.Math.Between(320, 560);
         this.rivalTargetPoint.set(Phaser.Math.Clamp(this.player.body.x + Math.cos(angle) * flankDistance, 90, 2310), Phaser.Math.Clamp(this.player.body.y + Math.sin(angle) * flankDistance, 110, 1290));
-      } else if (this.rivalMode === 'HIDE') {
-        const concealment = this.findRivalConcealment();
-        if (concealment) {
-          const angle = Math.atan2(this.rival.body.y - concealment.y, this.rival.body.x - concealment.x) || Phaser.Math.FloatBetween(-Math.PI, Math.PI);
-          const radius = Math.min(concealment.radius * 0.72, concealment.radius - 12);
-          this.rivalTargetPoint.set(Phaser.Math.Clamp(concealment.x + Math.cos(angle) * radius, 90, 2310), Phaser.Math.Clamp(concealment.y + Math.sin(angle) * radius, 110, 1290));
-        } else this.rivalMode = 'FLANK';
       } else if (this.rivalMode === 'PRESSURE') this.rivalTargetPoint.set(this.player.body.x, this.player.body.y);
     }
     if (this.rivalMode === 'SEARCH') {
@@ -424,9 +416,6 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         }
         this.moveRival(dx, dy, delta, this.rivalPatrolSpeed);
       }
-    } else if (this.rivalMode === 'HIDE') {
-      const dx = this.rivalTargetPoint.x - this.rival.body.x, dy = this.rivalTargetPoint.y - this.rival.body.y;
-      if (Math.hypot(dx, dy) > 28) this.moveRival(dx, dy, delta); else this.rivalMoving = false;
     } else if (this.rivalMode === 'FLANK') {
       const dx = this.rivalTargetPoint.x - this.rival.body.x, dy = this.rivalTargetPoint.y - this.rival.body.y;
       if (Math.hypot(dx, dy) < 70) { this.rivalMode = 'PRESSURE'; this.rivalDecisionAt = now + 250; } else this.moveRival(dx, dy, delta);
