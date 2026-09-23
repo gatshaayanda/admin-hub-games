@@ -34,14 +34,17 @@ type WardrobeVariant = {
   pants: number;
   accent: number;
   hat: number;
+  skin: number;
+  hair: number;
   style: 'FIELD' | 'UTILITY' | 'URBAN' | 'TRAIL';
+  gear: 'BANDANA' | 'VEST' | 'HOODIE' | 'CAP';
 };
 
 const VARIANTS: WardrobeVariant[] = [
-  { name: 'FIELD GREEN', shirt: 0x2f6b4e, shirtLight: 0x4f8b65, pants: 0x566052, accent: 0xe8c95c, hat: 0x5a7348, style: 'FIELD' },
-  { name: 'DUST TRAIL', shirt: 0x7b5a3b, shirtLight: 0xa47a4c, pants: 0x5d5145, accent: 0xd9b36c, hat: 0x6f593f, style: 'TRAIL' },
-  { name: 'DARK UTILITY', shirt: 0x30483f, shirtLight: 0x50685a, pants: 0x343b38, accent: 0xd66a3d, hat: 0x29342f, style: 'UTILITY' },
-  { name: 'TEAL RUNNER', shirt: 0x24676a, shirtLight: 0x4b9291, pants: 0x46535a, accent: 0xe8c95c, hat: 0x315f62, style: 'URBAN' },
+  { name: 'FIELD GREEN', shirt: 0x2f6b4e, shirtLight: 0x4f8b65, pants: 0x566052, accent: 0xe8c95c, hat: 0x5a7348, skin: 0xd4a45d, hair: 0x3b2f28, style: 'FIELD', gear: 'CAP' },
+  { name: 'DUST TRAIL', shirt: 0x7b5a3b, shirtLight: 0xa47a4c, pants: 0x5d5145, accent: 0xd9b36c, hat: 0x6f593f, skin: 0xb9784e, hair: 0x2d211c, style: 'TRAIL', gear: 'BANDANA' },
+  { name: 'DARK UTILITY', shirt: 0x30483f, shirtLight: 0x50685a, pants: 0x343b38, accent: 0xd66a3d, hat: 0x29342f, skin: 0x8f5d43, hair: 0x1e1815, style: 'UTILITY', gear: 'VEST' },
+  { name: 'TEAL RUNNER', shirt: 0x24676a, shirtLight: 0x4b9291, pants: 0x46535a, accent: 0xe8c95c, hat: 0x315f62, skin: 0xc98d62, hair: 0x4a3025, style: 'URBAN', gear: 'HOODIE' },
 ];
 
 export class WardrobeIntroScene extends Phaser.Scene {
@@ -484,6 +487,18 @@ export class WardrobeLabScene extends Phaser.Scene {
       this.preview.fillStyle(variant.shirt, 1).fillRoundedRect(-15 + lean, -4 + bob, 30, 22, 8);
       this.preview.fillStyle(variant.shirtLight, 1).fillRoundedRect(-10 + lean, -1 + bob, 20, 14, 4);
 
+      if (variant.gear === 'VEST') {
+        this.preview.fillStyle(0x202522, 0.92).fillRoundedRect(-14 + lean, -2 + bob, 5, 18, 2).fillRoundedRect(9 + lean, -2 + bob, 5, 18, 2);
+        this.preview.fillStyle(variant.accent, 1).fillRoundedRect(-4 + lean, 0 + bob, 8, 3, 1);
+      } else if (variant.gear === 'BANDANA') {
+        this.preview.fillStyle(variant.accent, 0.95).fillRoundedRect(-11 + lean, -6 + bob, 22, 4, 1);
+      } else if (variant.gear === 'HOODIE') {
+        this.preview.lineStyle(3, variant.shirtLight, 1).strokeCircle(0 + lean, -5 + bob, 11);
+        this.preview.fillStyle(variant.accent, 0.95).fillRoundedRect(-2 + lean, 6 + bob, 4, 5, 1);
+      } else {
+        this.preview.fillStyle(variant.accent, 0.95).fillRoundedRect(-9 + lean, 7 + bob, 18, 2, 1);
+      }
+
       if (variant.style === 'UTILITY') {
         this.preview.fillStyle(0x202522, 0.9).fillRoundedRect(-13 + lean, 0 + bob, 5, 13, 2);
         this.preview.fillStyle(0x202522, 0.9).fillRoundedRect(8 + lean, 0 + bob, 5, 13, 2);
@@ -527,6 +542,8 @@ export class WardrobeLabScene extends Phaser.Scene {
       this.preview.setRotation(-0.95);
       this.preview.fillStyle(0x3b2f28, 1).fillEllipse(0, -20, 24, 18);
       this.preview.fillStyle(0xd8a66b, 1).fillEllipse(0, -17, 13, 12);
+      this.preview.fillStyle(variant.hair, 1).fillEllipse(0, -20, 24, 18);
+      this.preview.fillStyle(variant.skin, 1).fillEllipse(0, -17, 13, 12);
       this.preview.fillStyle(variant.hat, 1).fillEllipse(0, -23, 25, 12);
       this.preview.fillStyle(variant.shirt, 1).fillRoundedRect(-15, -4, 30, 22, 8);
       this.preview.fillStyle(variant.pants, 1).fillRoundedRect(-10, 20, 8, 13, 2).fillRoundedRect(2, 20, 8, 13, 2);
