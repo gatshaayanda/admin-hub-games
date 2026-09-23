@@ -3446,3 +3446,17 @@ Protected interpretation:
 - Paintball visibility does **not** mean adding a trail. The ball itself should be readable during flight and then produce the established organic paint splatter on impact.
 - Do not add, restore, or experiment with these effects during unrelated combat fixes. If a future visual change is wanted, get an explicit product-owner request for that visual direction first.
 - The product owner's latest explicit projectile decisions override any earlier chat interpretation that introduced these effects.
+
+
+## Shooters Trigger — Current Arena Combat Authority — September 23, 2026
+The following current-state rules supersede older historical notes in this document when they conflict with the live source on `main`:
+- **Projectile:** Arena uses a solid 4px paintball at 520px/s neutral speed with a 1100ms lifetime. No tracer, streak, fire/smoke trail, glowing/laser effect, or skill-scaled projectile speed.
+- **Projectile visibility:** the fired paintball must remain visibly rendered through the minimum first-frame window and briefly at an impact when necessary so a phone playtest can actually see the shot. Visibility changes must not alter projectile physics.
+- **Body damage:** a confirmed center-mass body paint hit outside close range removes one of two body-hit lives. The second confirmed body hit eliminates the fighter.
+- **Close body hit:** a confirmed core body hit at or below 220px is decisive and eliminates immediately.
+- **Headshot:** instant elimination from any legal range.
+- **Scrape:** only a near-miss outside the core body hit zone; it does not damage the fighter or create a wounded state.
+- **Gun hit:** disarms the fighter and drops the gun at the hit location. The dropped gun remains recoverable on the ground; the fighter must physically return to it before being armed again.
+- **Respawn:** after a round point, only the eliminated fighter respawns after the existing 700ms transition. The other fighter remains in place. Active shots are cleared before the next round state.
+- **Hidden-player AI:** entering concealment should cause a one-time SEARCH transition, not repeated SEARCH resets. If the player remains hidden, the rival searches briefly, then withdraws to a genuine REGROUP position away from the last-known area and only then patrols that new area. Regroup/patrol movement must avoid concealment zones. Reappearance immediately returns the rival to active engagement.
+- Do not reintroduce the removed random HIDE state for the rival in response to a concealed player unless the product owner explicitly requests it.
