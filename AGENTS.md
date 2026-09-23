@@ -3657,3 +3657,28 @@ Do not implement all of these modes together. Complete, verify and checkpoint on
 - Completion alerts identify that results were saved. Quit/interruption alerts explicitly say results were not saved and the previous field state was restored.
 - The current local reset must also clear any active local session snapshot and unread Field Phone alert.
 - Firebase is not involved in this transaction layer. Shared profile persistence/reset remains a later multiplayer feature.
+
+
+## Shooters Trigger — Opening / Reset Flow Contract — September 23, 2026
+
+The opening flow is fixed and must remain clean:
+
+```
+Shooters Trigger Intro
+      ↓
+ENTER
+      ↓
+Setup / Name Entry
+      ↓
+ENTER FIELD
+      ↓
+Field HQ
+```
+
+- The Shooters Trigger Intro must show a real, explicit **ENTER** button. Do not use the entire screen as an implicit enter action.
+- After Intro → Setup, Setup owns name entry and the **ENTER FIELD** action.
+- **RESET LOCAL FIELD** belongs on the Shooters Trigger Setup screen, immediately after the Intro. It is not a Field HQ/phone-only control.
+- Reset clears the local Shooters Trigger player name, records, budget, loadout, unread field alert and active local session snapshot, then leaves the player on a clean Setup screen ready to enter a new name.
+- A reset/new player starts with no saved local Shooter Trigger state. The player must be able to type a new name and press **ENTER FIELD**.
+- Do not allow reset/cleanup changes to strand the player between Intro and Setup or leave an unclickable Enter control.
+- The normal post-reset acceptance path is: reset → type name → ENTER FIELD → Field HQ.

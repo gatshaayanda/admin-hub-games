@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { markShootersTriggerPhoneAlertRead } from '../shooters-trigger-session';
 
 const PLAYER_KEY = 'admin-hub-games:shooters-trigger-player';
 
@@ -81,10 +82,10 @@ export class ShootersTriggerSetupScene extends Phaser.Scene {
       }).setOrigin(0.5);
 
     const buttonWidth = Math.min(330, width * 0.72);
-    const button = this.add.rectangle(width / 2, height * 0.76, buttonWidth, 58, 0xe8c95c, 1)
+    const button = this.add.rectangle(width / 2, height * 0.70, buttonWidth, 58, 0xe8c95c, 1)
       .setStrokeStyle(2, 0xf4f1df, 0.8).setInteractive({ useHandCursor: false });
 
-    this.add.text(button.x, button.y, 'START FIELD TRAINING', {
+    this.add.text(button.x, button.y, 'ENTER FIELD', {
       fontFamily: 'monospace', fontSize: '11px', fontStyle: 'bold',
       color: '#102018', letterSpacing: 1,
     }).setOrigin(0.5);
@@ -94,12 +95,27 @@ export class ShootersTriggerSetupScene extends Phaser.Scene {
       this.startTraining();
     });
 
+    const resetButton = this.add.rectangle(width / 2, height * 0.82, buttonWidth, 46, 0x2b2118, 1)
+      .setStrokeStyle(2, 0xd66a3d, 0.9)
+      .setInteractive({ useHandCursor: false });
+    this.add.text(resetButton.x, resetButton.y, 'RESET LOCAL FIELD', {
+      fontFamily: 'monospace', fontSize: '10px', fontStyle: 'bold',
+      color: '#f4f1df', letterSpacing: 1,
+    }).setOrigin(0.5);
+
+    const reset = (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
+      this.resetLocalField();
+    };
+    resetButton.on('pointerdown', reset);
+
     this.positionInput(box.x, box.y, boxWidth);
     this.resizeHandler = () => this.positionInput(box.x, box.y, boxWidth);
     this.scale.on(Phaser.Scale.Events.RESIZE, this.resizeHandler, this);
     this.time.delayedCall(250, () => this.nameInput?.focus({ preventScroll: true }));
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      resetButton.off('pointerdown', reset);
       if (this.resizeHandler) this.scale.off(Phaser.Scale.Events.RESIZE, this.resizeHandler, this);
       this.resizeHandler = undefined;
       this.nameInput?.remove();
@@ -122,6 +138,25 @@ export class ShootersTriggerSetupScene extends Phaser.Scene {
     this.nameInput?.blur();
     this.cameras.main.fadeOut(350, 16, 26, 19);
     this.time.delayedCall(350, () => this.scene.start('ShootersTriggerLobbyScene'));
+  }
+
+  private resetLocalField() {
+    try { sessionStorage.removeItem('shooters-trigger:active-session'); } catch {}
+    try {
+      const keysToRemove: string[] = [];
+      for (let index = 0; index < localStorage.length; index += 1) {
+        const key = localStorage.key(index);
+        if (key?.startsWith('shooters-trigger:')) keysToRemove.push(key);
+      }
+      keysToRemove.forEach((key) => localStorage.removeItem(key));
+      localStorage.removeItem(PLAYER_KEY);
+    } catch {}
+    markShootersTriggerPhoneAlertRead();
+    this.name = '';
+    if (this.nameInput) this.nameInput.value = '';
+    this.registry.set('shootersTriggerPlayer', '');
+    this.status?.setText('LOCAL FIELD RESET · ENTER A NEW PLAYER NAME');
+    this.nameInput?.focus({ preventScroll: true });
   }
 
   private readName() {

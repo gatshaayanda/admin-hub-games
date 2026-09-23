@@ -576,45 +576,12 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     freedom.textContent = 'OPEN FIELD · YOU CAN VISIT ANY LOCATION IN ANY ORDER';
     freedom.style.cssText = 'font-size:9px;color:#9fbda8;line-height:1.6;margin-bottom:16px;';
 
-    const reset = document.createElement('button');
-    reset.type = 'button';
-    reset.textContent = 'RESET LOCAL FIELD';
-    Object.assign(reset.style, {
-      width: '100%', minHeight: '48px', marginBottom: '10px',
-      border: '2px solid #d66a3d', borderRadius: '8px', background: '#2b2118',
-      color: '#f4f1df', fontFamily: 'monospace', fontSize: '10px', fontWeight: '800',
-    });
-    reset.addEventListener('pointerdown', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      if (!window.confirm('RESET LOCAL FIELD DATA? This clears this device’s Shooters Trigger name, records, budget and loadout. Shared Firebase data is not touched.')) return;
-      this.resetLocalField();
-    });
-
     const close = document.createElement('button');
     close.type='button'; close.textContent='CLOSE PHONE';
     Object.assign(close.style,{width:'100%',minHeight:'48px',border:'2px solid #f4f1df',borderRadius:'8px',background:'#102018',color:'#f4f1df',fontFamily:'monospace',fontSize:'10px',fontWeight:'800'});
     close.addEventListener('pointerdown',(event)=>{event.preventDefault();event.stopPropagation();modal.remove();this.phoneModal=undefined;});
-    card.append(title,headline,message,playerNews,state,records,route,freedom,reset,close);
+    card.append(title,headline,message,playerNews,state,records,route,freedom,close);
     modal.appendChild(card); document.body.appendChild(modal); this.phoneModal=modal;
-  }
-
-  private resetLocalField() {
-    const prefixes = ['shooters-trigger:'];
-    const exactKeys = ['admin-hub-games:shooters-trigger-player'];
-    try { sessionStorage.removeItem('shooters-trigger:active-session'); } catch {}
-    try {
-      const keysToRemove: string[] = [];
-      for (let index = 0; index < localStorage.length; index += 1) {
-        const key = localStorage.key(index);
-        if (key && prefixes.some((prefix) => key.startsWith(prefix))) keysToRemove.push(key);
-      }
-      keysToRemove.forEach((key) => localStorage.removeItem(key));
-      exactKeys.forEach((key) => localStorage.removeItem(key));
-    } catch {}
-    this.phoneModal?.remove();
-    this.phoneModal = undefined;
-    this.scene.start('ShootersTriggerSetupScene');
   }
 
   private openEquipmentStore() {

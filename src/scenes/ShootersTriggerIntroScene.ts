@@ -43,19 +43,24 @@ export class ShootersTriggerIntroScene extends Phaser.Scene {
         wordWrap: { width: panel.width * 0.82 },
       }).setOrigin(0.5);
 
-    const hint = this.add.text(width / 2, height * 0.88, 'TAP TO ENTER TRAINING', {
+    const button = this.add.rectangle(width / 2, height * 0.88, Math.min(320, width * 0.72), 54, 0xe8c95c, 1)
+      .setStrokeStyle(2, 0xf4f1df, 0.85)
+      .setInteractive({ useHandCursor: false });
+    this.add.text(button.x, button.y, 'ENTER', {
       fontFamily: 'monospace', fontSize: '12px', fontStyle: 'bold',
-      color: '#e8c95c', letterSpacing: 1.4,
+      color: '#102018', letterSpacing: 1.6,
     }).setOrigin(0.5);
 
-    const enter = () => this.enterSetup();
-    this.input.once('pointerdown', enter);
-    this.input.keyboard?.once('keydown', enter);
-    this.tweens.add({ targets: hint, alpha: 0.35, duration: 800, yoyo: true, repeat: -1 });
+    const enter = (_pointer?: Phaser.Input.Pointer, _x?: number, _y?: number, event?: Phaser.Types.Input.EventData) => {
+      event?.stopPropagation();
+      this.enterSetup();
+    };
+    button.on('pointerdown', enter);
+    this.input.keyboard?.once('keydown-ENTER', enter);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.input.off('pointerdown', enter);
-      this.input.keyboard?.off('keydown', enter);
+      button.off('pointerdown', enter);
+      this.input.keyboard?.off('keydown-ENTER', enter);
     });
   }
 
