@@ -3454,6 +3454,7 @@ The following current-state rules supersede older historical notes in this docum
 - **Projectile visibility:** the fired paintball must remain visibly rendered through the minimum first-frame window and briefly at an impact when necessary so a phone playtest can actually see the shot. Visibility changes must not alter projectile physics.
 - **Body damage:** a confirmed center-mass body paint hit outside close range removes one of two body-hit lives. The second confirmed body hit eliminates the fighter.
 - **Close body hit:** a confirmed core body hit at or below 220px is decisive and eliminates immediately.
+- **Close-impact timing:** the decisive `<=220px` close-range test is evaluated from the shooter/target separation when the paintball is fired, not after projectile travel. Projectile travel can take ~423ms across 220px, so resolving the range only at impact makes close engagements falsely fall back into normal body-hit trading.
 - **Headshot:** instant elimination from any legal range.
 - **Scrape:** only a near-miss outside the core body hit zone; it does not damage the fighter or create a wounded state.
 - **Gun hit:** disarms the fighter and drops the gun at the hit location. The dropped gun remains recoverable on the ground; the fighter must physically return to it before being armed again.
