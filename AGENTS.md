@@ -3682,3 +3682,20 @@ Field HQ
 - A reset/new player starts with no saved local Shooter Trigger state. The player must be able to type a new name and press **ENTER FIELD**.
 - Do not allow reset/cleanup changes to strand the player between Intro and Setup or leave an unclickable Enter control.
 - The normal post-reset acceptance path is: reset → type name → ENTER FIELD → Field HQ.
+
+
+## Shooters Trigger — External Tester Feedback / Visual Asset Lab — September 23, 2026
+
+A late-night external playtest highlighted two presentation issues:
+- in the Shooting scene, the tester could lose sight of the field's extent while actively shooting;
+- the 2D field read as too visually plain and needed stronger grounded structures/landmarks;
+- the unarmed character in the earlier field/lobby presentation could read as disconnected head/body pieces.
+
+The September 23 checkpoint addresses these narrowly:
+- Shooting uses a modest camera zoom-out to expose more of the lane and nearby field context;
+- Shooting gains restrained, grounded field stations/perimeter details without changing its accepted combat mechanics or target layout;
+- the Home Field player sprite gets a clearer neck/shoulder/arm connection.
+
+**Wardrobe is a separate future project, not a game-library entry in this repository.** It is intended as a sprite/animation laboratory: refine the Shooters Trigger character there, experiment with Phaser animation/spritesheet workflows and reusable art, then deliberately bring verified character assets back into Shooters Trigger. Do not add a Wardrobe placeholder to the Admin Hub Games catalog and do not make Shooters Trigger depend on that future repository.
+
+The Wardrobe workflow should preserve this repository's source-of-truth rule: only copy a character asset back after it has been deliberately reviewed and verified in the target Shooters scene.

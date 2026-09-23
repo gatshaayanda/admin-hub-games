@@ -89,6 +89,10 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       Math.min(this.scale.width * 0.28, 320),
       Math.min(this.scale.height * 0.22, 150),
     );
+    // The tester reported losing sight of the shooting field's extent.
+    // A modest zoom-out keeps the player grounded while revealing more of the
+    // lane and nearby cover on phone and desktop.
+    this.cameras.main.setZoom(this.isPhoneSession() ? 0.84 : 0.92);
 
     this.aimUi = this.add.graphics().setScrollFactor(0).setDepth(80);
     this.controlsCleanup = installShootersTriggerMobileControls();
@@ -469,6 +473,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
     this.drawFlag(1180, 860, 0x2f7775, 'START');
     this.drawFlag(1830, 930, 0xd66a3d, 'TARGETS');
+    this.drawFieldAtmosphere();
 
     this.add.text(this.start.x, this.start.y + 52, 'YOUR START', {
       fontFamily: 'monospace',
@@ -485,6 +490,46 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       color: '#fff4d4',
       stroke: '#493526',
       strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(6);
+  }
+
+  private drawFieldAtmosphere() {
+    const g = this.add.graphics().setDepth(4);
+
+    // Grounded structures give the range a recognizable training-facility
+    // identity without changing collision or the accepted target layout.
+    g.lineStyle(3, 0xf4f1df, 0.28);
+    for (let x = 90; x <= this.worldWidth - 90; x += 120) {
+      g.fillStyle(0x493526, 0.9).fillRect(x - 2, 58, 4, 22);
+      g.fillStyle(0x493526, 0.9).fillRect(x - 2, this.worldHeight - 70, 4, 22);
+    }
+    g.lineBetween(90, 72, this.worldWidth - 90, 72);
+    g.lineBetween(90, this.worldHeight - 58, this.worldWidth - 90, this.worldHeight - 58);
+
+    this.drawFieldStation(340, 470, 'MARSHAL');
+    this.drawFieldStation(1480, 1160, 'PAINT / AIR');
+
+    // Small directional lane markings help the player understand the range
+    // without introducing another HUD element.
+    g.lineStyle(2, 0xf4f1df, 0.26);
+    for (let x = 1220; x <= 1740; x += 110) {
+      g.lineBetween(x, 1030, x + 55, 1030);
+      g.lineBetween(x, 1040, x + 55, 1040);
+    }
+  }
+
+  private drawFieldStation(x: number, y: number, label: string) {
+    const g = this.add.graphics().setDepth(5);
+    g.fillStyle(0x493526, 0.24).fillRoundedRect(x + 8, y + 10, 150, 62, 8);
+    g.fillStyle(0x6f5a42, 1).fillRoundedRect(x, y, 150, 62, 8);
+    g.fillStyle(0xd7c08a, 1).fillTriangle(x - 8, y + 8, x + 75, y - 22, x + 158, y + 8);
+    g.fillStyle(0x315845, 1).fillRect(x + 16, y + 24, 118, 28);
+    g.lineStyle(2, 0xf4f1df, 0.35).strokeRoundedRect(x, y, 150, 62, 8);
+    this.add.text(x + 75, y + 38, label, {
+      fontFamily: 'monospace',
+      fontSize: '8px',
+      fontStyle: 'bold',
+      color: '#fff4d4',
     }).setOrigin(0.5).setDepth(6);
   }
 

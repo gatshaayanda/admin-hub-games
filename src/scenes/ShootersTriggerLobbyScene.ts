@@ -920,9 +920,17 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
       g.fillStyle(0xd8a66b, 1).fillEllipse(0, -17 + bob, 13, 12);
       g.fillStyle(0xd4a45d, 1).fillCircle(-7, -17 + bob, 2.5).fillCircle(7, -17 + bob, 2.5);
       g.fillStyle(0x5a7348, 1).fillEllipse(0, -23 + bob, 25, 12);
+      // Visible neck + shoulder bridge prevents the head from reading as a
+      // separate piece from the torso in the unarmed Home Field sprite.
+      g.fillStyle(0xd4a45d, 1).fillRoundedRect(-4, -8 + bob, 8, 7, 2);
       g.fillStyle(0x2f6b4e, 1).fillRoundedRect(-15, -4 + bob, 30, 22, 8);
       g.fillStyle(0x4f8b65, 1).fillRoundedRect(-10, -1 + bob, 20, 14, 4);
-      g.fillStyle(0xd4a45d, 1).fillRoundedRect(-4, -8 + bob, 8, 7, 2);
+      g.fillStyle(0x2f6b4e, 1)
+        .fillRoundedRect(-17, 0 + bob, 7, 15, 3)
+        .fillRoundedRect(10, 0 + bob, 7, 15, 3);
+      g.fillStyle(0xd4a45d, 1)
+        .fillCircle(-14, 15 + bob, 3)
+        .fillCircle(14, 15 + bob, 3);
       g.fillStyle(0x29372f, 1).fillRoundedRect(-11, 16 + bob, 22, 7, 3);
       g.fillStyle(0x566052, 1).fillRoundedRect(-10 + legOffset, 20 + bob, 8, 13, 2).fillRoundedRect(2 - legOffset, 20 + bob, 8, 13, 2);
       g.fillStyle(0x202522, 1).fillRoundedRect(-12 + legOffset, 30 + bob, 10, 7, 2).fillRoundedRect(2 - legOffset, 30 + bob, 10, 7, 2);
