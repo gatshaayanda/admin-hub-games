@@ -538,7 +538,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
 
     this.rival.body.setAlpha(rivalHidden ? 0.28 : this.rival.downed ? 0.68 : 1);
     const name = this.rival.body.getData('nameLabel') as Phaser.GameObjects.Text | undefined;
-    name?.setAlpha(rivalHidden ? 0.18 : rival.downed ? 0.5 : 1);
+    name?.setAlpha(rivalHidden ? 0.18 : this.rival.downed ? 0.5 : 1);
   }
 
   private updatePlayerRefill(delta: number) {
