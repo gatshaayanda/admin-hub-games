@@ -771,8 +771,8 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       impactHoldMs: 0,
       closeImpactAtFire:
         Phaser.Math.Distance.Between(
-          this[owner].body.x,
-          this[owner].body.y,
+          owner === 'player' ? this.player.body.x : this.rival.body.x,
+          owner === 'player' ? this.player.body.y : this.rival.body.y,
           owner === 'player' ? this.rival.body.x : this.player.body.x,
           owner === 'player' ? this.rival.body.y : this.player.body.y,
         ) <= ARENA_CLOSE_IMPACT_RANGE,
