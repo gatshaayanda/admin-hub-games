@@ -1046,33 +1046,26 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       return;
     }
 
-    const decisive = closeImpactAtFire || target.weaponDropped;
-    target.hp = Math.max(0, target.hp - (decisive ? target.hp : 1));
+    // Restore the proven Arena engagement rule: a clean body paint hit is decisive.
+    // The later wounded/two-hit exchange made close engagements devolve into repeated
+    // paint trades without a clear finish. Paint is the evidence; the hit itself ends
+    // the fighter's round unless the shot was only a scrape.
+    target.hp = 0;
     if (owner === 'player') this.roundHits += 1;
     else this.roundRivalHits += 1;
 
     this.flash(target, false);
-    if (target.hp <= 0) {
-      this.showCombatHighlight(
-        owner === 'player'
-          ? (target.weaponDropped
-              ? 'GUN DOWN + FINISH'
-              : closeImpactAtFire
-                ? 'CLOSE HIT · ELIMINATED'
-                : 'ELIMINATED')
-          : (target.weaponDropped
-              ? 'GUN DOWN + FINISH ON YOU'
-              : closeImpactAtFire
-                ? 'CLOSE HIT · ELIMINATED'
-                : 'ELIMINATED'),
-        '#d66a3d', x, y, 1.05,
-      );
-      this.eliminateFighter(target, owner);
-      this.roundPoint(owner);
-      return;
-    }
-
-    this.markFighterWounded(target);
+    this.showCombatHighlight(
+      owner === 'player'
+        ? (target.weaponDropped ? 'GUN DOWN + FINISH' : 'ELIMINATED')
+        : (target.weaponDropped ? 'GUN DOWN + FINISH ON YOU' : 'ELIMINATED'),
+      '#d66a3d',
+      x,
+      y,
+      1.05,
+    );
+    this.eliminateFighter(target, owner);
+    this.roundPoint(owner);
   }
 
   private recordScrape(owner: 'player' | 'rival', x: number, y: number) {
