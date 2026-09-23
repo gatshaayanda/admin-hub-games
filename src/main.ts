@@ -20,7 +20,7 @@ function startHall() {
       { ShootersTriggerEvasionScene },
       { ShootersTriggerMediaScene },
       { ShootersTriggerArenaScene },
-      { WardrobeIntroScene },
+      { WardrobeIntroScene, WardrobeLabScene },
     ] = await Promise.all([
       import('phaser'),
       import('./pwa'),
@@ -40,6 +40,7 @@ function startHall() {
       import('./scenes/ShootersTriggerMediaScene'),
       import('./scenes/ShootersTriggerArenaScene'),
       import('./scenes/WardrobeIntroScene'),
+      import('./scenes/WardrobeLabScene'),
     ]);
 
     registerPwa();
