@@ -3376,3 +3376,14 @@ For each skill change, review side-by-side:
 - **Fairness:** inspect the player and rival paths together. A skill increase on one side must not create an untested asymmetry in aim, projectile behavior, hit resolution, or concealment.
 
 Acceptance for future skill tuning: name the skill, identify every code path it affects, playtest the resulting behavior at low/mid/high values, and verify the improvement is felt through gameplay rather than only through a numeric HUD/stat.
+
+
+## Shooters Trigger — Arena Aim / Firing Readability Contract — September 23, 2026
+
+- Player fire tap/hold auto-aim acquires the rival only when the rival is not concealed, is inside the current player aim range, and has line of sight. Auto-aim must not silently target through hard cover.
+- Neutral baseline aim acquisition is 720px. Outside neutral baseline, player shooting skill may scale aim range; inspect that range together with spread, cooldown, projectile speed and hit reliability whenever shooting skill changes.
+- Neutral baseline rival firing range is 720px. Outside neutral baseline, rival shooting skill may scale that range; inspect both player and rival ranges together.
+- The projectile is a visible paintball, not a tracer. Keep it readable enough to verify firing during a phone playtest, but do not add projectile trails or fire-like effects.
+- Actual shots should produce a brief muzzle firing response so a player can tell that a tap/hold resulted in a shot. This is firing feedback only and must not become a projectile trail.
+- Arena paint impacts must remain visible as the established organic paint splatter. Fighter-hit splats render above the fighter so confirmed paint impacts are actually visible; ground scrapes remain field splats.
+- If a playtest reports that either gun feels jammed, inspect input -> aim acquisition -> LOS/cover -> cooldown -> projectile creation/travel -> collision -> hit/scrape/disarm resolution for both player and rival before changing damage or adding advantages.
