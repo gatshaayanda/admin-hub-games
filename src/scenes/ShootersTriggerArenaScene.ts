@@ -838,10 +838,10 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         continue;
       }
 
-      const targetHead = new Phaser.Geom.Circle(target.body.x, target.body.y - 25, 16);
+      const targetHead = new Phaser.Geom.Circle(target.body.x, target.body.y - 25, 20);
       const targetBody = new Phaser.Geom.Circle(target.body.x, target.body.y + 1, 34);
       const weaponPoint = this.getWeaponPoint(target);
-      const targetWeapon = new Phaser.Geom.Circle(weaponPoint.x, weaponPoint.y, 14);
+      const targetWeapon = new Phaser.Geom.Circle(weaponPoint.x, weaponPoint.y, 16);
       const hitsWeapon = !target.weaponDropped && Phaser.Geom.Intersects.LineToCircle(shotLine, targetWeapon);
       const hitsHead = Phaser.Geom.Intersects.LineToCircle(shotLine, targetHead);
       const hitsBody = Phaser.Geom.Intersects.LineToCircle(shotLine, targetBody);
@@ -945,7 +945,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     if (this.matchOver || this.roundTransition || this.resolvingRound || target.weaponDropped || target.downed) return;
     if (owner === 'player') this.playerWeaponKnockouts += 1;
     else this.rivalWeaponKnockouts += 1;
-    this.addSplatter(hitX, hitY, 0.7, 46);
+    this.addSplatter(hitX, hitY, 0.7);
     this.showCombatHighlight(owner === 'player' ? 'GUN HIT · GUN DOWN' : 'YOUR GUN IS DOWN', '#e8c95c', hitX, hitY, 0.95);
     this.dropWeapon(target);
     this.statusHud?.setText(target === this.player ? 'GUN DOWN  ·  RECOVER OR REPOSITION' : 'RIVAL GUN DOWN  ·  PRESS THE RECOVERY');
@@ -1008,13 +1008,6 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     const shooter = owner === 'player' ? this.player : this.rival;
     const x = hitX ?? target.body.x;
     const y = hitY ?? target.body.y;
-    const bodyDistance = Phaser.Math.Distance.Between(x, y, target.body.x, target.body.y + 1);
-
-    if (!headshot && bodyDistance > ARENA_BODY_CORE_RADIUS) {
-      this.recordScrape(owner, x, y);
-      return;
-    }
-
     if (owner === 'player') {
       if (headshot) this.playerHeadshots += 1;
       else this.playerBodyHits += 1;
@@ -1027,7 +1020,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       this.rivalPaintHits += 1;
     }
 
-    this.addSplatter(x, y, headshot ? 1.25 : 1, 46);
+    this.addSplatter(x, y, headshot ? 1.25 : 1);
     this.showCombatHighlight(
       owner === 'player'
         ? (headshot ? 'HEADSHOT!' : 'PAINT HIT')
@@ -1089,33 +1082,21 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.showCombatHighlight(owner === 'player' ? 'SCRAPE' : 'SCRAPE ON YOU', '#9fbda8', x, y, 0.72);
   }
 
-  private addSplatter(x: number, y: number, scale = 1, depth = 12) {
-    const splat = this.add.graphics().setDepth(depth);
-    splat.setPosition(x, y);
-
-    // Organic paint mark: irregular blobs and small droplets, matching the
-    // established shooting-range paint rather than a directional/trail effect.
-    const marks = [
-      [-10, -6, 5.2],
-      [-3, -9, 3.8],
-      [5, -5, 4.4],
-      [11, 1, 3.2],
-      [7, 8, 3.8],
-      [-3, 8, 4.8],
-      [-11, 5, 3.4],
-    ];
-    const mainColor = Phaser.Utils.Array.GetRandom([0xd66a3d, 0xb94d36, 0xe08a54]);
-    splat.fillStyle(mainColor, 0.92);
-    for (const [markX, markY, radius] of marks) {
-      splat.fillCircle(
-        (markX + Phaser.Math.Between(-2, 2)) * scale,
-        (markY + Phaser.Math.Between(-2, 2)) * scale,
-        radius * scale,
-      );
-    }
-    splat.fillStyle(0xf27b4f, 0.78);
-    for (const [dropX, dropY, dropRadius] of [[-15, 9, 2.4], [15, -10, 2.2], [12, 11, 1.8], [-14, -11, 1.7]]) {
-      splat.fillCircle(dropX * scale, dropY * scale, dropRadius * scale);
+  private addSplatter(x: number, y: number, scale = 1) {
+    const splat = this.add.graphics();
+    splat.setDepth(12);
+    splat.x = x;
+    splat.y = y;
+    const colors = [0xd66a3d, 0xb94d36, 0xe08a54];
+    const base = 7 * scale;
+    splat.fillStyle(colors[Math.floor(Math.random() * colors.length)], 0.86);
+    splat.fillCircle(0, 0, base);
+    const drops = 5 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < drops; i += 1) {
+      const angle = Math.random() * Math.PI * 2;
+      const distance = base * (1.4 + Math.random() * 2.5);
+      const radius = base * (0.16 + Math.random() * 0.28);
+      splat.fillCircle(Math.cos(angle) * distance, Math.sin(angle) * distance, radius);
     }
     this.splatter.push(splat);
   }
