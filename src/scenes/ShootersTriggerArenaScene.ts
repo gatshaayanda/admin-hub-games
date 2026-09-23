@@ -59,7 +59,7 @@ const ARENA_BASE_AIM_RANGE = 720;
 const ARENA_BASE_RIVAL_FIRE_RANGE = 720;
 const ARENA_RIVAL_OPENING_DELAY_MS = 0;
 const ARENA_MAX_BODY_HITS = 2;
-const ARENA_BODY_CORE_RADIUS = 30;
+const ARENA_BODY_CORE_RADIUS = 34;
 const ARENA_SCRAPE_RADIUS = 44;
 const ARENA_CLOSE_IMPACT_RANGE = 220;
 const ARENA_PROJECTILE_MIN_VISIBLE_MS = 34;
@@ -759,7 +759,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     owner: 'player' | 'rival',
   ) {
     // Same proven projectile as Shooting Range: a discrete, visible paintball.
-    const ball = this.add.circle(x, y, 4, owner === 'player' ? 0xf0dfb6 : 0xe44f3d).setDepth(25);
+    const ball = this.add.circle(x, y, 4, owner === 'player' ? 0xf0dfb6 : 0xe44f3d).setDepth(50);
     this.shots.push({
       body: ball,
       vx: direction.x * 520,
