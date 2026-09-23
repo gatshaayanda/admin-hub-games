@@ -1,7 +1,7 @@
 import { markInstallSurfaceReady } from './pwa';
 
 type GameMenuItem = {
-  id: 'hall' | 'presidents-shoes' | 'shooters-trigger';
+  id: 'hall' | 'presidents-shoes' | 'shooters-trigger' | 'wardrobe';
   title: string;
   description: string;
   status: 'PLAY NOW' | 'IN DEVELOPMENT';
@@ -20,6 +20,13 @@ const games: GameMenuItem[] = [
     id: 'shooters-trigger',
     title: 'SHOOTERS TRIGGER',
     description: 'Paintball team training in development. Enter the field, play with your team and learn the arena.',
+    status: 'IN DEVELOPMENT',
+    playable: true,
+  },
+  {
+    id: 'wardrobe',
+    title: 'WARDROBE',
+    description: 'A character and animation lab. Inspect the Shooters Trigger player copy and prepare it for sprites, poses and future animation work.',
     status: 'IN DEVELOPMENT',
     playable: true,
   },
@@ -76,7 +83,7 @@ export function renderCatalog(onPlay: (gameId: GameMenuItem['id']) => void) {
 
       <footer class="game-menu-footer">
         <span>ADMIN HUB × PHASER</span>
-        <span>2 RELEASED · 1 IN DEVELOPMENT</span>
+        <span>2 RELEASED · 2 IN DEVELOPMENT</span>
       </footer>
     </main>
   `);
