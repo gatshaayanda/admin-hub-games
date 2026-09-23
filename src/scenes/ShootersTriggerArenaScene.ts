@@ -28,6 +28,7 @@ type Shot = {
   vy: number;
   owner: 'player' | 'rival';
   ttl: number;
+  ageMs: number;
 };
 
 type RivalProfile = {
@@ -128,8 +129,9 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private rivalLastFiredAt = 0;
   private rivalRevealedUntil = 0;
   private rivalDecisionAt = 0;
-  private rivalMode: 'PRESSURE' | 'FLANK' | 'HIDE' | 'SEARCH' = 'PRESSURE';
+  private rivalMode: 'PRESSURE' | 'FLANK' | 'HIDE' | 'SEARCH' | 'PATROL' = 'PRESSURE';
   private rivalTargetPoint = new Phaser.Math.Vector2(0, 0);
+  private rivalHiddenPatrolCenter = new Phaser.Math.Vector2(0, 0);
   private stealthIndicators: Array<{ ring: Phaser.GameObjects.Graphics; label: Phaser.GameObjects.Text; x: number; y: number; radius: number }> = [];
   private locatorPanel?: HTMLDivElement;
   private locatorCanvas?: HTMLCanvasElement;
@@ -372,8 +374,14 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     const distance = Phaser.Math.Distance.Between(this.rival.body.x, this.rival.body.y, this.player.body.x, this.player.body.y);
     if (now >= this.rivalDecisionAt) {
       this.rivalDecisionAt = now + Phaser.Math.Between(900, 1700);
-      if (playerHidden) { this.rivalMode = 'SEARCH'; this.rivalTargetPoint.set(this.playerLastKnown.x, this.playerLastKnown.y); }
-      else if (canSeePlayer && distance < 520 && Math.random() < 0.55) this.rivalMode = Math.random() < 0.62 ? 'FLANK' : 'PRESSURE';
+      if (playerHidden) {
+        // Once the player is hidden, the rival knows the last-known area but does
+        // not know the exact position. Search the area briefly, then patrol around
+        // the concealment instead of repeatedly walking/firing into the tree.
+        this.rivalMode = 'SEARCH';
+        this.rivalHiddenPatrolCenter.set(this.playerLastKnown.x, this.playerLastKnown.y);
+        this.rivalTargetPoint.set(this.playerLastKnown.x, this.playerLastKnown.y);
+      } else if (canSeePlayer && distance < 520 && Math.random() < 0.55) this.rivalMode = Math.random() < 0.62 ? 'FLANK' : 'PRESSURE';
       else if (Math.random() < 0.24) this.rivalMode = 'HIDE';
       else this.rivalMode = Math.random() < 0.58 ? 'FLANK' : 'PRESSURE';
       if (this.rivalMode === 'FLANK') {
@@ -391,8 +399,31 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     }
     if (this.rivalMode === 'SEARCH') {
       const dx = this.rivalTargetPoint.x - this.rival.body.x, dy = this.rivalTargetPoint.y - this.rival.body.y;
-      if (Math.hypot(dx, dy) < 85) { this.rivalMode = 'FLANK'; this.rivalDecisionAt = now + 350; }
-      this.moveRival(dx, dy, delta);
+      if (Math.hypot(dx, dy) < 85) {
+        if (playerHidden) {
+          this.rivalMode = 'PATROL';
+          this.rivalDecisionAt = now + Phaser.Math.Between(700, 1300);
+          this.chooseHiddenPatrolPoint();
+        } else {
+          this.rivalMode = 'FLANK';
+          this.rivalDecisionAt = now + 350;
+        }
+      } else {
+        this.moveRival(dx, dy, delta);
+      }
+    } else if (this.rivalMode === 'PATROL') {
+      if (!playerHidden) {
+        this.rivalMode = canSeePlayer ? 'PRESSURE' : 'FLANK';
+        this.rivalDecisionAt = now + 250;
+      } else {
+        const dx = this.rivalTargetPoint.x - this.rival.body.x;
+        const dy = this.rivalTargetPoint.y - this.rival.body.y;
+        if (Math.hypot(dx, dy) < 55 || now >= this.rivalDecisionAt) {
+          this.rivalDecisionAt = now + Phaser.Math.Between(700, 1500);
+          this.chooseHiddenPatrolPoint();
+        }
+        this.moveRival(dx, dy, delta);
+      }
     } else if (this.rivalMode === 'HIDE') {
       const dx = this.rivalTargetPoint.x - this.rival.body.x, dy = this.rivalTargetPoint.y - this.rival.body.y;
       if (Math.hypot(dx, dy) > 28) this.moveRival(dx, dy, delta); else this.rivalMoving = false;
@@ -490,6 +521,26 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     return this.concealments.some((zone) => Phaser.Math.Distance.Between(this.rival.body.x, this.rival.body.y, zone.x, zone.y) <= zone.radius);
   }
 
+  private chooseHiddenPatrolPoint() {
+    const center = this.rivalHiddenPatrolCenter;
+    const angle = Phaser.Math.FloatBetween(-Math.PI, Math.PI);
+    const radius = Phaser.Math.Between(150, 320);
+    const candidateX = Phaser.Math.Clamp(center.x + Math.cos(angle) * radius, 110, 2290);
+    const candidateY = Phaser.Math.Clamp(center.y + Math.sin(angle) * radius, 130, 1270);
+    const concealment = this.concealments.find((zone) =>
+      Phaser.Math.Distance.Between(candidateX, candidateY, zone.x, zone.y) <= zone.radius + 28
+    );
+    if (concealment) {
+      const escapeAngle = Math.atan2(candidateY - concealment.y, candidateX - concealment.x) || angle;
+      this.rivalTargetPoint.set(
+        Phaser.Math.Clamp(concealment.x + Math.cos(escapeAngle) * (concealment.radius + 80), 110, 2290),
+        Phaser.Math.Clamp(concealment.y + Math.sin(escapeAngle) * (concealment.radius + 80), 130, 1270),
+      );
+      return;
+    }
+    this.rivalTargetPoint.set(candidateX, candidateY);
+  }
+
   private findRivalConcealment() {
     return this.concealments.map((zone) => ({ zone, distance: Phaser.Math.Distance.Between(this.rival.body.x, this.rival.body.y, zone.x, zone.y) }))
       .sort((a, b) => a.distance - b.distance)[0]?.zone;
@@ -579,13 +630,14 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     owner: 'player' | 'rival',
   ) {
     // Paintball projectile: solid, small and readable — no tracer or fire trail.
-    const ball = this.add.circle(x, y, 4, owner === 'player' ? 0xf0dfb6 : 0xe44f3d).setDepth(25);
+    const ball = this.add.circle(x, y, 4, owner === 'player' ? 0xf0dfb6 : 0xe44f3d).setDepth(80);
     this.shots.push({
       body: ball,
       vx: direction.x * this.getProjectileSpeed(owner),
       vy: direction.y * this.getProjectileSpeed(owner),
       owner,
       ttl: 1100,
+      ageMs: 0,
     });
   }
 
@@ -593,6 +645,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     for (let i = this.shots.length - 1; i >= 0; i -= 1) {
       const shot = this.shots[i];
       shot.ttl -= delta;
+      shot.ageMs += delta;
 
       const previousX = shot.body.x;
       const previousY = shot.body.y;
@@ -622,6 +675,11 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         this.shots.splice(i, 1);
         continue;
       }
+
+      // Always render the fired paintball for at least one frame before resolving
+      // an immediate close-range collision. This keeps the established 4px paintball
+      // visibly readable without changing its 520px/s speed or 1100ms lifetime.
+      if (shot.ageMs < 34) continue;
 
       const shotLine = new Phaser.Geom.Line(previousX, previousY, shot.body.x, shot.body.y);
       // Cover must intercept the paintball before it can hit a fighter behind it.
