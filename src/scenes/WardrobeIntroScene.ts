@@ -360,11 +360,11 @@ export class WardrobeLabScene extends Phaser.Scene {
     return button;
   }
 
-  private showAction(index: number) {
+  private showAction(index: number, stopPlayback = true) {
     this.actionIndex = (index + ACTIONS.length) % ACTIONS.length;
     const action = ACTIONS[this.actionIndex];
 
-    this.stopFlow();
+    if (stopPlayback) this.stopFlow();
     this.actionText.setText(action);
     this.stepText.setText(
       'DISCRETE ACTION ' + String(this.actionIndex + 1).padStart(2, '0') +
