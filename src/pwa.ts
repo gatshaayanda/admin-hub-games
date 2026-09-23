@@ -33,7 +33,7 @@ function showUpdateNotice(waiting: ServiceWorker) {
 }
 
 export function showInstallNotice() {
-  if (!deferredInstallPrompt || !installSurfaceReady || document.getElementById('ahg-pwa-install')) return;
+  if (!deferredInstallPrompt || document.getElementById('ahg-pwa-install')) return;
 
   const notice = document.createElement('div');
   notice.id = 'ahg-pwa-install';
