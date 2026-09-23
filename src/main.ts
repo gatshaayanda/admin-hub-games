@@ -61,7 +61,7 @@ function startHall() {
         min: { width: 320, height: 180 },
         max: { width: 0, height: 0 },
       },
-      scene: [BootScene, PublisherIntroScene, NameEntryScene, HallIntroScene, GameShellScene, PresidentsShoesIntroScene, PresidentsShoesSetupScene, PresidentsShoesGameScene, ShootersTriggerIntroScene, ShootersTriggerSetupScene, ShootersTriggerTrainingScene, ShootersTriggerLobbyScene, ShootersTriggerEvasionScene, ShootersTriggerMediaScene, ShootersTriggerArenaScene, WardrobeIntroScene],
+      scene: [BootScene, PublisherIntroScene, NameEntryScene, HallIntroScene, GameShellScene, PresidentsShoesIntroScene, PresidentsShoesSetupScene, PresidentsShoesGameScene, ShootersTriggerIntroScene, ShootersTriggerSetupScene, ShootersTriggerTrainingScene, ShootersTriggerLobbyScene, ShootersTriggerEvasionScene, ShootersTriggerMediaScene, ShootersTriggerArenaScene, WardrobeIntroScene, WardrobeLabScene],
     };
 
     const game = new Phaser.Game(config);
