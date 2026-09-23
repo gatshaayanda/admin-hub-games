@@ -3475,3 +3475,14 @@ The arena combat reference is the previously proven paintball engagement from co
 - **Organic splatter is protected:** use the proven random circular paint mark with 5–8 surrounding droplets. Do not replace it with directional marks, streaks, trails, fire-like effects, glow or other invented VFX.
 - Paintball remains a visible 4px solid circle at 520px/s with no tracer, trail, glow or skill-scaled speed.
 - When diagnosing an engagement problem, inspect player and rival firing, swept projectile movement, cover interception, weapon/head/body hit geometry, hit resolution, splatter and respawn together. Do not compensate for hit-registration problems by adding more damage rules first.
+
+
+
+## Shooters Trigger — Arena Playable Baseline — September 23, 2026
+
+- **A clean body paint hit is decisive in Arena.** Do not restore the later two-hit/wounded exchange unless the product owner explicitly asks for that mechanic again.
+- A projectile that intersects the fighter body/head hit geometry is a real hit; only shots outside those hit geometries but inside the scrape band are scrapes.
+- Preserve the proven organic paint splatter and visible discrete paintball behavior.
+- Preserve the current rival movement/pressure/search behavior unless it is independently identified as broken.
+- HUD/presentation is not the priority while gameplay is being stabilized.
+- When combat regresses, inspect the complete shot -> collision -> hit resolution -> elimination pipeline before tuning visuals, HUD, AI movement, or ammo behavior.
