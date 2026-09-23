@@ -28,6 +28,8 @@ type Shot = {
   vy: number;
   owner: 'player' | 'rival';
   ttl: number;
+  ageMs: number;
+  impactHoldMs: number;
 };
 
 type RivalProfile = {
@@ -60,6 +62,8 @@ const ARENA_MAX_BODY_HITS = 2;
 const ARENA_BODY_CORE_RADIUS = 30;
 const ARENA_SCRAPE_RADIUS = 44;
 const ARENA_CLOSE_IMPACT_RANGE = 220;
+const ARENA_PROJECTILE_MIN_VISIBLE_MS = 34;
+const ARENA_HIDDEN_SEARCH_MS = 3200;
 
 export class ShootersTriggerArenaScene extends Phaser.Scene {
   public joystickVector = new Phaser.Math.Vector2();
@@ -128,9 +132,12 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private rivalLastFiredAt = 0;
   private rivalRevealedUntil = 0;
   private rivalDecisionAt = 0;
-  private rivalMode: 'PRESSURE' | 'FLANK' | 'SEARCH' | 'PATROL' = 'PRESSURE';
+  private rivalMode: 'PRESSURE' | 'FLANK' | 'SEARCH' | 'PATROL' | 'REGROUP' = 'PRESSURE';
   private rivalTargetPoint = new Phaser.Math.Vector2(0, 0);
   private rivalHiddenPatrolCenter = new Phaser.Math.Vector2(0, 0);
+  private rivalWasPlayerHidden = false;
+  private rivalHiddenSearchStartedAt = 0;
+  private rivalHiddenPatrolAttempts = 0;
   private readonly rivalPatrolSpeed = 92;
   private stealthIndicators: Array<{ ring: Phaser.GameObjects.Graphics; label: Phaser.GameObjects.Text; x: number; y: number; radius: number }> = [];
   private locatorPanel?: HTMLDivElement;
@@ -324,7 +331,13 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     }
   }
 
-  private moveRival(desiredX: number, desiredY: number, delta: number, speedOverride?: number) {
+  private moveRival(
+    desiredX: number,
+    desiredY: number,
+    delta: number,
+    speedOverride?: number,
+    avoidConcealment = false,
+  ) {
     const length = Math.hypot(desiredX, desiredY);
     if (length < 0.01) {
       this.rivalMoving = false;
@@ -333,12 +346,16 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     const baseAngle = Math.atan2(desiredY, desiredX);
     const speed = speedOverride ?? (this.rival.wounded ? this.rival.speed * 0.92 : this.rival.speed);
     const step = speed * delta / 1000;
+    const canStep = (nx: number, ny: number, padding: number) =>
+      !this.inCover(nx, ny, padding) &&
+      (!avoidConcealment || !this.inConcealment(nx, ny, 18));
+
     const offsets = [0, 0.62, -0.62, 1.18, -1.18, 1.7, -1.7, Math.PI];
     for (const offset of offsets) {
       const angle = baseAngle + offset;
       const nx = Phaser.Math.Clamp(this.rival.body.x + Math.cos(angle) * step, 42, 2358);
       const ny = Phaser.Math.Clamp(this.rival.body.y + Math.sin(angle) * step, 90, 1350);
-      if (this.inCover(nx, ny, 14)) continue;
+      if (!canStep(nx, ny, 14)) continue;
       this.rival.body.x = nx;
       this.rival.body.y = ny;
       this.rivalMoving = true;
@@ -348,7 +365,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     for (const angle of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
       const nx = Phaser.Math.Clamp(this.rival.body.x + Math.cos(angle) * step, 42, 2358);
       const ny = Phaser.Math.Clamp(this.rival.body.y + Math.sin(angle) * step, 90, 1350);
-      if (this.inCover(nx, ny, 10)) continue;
+      if (!canStep(nx, ny, 10)) continue;
       this.rival.body.x = nx;
       this.rival.body.y = ny;
       this.rivalMoving = true;
@@ -368,71 +385,160 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       this.moveRival(dx, dy, delta); return;
     }
     if (this.rival.ammo <= 0 || this.rival.refilling) { this.updateRivalRefill(delta); return; }
+
     const now = Date.now();
     const playerHidden = this.isPlayerConcealed();
-    const canSeePlayer = !playerHidden && this.hasLineOfSight(this.rival.body.x, this.rival.body.y, this.player.body.x, this.player.body.y);
-    const distance = Phaser.Math.Distance.Between(this.rival.body.x, this.rival.body.y, this.player.body.x, this.player.body.y);
-    if (now >= this.rivalDecisionAt) {
-      this.rivalDecisionAt = now + Phaser.Math.Between(900, 1700);
-      if (playerHidden) {
-        // Once the player is hidden, the rival knows the last-known area but does
-        // not know the exact position. Search the area briefly, then patrol around
-        // the concealment instead of repeatedly walking/firing into the tree.
-        this.rivalMode = 'SEARCH';
-        this.rivalHiddenPatrolCenter.set(this.playerLastKnown.x, this.playerLastKnown.y);
-        this.rivalTargetPoint.set(this.playerLastKnown.x, this.playerLastKnown.y);
-      } else if (canSeePlayer && distance < 520 && Math.random() < 0.55) this.rivalMode = Math.random() < 0.62 ? 'FLANK' : 'PRESSURE';
-      else this.rivalMode = Math.random() < 0.58 ? 'FLANK' : 'PRESSURE';
-      if (this.rivalMode === 'FLANK') {
-        const angle = Math.atan2(this.player.body.y - this.rival.body.y, this.player.body.x - this.rival.body.x) + (Math.random() < 0.5 ? Math.PI / 2 : -Math.PI / 2);
-        const flankDistance = Phaser.Math.Between(320, 560);
-        this.rivalTargetPoint.set(Phaser.Math.Clamp(this.player.body.x + Math.cos(angle) * flankDistance, 90, 2310), Phaser.Math.Clamp(this.player.body.y + Math.sin(angle) * flankDistance, 110, 1290));
-      } else if (this.rivalMode === 'PRESSURE') this.rivalTargetPoint.set(this.player.body.x, this.player.body.y);
+    const canSeePlayer = !playerHidden && this.hasLineOfSight(
+      this.rival.body.x,
+      this.rival.body.y,
+      this.player.body.x,
+      this.player.body.y,
+    );
+    const distance = Phaser.Math.Distance.Between(
+      this.rival.body.x,
+      this.rival.body.y,
+      this.player.body.x,
+      this.player.body.y,
+    );
+
+    // Hidden-state transitions happen once. The old implementation re-entered
+    // SEARCH every decision tick while the player stayed concealed, which meant
+    // PATROL could never really persist and the rival kept returning to the same
+    // last-known point. A hidden player now causes: search -> regroup -> patrol.
+    if (playerHidden && !this.rivalWasPlayerHidden) {
+      this.rivalMode = 'SEARCH';
+      this.rivalHiddenPatrolCenter.set(this.playerLastKnown.x, this.playerLastKnown.y);
+      this.rivalHiddenSearchStartedAt = now;
+      this.rivalHiddenPatrolAttempts = 0;
+      this.rivalTargetPoint.set(this.playerLastKnown.x, this.playerLastKnown.y);
+    } else if (!playerHidden && this.rivalWasPlayerHidden) {
+      this.rivalMode = canSeePlayer ? 'PRESSURE' : 'FLANK';
+      this.rivalDecisionAt = now + 250;
+      this.rivalHiddenSearchStartedAt = 0;
+      this.rivalHiddenPatrolAttempts = 0;
     }
-    if (this.rivalMode === 'SEARCH') {
-      const dx = this.rivalTargetPoint.x - this.rival.body.x, dy = this.rivalTargetPoint.y - this.rival.body.y;
-      if (Math.hypot(dx, dy) < 85) {
-        if (playerHidden) {
+    this.rivalWasPlayerHidden = playerHidden;
+
+    if (!playerHidden && now >= this.rivalDecisionAt) {
+      this.rivalDecisionAt = now + Phaser.Math.Between(900, 1700);
+      if (canSeePlayer && distance < 520 && Math.random() < 0.55) {
+        this.rivalMode = Math.random() < 0.62 ? 'FLANK' : 'PRESSURE';
+      } else {
+        this.rivalMode = Math.random() < 0.58 ? 'FLANK' : 'PRESSURE';
+      }
+
+      if (this.rivalMode === 'FLANK') {
+        const angle =
+          Math.atan2(
+            this.player.body.y - this.rival.body.y,
+            this.player.body.x - this.rival.body.x,
+          ) + (Math.random() < 0.5 ? Math.PI / 2 : -Math.PI / 2);
+        const flankDistance = Phaser.Math.Between(320, 560);
+        this.rivalTargetPoint.set(
+          Phaser.Math.Clamp(this.player.body.x + Math.cos(angle) * flankDistance, 90, 2310),
+          Phaser.Math.Clamp(this.player.body.y + Math.sin(angle) * flankDistance, 110, 1290),
+        );
+      } else {
+        this.rivalTargetPoint.set(this.player.body.x, this.player.body.y);
+      }
+    }
+
+    if (playerHidden) {
+      if (this.rivalMode === 'SEARCH') {
+        const dx = this.rivalTargetPoint.x - this.rival.body.x;
+        const dy = this.rivalTargetPoint.y - this.rival.body.y;
+        const searchAge = now - this.rivalHiddenSearchStartedAt;
+
+        if (Math.hypot(dx, dy) < 85 || searchAge >= ARENA_HIDDEN_SEARCH_MS) {
+          this.rivalMode = 'REGROUP';
+          this.chooseHiddenRegroupPoint();
+        } else {
+          this.moveRival(dx, dy, delta, this.rivalPatrolSpeed, true);
+        }
+      } else if (this.rivalMode === 'REGROUP') {
+        const dx = this.rivalTargetPoint.x - this.rival.body.x;
+        const dy = this.rivalTargetPoint.y - this.rival.body.y;
+        if (Math.hypot(dx, dy) < 60) {
           this.rivalMode = 'PATROL';
-          this.rivalDecisionAt = now + Phaser.Math.Between(700, 1300);
+          this.rivalHiddenPatrolCenter.set(this.rival.body.x, this.rival.body.y);
+          this.rivalHiddenPatrolAttempts = 0;
+          this.rivalDecisionAt = now + Phaser.Math.Between(700, 1200);
           this.chooseHiddenPatrolPoint();
         } else {
-          this.rivalMode = 'FLANK';
-          this.rivalDecisionAt = now + 350;
+          // Regroup is an actual withdrawal, not the same search path at a
+          // slower speed. It moves at active movement speed while still avoiding
+          // natural concealment.
+          this.moveRival(dx, dy, delta, undefined, true);
         }
-      } else {
-        this.moveRival(dx, dy, delta, this.rivalPatrolSpeed);
-      }
-    } else if (this.rivalMode === 'PATROL') {
-      if (!playerHidden) {
-        this.rivalMode = canSeePlayer ? 'PRESSURE' : 'FLANK';
-        this.rivalDecisionAt = now + 250;
-      } else {
+      } else if (this.rivalMode === 'PATROL') {
         const dx = this.rivalTargetPoint.x - this.rival.body.x;
         const dy = this.rivalTargetPoint.y - this.rival.body.y;
         if (Math.hypot(dx, dy) < 55 || now >= this.rivalDecisionAt) {
-          this.rivalDecisionAt = now + Phaser.Math.Between(700, 1500);
+          this.rivalHiddenPatrolAttempts += 1;
+          this.rivalDecisionAt = now + Phaser.Math.Between(900, 1600);
           this.chooseHiddenPatrolPoint();
         }
-        this.moveRival(dx, dy, delta, this.rivalPatrolSpeed);
+        this.moveRival(dx, dy, delta, this.rivalPatrolSpeed, true);
+      } else {
+        // A hidden player should never leave the rival in a normal combat mode.
+        this.rivalMode = 'SEARCH';
+        this.rivalHiddenSearchStartedAt = now;
+        this.rivalTargetPoint.set(this.playerLastKnown.x, this.playerLastKnown.y);
+        this.moveRival(
+          this.rivalTargetPoint.x - this.rival.body.x,
+          this.rivalTargetPoint.y - this.rival.body.y,
+          delta,
+          this.rivalPatrolSpeed,
+          true,
+        );
       }
     } else if (this.rivalMode === 'FLANK') {
-      const dx = this.rivalTargetPoint.x - this.rival.body.x, dy = this.rivalTargetPoint.y - this.rival.body.y;
-      if (Math.hypot(dx, dy) < 70) { this.rivalMode = 'PRESSURE'; this.rivalDecisionAt = now + 250; } else this.moveRival(dx, dy, delta);
+      const dx = this.rivalTargetPoint.x - this.rival.body.x;
+      const dy = this.rivalTargetPoint.y - this.rival.body.y;
+      if (Math.hypot(dx, dy) < 70) {
+        this.rivalMode = 'PRESSURE';
+        this.rivalDecisionAt = now + 250;
+      } else {
+        this.moveRival(dx, dy, delta);
+      }
     } else {
-      const dx = this.player.body.x - this.rival.body.x, dy = this.player.body.y - this.rival.body.y;
-      const d = Math.hypot(dx, dy) || 1, side = Math.random() < 0.5 ? 1 : -1;
-      this.moveRival(d > 560 ? dx / d : (-dy / d) * side, d > 560 ? dy / d : (dx / d) * side, delta);
+      const dx = this.player.body.x - this.rival.body.x;
+      const dy = this.player.body.y - this.rival.body.y;
+      const d = Math.hypot(dx, dy) || 1;
+      const side = Math.random() < 0.5 ? 1 : -1;
+      this.moveRival(
+        d > 560 ? dx / d : (-dy / d) * side,
+        d > 560 ? dy / d : (dx / d) * side,
+        delta,
+      );
     }
+
     const rivalHidden = this.isRivalConcealed();
-    const nowDistance = Phaser.Math.Distance.Between(this.player.body.x, this.player.body.y, this.rival.body.x, this.rival.body.y);
-    if (!rivalHidden && !playerHidden && canSeePlayer && this.rival.cooldown <= 0 && now >= this.rivalCanFireAt && nowDistance < this.getRivalFireRange()) {
-      const direction = new Phaser.Math.Vector2(this.player.body.x - this.rival.body.x, this.player.body.y - this.rival.body.y).normalize();
+    const nowDistance = Phaser.Math.Distance.Between(
+      this.player.body.x,
+      this.player.body.y,
+      this.rival.body.x,
+      this.rival.body.y,
+    );
+
+    if (
+      !rivalHidden &&
+      !playerHidden &&
+      canSeePlayer &&
+      this.rival.cooldown <= 0 &&
+      now >= this.rivalCanFireAt &&
+      nowDistance < this.getRivalFireRange()
+    ) {
+      const direction = new Phaser.Math.Vector2(
+        this.player.body.x - this.rival.body.x,
+        this.player.body.y - this.rival.body.y,
+      ).normalize();
       this.rivalFire(direction);
     }
+
     this.rival.body.setAlpha(rivalHidden ? 0.28 : this.rival.downed ? 0.68 : 1);
     const name = this.rival.body.getData('nameLabel') as Phaser.GameObjects.Text | undefined;
-    name?.setAlpha(rivalHidden ? 0.18 : this.rival.downed ? 0.5 : 1);
+    name?.setAlpha(rivalHidden ? 0.18 : rival.downed ? 0.5 : 1);
   }
 
   private updatePlayerRefill(delta: number) {
@@ -507,27 +613,66 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     if (this.rival.downed || this.rival.weaponDropped) return false;
     if (Date.now() < this.rivalRevealedUntil) return false;
     if (Date.now() - this.rivalLastFiredAt < ARENA_STEALTH_BREAK_MS) return false;
-    return this.concealments.some((zone) => Phaser.Math.Distance.Between(this.rival.body.x, this.rival.body.y, zone.x, zone.y) <= zone.radius);
+    return this.inConcealment(this.rival.body.x, this.rival.body.y);
+  }
+
+  private inConcealment(x: number, y: number, padding = 0) {
+    return this.concealments.some((zone) =>
+      Phaser.Math.Distance.Between(x, y, zone.x, zone.y) <= zone.radius + padding
+    );
   }
 
   private chooseHiddenPatrolPoint() {
     const center = this.rivalHiddenPatrolCenter;
-    const angle = Phaser.Math.FloatBetween(-Math.PI, Math.PI);
-    const radius = Phaser.Math.Between(210, 420);
-    const candidateX = Phaser.Math.Clamp(center.x + Math.cos(angle) * radius, 110, 2290);
-    const candidateY = Phaser.Math.Clamp(center.y + Math.sin(angle) * radius, 130, 1270);
-    const concealment = this.concealments.find((zone) =>
-      Phaser.Math.Distance.Between(candidateX, candidateY, zone.x, zone.y) <= zone.radius + 28
-    );
-    if (concealment) {
-      const escapeAngle = Math.atan2(candidateY - concealment.y, candidateX - concealment.x) || angle;
-      this.rivalTargetPoint.set(
-        Phaser.Math.Clamp(concealment.x + Math.cos(escapeAngle) * (concealment.radius + 80), 110, 2290),
-        Phaser.Math.Clamp(concealment.y + Math.sin(escapeAngle) * (concealment.radius + 80), 130, 1270),
-      );
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const angle = Phaser.Math.FloatBetween(-Math.PI, Math.PI);
+      const radius = Phaser.Math.Between(210, 420);
+      const candidateX = Phaser.Math.Clamp(center.x + Math.cos(angle) * radius, 110, 2290);
+      const candidateY = Phaser.Math.Clamp(center.y + Math.sin(angle) * radius, 130, 1270);
+      if (this.inCover(candidateX, candidateY, 14)) continue;
+      if (this.inConcealment(candidateX, candidateY, 28)) continue;
+      this.rivalTargetPoint.set(candidateX, candidateY);
       return;
     }
-    this.rivalTargetPoint.set(candidateX, candidateY);
+
+    // Deterministic fallback: leave the centre area rather than selecting a
+    // tree/stealth zone just because the random sample was unlucky.
+    const away = new Phaser.Math.Vector2(
+      this.rival.body.x - center.x,
+      this.rival.body.y - center.y,
+    );
+    if (away.lengthSq() < 1) away.set(1, 0);
+    away.normalize();
+    this.rivalTargetPoint.set(
+      Phaser.Math.Clamp(center.x + away.x * 320, 110, 2290),
+      Phaser.Math.Clamp(center.y + away.y * 320, 130, 1270),
+    );
+  }
+
+  private chooseHiddenRegroupPoint() {
+    const center = this.playerLastKnown;
+    const candidates = [
+      new Phaser.Math.Vector2(1180, 160),
+      new Phaser.Math.Vector2(1180, 1240),
+      new Phaser.Math.Vector2(520, 240),
+      new Phaser.Math.Vector2(1840, 240),
+      new Phaser.Math.Vector2(520, 1160),
+      new Phaser.Math.Vector2(1840, 1160),
+    ];
+
+    const safe = candidates.filter((point) =>
+      !this.inCover(point.x, point.y, 20) &&
+      !this.inConcealment(point.x, point.y, 24)
+    );
+
+    const choices = safe.length ? safe : candidates;
+    choices.sort(
+      (a, b) =>
+        Phaser.Math.Distance.Between(b.x, b.y, center.x, center.y) -
+        Phaser.Math.Distance.Between(a.x, a.y, center.x, center.y),
+    );
+
+    this.rivalTargetPoint.copy(choices[0]);
   }
 
   private findRivalConcealment() {
@@ -621,13 +766,27 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       vy: direction.y * 520,
       owner,
       ttl: 1100,
+      ageMs: 0,
+      impactHoldMs: 0,
     });
   }
 
   private updateShots(delta: number) {
     for (let i = this.shots.length - 1; i >= 0; i -= 1) {
       const shot = this.shots[i];
+
+      if (shot.impactHoldMs > 0) {
+        shot.impactHoldMs -= delta;
+        if (shot.impactHoldMs <= 0) {
+          shot.body.destroy();
+          this.shots.splice(i, 1);
+        }
+        continue;
+      }
+
+      shot.ageMs += delta;
       shot.ttl -= delta;
+
       const previousX = shot.body.x;
       const previousY = shot.body.y;
       const nx = previousX + shot.vx * delta / 1000;
@@ -658,12 +817,16 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       }
 
       const shotLine = new Phaser.Geom.Line(previousX, previousY, shot.body.x, shot.body.y);
+
       // Cover must intercept the paintball before it can hit a fighter behind it.
       if (this.covers.some((cover) => Phaser.Geom.Intersects.LineToRectangle(shotLine, cover))) {
         if (shot.owner === 'player') this.playerMisses += 1;
         else this.rivalMisses += 1;
-        shot.body.destroy();
-        this.shots.splice(i, 1);
+        this.holdShotAtImpact(shot, nx, ny);
+        if (shot.impactHoldMs <= 0) {
+          shot.body.destroy();
+          this.shots.splice(i, 1);
+        }
         continue;
       }
 
@@ -676,33 +839,87 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       const hitsBody = Phaser.Geom.Intersects.LineToCircle(shotLine, targetBody);
 
       if (hitsWeapon || hitsHead || hitsBody) {
-        const hitPoint = Phaser.Geom.Line.GetNearestPoint(shotLine, hitsWeapon ? weaponPoint : hitsHead ? new Phaser.Math.Vector2(target.body.x, target.body.y - 25) : new Phaser.Math.Vector2(target.body.x, target.body.y + 1));
+        const hitPoint = Phaser.Geom.Line.GetNearestPoint(
+          shotLine,
+          hitsWeapon
+            ? weaponPoint
+            : hitsHead
+              ? new Phaser.Math.Vector2(target.body.x, target.body.y - 25)
+              : new Phaser.Math.Vector2(target.body.x, target.body.y + 1),
+        );
+
         if (hitsWeapon) {
           this.resolveWeaponHit(shot.owner, target, hitPoint.x, hitPoint.y);
         } else {
-          const headDistance = Phaser.Math.Distance.Between(hitPoint.x, hitPoint.y, target.body.x, target.body.y - 25);
-          const bodyDistance = Phaser.Math.Distance.Between(hitPoint.x, hitPoint.y, target.body.x, target.body.y + 1);
+          const headDistance = Phaser.Math.Distance.Between(
+            hitPoint.x,
+            hitPoint.y,
+            target.body.x,
+            target.body.y - 25,
+          );
+          const bodyDistance = Phaser.Math.Distance.Between(
+            hitPoint.x,
+            hitPoint.y,
+            target.body.x,
+            target.body.y + 1,
+          );
           this.resolveHit(shot.owner, headDistance <= bodyDistance, hitPoint.x, hitPoint.y);
         }
-        shot.body.destroy();
-        this.shots.splice(i, 1);
-        if (this.matchOver || this.roundTransition || this.resolvingRound) break;
+
+        if (this.matchOver || this.roundTransition || this.resolvingRound) {
+          break;
+        }
+
+        this.holdShotAtImpact(shot, hitPoint.x, hitPoint.y);
+        if (shot.impactHoldMs <= 0) {
+          shot.body.destroy();
+          this.shots.splice(i, 1);
+        }
         continue;
       }
 
-      const nearestBodyPoint = Phaser.Geom.Line.GetNearestPoint(shotLine, new Phaser.Math.Vector2(target.body.x, target.body.y + 1));
-      const nearestHeadPoint = Phaser.Geom.Line.GetNearestPoint(shotLine, new Phaser.Math.Vector2(target.body.x, target.body.y - 25));
-      const nearestBodyDistance = Phaser.Math.Distance.Between(nearestBodyPoint.x, nearestBodyPoint.y, target.body.x, target.body.y + 1);
-      const nearestHeadDistance = Phaser.Math.Distance.Between(nearestHeadPoint.x, nearestHeadPoint.y, target.body.x, target.body.y - 25);
+      const nearestBodyPoint = Phaser.Geom.Line.GetNearestPoint(
+        shotLine,
+        new Phaser.Math.Vector2(target.body.x, target.body.y + 1),
+      );
+      const nearestHeadPoint = Phaser.Geom.Line.GetNearestPoint(
+        shotLine,
+        new Phaser.Math.Vector2(target.body.x, target.body.y - 25),
+      );
+      const nearestBodyDistance = Phaser.Math.Distance.Between(
+        nearestBodyPoint.x,
+        nearestBodyPoint.y,
+        target.body.x,
+        target.body.y + 1,
+      );
+      const nearestHeadDistance = Phaser.Math.Distance.Between(
+        nearestHeadPoint.x,
+        nearestHeadPoint.y,
+        target.body.x,
+        target.body.y - 25,
+      );
       const scrapeDistance = Math.min(nearestBodyDistance, nearestHeadDistance);
+
       if (scrapeDistance <= ARENA_SCRAPE_RADIUS) {
         // One paintball = one event. A scrape cannot later become another hit.
         this.recordScrape(shot.owner, nearestBodyPoint.x, nearestBodyPoint.y);
-        shot.body.destroy();
-        this.shots.splice(i, 1);
+        this.holdShotAtImpact(shot, nearestBodyPoint.x, nearestBodyPoint.y);
+        if (shot.impactHoldMs <= 0) {
+          shot.body.destroy();
+          this.shots.splice(i, 1);
+        }
         continue;
       }
     }
+  }
+
+  private holdShotAtImpact(shot: Shot, x: number, y: number) {
+    const visibleRemaining = Math.max(0, ARENA_PROJECTILE_MIN_VISIBLE_MS - shot.ageMs);
+    if (visibleRemaining <= 0) return;
+    shot.body.setPosition(x, y);
+    shot.vx = 0;
+    shot.vy = 0;
+    shot.impactHoldMs = visibleRemaining;
   }
 
   private getWeaponPoint(target: Fighter) {
