@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { getShootersTriggerPhoneAlert, markShootersTriggerPhoneAlertRead, recoverInterruptedShootersTriggerSession } from '../shooters-trigger-session';
 
 type Location = {
   id: 'shooting' | 'evasion' | 'upgrades' | 'arena';
@@ -46,6 +47,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
   constructor() { super('ShootersTriggerLobbyScene'); }
 
   create() {
+    recoverInterruptedShootersTriggerSession();
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor('#78a653');
     this.drawField();
@@ -287,6 +289,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
   }
 
   private getPhoneNextLabel() {
+    const fieldAlert = getShootersTriggerPhoneAlert();
     let shooting: any = null, evasion: any = null, arena: any = null;
     try {
       shooting = JSON.parse(localStorage.getItem('shooters-trigger:last-shooting') || 'null');
@@ -302,6 +305,14 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
   }
 
   private refreshPhoneAlert(initial = false) {
+    const explicitAlert = getShootersTriggerPhoneAlert();
+    if (explicitAlert) {
+      this.phoneUnread = true;
+      if (!initial) this.playPhoneAlert();
+      this.renderPhoneAlert();
+      return;
+    }
+
     const signature = this.getPhoneSignature();
     if (!signature || signature === 'unavailable') return;
 
@@ -388,6 +399,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
 
   private markPhoneRead() {
     const signature = this.getPhoneSignature();
+    markShootersTriggerPhoneAlertRead();
     this.phoneUnread = false;
     this.phoneLastSignature = signature;
     try { localStorage.setItem('shooters-trigger:phone-seen-signature', signature); } catch {}
@@ -425,7 +437,9 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
       : shooting && evasion && !arena ? 'FIELD READY'
       : arena?.result === 'WIN' ? 'PROVEN' : 'TESTED';
 
-    const next = !shooting
+    const next = fieldAlert
+      ? ['FIELD ALERT', fieldAlert.message || 'FIELD UPDATE · READ AND CONTINUE']
+      : !shooting
       ? ['WELCOME TO THE FIELD', 'Start at SHOOTING. Build your first shooting record.']
       : !evasion
         ? ['SHOOTING RECORDED', 'Next recommended stop: EVASION. Learn movement, cover and survival under pressure.']
@@ -582,6 +596,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
   private resetLocalField() {
     const prefixes = ['shooters-trigger:'];
     const exactKeys = ['admin-hub-games:shooters-trigger-player'];
+    try { sessionStorage.removeItem('shooters-trigger:active-session'); } catch {}
     try {
       const keysToRemove: string[] = [];
       for (let index = 0; index < localStorage.length; index += 1) {
