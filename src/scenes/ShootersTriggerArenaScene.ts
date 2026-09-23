@@ -44,7 +44,7 @@ type RivalProfile = {
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 const ARENA_NEUTRAL_BASELINE = true;
 const ARENA_BASE_SPEED = 170;
-const ARENA_BASE_COOLDOWN = 360;
+const ARENA_BASE_COOLDOWN = 240;
 const ARENA_AMMO_CAPACITY = 24;
 const ARENA_REFILL_DURATION = 2500;
 const ARENA_AMMO_STATIONS = [
@@ -696,7 +696,6 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
 
   private playerFire() {
     if (this.player.weaponDropped || this.player.refilling || this.player.ammo <= 0 || this.player.cooldown > 0) return;
-    const distance = Phaser.Math.Distance.Between(this.player.body.x, this.player.body.y, this.rival.body.x, this.rival.body.y);
     this.player.cooldown = ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(130, 330 - this.playerSkill * 1.15);
     this.player.ammo -= 1;
     this.playerShotsFired += 1;
@@ -706,15 +705,14 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.spawnShot(
       this.player.body.x + this.aim.x * 42,
       this.player.body.y + this.aim.y * 42,
-      this.applyDistanceSpread(this.aim, distance, this.playerSkill),
+      this.aim.clone(),
       'player',
     );
   }
 
   private rivalFire(direction: Phaser.Math.Vector2) {
     const accuracy = this.rivalProfile.shooting;
-    const distance = Phaser.Math.Distance.Between(this.player.body.x, this.player.body.y, this.rival.body.x, this.rival.body.y);
-    const aim = this.applyDistanceSpread(direction, distance, accuracy);
+    const aim = direction.clone().normalize();
     this.rival.cooldown = ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(330, 930 - accuracy * 5.4);
     this.rival.ammo -= 1;
     this.rivalShotsFired += 1;
@@ -737,13 +735,6 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     return ARENA_NEUTRAL_BASELINE ? ARENA_BASE_RIVAL_FIRE_RANGE : clamp(560 + this.rivalProfile.shooting * 3.2, 600, 880);
   }
 
-  private applyDistanceSpread(direction: Phaser.Math.Vector2, distance: number, skill: number) {
-    const baseSpread = distance < 260 ? 2 : distance < 620 ? 5 : 9;
-    const skillReduction = clamp((skill - 50) * 0.045, -1.5, 2.25);
-    const spreadDegrees = clamp(baseSpread - skillReduction, 1, 10);
-    const angle = Math.atan2(direction.y, direction.x) + Phaser.Math.DegToRad(Phaser.Math.FloatBetween(-spreadDegrees, spreadDegrees));
-    return new Phaser.Math.Vector2(Math.cos(angle), Math.sin(angle));
-  }
 
   private flashMuzzle(muzzle: Phaser.GameObjects.Graphics) {
     muzzle.setVisible(true).setAlpha(1).setScale(1.9);
@@ -773,30 +764,18 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private updateShots(delta: number) {
     for (let i = this.shots.length - 1; i >= 0; i -= 1) {
       const shot = this.shots[i];
-
-      if (shot.impactHoldMs > 0) {
-        shot.impactHoldMs -= delta;
-        if (shot.impactHoldMs <= 0) {
-          shot.body.destroy();
-          this.shots.splice(i, 1);
-        }
-        continue;
-      }
-
       shot.ageMs += delta;
       shot.ttl -= delta;
-
-      const previousX = shot.body.x;
-      const previousY = shot.body.y;
-      const nx = previousX + shot.vx * delta / 1000;
-      const ny = previousY + shot.vy * delta / 1000;
+      shot.body.x += shot.vx * delta / 1000;
+      shot.body.y += shot.vy * delta / 1000;
 
       if (
         shot.ttl <= 0 ||
-        nx < 0 ||
-        nx > 2400 ||
-        ny < 0 ||
-        ny > 1400
+        shot.body.x < 0 ||
+        shot.body.x > 2400 ||
+        shot.body.y < 0 ||
+        shot.body.y > 1400 ||
+        this.hitCover(shot.body.x, shot.body.y)
       ) {
         if (shot.owner === 'player') this.playerMisses += 1;
         else this.rivalMisses += 1;
@@ -805,9 +784,6 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         continue;
       }
 
-      shot.body.x = nx;
-      shot.body.y = ny;
-
       const target = shot.owner === 'player' ? this.rival : this.player;
       if (target.downed) {
         shot.body.destroy();
@@ -815,66 +791,31 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         continue;
       }
 
-      const shotLine = new Phaser.Geom.Line(previousX, previousY, shot.body.x, shot.body.y);
-
-      // Cover must intercept the paintball before it can hit a fighter behind it.
-      if (this.covers.some((cover) => Phaser.Geom.Intersects.LineToRectangle(shotLine, cover))) {
-        if (shot.owner === 'player') this.playerMisses += 1;
-        else this.rivalMisses += 1;
-        this.holdShotAtImpact(shot, nx, ny);
-        if (shot.impactHoldMs <= 0) {
-          shot.body.destroy();
-          this.shots.splice(i, 1);
-        }
-        continue;
-      }
-
-      const targetHead = new Phaser.Geom.Circle(target.body.x, target.body.y - 25, 20);
-      const targetBody = new Phaser.Geom.Circle(target.body.x, target.body.y + 1, 34);
+      const shotPoint = new Phaser.Math.Vector2(shot.body.x, shot.body.y);
+      const targetHeadCenter = new Phaser.Math.Vector2(target.body.x, target.body.y - 25);
+      const targetBodyCenter = new Phaser.Math.Vector2(target.body.x, target.body.y + 1);
       const weaponPoint = this.getWeaponPoint(target);
-      const targetWeapon = new Phaser.Geom.Circle(weaponPoint.x, weaponPoint.y, 16);
-      const hitsWeapon = !target.weaponDropped && Phaser.Geom.Intersects.LineToCircle(shotLine, targetWeapon);
-      const hitsHead = Phaser.Geom.Intersects.LineToCircle(shotLine, targetHead);
-      const hitsBody = Phaser.Geom.Intersects.LineToCircle(shotLine, targetBody);
+      const weaponDistance = Phaser.Math.Distance.BetweenPoints(shotPoint, weaponPoint);
+      const headDistance = Phaser.Math.Distance.BetweenPoints(shotPoint, targetHeadCenter);
+      const bodyDistance = Phaser.Math.Distance.BetweenPoints(shotPoint, targetBodyCenter);
+      const hitsWeapon = !target.weaponDropped && weaponDistance <= 16;
+      const hitsHead = headDistance <= 20;
+      const hitsBody = bodyDistance <= 34;
 
       if (hitsWeapon || hitsHead || hitsBody) {
-        const hitPoint = Phaser.Geom.Line.GetNearestPoint(
-          shotLine,
-          hitsWeapon
-            ? weaponPoint
-            : hitsHead
-              ? new Phaser.Math.Vector2(target.body.x, target.body.y - 25)
-              : new Phaser.Math.Vector2(target.body.x, target.body.y + 1),
-        );
-
         if (hitsWeapon) {
-          this.resolveWeaponHit(shot.owner, target, hitPoint.x, hitPoint.y);
+          this.resolveWeaponHit(shot.owner, target, shot.body.x, shot.body.y);
         } else {
-          const headDistance = Phaser.Math.Distance.Between(
-            hitPoint.x,
-            hitPoint.y,
-            target.body.x,
-            target.body.y - 25,
-          );
-          const bodyDistance = Phaser.Math.Distance.Between(
-            hitPoint.x,
-            hitPoint.y,
-            target.body.x,
-            target.body.y + 1,
-          );
           this.resolveHit(
             shot.owner,
-            headDistance <= bodyDistance,
-            hitPoint.x,
-            hitPoint.y,
+            hitsHead && (!hitsBody || headDistance <= bodyDistance),
+            shot.body.x,
+            shot.body.y,
           );
         }
 
-        if (this.matchOver || this.roundTransition || this.resolvingRound) {
-          break;
-        }
-
-        this.holdShotAtImpact(shot, hitPoint.x, hitPoint.y);
+        if (this.matchOver || this.roundTransition || this.resolvingRound) break;
+        this.holdShotAtImpact(shot, shot.body.x, shot.body.y);
         if (shot.impactHoldMs <= 0) {
           shot.body.destroy();
           this.shots.splice(i, 1);
@@ -882,37 +823,14 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         continue;
       }
 
-      const nearestBodyPoint = Phaser.Geom.Line.GetNearestPoint(
-        shotLine,
-        new Phaser.Math.Vector2(target.body.x, target.body.y + 1),
-      );
-      const nearestHeadPoint = Phaser.Geom.Line.GetNearestPoint(
-        shotLine,
-        new Phaser.Math.Vector2(target.body.x, target.body.y - 25),
-      );
-      const nearestBodyDistance = Phaser.Math.Distance.Between(
-        nearestBodyPoint.x,
-        nearestBodyPoint.y,
-        target.body.x,
-        target.body.y + 1,
-      );
-      const nearestHeadDistance = Phaser.Math.Distance.Between(
-        nearestHeadPoint.x,
-        nearestHeadPoint.y,
-        target.body.x,
-        target.body.y - 25,
-      );
-      const scrapeDistance = Math.min(nearestBodyDistance, nearestHeadDistance);
-
+      const scrapeDistance = Math.min(headDistance, bodyDistance);
       if (scrapeDistance <= ARENA_SCRAPE_RADIUS) {
-        // One paintball = one event. A scrape cannot later become another hit.
-        this.recordScrape(shot.owner, nearestBodyPoint.x, nearestBodyPoint.y);
-        this.holdShotAtImpact(shot, nearestBodyPoint.x, nearestBodyPoint.y);
+        this.recordScrape(shot.owner, shot.body.x, shot.body.y);
+        this.holdShotAtImpact(shot, shot.body.x, shot.body.y);
         if (shot.impactHoldMs <= 0) {
           shot.body.destroy();
           this.shots.splice(i, 1);
         }
-        continue;
       }
     }
   }
