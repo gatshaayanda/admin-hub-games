@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { installShootersTriggerMobileControls } from '../shooters-trigger-mobile-controls';
+import { abandonShootersTriggerSession, beginShootersTriggerSession, completeShootersTriggerSession } from '../shooters-trigger-session';
 
 type Paintball = {
   body: Phaser.GameObjects.Arc;
@@ -67,6 +68,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
   create() {
     this.playerName = String(this.registry.get('shootersTriggerPlayer') || 'Player');
+    beginShootersTriggerSession('SHOOTING RANGE');
 
     this.cameras.main.setBackgroundColor('#6f984b');
     this.drawField();
@@ -666,7 +668,37 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       this.finishTraining();
     });
     document.body.appendChild(button);
+
+    const quit = document.createElement('button');
+    quit.type = 'button';
+    quit.textContent = 'QUIT · DON’T SAVE';
+    quit.setAttribute('aria-label', 'Quit shooting session without saving results');
+    Object.assign(quit.style, {
+      position: 'fixed',
+      left: '18px',
+      bottom: 'max(18px, env(safe-area-inset-bottom))',
+      minHeight: '48px',
+      padding: '10px 16px',
+      border: '2px solid #d66a3d',
+      borderRadius: '10px',
+      background: '#2b2118',
+      color: '#f4f1df',
+      fontFamily: 'monospace',
+      fontSize: '11px',
+      fontWeight: '800',
+      letterSpacing: '.8px',
+      zIndex: '1450',
+      touchAction: 'manipulation',
+    });
+    quit.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      abandonShootersTriggerSession('SHOOTING RANGE QUIT · RESULTS NOT SAVED · PREVIOUS FIELD STATE RESTORED');
+      this.scene.start('ShootersTriggerLobbyScene');
+    });
+    document.body.appendChild(quit);
     this.sessionButton = button;
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => quit.remove());
   }
 
   private finishTraining() {
@@ -690,6 +722,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       const existingBudget = Number(localStorage.getItem('shooters-trigger:budget') || 0);
       localStorage.setItem('shooters-trigger:budget', String(existingBudget));
     } catch {}
+    completeShootersTriggerSession('SHOOTING RANGE COMPLETE · RESULTS SAVED TO FIELD PHONE');
     this.scene.start('ShootersTriggerLobbyScene');
   }
 
