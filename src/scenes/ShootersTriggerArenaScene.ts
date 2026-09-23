@@ -30,7 +30,6 @@ type Shot = {
   ttl: number;
   ageMs: number;
   impactHoldMs: number;
-  closeImpactAtFire: boolean;
 };
 
 type RivalProfile = {
@@ -62,7 +61,6 @@ const ARENA_RIVAL_OPENING_DELAY_MS = 0;
 const ARENA_MAX_BODY_HITS = 2;
 const ARENA_BODY_CORE_RADIUS = 34;
 const ARENA_SCRAPE_RADIUS = 44;
-const ARENA_CLOSE_IMPACT_RANGE = 220;
 const ARENA_PROJECTILE_MIN_VISIBLE_MS = 34;
 const ARENA_HIDDEN_SEARCH_MS = 3200;
 
@@ -769,13 +767,6 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       ttl: 1100,
       ageMs: 0,
       impactHoldMs: 0,
-      closeImpactAtFire:
-        Phaser.Math.Distance.Between(
-          owner === 'player' ? this.player.body.x : this.rival.body.x,
-          owner === 'player' ? this.player.body.y : this.rival.body.y,
-          owner === 'player' ? this.rival.body.x : this.player.body.x,
-          owner === 'player' ? this.rival.body.y : this.player.body.y,
-        ) <= ARENA_CLOSE_IMPACT_RANGE,
     });
   }
 
@@ -876,7 +867,6 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
             headDistance <= bodyDistance,
             hitPoint.x,
             hitPoint.y,
-            shot.closeImpactAtFire,
           );
         }
 
@@ -1001,7 +991,6 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     headshot: boolean,
     hitX?: number,
     hitY?: number,
-    closeImpactAtFire = false,
   ) {
     if (this.matchOver || this.roundTransition || this.resolvingRound) return;
     const target = owner === 'player' ? this.rival : this.player;
