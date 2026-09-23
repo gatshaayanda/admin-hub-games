@@ -3696,6 +3696,41 @@ The September 23 checkpoint addresses these narrowly:
 - Shooting gains restrained, grounded field stations/perimeter details without changing its accepted combat mechanics or target layout;
 - the Home Field player sprite gets a clearer neck/shoulder/arm connection.
 
-**Wardrobe is now an intentional IN DEVELOPMENT game-library entry.** It is a character/sprite/animation laboratory built around a deliberate copy of the Shooters Trigger Home Field player character. It is not part of Shooters Trigger runtime logic: Wardrobe may experiment freely, while verified assets are only brought back into Shooters Trigger after explicit review. Do not change Shooters Trigger merely because Wardrobe exists.
+### Wardrobe character lab
 
-The Wardrobe workflow is currently dependency-light. Do not add an art package, editor plugin, animation library or paid asset service merely to start the lab. First inspect free/open options and Phaser's native spritesheet/atlas/Aseprite animation support; choose a tool only after review. The current Wardrobe scene intentionally uses a copied procedural character so the art pipeline can be evaluated before real assets are introduced.
+**Wardrobe is an IN DEVELOPMENT character/sprite/animation laboratory.** It is deliberately separate from Shooters Trigger runtime logic. Wardrobe may experiment freely; nothing is copied back into Shooters Trigger until Ayanda explicitly reviews and approves it.
+
+The current Wardrobe baseline is an intentional copy of the Shooters Trigger Home Field procedural character:
+- Phaser `Container` + procedural `Graphics`;
+- head/hair, face, hat, neck, torso, arms, hands, belt, legs and shoes;
+- no external art package is required for the baseline;
+- the reference remains visually comparable to the live Home Field character.
+
+The Wardrobe action lab provides discrete, inspectable character states:
+- `IDLE`
+- `WALK`
+- `WALK LEFT`
+- `WALK RIGHT`
+- `AIM LEFT`
+- `AIM RIGHT`
+- `FIRE`
+- `BODY HIT`
+- `HEADSHOT`
+- `DEATH`
+- `RESPAWN`
+
+The **NEXT ACTION** control advances one state at a time and labels the exact action being inspected. **FLOW THROUGH ALL** plays the full sequence so movement, combat, hit reactions and death/recovery can be judged as one character performance.
+
+Wardrobe is the experimentation surface. Future improvements may add:
+- additional frames between existing states rather than only changing endpoints;
+- separate body-part transforms for arms, legs, head, torso and marker;
+- directional variants and side/back views;
+- weapon/equipment layers;
+- stronger recoil, impact, stumble and fall timing;
+- paint/splatter layers;
+- sprite-sheet or texture-atlas exports;
+- eventually, real pixel/sprite artwork replacing the procedural reference.
+
+Keep this work **Wardrobe-only** until an approved character change is intentionally transferred to Shooters Trigger. Do not refactor or alter Shooters Trigger gameplay simply to support Wardrobe experiments.
+
+The dependency-light rule still applies: do not add an art package, editor plugin, animation library or paid asset service merely to continue the lab. Phaser already supports Containers, transforms/tweening, and frame-based Sprite/SpriteSheet/Texture Atlas animation; use those native capabilities first. Inspect free/open art tools before selecting one for production artwork.
