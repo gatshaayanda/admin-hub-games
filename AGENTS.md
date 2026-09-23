@@ -3392,7 +3392,7 @@ Acceptance for future skill tuning: name the skill, identify every code path it 
 ## Shooters Trigger — Explicit Arena Visual Baseline — September 23, 2026
 
 The product owner has explicitly approved the following Arena firing presentation in the current checkpoint. Treat these as established behavior, not optional polish:
-- Keep the visible paintball projectile treatment: solid, readable 5px paintballs with the current speed/TTL behavior (740px/s neutral baseline, 1200ms TTL). Do not replace this with invisible shots, tracer streaks, fire trails, glowing tails, or another projectile style unless explicitly requested.
+- Keep the visible paintball projectile treatment: solid, readable 4px paintballs with the preserved speed/TTL behavior (520px/s neutral baseline, 1100ms TTL). Do not replace this with invisible shots, tracer streaks, fire trails, glowing tails, or another projectile style unless explicitly requested.
 - Keep the brief muzzle firing response on both player and rival shots. It is a short firing cue, not a projectile trail.
 - Keep existing firing recoil. Do not remove or redesign recoil while fixing projectile, aim, AI, or hit-resolution issues unless explicitly requested.
 - If a future chat/session finds an older Arena implementation that differs from this approved baseline, do not automatically restore the old version. Inspect the current main checkpoint and the owner's latest explicit instruction first.
