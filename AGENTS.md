@@ -3344,3 +3344,18 @@ This rule exists because Arena behavior was changed in prior chats without the p
 - **Inspect before changing.** For a reported combat problem, inspect the player path and rival path side-by-side, plus the relevant Git history. Recover a known-good implementation when the complaint is about previously approved behavior; do not invent a replacement.
 - **No silent removals.** Do not remove a feature because it appears unnecessary, cleaner, or easier to implement. Removal requires an explicit product-owner request.
 - **Patch boundary:** the final diff must contain only the requested gameplay fix and the contract/documentation needed to prevent recurrence. Unexpected files or unrelated behavior = STOP, inspect, and revert the unrelated part before checkpointing.
+
+
+## Shooters Trigger — Rival Engagement / Symmetric Stealth Contract — September 23, 2026
+
+- The Arena rival must continuously make tactical movement after spawn and after respawn; it must not remain a static target.
+- The previous rival spawn at `2040,330` overlapped the top-right tree-trunk collision zone. The current spawn is `2040,430` so the rival starts outside solid cover and can move.
+- Rival behavior uses lightweight tactical modes: **PRESSURE**, **FLANK**, **HIDE**, and **SEARCH**. Pressure closes/strafe-engages, flank changes the firing angle, hide uses natural concealment, and search moves toward the player's last known position after the player disappears.
+- `ARENA_RIVAL_OPENING_DELAY_MS` remains `0`. Do not add an arbitrary movement wait.
+- After rival respawn, tactical decision-making resumes immediately; the rival must not become a stationary respawn target.
+- Player fire tap/hold auto-aim remains active only while the rival is visible. Manual drag aim remains the override.
+- Concealment is symmetric: a hidden player is not directly targeted by the rival, and a hidden rival is not shown on the player's tactical map or edge locator. Firing breaks concealment for the existing short reveal window.
+- A hidden rival may still be faintly represented in the world while concealed, but the tactical map must not disclose its position. The rival cannot fire while concealed.
+- Preserve existing paint VFX, field, HUD/map layout, pause, controls, damage, weapon drops, respawn rules, Hall, and shared shell. This is an AI/engagement fix only.
+- For future AI complaints, inspect movement, cover collision, tactical state, LOS, firing, stealth and player engagement together. Online paintball references reviewed September 23, 2026 reinforce dynamic cover rotation, flanking, and concealment as ways to avoid static firing lanes; the implementation remains deliberately lightweight for this game.
+- Acceptance: fresh round -> rival moves; player respawn -> rival moves/changes angle; rival can flank; rival can hide; hidden rival disappears from tactical map/locator; firing reveals rival; player fire tap/hold still auto-aims at a visible rival; manual drag aim overrides auto-aim.

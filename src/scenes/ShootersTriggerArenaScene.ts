@@ -52,7 +52,7 @@ const ARENA_AMMO_STATIONS = [
 const ARENA_STEALTH_RADIUS = 78;
 const ARENA_STEALTH_BREAK_MS = 1200;
 const ARENA_PLAYER_SPAWN = new Phaser.Math.Vector2(360, 1040);
-const ARENA_RIVAL_SPAWN = new Phaser.Math.Vector2(2040, 330);
+const ARENA_RIVAL_SPAWN = new Phaser.Math.Vector2(2040, 430);
 const ARENA_RIVAL_FIRE_RANGE = 720;
 const ARENA_RIVAL_OPENING_DELAY_MS = 0;
 const ARENA_MAX_BODY_HITS = 2;
@@ -124,6 +124,11 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private evasionSkill = 0;
   private arenaStartedAt = 0;
   private rivalCanFireAt = 0;
+  private rivalLastFiredAt = 0;
+  private rivalRevealedUntil = 0;
+  private rivalDecisionAt = 0;
+  private rivalMode: 'PRESSURE' | 'FLANK' | 'HIDE' | 'SEARCH' = 'PRESSURE';
+  private rivalTargetPoint = new Phaser.Math.Vector2(0, 0);
   private stealthIndicators: Array<{ ring: Phaser.GameObjects.Graphics; label: Phaser.GameObjects.Text; x: number; y: number; radius: number }> = [];
   private locatorPanel?: HTMLDivElement;
   private locatorCanvas?: HTMLCanvasElement;
@@ -165,6 +170,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
 
     this.arenaStartedAt = Date.now();
     this.rivalCanFireAt = this.arenaStartedAt + ARENA_RIVAL_OPENING_DELAY_MS;
+    this.rivalDecisionAt = this.arenaStartedAt + 900;
 
     this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
 
@@ -201,7 +207,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.player.cooldown = Math.max(0, this.player.cooldown - delta);
     this.rival.cooldown = Math.max(0, this.rival.cooldown - delta);
 
-    if (this.fire && !this.manualAim && !this.player.weaponDropped && !this.player.downed && this.rival) {
+    if (this.fire && !this.manualAim && !this.player.weaponDropped && !this.player.downed && this.rival && !this.isRivalConcealed()) {
       const dx = this.rival.body.x - this.player.body.x;
       const dy = this.rival.body.y - this.player.body.y;
       const distance = Math.hypot(dx, dy);
@@ -223,7 +229,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   public setFireHeld(value: boolean) {
     if (!value) {
       this.manualAim = false;
-    } else if (!this.manualAim && !this.player.weaponDropped && !this.player.downed && this.rival) {
+    } else if (!this.manualAim && !this.player.weaponDropped && !this.player.downed && this.rival && !this.isRivalConcealed()) {
       const dx = this.rival.body.x - this.player.body.x;
       const dy = this.rival.body.y - this.player.body.y;
       const distance = Math.hypot(dx, dy);
@@ -349,78 +355,57 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       const dx = this.rival.droppedWeapon.x - this.rival.body.x;
       const dy = this.rival.droppedWeapon.y - this.rival.body.y;
       const distance = Math.hypot(dx, dy) || 1;
-      if (distance <= 38) {
-        this.pickupWeapon(this.rival);
-        return;
-      }
-      this.moveRival(dx, dy, delta);
-      return;
+      if (distance <= 38) { this.pickupWeapon(this.rival); return; }
+      this.moveRival(dx, dy, delta); return;
     }
-
-    if (this.rival.ammo <= 0 || this.rival.refilling) {
-      this.updateRivalRefill(delta);
-      return;
-    }
-
+    if (this.rival.ammo <= 0 || this.rival.refilling) { this.updateRivalRefill(delta); return; }
+    const now = Date.now();
     const playerHidden = this.isPlayerConcealed();
-    const targetX = playerHidden ? this.playerLastKnown.x : this.player.body.x;
-    const targetY = playerHidden ? this.playerLastKnown.y : this.player.body.y;
-    const dx = targetX - this.rival.body.x;
-    const dy = targetY - this.rival.body.y;
-    const distance = Math.hypot(dx, dy) || 1;
-    const direction = new Phaser.Math.Vector2(dx / distance, dy / distance);
-
-    let moveX = 0;
-    let moveY = 0;
-
-    if (this.rivalProfile.id === 'marksman') {
-      if (distance < 470) {
-        moveX = -direction.x;
-        moveY = -direction.y;
-      } else if (distance > 760) {
-        moveX = direction.x;
-        moveY = direction.y;
-      } else {
-        moveX = -direction.y * 0.5;
-        moveY = direction.x * 0.5;
-      }
-    } else if (this.rivalProfile.id === 'runner') {
-      if (distance > 260) {
-        moveX = direction.x;
-        moveY = direction.y;
-      } else {
-        moveX = -direction.y;
-        moveY = direction.x;
-      }
+    const canSeePlayer = !playerHidden && this.hasLineOfSight(this.rival.body.x, this.rival.body.y, this.player.body.x, this.player.body.y);
+    const distance = Phaser.Math.Distance.Between(this.rival.body.x, this.rival.body.y, this.player.body.x, this.player.body.y);
+    if (now >= this.rivalDecisionAt) {
+      this.rivalDecisionAt = now + Phaser.Math.Between(900, 1700);
+      if (playerHidden) { this.rivalMode = 'SEARCH'; this.rivalTargetPoint.set(this.playerLastKnown.x, this.playerLastKnown.y); }
+      else if (canSeePlayer && distance < 520 && Math.random() < 0.55) this.rivalMode = Math.random() < 0.62 ? 'FLANK' : 'PRESSURE';
+      else if (Math.random() < 0.24) this.rivalMode = 'HIDE';
+      else this.rivalMode = Math.random() < 0.58 ? 'FLANK' : 'PRESSURE';
+      if (this.rivalMode === 'FLANK') {
+        const angle = Math.atan2(this.player.body.y - this.rival.body.y, this.player.body.x - this.rival.body.x) + (Math.random() < 0.5 ? Math.PI / 2 : -Math.PI / 2);
+        const flankDistance = Phaser.Math.Between(320, 560);
+        this.rivalTargetPoint.set(Phaser.Math.Clamp(this.player.body.x + Math.cos(angle) * flankDistance, 90, 2310), Phaser.Math.Clamp(this.player.body.y + Math.sin(angle) * flankDistance, 110, 1290));
+      } else if (this.rivalMode === 'HIDE') {
+        const concealment = this.findRivalConcealment();
+        if (concealment) {
+          const angle = Math.atan2(this.rival.body.y - concealment.y, this.rival.body.x - concealment.x) || Phaser.Math.FloatBetween(-Math.PI, Math.PI);
+          const radius = Math.min(concealment.radius * 0.72, concealment.radius - 12);
+          this.rivalTargetPoint.set(Phaser.Math.Clamp(concealment.x + Math.cos(angle) * radius, 90, 2310), Phaser.Math.Clamp(concealment.y + Math.sin(angle) * radius, 110, 1290));
+        } else this.rivalMode = 'FLANK';
+      } else if (this.rivalMode === 'PRESSURE') this.rivalTargetPoint.set(this.player.body.x, this.player.body.y);
+    }
+    if (this.rivalMode === 'SEARCH') {
+      const dx = this.rivalTargetPoint.x - this.rival.body.x, dy = this.rivalTargetPoint.y - this.rival.body.y;
+      if (Math.hypot(dx, dy) < 85) { this.rivalMode = 'FLANK'; this.rivalDecisionAt = now + 350; }
+      this.moveRival(dx, dy, delta);
+    } else if (this.rivalMode === 'HIDE') {
+      const dx = this.rivalTargetPoint.x - this.rival.body.x, dy = this.rivalTargetPoint.y - this.rival.body.y;
+      if (Math.hypot(dx, dy) > 28) this.moveRival(dx, dy, delta); else this.rivalMoving = false;
+    } else if (this.rivalMode === 'FLANK') {
+      const dx = this.rivalTargetPoint.x - this.rival.body.x, dy = this.rivalTargetPoint.y - this.rival.body.y;
+      if (Math.hypot(dx, dy) < 70) { this.rivalMode = 'PRESSURE'; this.rivalDecisionAt = now + 250; } else this.moveRival(dx, dy, delta);
     } else {
-      if (distance > 540) {
-        moveX = direction.x;
-        moveY = direction.y;
-      } else if (distance < 360) {
-        moveX = -direction.x;
-        moveY = -direction.y;
-      } else {
-        moveX = -direction.y * 0.65;
-        moveY = direction.x * 0.65;
-      }
+      const dx = this.player.body.x - this.rival.body.x, dy = this.player.body.y - this.rival.body.y;
+      const d = Math.hypot(dx, dy) || 1, side = Math.random() < 0.5 ? 1 : -1;
+      this.moveRival(d > 560 ? dx / d : (-dy / d) * side, d > 560 ? dy / d : (dx / d) * side, delta);
     }
-
-    let desiredX = moveX;
-    let desiredY = moveY;
-    if ((Math.random() * 100) < this.rivalProfile.coverUse * delta / 1000 * 0.9) {
-      const cover = this.findUsefulCover();
-      if (cover) {
-        desiredX = cover.x + cover.width / 2 - this.rival.body.x;
-        desiredY = cover.y + cover.height / 2 - this.rival.body.y;
-      }
+    const rivalHidden = this.isRivalConcealed();
+    const nowDistance = Phaser.Math.Distance.Between(this.player.body.x, this.player.body.y, this.rival.body.x, this.rival.body.y);
+    if (!rivalHidden && !playerHidden && canSeePlayer && this.rival.cooldown <= 0 && now >= this.rivalCanFireAt && nowDistance < ARENA_RIVAL_FIRE_RANGE) {
+      const direction = new Phaser.Math.Vector2(this.player.body.x - this.rival.body.x, this.player.body.y - this.rival.body.y).normalize();
+      this.rivalFire(direction);
     }
-    this.moveRival(desiredX, desiredY, delta);
-
-    const canSeePlayer = this.hasLineOfSight(this.rival.body.x, this.rival.body.y, this.player.body.x, this.player.body.y);
-    const canSeeLastKnown = this.hasLineOfSight(this.rival.body.x, this.rival.body.y, targetX, targetY);
-    const hasFiringSolution = !playerHidden && canSeePlayer;
-    // Concealment is real: once the player is hidden, the rival searches the last-known position but cannot fire at that stale position.
-    if (!playerHidden && !this.rival.weaponDropped && !this.rival.refilling && this.rival.ammo > 0 && this.rival.cooldown <= 0 && Date.now() >= this.rivalCanFireAt && distance < ARENA_RIVAL_FIRE_RANGE && hasFiringSolution) this.rivalFire(direction);
+    this.rival.body.setAlpha(rivalHidden ? 0.28 : this.rival.downed ? 0.68 : 1);
+    const name = this.rival.body.getData('nameLabel') as Phaser.GameObjects.Text | undefined;
+    name?.setAlpha(rivalHidden ? 0.18 : this.rival.downed ? 0.5 : 1);
   }
 
   private updatePlayerRefill(delta: number) {
@@ -491,6 +476,19 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.rival.refillElapsed = 0;
   }
 
+  private isRivalConcealed() {
+    if (this.rival.downed || this.rival.weaponDropped) return false;
+    if (Date.now() < this.rivalRevealedUntil) return false;
+    if (Date.now() - this.rivalLastFiredAt < ARENA_STEALTH_BREAK_MS) return false;
+    return this.concealments.some((zone) => Phaser.Math.Distance.Between(this.rival.body.x, this.rival.body.y, zone.x, zone.y) <= zone.radius);
+  }
+
+  private findRivalConcealment() {
+    return this.concealments.map((zone) => ({ zone, distance: Phaser.Math.Distance.Between(this.rival.body.x, this.rival.body.y, zone.x, zone.y) }))
+      .filter(({ zone }) => !this.inCover(zone.x, zone.y, 8))
+      .sort((a, b) => a.distance - b.distance)[0]?.zone;
+  }
+
   private findUsefulCover() {
     const playerX = this.isPlayerConcealed() ? this.playerLastKnown.x : this.player.body.x;
     const playerY = this.isPlayerConcealed() ? this.playerLastKnown.y : this.player.body.y;
@@ -529,6 +527,8 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.rival.cooldown = ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(330, 930 - accuracy * 5.4);
     this.rival.ammo -= 1;
     this.rivalShotsFired += 1;
+    this.rivalLastFiredAt = Date.now();
+    this.rivalRevealedUntil = Date.now() + 1800;
     this.spawnShot(
       this.rival.body.x + aim.x * 42,
       this.rival.body.y + aim.y * 42,
@@ -955,7 +955,12 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         this.resetFighter(this.rival, ARENA_RIVAL_SPAWN.x, ARENA_RIVAL_SPAWN.y);
       }
       eliminated.cooldown = 700;
-      if (eliminated === this.rival) this.rivalCanFireAt = Date.now() + ARENA_RIVAL_OPENING_DELAY_MS;
+      if (eliminated === this.rival) {
+        this.rivalCanFireAt = Date.now() + ARENA_RIVAL_OPENING_DELAY_MS;
+        this.rivalDecisionAt = Date.now() + 250;
+        this.rivalMode = 'PRESSURE';
+        this.rivalRevealedUntil = Date.now() + 700;
+      }
       this.roundTransition = false;
       this.statusHud?.setText(
         this.player.score === 2 && this.rival.score === 2
@@ -1293,13 +1298,15 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     ctx.lineTo(px + this.aim.x * 8, py + this.aim.y * 8);
     ctx.stroke();
 
-    ctx.fillStyle = '#e44f3d';
-    ctx.beginPath();
-    ctx.moveTo(rx, ry - 5);
-    ctx.lineTo(rx + 5, ry + 4);
-    ctx.lineTo(rx - 5, ry + 4);
-    ctx.closePath();
-    ctx.fill();
+    if (!this.isRivalConcealed()) {
+      ctx.fillStyle = '#e44f3d';
+      ctx.beginPath();
+      ctx.moveTo(rx, ry - 5);
+      ctx.lineTo(rx + 5, ry + 4);
+      ctx.lineTo(rx - 5, ry + 4);
+      ctx.closePath();
+      ctx.fill();
+    }
 
     const distance = Phaser.Math.Distance.Between(
       this.player.body.x,
@@ -1323,7 +1330,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     // This keeps the map useful without adding another permanent HUD panel.
     const arrow = this.locatorArrow;
     if (!arrow) return;
-    if (onScreen) {
+    if (this.isRivalConcealed() || onScreen) {
       arrow.style.display = 'none';
       return;
     }
