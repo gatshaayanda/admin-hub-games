@@ -3529,3 +3529,116 @@ When describing or testing Arena, do not call this a chance-based “headshot ra
 ## Push Probe — September 23, 2026
 
 This checkpoint exists solely to probe whether the current Vercel deployment rate limit has cleared. No gameplay or product behavior is changed by this note.
+
+
+## Shooters Trigger — Golden Pre-V1 Core — September 23, 2026
+
+The current Arena checkpoint is the protected **Golden Pre-V1 Core**. The product owner has explicitly approved the current engagement feel as the foundation to build from.
+
+Protect this behavior unless the product owner explicitly changes it:
+- visible discrete paintballs flying through the field;
+- direct, readable engagement at close and normal range;
+- rival movement that is actionable and continuously creates engagements;
+- weapon knockdown where a fighter's gun can fall to the ground;
+- the dropped weapon remains recoverable in the world and the fighter must physically walk over it to pick it back up;
+- cover, concealment, movement, firing, paint impacts and the current two-body-hit/headshot resolution;
+- no replacement projectile system, arbitrary damage multipliers, or combat redesign merely to add progression.
+
+Git history may be used to recover or compare behavior, but the current main checkpoint and the owner's latest explicit approval are authoritative. Future Shooting, Evasion, Armory, Phone and progression work must layer around this core rather than destabilize it.
+
+## Shooters Trigger — Local Reset / Phone / Profile Direction — September 23, 2026
+
+### Reset Local is the current reset boundary
+
+- **Reset Local Field** clears this device's Shooters Trigger local profile and gameplay records.
+- It clears the Shooters Trigger player name, shooting record, evasion record, Arena record, budget, loadout/upgrades, phone-read state and other keys using the `shooters-trigger:` prefix.
+- It also clears the current local Shooters Trigger player identity key `admin-hub-games:shooters-trigger-player`.
+- It must **not** delete Firebase/shared data. Firebase reset/re-download is a later multiplayer/profile-persistence feature.
+- A reset returns the player to a genuinely new local field state: no old stats, no old money and no old loadout.
+- If a reset flow is changed, verify the next setup shows a clean player identity and the phone reports a new-player state.
+
+### Phone is the field's persistent information layer
+
+The Field Phone is not just a post-match scoreboard. It is the player's persistent field notebook/news/guide and should eventually contain:
+
+- saved player name;
+- current bot/operator identity, beginning with **ADMIN OPERATOR 0** for the neutral baseline and later using higher operator numbers;
+- map/field guide information;
+- the three core locations: **ARENA**, **TRAINING CAMP / SHOOTING RANGE**, and **ARMORY / EQUIPMENT**;
+- Media Coverage and Guide information;
+- player records, money and progression;
+- actionable field news explaining what the player can do next.
+
+A genuinely new/reset player starts with **zero money** and should be told through the phone that they can:
+1. walk to the Arena for a 1v1 to make money;
+2. walk to Training Camp to improve their odds before fighting;
+3. use Arena earnings at Armory/Equipment to buy future special bonuses.
+
+The player remains free to explore the field; the phone explains the route rather than becoming a mandatory gate.
+
+### Future Firebase profile model
+
+When multiplayer/shared persistence is introduced:
+- local profiles may support multiple player names/results on the device;
+- profiles can be tied to saved Firebase records and downloaded again;
+- Firebase becomes the shared persistence layer for those profiles;
+- **Reset Local** remains a device-local reset and must not silently delete Firebase profiles;
+- a separate explicit Firebase reset/delete operation will be designed and documented later.
+
+Do not implement Firebase profile/reset behavior as part of the current local-reset checkpoint.
+
+## Shooters Trigger — Training / Evasion / Progression Direction — September 23, 2026
+
+Implement these modes **one at a time**, always starting from the Golden Pre-V1 Core.
+
+### Shooting Range
+
+The Shooting Range keeps the established environment and target practice mechanics, but its next evolution is a one-minute evasion test:
+- targets/environment remain available as the established training field;
+- an unarmed bot/operator is present;
+- the bot's objective is to evade the player for up to 60 seconds;
+- the player uses the established paintball engagement system to track and hit the bot;
+- the result records actual shooting/evasion performance;
+- the stronger result gives the player the corresponding progression edge going into Arena;
+- a tie is resolved using the player's established Golden Pre-V1 baseline skill record rather than an arbitrary random result.
+
+### Evasion Camp
+
+Use the same field/cover principles as Shooting Range, reversed:
+- the player is unarmed;
+- the opponent is armed;
+- the player must dodge, evade, reposition and use cover/concealment for up to 60 seconds;
+- actual projectile travel, cover, paint impacts and movement remain authoritative;
+- the result records survival/evasion performance;
+- the stronger result gives the corresponding progression edge going into Arena.
+
+### Progression loop
+
+The intended current loop is:
+
+```
+NEW / RESET PLAYER · BUDGET 0
+        ↓
+PHONE EXPLAINS THE FIELD
+        ↓
+ARENA 1v1 → EARN MONEY
+        ↘
+ TRAINING / EVASION → IMPROVE PERFORMANCE EDGE
+        ↓
+ARMORY / EQUIPMENT → SPEND MONEY ON SPECIAL BONUSES
+        ↓
+ARENA → APPLY TRAINING + EQUIPMENT ADVANTAGES
+```
+
+Progression must improve positioning, exposure, recovery, handling, tactical information and other meaningful field advantages without silently replacing the protected two-hit/headshot combat rules.
+
+Do not implement all of these modes together. Complete, verify and checkpoint one mode before starting the next.
+
+## Admin Hub Games — PWA Install Prompt Contract — September 23, 2026
+
+- The homepage manifest is `/manifest.webmanifest`, the service worker is `/sw.js`, and `src/pwa.ts` listens for `beforeinstallprompt`.
+- When the browser exposes `beforeinstallprompt`, Admin Hub Games may prevent the browser's default UI and show its own **KEEP ADMIN HUB GAMES ON YOUR PHONE / INSTALL** surface.
+- The install surface must not wait for a game scene, game interaction, or another game-specific readiness gate. It is a platform-level homepage capability.
+- PWA installation is never a game-flow gate.
+- Android/Chrome and other Chromium browsers may decide independently when `beforeinstallprompt` is available; iOS Safari uses its own Add to Home Screen flow.
+- A GitHub/Vercel build alone does not prove installability. A release candidate must be tested in a real supported browser/device, including the homepage install surface and installed launch.
