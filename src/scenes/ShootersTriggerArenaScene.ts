@@ -485,7 +485,6 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
 
   private findRivalConcealment() {
     return this.concealments.map((zone) => ({ zone, distance: Phaser.Math.Distance.Between(this.rival.body.x, this.rival.body.y, zone.x, zone.y) }))
-      .filter(({ zone }) => !this.inCover(zone.x, zone.y, 8))
       .sort((a, b) => a.distance - b.distance)[0]?.zone;
   }
 
