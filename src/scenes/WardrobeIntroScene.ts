@@ -261,76 +261,101 @@ export class WardrobeLabScene extends Phaser.Scene {
 
   create() {
     const { width, height } = this.scale;
+    const portrait = height > width;
+    const compact = portrait || width < 700;
     this.cameras.main.setBackgroundColor('#101512');
 
-    this.add.text(26, 22, 'WARDROBE · ACTION LAB', {
-      fontFamily: 'monospace', fontSize: '15px', fontStyle: 'bold', color: '#f4f1df'
+    const headerSize = compact ? 12 : 15;
+    this.add.text(18, 18, 'WARDROBE · ACTION LAB', {
+      fontFamily: 'monospace', fontSize: headerSize + 'px', fontStyle: 'bold', color: '#f4f1df'
     });
 
-    this.add.text(26, 52, 'SHOOTERS TRIGGER · HOME FIELD CHARACTER COPY · SAFE EXPERIMENT AREA', {
-      fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold', color: '#8fb39b'
-    });
+    this.add.text(18, compact ? 40 : 48,
+      compact ? 'SHOOTERS TRIGGER · CHARACTER COPY' : 'SHOOTERS TRIGGER · HOME FIELD CHARACTER COPY · SAFE EXPERIMENT AREA',
+      {
+        fontFamily: 'monospace', fontSize: compact ? '8px' : '9px', fontStyle: 'bold', color: '#8fb39b'
+      });
 
-    this.actionText = this.add.text(width / 2, 86, '', {
-      fontFamily: 'monospace', fontSize: '18px', fontStyle: 'bold', color: '#e8c95c'
+    this.actionText = this.add.text(width / 2, compact ? 72 : 86, '', {
+      fontFamily: 'monospace', fontSize: compact ? '17px' : '18px', fontStyle: 'bold', color: '#e8c95c'
     }).setOrigin(0.5);
 
-    this.stepText = this.add.text(width / 2, 110, '', {
-      fontFamily: 'monospace', fontSize: '9px', color: '#8fb39b'
+    this.stepText = this.add.text(width / 2, compact ? 94 : 110, '', {
+      fontFamily: 'monospace', fontSize: '8px', color: '#8fb39b'
     }).setOrigin(0.5);
 
-    const benchW = Math.min(width * 0.72, 560);
-    const benchH = Math.min(height * 0.54, 380);
-    const benchX = width * 0.43;
-    const benchY = height * 0.47;
+    const benchW = compact ? Math.min(width * 0.90, 520) : Math.min(width * 0.72, 560);
+    const benchH = compact ? Math.min(height * 0.32, 235) : Math.min(height * 0.54, 380);
+    const benchX = compact ? width / 2 : width * 0.43;
+    const benchY = compact ? height * 0.29 : height * 0.47;
 
     this.add.rectangle(benchX, benchY, benchW, benchH, 0x202a24, 1)
       .setStrokeStyle(2, 0x526d5d, 1);
 
-    this.add.text(benchX, benchY - benchH / 2 + 18, 'LIVE PREVIEW · PROCEDURAL BASELINE', {
+    this.add.text(benchX, benchY - benchH / 2 + 16, compact ? 'LIVE PREVIEW' : 'LIVE PREVIEW · PROCEDURAL BASELINE', {
       fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold', color: '#8fb39b'
     }).setOrigin(0.5);
 
-    this.shadow = this.add.ellipse(benchX, benchY + 125, 92, 28, 0x000000, 0.28);
-    this.character = this.add.container(benchX, benchY + 82);
+    this.shadow = this.add.ellipse(benchX, benchY + (compact ? benchH * 0.30 : 125), compact ? 68 : 92, compact ? 20 : 28, 0x000000, 0.28);
+    this.character = this.add.container(benchX, benchY + (compact ? 42 : 82));
     this.preview = this.add.graphics();
     this.character.add(this.preview);
-    this.character.setScale(Math.min(5.2, Math.max(3.2, Math.min(width, height) / 145)));
+    this.character.setScale(compact
+      ? Math.min(4.0, Math.max(2.8, Math.min(width, height) / 155))
+      : Math.min(5.2, Math.max(3.2, Math.min(width, height) / 145)));
 
-    this.detailText = this.add.text(benchX, benchY + benchH / 2 - 22, '', {
-      fontFamily: 'monospace', fontSize: '9px', color: '#d8dfd8', align: 'center'
+    this.detailText = this.add.text(benchX, benchY + benchH / 2 - 18, '', {
+      fontFamily: 'monospace', fontSize: compact ? '8px' : '9px', color: '#d8dfd8', align: 'center',
+      wordWrap: { width: benchW - 24 }
     }).setOrigin(0.5);
 
-    const controlsX = Math.min(width - 155, benchX + benchW / 2 + 135);
-    this.add.text(controlsX, 146, 'ACTION STRIP', {
-      fontFamily: 'monospace', fontSize: '10px', fontStyle: 'bold', color: '#e8c95c'
+    const controlsTop = compact ? benchY + benchH / 2 + 24 : 146;
+    const columns = compact ? 3 : 1;
+    const gapX = compact ? 5 : 0;
+    const gapY = compact ? 5 : 7;
+    const buttonW = compact
+      ? Math.min(112, (width - 36 - gapX * (columns - 1)) / columns)
+      : 235;
+    const buttonH = compact ? 34 : 32;
+    const totalW = columns * buttonW + (columns - 1) * gapX;
+    const controlsX = compact ? (width - totalW) / 2 + buttonW / 2 : Math.min(width - 155, benchX + benchW / 2 + 135);
+
+    this.add.text(compact ? width / 2 : controlsX, controlsTop - 16, 'ACTION STRIP', {
+      fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold', color: '#e8c95c'
     }).setOrigin(0.5);
 
     ACTIONS.forEach((action, index) => {
-      const y = 174 + index * 39;
-      const button = this.add.rectangle(controlsX, y, 235, 32, 0x202a24, 1)
+      const row = compact ? Math.floor(index / columns) : index;
+      const col = compact ? index % columns : 0;
+      const x = compact ? controlsX + col * (buttonW + gapX) : controlsX;
+      const y = compact ? controlsTop + row * (buttonH + gapY) : controlsTop + index * 39;
+      const button = this.add.rectangle(x, y, buttonW, buttonH, 0x202a24, 1)
         .setStrokeStyle(1, 0x526d5d, 1)
         .setInteractive({ useHandCursor: false });
-      this.add.text(controlsX - 101, y, String(index + 1).padStart(2, '0') + ' · ' + action, {
-        fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold', color: '#f4f1df'
-      }).setOrigin(0, 0.5);
+      this.add.text(x, y, String(index + 1).padStart(2, '0') + ' · ' + action, {
+        fontFamily: 'monospace', fontSize: compact ? '7px' : '9px', fontStyle: 'bold', color: '#f4f1df',
+        align: 'center', wordWrap: { width: buttonW - 8 }
+      }).setOrigin(0.5);
       button.on('pointerdown', () => this.showAction(index));
       this.actionButtons.push(button);
     });
 
-    const next = this.makeButton(width / 2 - 100, height - 55, 190, 'NEXT ACTION →');
+    const bottomY = height - (compact ? 30 : 55);
+    const next = this.makeButton(compact ? width * 0.29 : width / 2 - 100, bottomY, compact ? Math.min(150, width * 0.42) : 190, 'NEXT ACTION →');
+    next.setScale(compact ? 0.86 : 1);
     next.on('pointerdown', () => this.showAction((this.actionIndex + 1) % ACTIONS.length));
 
-    const play = this.makeButton(width / 2 + 105, height - 55, 190, '▶ FLOW THROUGH ALL');
+    const play = this.makeButton(compact ? width * 0.71 : width / 2 + 105, bottomY, compact ? Math.min(150, width * 0.42) : 190, '▶ FLOW THROUGH ALL');
+    play.setScale(compact ? 0.86 : 1);
     play.on('pointerdown', () => this.toggleFlow(play));
 
-    const reset = this.add.text(26, height - 28, 'RESET · BASE COPY', {
-      fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold', color: '#f4f1df'
+    const reset = this.add.text(16, height - (compact ? 8 : 28), compact ? 'RESET' : 'RESET · BASE COPY', {
+      fontFamily: 'monospace', fontSize: '8px', fontStyle: 'bold', color: '#f4f1df'
     }).setOrigin(0, 1).setInteractive({ useHandCursor: false });
     reset.on('pointerdown', () => this.showAction(0));
 
-    const back = this.add.text(width - 26, height - 28, 'BACK TO GAME LIBRARY', {
-      fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold', color: '#f4f1df'
+    const back = this.add.text(width - 16, height - (compact ? 8 : 28), compact ? 'BACK' : 'BACK TO GAME LIBRARY', {
+      fontFamily: 'monospace', fontSize: '8px', fontStyle: 'bold', color: '#f4f1df'
     }).setOrigin(1, 1).setInteractive({ useHandCursor: false });
     back.on('pointerdown', () => window.location.href = '/');
 
