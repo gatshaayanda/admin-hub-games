@@ -3449,40 +3449,69 @@ Protected interpretation:
 
 
 ## Shooters Trigger — Current Arena Combat Authority — September 23, 2026
-The following current-state rules supersede older historical notes in this document when they conflict with the live source on `main`:
-- **Projectile:** Arena uses a solid 4px paintball at 520px/s neutral speed with a 1100ms lifetime. No tracer, streak, fire/smoke trail, glowing/laser effect, or skill-scaled projectile speed.
-- **Projectile visibility:** the fired paintball must remain visibly rendered through the minimum first-frame window and briefly at an impact when necessary so a phone playtest can actually see the shot. Visibility changes must not alter projectile physics.
-- **Body damage:** a confirmed center-mass body paint hit outside close range removes one of two body-hit lives. The second confirmed body hit eliminates the fighter.
-- **Close body hit:** a confirmed core body hit at or below 220px is decisive and eliminates immediately.
-- **Close-impact timing:** the decisive `<=220px` close-range test is evaluated from the shooter/target separation when the paintball is fired, not after projectile travel. Projectile travel can take ~423ms across 220px, so resolving the range only at impact makes close engagements falsely fall back into normal body-hit trading.
-- **Headshot:** instant elimination from any legal range.
-- **Scrape:** only a near-miss outside the core body hit zone; it does not damage the fighter or create a wounded state.
-- **Gun hit:** disarms the fighter and drops the gun at the hit location. The dropped gun remains recoverable on the ground; the fighter must physically return to it before being armed again.
-- **Respawn:** after a round point, only the eliminated fighter respawns after the existing 700ms transition. The other fighter remains in place. Active shots are cleared before the next round state.
-- **Hidden-player AI:** entering concealment should cause a one-time SEARCH transition, not repeated SEARCH resets. If the player remains hidden, the rival searches briefly, then withdraws to a genuine REGROUP position away from the last-known area and only then patrols that new area. Regroup/patrol movement must avoid concealment zones. Reappearance immediately returns the rival to active engagement.
-- Do not reintroduce the removed random HIDE state for the rival in response to a concealed player unless the product owner explicitly requests it.
+The following current-state rules are authoritative and supersede older historical notes in this document when they conflict with the live source on main.
+
+### Hit resolution order
+1. **Cover:** if the projectile crosses cover before the fighter, it is blocked — no damage and it counts as a miss.
+2. **Gun:** a weapon hit drops the target's gun. The fighter survives and is unarmed until the gun is physically recovered.
+3. **Head:** a clean head hit is an immediate elimination.
+4. **Body:** a clean body hit removes **1 of 2 body-hit points**. The first clean body hit wounds the fighter; the second clean body hit eliminates them.
+5. **Scrape / near miss:** paint splatter only — no damage and no HP reduction.
+6. **Everything else:** true miss — no damage.
+
+There is no random chance table that decides whether a shot is a headshot or body hit. Projectile trajectory and collision geometry decide where the paintball lands.
+
+### Protected projectile and VFX rules
+- Arena uses a solid 4px paintball at 520px/s neutral speed with a 1100ms lifetime.
+- No tracer, streak, fire/smoke trail, glowing/laser effect, or skill-scaled projectile speed.
+- Preserve organic circular paint splatter with surrounding droplets. Do not replace it with fire-like, directional, streaking or energy VFX.
+- Projectile visibility must not alter projectile physics.
+
+### Protected body geometry
+- Body hit authority is the 34px body circle centered at fighter body Y + 1.
+- Head hit radius is 20px.
+- Weapon hit radius is 16px.
+- Scrape is reserved for shots outside the actual head/body hit geometry but within the 44px near-miss band.
+- A paintball that intersects the body hit circle is a body hit. Do not add a smaller inner body-core gate.
+- Do not restore one-hit body elimination unless the product owner explicitly changes the rule.
+- Do not introduce a 100→50→0 health-bar presentation. The two body-hit points are an internal round-resolution mechanic.
 
 
 ## Shooters Trigger — Arena Paint Engagement Restoration — September 23, 2026
+The Arena engagement reference remains the proven paintball interaction from commit 9f8ae905b5065724c454b359b2cd7fb696faa26d, with the current approved combat layers retained.
 
-The arena combat reference is the previously proven paintball engagement from commit `9f8ae905b5065724c454b359b2cd7fb696faa26d`. The current Arena must preserve that readable, organic paintball interaction while retaining the newer weapon-drop, cover, stealth, patrol and two-body-hit systems.
-
-- A paintball that intersects the fighter body hit circle is a **body hit**. Do not add a second, smaller inner body-core gate that turns an already-intersecting body shot into a scrape.
-- Arena body collision remains a 34px circle centered at fighter body Y + 1; the intersection itself is the hit authority.
-- Head hit radius is 20px and weapon hit radius is 16px, matching the proven engagement geometry.
-- Scrape is reserved for paintballs that pass outside the body/head hit geometry but within the 44px near-miss band.
-- Preserve the two-body-hit damage model unless the product owner explicitly changes it: first clean body hit wounds; second clean body hit eliminates. Headshot remains immediate elimination. A close-impact shot recorded at fire time may still be decisive.
-- **Organic splatter is protected:** use the proven random circular paint mark with 5–8 surrounding droplets. Do not replace it with directional marks, streaks, trails, fire-like effects, glow or other invented VFX.
-- Paintball remains a visible 4px solid circle at 520px/s with no tracer, trail, glow or skill-scaled speed.
-- When diagnosing an engagement problem, inspect player and rival firing, swept projectile movement, cover interception, weapon/head/body hit geometry, hit resolution, splatter and respawn together. Do not compensate for hit-registration problems by adding more damage rules first.
-
+- Preserve the two-body-hit damage model: first clean body hit wounds; second clean body hit eliminates.
+- Headshot remains immediate elimination.
+- Gun hit disarms the fighter and drops a recoverable gun.
+- Scrape is paint only and never damages.
+- Cover can fully block a projectile before it reaches the fighter.
+- A true miss does nothing.
+- Preserve the organic paint splatter and visible discrete paintball behavior.
+- Preserve the current rival movement/pressure/search behavior unless independently identified as broken.
+- HUD/presentation is not the priority while gameplay is being stabilized.
+- When combat regresses, inspect the complete shot → projectile travel → cover interception → weapon/head/body geometry → hit resolution → elimination/respawn pipeline before tuning visuals, HUD, AI movement or ammo behavior.
 
 
 ## Shooters Trigger — Arena Playable Baseline — September 23, 2026
+This baseline is now **two body hits**, not one.
 
-- **A clean body paint hit is decisive in Arena.** Do not restore the later two-hit/wounded exchange unless the product owner explicitly asks for that mechanic again.
-- A projectile that intersects the fighter body/head hit geometry is a real hit; only shots outside those hit geometries but inside the scrape band are scrapes.
-- Preserve the proven organic paint splatter and visible discrete paintball behavior.
-- Preserve the current rival movement/pressure/search behavior unless it is independently identified as broken.
-- HUD/presentation is not the priority while gameplay is being stabilized.
-- When combat regresses, inspect the complete shot -> collision -> hit resolution -> elimination pipeline before tuning visuals, HUD, AI movement, or ammo behavior.
+- Clean body hit #1 → target remains alive but becomes wounded.
+- Clean body hit #2 → target is eliminated.
+- Clean head hit → immediate elimination.
+- Gun hit → gun drops; target survives and must recover it.
+- Scrape → paint only; target health is unchanged.
+- Shot into cover → blocked; target takes no damage.
+- True miss → no damage.
+
+### Cover is the tactical bridge
+Shooting, Evasion and Armory progression must ultimately have gameplay effects through **cover, positioning and exposure**, rather than bypassing the two-hit/headshot rules with arbitrary damage multipliers.
+
+- **Shooting** should improve how effectively the player exploits exposure and sightlines around cover, without making projectiles magically faster or turning body hits into one-hit kills.
+- **Evasion** should improve survival through movement, concealment, cover use and exposure management, not silently add HP.
+- **Armory** upgrades should create equipment, recovery, protection, handling or tactical advantages that work with cover and positioning without rewriting core hit resolution.
+- Cover remains real geometry: it blocks shots, creates fights, creates stealth opportunities and forces repositioning.
+- Any future modifier that changes hit resolution must be explicitly approved and documented before implementation.
+
+When describing or testing Arena, do not call this a chance-based “headshot rate” or a one-hit body-kill system. The important distinction is where the paintball actually lands.
+
+
