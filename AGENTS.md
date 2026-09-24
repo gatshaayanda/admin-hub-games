@@ -3972,3 +3972,34 @@ The rival should read the battlefield as a small decision problem: fire now, hol
 7. Watch for the opposite failure: the rival must not become passive and refuse to shoot entirely.
 
 The current goal is not “perfect AI.” The goal is to remove the discovered deterministic exploit while preserving readable paintball combat and creating a reason for the player to adapt again.
+
+
+## Shooters Trigger — Training Camp / Edge Contract — September 24, 2026
+
+Current field-area structure is deliberately small:
+- **Training Camp** — one mandatory training session: Evasion first, then Shooting after a short break.
+- **Armory & Outfitter** — equipment / money layer.
+- **Arena** — first-to-3 combat using the protected Arena core.
+
+Training Camp rules:
+- Evasion always starts first.
+- Evasion = player is unarmed; training bot is armed and actively chases/shoots.
+- Evasion has no hiding mechanic. Cover blocks shots; it is not concealment.
+- Evasion uses unlimited bot ammo; no ammo stations/refills.
+- Evasion lasts 30 seconds for the current playtest build.
+- Break occurs between Evasion and Shooting so the player understands the role switch.
+- Shooting = player is armed; bot is unarmed and evasive.
+- Shooting uses the Arena-like field geometry and combat readability.
+- Shooting has unlimited player ammo and no ammo stations/refills.
+- Shooting lasts 30 seconds for the current playtest build.
+- The training report records both sides' evidence and produces an Evasion Edge, Shooting Edge, and Overall Edge: PLAYER / BOT / TIE.
+- Edge is an odds modifier, not a guaranteed result. Skill and play can still beat the odds.
+- TIE preserves the golden neutral baseline.
+- Arena consumes the training report. The rival knows the resulting edge and adjusts its tactical tendency within bounded rules rather than becoming an automatically stronger opponent.
+- Shooting-edge also affects the probability of a clean Arena gun knockout; it must never become a guaranteed disarm.
+- Training is required before entering Arena from the field.
+- Phone/field report should explain the edge plainly as ODDS ONLY and show both training legs before the player enters Arena.
+
+Do not reintroduce separate Shooting Range and Evasion Yard field destinations unless the product owner explicitly asks for them. They are now one Training Camp experience.
+
+Current implementation checkpoint is on main after the Training Camp rebuild and Arena edge integration. Vercel may still reject builds during an account-level build-rate-limit window; a GitHub checkpoint is not proof of production deployment.
