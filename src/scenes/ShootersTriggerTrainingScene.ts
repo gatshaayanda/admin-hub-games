@@ -2,820 +2,100 @@ import Phaser from 'phaser';
 import { installShootersTriggerMobileControls } from '../shooters-trigger-mobile-controls';
 import { abandonShootersTriggerSession, beginShootersTriggerSession, completeShootersTriggerSession } from '../shooters-trigger-session';
 
-type Paintball = {
-  body: Phaser.GameObjects.Arc;
-  vx: number;
-  vy: number;
-  ttl: number;
-};
-
-type Target = {
-  body: Phaser.GameObjects.Container;
-  plate: Phaser.GameObjects.Arc;
-  splatter: Phaser.GameObjects.Graphics;
-  kind: 'dummy' | 'bottle';
-  x: number;
-  y: number;
-  hits: number;
-};
+type Stage = 'EVASION' | 'BREAK' | 'SHOOTING';
+type Shot = { body: Phaser.GameObjects.Arc; vx: number; vy: number; owner: 'player' | 'bot'; ttl: number };
+type Fighter = { body: Phaser.GameObjects.Container; weapon: Phaser.GameObjects.Graphics; armed: boolean };
+const W=2400,H=1400,MS=30000,FIRE=240,SPEED=520;
+const P={x:360,y:1040}, B={x:2040,y:430};
 
 export class ShootersTriggerTrainingScene extends Phaser.Scene {
-  public joystickVector = new Phaser.Math.Vector2();
+ public joystickVector=new Phaser.Math.Vector2(); private stage:Stage='EVASION'; private started=0; private done=false;
+ private player!:Fighter; private bot!:Fighter; private shots:Shot[]=[]; private covers:Phaser.Geom.Rectangle[]=[];
+ private cleanup?:()=>void; private cursors!:Phaser.Types.Input.Keyboard.CursorKeys; private fireHeld=false;
+ private aim=new Phaser.Math.Vector2(1,0); private cooldown=0; private playerShots=0; private playerHits=0; private playerHeadshots=0;
+ private botShots=0; private botHits=0; private botHeadshots=0; private coverBlocks=0; private scrapes=0;
+ private title?:Phaser.GameObjects.Text; private timer?:Phaser.GameObjects.Text; private status?:Phaser.GameObjects.Text; private breakPanel?:HTMLDivElement;
 
-  private player!: Phaser.GameObjects.Container;
-  private playerPoseA!: Phaser.GameObjects.Graphics;
-  private playerPoseB!: Phaser.GameObjects.Graphics;
-  private playerWeapon!: Phaser.GameObjects.Graphics;
-  private playerArms!: Phaser.GameObjects.Graphics;
-  private muzzleFlash!: Phaser.GameObjects.Graphics;
-  private playerMoving = false;
-  private playerFacing = 1;
-  private playerAnimTime = 0;
-  private playerTarget: Phaser.Math.Vector2 | null = null;
-  private playerName = 'Player';
+ constructor(){super('ShootersTriggerTrainingScene');}
+ create(){
+  beginShootersTriggerSession('TRAINING CAMP'); this.drawField();
+  this.player=this.createFighter(P.x,P.y,0x2f6b4e,'YOU'); this.bot=this.createFighter(B.x,B.y,0x9b3f3f,'TRAINING BOT');
+  this.setArmed(this.player,false); this.setArmed(this.bot,true);
+  this.cameras.main.setBounds(0,0,W,H); this.cameras.main.startFollow(this.player.body,true,.08,.08);
+  this.cameras.main.setDeadzone(Math.min(this.scale.width*.28,320),Math.min(this.scale.height*.22,150));
+  this.cameras.main.setZoom(this.isPhoneSession() ? .84 : .92);
+  this.cursors=this.input.keyboard!.createCursorKeys(); this.cleanup=installShootersTriggerMobileControls();
+  this.input.on('pointerdown',this.handlePointer,this); this.input.on('pointermove',this.handlePointer,this);
+  this.scale.on(Phaser.Scale.Events.RESIZE,this.resize,this); this.createHud(); this.started=Date.now();
+  this.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>this.destroyUi()); window.dispatchEvent(new Event('admin-hub-games:game-ready'));
+ }
+ update(_t:number,delta:number){
+  if(this.done||this.stage==='BREAK')return; const elapsed=Date.now()-this.started;
+  this.movePlayer(delta); this.stage==='EVASION'?this.updateEvasionBot(delta):this.updateShootingBot(delta);
+  this.cooldown=Math.max(0,this.cooldown-delta); if(this.stage==='SHOOTING'&&this.fireHeld)this.firePlayer(); this.updateShots(delta); this.updateHud();
+  if(elapsed>=MS)this.finishStage();
+ }
+ setMoveVector(x:number,y:number){this.joystickVector.set(Phaser.Math.Clamp(x,-1,1),Phaser.Math.Clamp(y,-1,1));}
+ setFireHeld(v:boolean){this.fireHeld=v;}
+ setAimVector(x:number,y:number){const l=Math.hypot(x,y);if(l>.05)this.aim.set(x/l,y/l);}
+ isPhoneSession(){return window.matchMedia('(pointer: coarse)').matches||navigator.maxTouchPoints>0;}
 
-  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
-  private keys!: Record<string, Phaser.Input.Keyboard.Key>;
-  private paintballs: Paintball[] = [];
-  private targets: Target[] = [];
-  private covers: Phaser.Geom.Rectangle[] = [];
-
-  private speed = 170;
-  private readonly worldWidth = 2400;
-  private readonly worldHeight = 1400;
-  private readonly start = { x: 1180, y: 1080 };
-
-  private aim = new Phaser.Math.Vector2(1, 0);
-  private aimPoint?: Phaser.Math.Vector2;
-  private hasAimInput = false;
-  private fireHeld = false;
-  private fireCooldown = 0;
-  private shotsFired = 0;
-  private recoilKick = 0;
-  private muzzleFlashTimer = 0;
-  private aimWasExplicitlySet = false;
-
-  private statusText!: Phaser.GameObjects.Text;
-  private hintText!: Phaser.GameObjects.Text;
-  private nameText!: Phaser.GameObjects.Text;
-  private aimUi!: Phaser.GameObjects.Graphics;
-  private controlsCleanup?: () => void;
-  private sessionButton?: HTMLButtonElement;
-
-  constructor() {
-    super('ShootersTriggerTrainingScene');
+ private movePlayer(delta:number){
+  let dx=this.joystickVector.x,dy=this.joystickVector.y;
+  if(!dx&&!dy){dx=(this.cursors.right.isDown?1:0)-(this.cursors.left.isDown?1:0);dy=(this.cursors.down.isDown?1:0)-(this.cursors.up.isDown?1:0);}
+  if(!dx&&!dy)return; const l=Math.hypot(dx,dy)||1,nx=Phaser.Math.Clamp(this.player.body.x+dx/l*175*delta/1000,42,W-42),ny=Phaser.Math.Clamp(this.player.body.y+dy/l*175*delta/1000,90,H-50);
+  if(!this.inCover(nx,ny,14)){this.player.body.x=nx;this.player.body.y=ny;}
+ }
+ private updateEvasionBot(delta:number){this.moveBot(this.player.body.x-this.bot.body.x,this.player.body.y-this.bot.body.y,delta,150);if(this.cooldown<=0){this.fireBot();this.cooldown=FIRE;}}
+ private updateShootingBot(delta:number){
+  const dx=this.player.body.x-this.bot.body.x,dy=this.player.body.y-this.bot.body.y,d=Math.hypot(dx,dy)||1,side=Math.sin(Date.now()/420)>=0?1:-1;
+  this.moveBot(-dy/d*side*420+dx/d*80,dx/d*side*420+dy/d*80,delta,175);
+ }
+ private moveBot(dx:number,dy:number,delta:number,speed:number){
+  const l=Math.hypot(dx,dy)||1,step=speed*delta/1000,nx=Phaser.Math.Clamp(this.bot.body.x+dx/l*step,42,W-42),ny=Phaser.Math.Clamp(this.bot.body.y+dy/l*step,90,H-50);
+  if(!this.inCover(nx,ny,14)){this.bot.body.x=nx;this.bot.body.y=ny;return;}
+  const a=Math.atan2(dy,dx);for(const o of [Math.PI/2,-Math.PI/2,Math.PI]){const x=Phaser.Math.Clamp(this.bot.body.x+Math.cos(a+o)*step,42,W-42),y=Phaser.Math.Clamp(this.bot.body.y+Math.sin(a+o)*step,90,H-50);if(!this.inCover(x,y,12)){this.bot.body.x=x;this.bot.body.y=y;return;}}
+ }
+ private fireBot(){const dx=this.player.body.x-this.bot.body.x,dy=this.player.body.y-this.bot.body.y,d=Math.hypot(dx,dy)||1;if(d>950)return;const v=new Phaser.Math.Vector2(dx/d,dy/d);this.botShots++;this.spawnShot(this.bot.body.x+v.x*42,this.bot.body.y+v.y*42,v,'bot');}
+ private firePlayer(){if(this.cooldown>0)return;this.cooldown=FIRE;this.playerShots++;this.spawnShot(this.player.body.x+this.aim.x*42,this.player.body.y+this.aim.y*42,this.aim,'player');}
+ private spawnShot(x:number,y:number,v:Phaser.Math.Vector2,owner:'player'|'bot'){this.shots.push({body:this.add.circle(x,y,4,owner==='player'?0xf0dfb6:0xe44f3d,1).setDepth(25),vx:v.x*SPEED,vy:v.y*SPEED,owner,ttl:1100});}
+ private updateShots(delta:number){
+  for(let i=this.shots.length-1;i>=0;i--){const s=this.shots[i];s.ttl-=delta;const x=s.body.x+s.vx*delta/1000,y=s.body.y+s.vy*delta/1000;
+   if(s.ttl<=0||x<0||x>W||y<0||y>H){s.body.destroy();this.shots.splice(i,1);continue;}
+   if(this.inCover(x,y)){this.coverBlocks++;s.body.destroy();this.shots.splice(i,1);continue;}s.body.setPosition(x,y);
+   const target=s.owner==='player'?this.bot:this.player,head=Phaser.Math.Distance.Between(x,y-15,target.body.x,target.body.y)<20,body=Phaser.Math.Distance.Between(x,y,target.body.x,target.body.y)<28;
+   const scrape=Math.min(Phaser.Math.Distance.Between(x,y-15,target.body.x,target.body.y),Phaser.Math.Distance.Between(x,y,target.body.x,target.body.y))<44;
+   if(head||body){if(s.owner==='player'){this.playerHits++;if(head)this.playerHeadshots++;}else{this.botHits++;if(head)this.botHeadshots++;}this.paint(x,y,head);s.body.destroy();this.shots.splice(i,1);continue;}
+   if(scrape){this.scrapes++;this.paint(x,y,false,true);s.body.destroy();this.shots.splice(i,1);}
   }
-
-  create() {
-    this.playerName = String(this.registry.get('shootersTriggerPlayer') || 'Player');
-    beginShootersTriggerSession('SHOOTING RANGE');
-
-    this.cameras.main.setBackgroundColor('#6f984b');
-    this.drawField();
-
-    this.player = this.createPlayer(this.start.x, this.start.y);
-    this.player.setDepth(30);
-
-    this.createTargets();
-    this.createHud();
-    this.createSessionButton();
-
-    this.cursors = this.input.keyboard!.createCursorKeys();
-    this.keys = this.input.keyboard!.addKeys('W,A,S,D,SPACE') as Record<string, Phaser.Input.Keyboard.Key>;
-
-    this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
-    this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
-    this.cameras.main.setDeadzone(
-      Math.min(this.scale.width * 0.28, 320),
-      Math.min(this.scale.height * 0.22, 150),
-    );
-    // The tester reported losing sight of the shooting field's extent.
-    // A modest zoom-out keeps the player grounded while revealing more of the
-    // lane and nearby cover on phone and desktop.
-    this.cameras.main.setZoom(this.isPhoneSession() ? 0.84 : 0.92);
-
-    this.aimUi = this.add.graphics().setScrollFactor(0).setDepth(80);
-    this.controlsCleanup = installShootersTriggerMobileControls();
-
-    this.input.on('pointerdown', this.handlePointerDown, this);
-    this.input.on('pointermove', this.handlePointerMove, this);
-    this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
-
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
-      this.input.off('pointerdown', this.handlePointerDown, this);
-      this.input.off('pointermove', this.handlePointerMove, this);
-      this.controlsCleanup?.();
-      this.controlsCleanup = undefined;
-      this.sessionButton?.remove();
-      this.sessionButton = undefined;
-    });
-
-    window.dispatchEvent(new Event('admin-hub-games:game-ready'));
-  }
-
-  public isPhoneSession() {
-    return window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
-  }
-
-  public setMoveVector(x: number, y: number) {
-    this.joystickVector.set(
-      Phaser.Math.Clamp(x, -1, 1),
-      Phaser.Math.Clamp(y, -1, 1),
-    );
-  }
-
-  public setFireHeld(held: boolean) {
-    this.fireHeld = held;
-  }
-
-  public setAimVector(x: number, y: number) {
-    const length = Math.hypot(x, y);
-    if (length < 0.05) return;
-    this.aim.set(x / length, y / length);
-    this.hasAimInput = true;
-    this.aimWasExplicitlySet = true;
-    this.aimPoint = new Phaser.Math.Vector2(
-      this.player.x + this.aim.x * 180,
-      this.player.y + this.aim.y * 180,
-    );
-    this.updateWeaponPose();
-  }
-
-  update(_time: number, delta: number) {
-    this.updateMovement(delta);
-    this.updateAimAndFire(delta);
-    this.updatePaintballs(delta);
-    this.updatePlayerAnimation(delta);
-    this.updateWeaponPose();
-    this.updateHud();
-  }
-
-  private updateMovement(delta: number) {
-    let dx = this.joystickVector.x;
-    let dy = this.joystickVector.y;
-
-    if (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) {
-      if (this.cursors.left.isDown || this.keys.A.isDown) dx -= 1;
-      if (this.cursors.right.isDown || this.keys.D.isDown) dx += 1;
-      if (this.cursors.up.isDown || this.keys.W.isDown) dy -= 1;
-      if (this.cursors.down.isDown || this.keys.S.isDown) dy += 1;
-    }
-
-    if (dx === 0 && dy === 0 && this.playerTarget) {
-      const distanceToTarget = Phaser.Math.Distance.Between(
-        this.player.x,
-        this.player.y,
-        this.playerTarget.x,
-        this.playerTarget.y,
-      );
-
-      if (distanceToTarget < 8) {
-        this.playerTarget = null;
-      } else {
-        dx = this.playerTarget.x - this.player.x;
-        dy = this.playerTarget.y - this.player.y;
-      }
-    }
-
-    this.playerMoving = dx !== 0 || dy !== 0;
-
-    // Movement never silently steals the combat direction. The player aims,
-    // then movement remains free to strafe/retreat while the current aim drives fire.
-    // If no explicit aim exists yet, keep the stable initial right-facing direction.
-
-    if (Math.abs(dx) > 0.08) {
-      this.playerFacing = dx < 0 ? -1 : 1;
-    }
-
-    if (dx !== 0 || dy !== 0) {
-      const length = Math.hypot(dx, dy) || 1;
-      const distance = this.speed * (delta / 1000);
-      this.movePlayer((dx / length) * distance, (dy / length) * distance);
-
-      if (
-        this.playerTarget &&
-        Phaser.Math.Distance.Between(this.player.x, this.player.y, this.playerTarget.x, this.playerTarget.y) < 8
-      ) {
-        this.playerTarget = null;
-      }
-    }
-  }
-
-  private movePlayer(dx: number, dy: number) {
-    const nextX = Phaser.Math.Clamp(this.player.x + dx, 42, this.worldWidth - 42);
-    const nextY = Phaser.Math.Clamp(this.player.y + dy, 90, this.worldHeight - 50);
-
-    if (!this.hitCover(nextX, nextY, 14)) {
-      this.player.x = nextX;
-      this.player.y = nextY;
-    }
-  }
-
-  private updateAimAndFire(delta: number) {
-    this.fireCooldown = Math.max(0, this.fireCooldown - delta);
-    if (this.keys.SPACE.isDown && !this.isPhoneSession()) {
-      this.fire();
-    }
-
-    if (this.fireHeld) this.fire();
-  }
-
-  private handlePointerDown(pointer: Phaser.Input.Pointer) {
-    if (this.isPhoneSession()) return;
-
-    const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-    this.setAimPoint(point.x, point.y);
-    this.fire();
-  }
-
-  private handlePointerMove(pointer: Phaser.Input.Pointer) {
-    if (this.isPhoneSession()) return;
-    const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-    this.setAimPoint(point.x, point.y);
-  }
-
-  private setAimPoint(x: number, y: number) {
-    this.aimPoint = new Phaser.Math.Vector2(x, y);
-    this.aim.set(x - this.player.x, y - this.player.y).normalize();
-    this.hasAimInput = true;
-    this.aimWasExplicitlySet = true;
-    this.updateWeaponPose();
-  }
-
-  private fire() {
-    if (this.fireCooldown > 0) return;
-    this.fireCooldown = 240;
-    this.shotsFired += 1;
-    this.recoilKick = 1;
-    this.muzzleFlashTimer = 72;
-    const speed = 520;
-    const muzzleDistance = 42;
-    const ball = this.add.circle(
-      this.player.x + this.aim.x * muzzleDistance,
-      this.player.y + this.aim.y * muzzleDistance,
-      4,
-      0xf0dfb6,
-      1,
-    ).setDepth(25);
-
-    this.paintballs.push({
-      body: ball,
-      vx: this.aim.x * speed,
-      vy: this.aim.y * speed,
-      ttl: 1100,
-    });
-
-    this.statusText.setText('PAINTBALL AWAY  ·  AIM LOCKED');
-  }
-
-  private updatePaintballs(delta: number) {
-    for (let i = this.paintballs.length - 1; i >= 0; i -= 1) {
-      const ball = this.paintballs[i];
-      ball.ttl -= delta;
-      ball.body.x += ball.vx * delta / 1000;
-      ball.body.y += ball.vy * delta / 1000;
-
-      if (
-        ball.ttl <= 0 ||
-        ball.body.x < 0 ||
-        ball.body.x > this.worldWidth ||
-        ball.body.y < 0 ||
-        ball.body.y > this.worldHeight ||
-        this.hitCover(ball.body.x, ball.body.y)
-      ) {
-        ball.body.destroy();
-        this.paintballs.splice(i, 1);
-        continue;
-      }
-
-      const target = this.targets.find((item) =>
-        Phaser.Math.Distance.Between(ball.body.x, ball.body.y, item.x, item.y) < 30,
-      );
-
-      if (target) {
-        target.hits += 1;
-        target.plate.setFillStyle(0xe8c95c, 1);
-        this.showTargetSplatter(target);
-        this.time.delayedCall(130, () => {
-          if (target.plate.active) target.plate.setFillStyle(0xe06a3d, 1);
-        });
-        this.statusText.setText(
-          `${target.kind === 'bottle' ? 'BOTTLE HIT' : 'DUMMY HIT'}  ·  PAINT SPLAT  ·  ${target.hits}`,
-        );
-        ball.body.destroy();
-        this.paintballs.splice(i, 1);
-      }
-    }
-  }
-
-  private updatePlayerAnimation(delta: number) {
-    this.playerAnimTime += delta;
-    this.recoilKick = Math.max(0, this.recoilKick - delta / 95);
-    this.muzzleFlashTimer = Math.max(0, this.muzzleFlashTimer - delta);
-
-    const step = this.playerMoving ? 120 : 650;
-    const showB = Math.floor(this.playerAnimTime / step) % 2 === 1;
-
-    this.playerPoseA.setVisible(!showB).setScale(this.playerFacing, 1);
-    this.playerPoseB.setVisible(showB).setScale(this.playerFacing, 1);
-  }
-
-  private createPlayer(x: number, y: number) {
-    const container = this.add.container(x, y);
-    const shadow = this.add.ellipse(0, 34, 27, 10, 0x3d3025, 0.28);
-
-    const makePose = (legOffset: number, bob: number) => {
-      const g = this.add.graphics();
-
-      // The human body is deliberately brighter/separated from the equipment:
-      // head -> mask -> neck -> jersey -> pants -> boots. Gear accents sit on
-      // top of this person instead of becoming the person.
-      g.fillStyle(0x3b2f28, 1).fillEllipse(0, -20 + bob, 24, 18);
-      g.fillStyle(0xd8a66b, 1).fillEllipse(0, -17 + bob, 13, 12);
-      g.fillStyle(0xd4a45d, 1)
-        .fillCircle(-7, -17 + bob, 2.5)
-        .fillCircle(7, -17 + bob, 2.5);
-      g.fillStyle(0x5a7348, 1).fillEllipse(0, -23 + bob, 25, 12);
-      g.fillStyle(0x111715, 1).fillRoundedRect(-13, -17 + bob, 26, 10, 4);
-      g.fillStyle(0x9bb9b1, 0.88).fillRoundedRect(-9, -15 + bob, 18, 6, 2);
-      g.lineStyle(1, 0xe8f2dc, 0.42).strokeRoundedRect(-9, -15 + bob, 18, 6, 2);
-
-      // Neck and shoulders make the human anatomy readable beneath the gear.
-      g.fillStyle(0xd4a45d, 1).fillRoundedRect(-4, -8 + bob, 8, 7, 2);
-      g.fillStyle(0x2f6b4e, 1).fillRoundedRect(-15, -4 + bob, 30, 22, 8);
-      g.fillStyle(0x4f8b65, 1).fillRoundedRect(-10, -1 + bob, 20, 14, 4);
-      g.fillStyle(0x17201c, 0.9)
-        .fillRoundedRect(-15, 0 + bob, 6, 13, 2)
-        .fillRoundedRect(9, 0 + bob, 6, 13, 2);
-
-      // Chest rig / harness: clearly equipment worn by the body.
-      g.fillStyle(0xc1a86c, 1).fillRect(-10, 8 + bob, 20, 4);
-      g.fillStyle(0x1d2923, 1).fillRect(-12, 12 + bob, 24, 5);
-      g.fillStyle(0x5e4936, 1)
-        .fillRoundedRect(-15, 8 + bob, 5, 8, 2)
-        .fillRoundedRect(10, 8 + bob, 5, 8, 2);
-
-      // Hips, separated legs and boots provide the stable ground anchor.
-      g.fillStyle(0x29372f, 1).fillRoundedRect(-11, 16 + bob, 22, 7, 3);
-      g.fillStyle(0x566052, 1)
-        .fillRoundedRect(-10 + legOffset, 20 + bob, 8, 13, 2)
-        .fillRoundedRect(2 - legOffset, 20 + bob, 8, 13, 2);
-      g.fillStyle(0x202522, 1)
-        .fillRoundedRect(-12 + legOffset, 30 + bob, 10, 7, 2)
-        .fillRoundedRect(2 - legOffset, 30 + bob, 10, 7, 2);
-      return g;
-    };
-
-    this.playerPoseA = makePose(0, 0);
-    this.playerPoseB = makePose(2, 1).setVisible(false);
-
-    this.playerArms = this.add.graphics();
-    this.playerWeapon = this.add.graphics();
-    this.muzzleFlash = this.add.graphics();
-
-    container.add([shadow, this.playerPoseA, this.playerPoseB, this.playerArms, this.playerWeapon, this.muzzleFlash]);
-    this.playerWeapon.setDepth(31);
-
-    this.nameText = this.add.text(x, y - 50, this.playerName, {
-      fontFamily: 'monospace',
-      fontSize: '10px',
-      color: '#fff4d4',
-      stroke: '#2d5d35',
-      strokeThickness: 4,
-    }).setOrigin(0.5).setDepth(40);
-
-    return container;
-  }
-
-  private updateWeaponPose() {
-    if (!this.playerWeapon) return;
-
-    const angle = Math.atan2(this.aim.y, this.aim.x);
-    const recoilOffset = this.recoilKick * 7;
-    this.playerWeapon.setRotation(angle);
-    this.playerWeapon.setPosition(5 - recoilOffset, 3);
-
-    const arms = this.playerArms;
-    arms.setRotation(angle);
-    arms.setPosition(0, 0);
-    arms.clear();
-    // Braced forearms: shoulders stay on the torso, hands converge on the
-    // marker. This keeps the gun visibly carried rather than floating.
-    arms.lineStyle(5, 0x314b3c, 1);
-    arms.lineBetween(-8, 5, 5, 2);
-    arms.lineBetween(8, 5, 12, 4);
-    arms.fillStyle(0xd4a45d, 1).fillCircle(5, 2, 3).fillCircle(12, 4, 3);
-
-    const g = this.playerWeapon;
-    g.clear();
-
-    // Hopper, marker body, air line/tank, grip, stock, barrel and sight.
-    g.lineStyle(3, 0x6c806f, 1).lineBetween(10, 5, 2, 12);
-    g.fillStyle(0x151b18, 1).fillEllipse(13, -8, 9, 7);
-    g.fillStyle(0x33423b, 1).fillRoundedRect(7, -4, 18, 9, 3);
-    g.fillStyle(0x111715, 1).fillRect(22, -2, 15, 5);
-    g.fillStyle(0x53635c, 1).fillRect(12, -9, 8, 4);
-    g.fillStyle(0x171d1b, 1).fillRoundedRect(11, 4, 5, 10, 2);
-    g.fillStyle(0x493b31, 1).fillRoundedRect(-5, 4, 10, 5, 2);
-    g.lineStyle(3, 0x2a332f, 1).lineBetween(-2, 6, 8, 5);
-
-    // Short sight line is deliberately subtle; the muzzle and projectile are
-    // the authoritative direction cues.
-    g.lineStyle(1, 0xe8c95c, 0.45).lineBetween(35, 0, 45, 0);
-
-    this.muzzleFlash.clear();
-    this.muzzleFlash.setRotation(angle);
-    this.muzzleFlash.setPosition(42 - recoilOffset, 0);
-    if (this.muzzleFlashTimer > 0) {
-      const pulse = this.muzzleFlashTimer / 72;
-      this.muzzleFlash.fillStyle(0xffe7a3, 0.92 * pulse);
-      this.muzzleFlash.fillTriangle(0, 0, 16 + 5 * pulse, -5, 16 + 5 * pulse, 5);
-      this.muzzleFlash.fillStyle(0xf3a94f, 0.8 * pulse);
-      this.muzzleFlash.fillCircle(5, 0, 4 + 2 * pulse);
-      this.muzzleFlash.setVisible(true);
-    } else {
-      this.muzzleFlash.setVisible(false);
-    }
-  }
-
-  private drawField() {
-    const g = this.add.graphics();
-
-    // Same quiet broad-field philosophy as Hall, but unmistakably a paintball arena.
-    g.fillStyle(0x78a653, 1).fillRect(0, 0, this.worldWidth, this.worldHeight);
-    g.fillStyle(0x86ad5e, 0.42).fillRect(0, 0, this.worldWidth * 0.50, this.worldHeight);
-    g.fillStyle(0x679346, 0.32).fillRect(this.worldWidth * 0.50, 0, this.worldWidth * 0.50, this.worldHeight);
-
-    // Mown lanes.
-    g.fillStyle(0xd1b46c, 0.30).fillRect(0, 510, this.worldWidth, 92);
-    g.fillStyle(0xd1b46c, 0.22).fillRect(870, 0, 100, this.worldHeight);
-
-    // Paintball field perimeter.
-    g.lineStyle(5, 0xf4f1df, 0.48);
-    g.strokeRect(55, 70, this.worldWidth - 110, this.worldHeight - 120);
-
-    this.drawTree(300, 280, 1.15);
-    this.drawTree(2050, 300, 0.95);
-    this.drawTree(350, 1110, 0.90);
-    this.drawTree(2070, 1090, 1.10);
-
-    this.drawBunker(690, 360, 190, 72, 0x76563b);
-    this.drawBunker(1470, 350, 230, 76, 0x5f6e69);
-    this.drawBunker(520, 760, 250, 70, 0x9d754d);
-    this.drawBunker(1570, 760, 220, 68, 0x6e8190);
-    this.drawBunker(850, 1030, 260, 74, 0xb58c58);
-    this.drawBunker(1420, 1080, 240, 72, 0x737b79);
-
-    this.drawTireStack(1080, 300);
-    this.drawTireStack(1900, 650);
-    this.drawTireStack(730, 1170);
-
-    this.drawFlag(1180, 860, 0x2f7775, 'START');
-    this.drawFlag(1830, 930, 0xd66a3d, 'TARGETS');
-    this.drawFieldAtmosphere();
-
-    this.add.text(this.start.x, this.start.y + 52, 'YOUR START', {
-      fontFamily: 'monospace',
-      fontSize: '11px',
-      color: '#fff4d4',
-      stroke: '#315845',
-      strokeThickness: 4,
-    }).setOrigin(0.5).setDepth(6);
-
-    // Field targets are objects, not extra characters.
-    this.add.text(1880, 820, 'SHOOTING RANGE', {
-      fontFamily: 'monospace',
-      fontSize: '12px',
-      color: '#fff4d4',
-      stroke: '#493526',
-      strokeThickness: 4,
-    }).setOrigin(0.5).setDepth(6);
-  }
-
-  private drawFieldAtmosphere() {
-    const g = this.add.graphics().setDepth(4);
-
-    // Grounded structures give the range a recognizable training-facility
-    // identity without changing collision or the accepted target layout.
-    g.lineStyle(3, 0xf4f1df, 0.28);
-    for (let x = 90; x <= this.worldWidth - 90; x += 120) {
-      g.fillStyle(0x493526, 0.9).fillRect(x - 2, 58, 4, 22);
-      g.fillStyle(0x493526, 0.9).fillRect(x - 2, this.worldHeight - 70, 4, 22);
-    }
-    g.lineBetween(90, 72, this.worldWidth - 90, 72);
-    g.lineBetween(90, this.worldHeight - 58, this.worldWidth - 90, this.worldHeight - 58);
-
-    this.drawFieldStation(340, 470, 'MARSHAL');
-    this.drawFieldStation(1480, 1160, 'PAINT / AIR');
-
-    // Small directional lane markings help the player understand the range
-    // without introducing another HUD element.
-    g.lineStyle(2, 0xf4f1df, 0.26);
-    for (let x = 1220; x <= 1740; x += 110) {
-      g.lineBetween(x, 1030, x + 55, 1030);
-      g.lineBetween(x, 1040, x + 55, 1040);
-    }
-  }
-
-  private drawFieldStation(x: number, y: number, label: string) {
-    const g = this.add.graphics().setDepth(5);
-    g.fillStyle(0x493526, 0.24).fillRoundedRect(x + 8, y + 10, 150, 62, 8);
-    g.fillStyle(0x6f5a42, 1).fillRoundedRect(x, y, 150, 62, 8);
-    g.fillStyle(0xd7c08a, 1).fillTriangle(x - 8, y + 8, x + 75, y - 22, x + 158, y + 8);
-    g.fillStyle(0x315845, 1).fillRect(x + 16, y + 24, 118, 28);
-    g.lineStyle(2, 0xf4f1df, 0.35).strokeRoundedRect(x, y, 150, 62, 8);
-    this.add.text(x + 75, y + 38, label, {
-      fontFamily: 'monospace',
-      fontSize: '8px',
-      fontStyle: 'bold',
-      color: '#fff4d4',
-    }).setOrigin(0.5).setDepth(6);
-  }
-
-  private drawTree(x: number, y: number, scale: number) {
-    const g = this.add.graphics();
-    g.fillStyle(0x65472f, 1).fillRect(x - 6 * scale, y + 18 * scale, 12 * scale, 60 * scale);
-    g.fillStyle(0x405638, 1)
-      .fillCircle(x, y, 34 * scale)
-      .fillCircle(x - 28 * scale, y + 9 * scale, 28 * scale)
-      .fillCircle(x + 28 * scale, y + 9 * scale, 29 * scale);
-    g.fillStyle(0x526d3c, 0.75).fillCircle(x + 5 * scale, y - 16 * scale, 23 * scale);
-  }
-
-  private drawBunker(x: number, y: number, width: number, height: number, color: number) {
-    const g = this.add.graphics();
-    g.fillStyle(0x493526, 0.24).fillRect(x + 8, y + 9, width, height);
-    g.fillStyle(color, 1).fillRoundedRect(x, y, width, height, 10);
-    g.fillStyle(0xffffff, 0.12).fillRect(x + 12, y + 10, width - 24, 5);
-    g.lineStyle(2, 0xf4f1df, 0.28).strokeRoundedRect(x, y, width, height, 10);
-    this.covers.push(new Phaser.Geom.Rectangle(x, y, width, height));
-  }
-
-  private drawTireStack(x: number, y: number) {
-    const g = this.add.graphics();
-    for (let i = 0; i < 4; i += 1) {
-      g.fillStyle(0x2b302d, 1).fillCircle(x + i * 17, y - i * 3, 19);
-      g.fillStyle(0x66706a, 1).fillCircle(x + i * 17, y - i * 3, 7);
-    }
-    this.covers.push(new Phaser.Geom.Rectangle(x - 20, y - 25, 90, 45));
-  }
-
-  private drawFlag(x: number, y: number, color: number, label: string) {
-    const g = this.add.graphics();
-    g.fillStyle(0x594838, 1).fillRect(x, y, 4, 78);
-    g.fillStyle(color, 1).fillTriangle(x + 4, y + 4, x + 64, y + 18, x + 4, y + 32);
-    this.add.text(x + 32, y + 50, label, {
-      fontFamily: 'monospace',
-      fontSize: '9px',
-      color: '#fff4d4',
-      stroke: '#493526',
-      strokeThickness: 4,
-    }).setOrigin(0.5).setDepth(6);
-  }
-
-  private createTargets() {
-    const targets = [
-      { x: 1820, y: 430, kind: 'dummy' as const },
-      { x: 1970, y: 520, kind: 'bottle' as const },
-      { x: 1880, y: 650, kind: 'dummy' as const },
-      { x: 2050, y: 760, kind: 'bottle' as const },
-      { x: 1740, y: 820, kind: 'dummy' as const },
-      { x: 1940, y: 900, kind: 'bottle' as const },
-    ];
-
-    for (const target of targets) {
-      const body = this.add.container(target.x, target.y).setDepth(15);
-      const splatter = this.add.graphics().setDepth(1);
-      const post = this.add.rectangle(0, 30, 7, 60, 0x594838, 1);
-
-      let plate: Phaser.GameObjects.Arc;
-      if (target.kind === 'bottle') {
-        body.add(this.add.rectangle(0, 5, 18, 34, 0xddd8c2, 1));
-        body.add(this.add.rectangle(0, -14, 8, 5, 0x5f6e69, 1));
-        plate = this.add.circle(0, -1, 9, 0xf4f1df, 1).setStrokeStyle(2, 0xd66a3d, 0.9);
-      } else {
-        plate = this.add.circle(0, 0, 24, 0xd66a3d, 1)
-          .setStrokeStyle(3, 0xf4f1df, 0.8);
-        body.add(this.add.circle(0, 0, 8, 0xf4f1df, 1));
-      }
-
-      body.add([post, plate, splatter]);
-      this.targets.push({
-        body,
-        plate,
-        splatter,
-        kind: target.kind,
-        x: target.x,
-        y: target.y,
-        hits: 0,
-      });
-    }
-  }
-
-  private showTargetSplatter(target: Target) {
-    const g = target.splatter;
-    g.clear();
-
-    // Paint remains on the target after the hit. It is feedback, not a
-    // disappearing “hit effect”, so the range visibly records where the
-    // player has been shooting.
-    const marks = [
-      [-8, -5, 4],
-      [5, -7, 3],
-      [10, 2, 2.5],
-      [-4, 7, 2.5],
-      [3, 2, 5],
-    ];
-
-    g.fillStyle(0xe94f46, 0.9);
-    for (const [x, y, radius] of marks) {
-      g.fillCircle(x + Phaser.Math.Between(-2, 2), y + Phaser.Math.Between(-2, 2), radius);
-    }
-
-    g.fillStyle(0xf27b4f, 0.72);
-    g.fillCircle(-12, 8, 2);
-    g.fillCircle(12, -9, 2);
-    g.lineStyle(2, 0xe94f46, 0.72);
-    g.lineBetween(-12, -2, -17, -7);
-    g.lineBetween(10, 6, 16, 10);
-  }
-
-  private hitCover(x: number, y: number, padding = 12) {
-    return this.covers.some((cover) =>
-      x >= cover.x - padding &&
-      x <= cover.x + cover.width + padding &&
-      y >= cover.y - padding &&
-      y <= cover.y + cover.height + padding,
-    );
-  }
-
-  private createHud() {
-    const plate = this.add.rectangle(12, 12, 205, 42, 0x2d241e, 0.78)
-      .setOrigin(0)
-      .setScrollFactor(0)
-      .setDepth(70)
-      .setStrokeStyle(1, 0xe7d6a4, 0.35);
-
-    this.statusText = this.add.text(24, 20, 'FIELD TRAINING  ·  MOVE', {
-      fontFamily: 'monospace',
-      fontSize: '10px',
-      color: '#fff4d4',
-      letterSpacing: 0.8,
-    }).setScrollFactor(0).setDepth(71);
-
-    this.hintText = this.add.text(this.scale.width / 2, 18, '', {
-      fontFamily: 'monospace',
-      fontSize: '10px',
-      color: '#fff6dc',
-      stroke: '#2c241d',
-      strokeThickness: 4,
-    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(71);
-
-    this.add.text(this.scale.width - 16, 16, 'SHOOTERS TRIGGER', {
-      fontFamily: 'monospace',
-      fontSize: '10px',
-      color: '#fff4d4',
-      stroke: '#493526',
-      strokeThickness: 4,
-      letterSpacing: 1,
-    }).setOrigin(1, 0).setScrollFactor(0).setDepth(71);
-
-    plate.setData('hud', true);
-    this.layoutUi(this.scale.width, this.scale.height);
-  }
-
-  private createSessionButton() {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.textContent = 'CLOSE SESSION · SAVE';
-    button.setAttribute('aria-label', 'Close shooting session and save results');
-    Object.assign(button.style, {
-      position: 'fixed',
-      right: '18px',
-      bottom: 'max(18px, env(safe-area-inset-bottom))',
-      minHeight: '48px',
-      padding: '10px 16px',
-      border: '2px solid #f4f1df',
-      borderRadius: '10px',
-      background: '#102018',
-      color: '#f4f1df',
-      fontFamily: 'monospace',
-      fontSize: '11px',
-      fontWeight: '800',
-      letterSpacing: '.8px',
-      zIndex: '1450',
-      touchAction: 'manipulation',
-    });
-    button.addEventListener('pointerdown', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      this.finishTraining();
-    });
-    document.body.appendChild(button);
-
-    const quit = document.createElement('button');
-    quit.type = 'button';
-    quit.textContent = 'QUIT · DON’T SAVE';
-    quit.setAttribute('aria-label', 'Quit shooting session without saving results');
-    Object.assign(quit.style, {
-      position: 'fixed',
-      left: '18px',
-      bottom: 'max(18px, env(safe-area-inset-bottom))',
-      minHeight: '48px',
-      padding: '10px 16px',
-      border: '2px solid #d66a3d',
-      borderRadius: '10px',
-      background: '#2b2118',
-      color: '#f4f1df',
-      fontFamily: 'monospace',
-      fontSize: '11px',
-      fontWeight: '800',
-      letterSpacing: '.8px',
-      zIndex: '1450',
-      touchAction: 'manipulation',
-    });
-    quit.addEventListener('pointerdown', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      abandonShootersTriggerSession('SHOOTING RANGE QUIT · RESULTS NOT SAVED · PREVIOUS FIELD STATE RESTORED');
-      this.scene.start('ShootersTriggerLobbyScene');
-    });
-    document.body.appendChild(quit);
-    this.sessionButton = button;
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => quit.remove());
-  }
-
-  private finishTraining() {
-    const hits = this.targets.reduce((sum, target) => sum + target.hits, 0);
-    const shots = Math.max(1, this.shotsFired);
-    const record = {
-      type: 'shooting',
-      player: this.playerName,
-      completedAt: Date.now(),
-      shots,
-      targetHits: hits,
-      accuracy: Math.min(100, Math.round((hits / shots) * 100)),
-      centerMassHits: this.targets.filter(target => target.kind === 'dummy').reduce((sum, target) => sum + target.hits, 0),
-      exceptionalHits: this.targets.filter(target => target.kind === 'bottle').reduce((sum, target) => sum + target.hits, 0),
-      misses: Math.max(0, shots - hits),
-      coverHits: 0,
-      budgetEarned: 0,
-    };
-    try {
-      localStorage.setItem('shooters-trigger:last-shooting', JSON.stringify(record));
-      const existingBudget = Number(localStorage.getItem('shooters-trigger:budget') || 0);
-      localStorage.setItem('shooters-trigger:budget', String(existingBudget));
-    } catch {}
-    completeShootersTriggerSession('SHOOTING RANGE COMPLETE · RESULTS SAVED TO FIELD PHONE');
-    this.scene.start('ShootersTriggerLobbyScene');
-  }
-
-  private updateHud() {
-    const distance = this.playerTarget
-      ? Math.round(Phaser.Math.Distance.Between(this.player.x, this.player.y, this.playerTarget.x, this.playerTarget.y))
-      : 0;
-
-    this.hintText.setText(
-      this.isPhoneSession()
-        ? 'MOVE  ·  DRAG RIGHT TO AIM  ·  FIRE'
-        : distance > 0
-          ? `WALKING TO MARKER  ·  ${distance}`
-          : 'WASD / ARROWS  ·  MOUSE AIM  ·  LEFT CLICK / SPACE FIRE',
-    );
-
-    this.nameText.setPosition(this.player.x, this.player.y - 48);
-    this.updateAimMarker();
-  }
-
-  private updateAimMarker() {
-    this.aimUi.clear();
-    if (!this.aimPoint) return;
-
-    const camera = this.cameras.main;
-    const x = (this.aimPoint.x - camera.scrollX) * camera.zoom;
-    const y = (this.aimPoint.y - camera.scrollY) * camera.zoom;
-
-    this.aimUi.lineStyle(1.5, 0xe8c95c, 0.72);
-    this.aimUi.strokeCircle(x, y, 10);
-    this.aimUi.lineBetween(x - 7, y, x - 2, y);
-    this.aimUi.lineBetween(x + 2, y, x + 7, y);
-    this.aimUi.lineBetween(x, y - 7, x, y - 2);
-    this.aimUi.lineBetween(x, y + 2, x, y + 7);
-  }
-
-  private handleResize(width: number, height: number) {
-    // Same responsive camera contract as Hall: full viewport, smooth follow,
-    // no gameplay zoom or portrait-specific world rewrite.
-    this.cameras.main.setViewport(0, 0, width, height);
-    this.cameras.main.setDeadzone(
-      Math.min(width * 0.28, 320),
-      Math.min(height * 0.22, 150),
-    );
-    this.layoutUi(width, height);
-  }
-
-  private layoutUi(width: number, _height: number) {
-    this.hintText?.setPosition(width / 2, 18);
-  }
+ }
+ private paint(x:number,y:number,head:boolean,scrape=false){const g=this.add.graphics().setDepth(12),base=scrape?4:head?9:7;g.fillStyle(scrape?0xe08a54:0xd66a3d,.86).fillCircle(x,y,base);for(let i=0;i<(scrape?3:7);i++){const a=Math.random()*Math.PI*2,d=base*(1.4+Math.random()*2.2);g.fillCircle(x+Math.cos(a)*d,y+Math.sin(a)*d,base*.2);}this.time.delayedCall(900,()=>g.destroy());}
+ private handlePointer(pointer:Phaser.Input.Pointer){if(this.isPhoneSession()||this.stage!=='SHOOTING')return;const p=this.cameras.main.getWorldPoint(pointer.x,pointer.y);this.aim.set(p.x-this.player.body.x,p.y-this.player.body.y).normalize();}
+ private finishStage(){if(this.done)return;this.clearShots();if(this.stage==='EVASION'){this.showBreak();return;}this.finishTraining();}
+ private showBreak(){this.stage='BREAK';const p=document.createElement('div');this.breakPanel=p;Object.assign(p.style,{position:'fixed',inset:'0',zIndex:'1550',display:'grid',placeItems:'center',padding:'20px',background:'rgba(12,18,14,.76)',fontFamily:'monospace'});const c=document.createElement('div');Object.assign(c.style,{width:'min(420px,92vw)',padding:'24px',background:'#151a16',color:'#f4f1df',border:'2px solid #e8c95c',borderRadius:'12px',textAlign:'center'});c.innerHTML='<div style="color:#e8c95c;font-size:20px;font-weight:800">BREAK · 30 SEC COMPLETE</div><div style="margin:16px 0;font-size:11px;line-height:1.7">Roles switch now.<br>You get the gun.<br>The training bot becomes the evasive target.</div>';const b=document.createElement('button');b.textContent='START SHOOTING · 30 SEC';Object.assign(b.style,{width:'100%',minHeight:'50px',background:'#e8c95c',border:0,borderRadius:'8px',fontFamily:'monospace',fontWeight:'800'});b.onclick=()=>this.startShooting();c.appendChild(b);p.appendChild(c);document.body.appendChild(p);}
+ private startShooting(){this.breakPanel?.remove();this.breakPanel=undefined;this.stage='SHOOTING';this.started=Date.now();this.cooldown=0;this.setArmed(this.player,true);this.setArmed(this.bot,false);this.player.body.setPosition(P.x,P.y);this.bot.body.setPosition(B.x,B.y);this.status?.setText('ROLES SWITCHED · AIM · FIRE · 30 SEC');}
+ private finishTraining(){
+  this.done=true;const er=this.botShots?this.botHits/this.botShots:0,sr=this.playerShots?this.playerHits/this.playerShots:0;
+  const es=Phaser.Math.Clamp(Math.round((1-er)*100+Math.min(15,this.coverBlocks*2)),0,100),ss=Phaser.Math.Clamp(Math.round(sr*100+Math.min(15,this.playerHeadshots*3)),0,100);
+  const ee=es>55?'PLAYER':es<45?'BOT':'TIE',se=ss>55?'PLAYER':ss<45?'BOT':'TIE',pe=[ee,se].filter(x=>x==='PLAYER').length,be=[ee,se].filter(x=>x==='BOT').length,overall=pe>be?'PLAYER':be>pe?'BOT':'TIE';
+  const rec={durationMs:MS,evasion:{score:es,edge:ee,shots:this.botShots,hits:this.botHits,headshots:this.botHeadshots,coverBlocks:this.coverBlocks,scrapes:this.scrapes},shooting:{score:ss,edge:se,shots:this.playerShots,hits:this.playerHits,headshots:this.playerHeadshots},edge:{evasion:ee,shooting:se,overall},completedAt:Date.now()};
+  try{
+   localStorage.setItem('shooters-trigger:last-evasion',JSON.stringify({survived:MS,incomingShots:this.botShots,hits:this.botHits,headshots:this.botHeadshots,coverBlocks:this.coverBlocks,scrapes:this.scrapes,score:es,edge:ee}));
+   localStorage.setItem('shooters-trigger:last-shooting',JSON.stringify({accuracy:sr*100,targetHits:this.playerHits,headshots:this.playerHeadshots,shotsFired:this.playerShots,score:ss,edge:se}));
+   localStorage.setItem('shooters-trigger:training-report',JSON.stringify(rec));
+  }catch{}
+  completeShootersTriggerSession('TRAINING CAMP COMPLETE · PHONE REPORT UPDATED · ARENA ODDS READY');this.showResult(rec);
+ }
+ private showResult(r:any){const p=document.createElement('div');Object.assign(p.style,{position:'fixed',inset:'0',zIndex:'1600',display:'grid',placeItems:'center',padding:'16px',background:'rgba(12,18,14,.82)',fontFamily:'monospace'});const c=document.createElement('div');Object.assign(c.style,{width:'min(440px,94vw)',padding:'22px',background:'#151a16',color:'#f4f1df',border:'2px solid #e8c95c',borderRadius:'12px',textAlign:'center'});c.innerHTML='<div style="color:#e8c95c;font-size:19px;font-weight:800">TRAINING REPORT</div><div style="margin:12px 0;font-size:11px;line-height:1.8"><b>EVASION</b> · '+r.evasion.edge+' EDGE · '+r.evasion.score+'<br><b>SHOOTING</b> · '+r.shooting.edge+' EDGE · '+r.shooting.score+'<br><br><b>OVERALL EDGE · '+r.edge.overall+'</b><br><span style="color:#9fbda8">EDGE = ODDS, NOT A GUARANTEED WIN.</span></div>';const b=document.createElement('button');b.textContent='RETURN TO FIELD';Object.assign(b.style,{width:'100%',minHeight:'50px',background:'#e8c95c',border:0,borderRadius:'8px',fontFamily:'monospace',fontWeight:'800'});b.onclick=()=>{p.remove();this.scene.start('ShootersTriggerLobbyScene');};c.appendChild(b);p.appendChild(c);document.body.appendChild(p);}
+ private createHud(){this.title=this.add.text(this.scale.width/2,18,'TRAINING CAMP · EVASION FIRST',{fontFamily:'monospace',fontSize:'12px',fontStyle:'bold',color:'#fff4d4',stroke:'#315845',strokeThickness:4}).setOrigin(.5).setScrollFactor(0).setDepth(100);this.timer=this.add.text(this.scale.width/2,42,'30.0s',{fontFamily:'monospace',fontSize:'11px',color:'#e8c95c'}).setOrigin(.5).setScrollFactor(0).setDepth(100);this.status=this.add.text(this.scale.width/2,this.scale.height-18,'RUN · USE COVER · NO HIDING · UNLIMITED AMMO',{fontFamily:'monospace',fontSize:'9px',color:'#f4f1df'}).setOrigin(.5).setScrollFactor(0).setDepth(100);}
+ private updateHud(){this.timer?.setText(((Math.max(0,MS-(Date.now()-this.started)))/1000).toFixed(1)+'s');this.title?.setText(this.stage==='EVASION'?'TRAINING CAMP · EVASION FIRST':'TRAINING CAMP · SHOOTING');}
+ private createFighter(x:number,y:number,color:number,label:string):Fighter{const c=this.add.container(x,y).setDepth(30),g=this.add.graphics();g.fillStyle(0x3b2f28,1).fillEllipse(0,-20,24,18);g.fillStyle(0xd8a66b,1).fillEllipse(0,-17,13,12);g.fillStyle(color,1).fillEllipse(0,-23,25,12);g.fillStyle(0x111715,1).fillRoundedRect(-13,-17,26,10,4);g.fillStyle(0x9bb9b1,.88).fillRoundedRect(-9,-15,18,6,2);g.fillStyle(0xd4a45d,1).fillRoundedRect(-4,-8,8,7,2);g.fillStyle(color,1).fillRoundedRect(-15,-4,30,22,8);g.fillStyle(0x4f8b65,1).fillRoundedRect(-10,-1,20,14,4);g.fillStyle(0x566052,1).fillRoundedRect(-10,20,8,13,2).fillRoundedRect(2,20,8,13,2);g.fillStyle(0x202522,1).fillRoundedRect(-12,30,10,7,2).fillRoundedRect(2,30,10,7,2);const w=this.add.graphics();c.add([g,w]);this.add.text(x,y-50,label,{fontFamily:'monospace',fontSize:'10px',color:'#fff4d4',stroke:'#315845',strokeThickness:4}).setOrigin(.5).setDepth(40);return{body:c,weapon:w,armed:true};}
+ private setArmed(f:Fighter,a:boolean){f.armed=a;f.weapon.clear();f.weapon.setVisible(a);if(a)f.weapon.fillStyle(0x151b18,1).fillRoundedRect(2,-4,34,8,3).fillRoundedRect(8,4,9,5,2);}
+ private inCover(x:number,y:number,p=0){return this.covers.some(r=>x>=r.x-p&&x<=r.x+r.width+p&&y>=r.y-p&&y<=r.y+r.height+p);}
+ private clearShots(){this.shots.forEach(s=>s.body.destroy());this.shots=[];}
+ private drawField(){const g=this.add.graphics();g.fillStyle(0x78a653,1).fillRect(0,0,W,H);g.fillStyle(0xd1b46c,.3).fillRect(0,510,W,92);g.fillStyle(0xd1b46c,.22).fillRect(870,0,100,H);g.lineStyle(5,0xf4f1df,.48).strokeRect(55,70,W-110,H-120);this.bunker(690,360,190,72,0x76563b);this.bunker(1470,350,230,76,0x5f6e69);this.bunker(520,760,250,70,0x9d754d);this.bunker(1570,760,220,68,0x6e8190);this.bunker(850,1030,260,74,0xb58c58);this.bunker(1420,1080,240,72,0x737b79);this.tires(1080,300);this.tires(1900,650);this.tires(730,1170);}
+ private bunker(x:number,y:number,w:number,h:number,c:number){const g=this.add.graphics();g.fillStyle(0x493526,.24).fillRect(x+8,y+9,w,h);g.fillStyle(c,1).fillRoundedRect(x,y,w,h,10);g.lineStyle(2,0xf4f1df,.28).strokeRoundedRect(x,y,w,h,10);this.covers.push(new Phaser.Geom.Rectangle(x,y,w,h));}
+ private tires(x:number,y:number){const g=this.add.graphics();for(let i=0;i<4;i++){g.fillStyle(0x2b302d,1).fillCircle(x+i*17,y-i*3,19);g.fillStyle(0x66706a,1).fillCircle(x+i*17,y-i*3,7);}this.covers.push(new Phaser.Geom.Rectangle(x-20,y-25,90,45));}
+ private resize(w:number,h:number){this.cameras.main.setViewport(0,0,w,h);this.title?.setPosition(w/2,18);this.timer?.setPosition(w/2,42);this.status?.setPosition(w/2,h-18);}
+ private destroyUi(){this.scale.off(Phaser.Scale.Events.RESIZE,this.resize,this);this.input.off('pointerdown',this.handlePointer,this);this.input.off('pointermove',this.handlePointer,this);this.cleanup?.();this.breakPanel?.remove();this.clearShots();}
 }
