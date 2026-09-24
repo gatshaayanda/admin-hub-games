@@ -3933,3 +3933,42 @@ Future chats should explain Shooters Trigger in plain language first:
 > **"You train, the game learns how you play, you fight, you earn, you buy an advantage, and the rival learns to fight back."**
 
 Technical implementation details come after the gameplay reason. If a future agent only sees a feature request, it should recover this product context from AGENTS.md before changing the code.
+
+
+## Shooters Trigger — Ammo Economy / Adaptive Rival Contract — September 24, 2026
+
+The Arena playthrough exposed a concrete exploit that future work must preserve as a known design problem, not accidentally reintroduce:
+
+**Observed exploit**
+- Rival sees the player in the open.
+- Rival sprays continuously because it treats “player visible” as “keep firing.”
+- Rival empties its magazine.
+- Rival automatically goes to the nearest ammo station.
+- Player simply disengages, follows the rival to that vulnerable reload, and gets an easy elimination.
+- This makes the rival predictable and turns its own reload rule into the player's win button.
+
+**Required counter-design**
+- Ammo is a tactical resource.
+- The rival must not equate visibility with unlimited firing.
+- When the rival is low on ammo it should evaluate both ammo stations and prefer the safer route, considering distance to the station, player proximity and whether the player has a clear line of sight.
+- The rival should conserve shots, sometimes hold fire, and avoid feeding a player who is actively wasting paint.
+- The rival should be capable of baiting the player's ammunition economy instead: if the player is spending heavily or nearly empty, the rival can hold fire and reposition so the player has to make the vulnerable reload decision.
+- Reloading should be a positional decision, not simply “nearest station.”
+- The player and rival both refill from an ammo station while holding position whenever ammo is below maximum, including when ammo is already zero. A station does not require the magazine to be completely empty before the refill can begin.
+- Keep both ammo stations. They are deliberately part of the tactical choice: left route vs right route.
+- Do not solve this by simply making the rival faster, more accurate, or giving it more ammunition. The intended improvement is decision quality.
+- The future “special speed” power-up may become a separate progression/equipment system. It is not part of this neutral Arena counter patch.
+
+**Design principle**
+The rival should read the battlefield as a small decision problem: fire now, hold, flank, retreat, or reload safely. Game-AI references commonly describe ammo + enemy position as inputs to tactical decisions and specifically recommend finding a suitable place to reload rather than treating reload as a blind nearest-point action. A utility-style decision model is the longer-term direction; this patch is deliberately a small deterministic step toward that behavior.
+
+**Playtest acceptance**
+1. Stand near an ammo station with non-zero ammo and verify refill begins without first emptying the magazine.
+2. Reach zero ammo at a station and verify refill still works.
+3. Confirm there are two meaningful ammo routes.
+4. Try the old exploit: expose yourself, make the rival shoot, then wait for its reload decision.
+5. The rival should no longer blindly empty its clip and walk to the nearest station.
+6. If the player is threatening one station, the rival should have a reason to choose the other.
+7. Watch for the opposite failure: the rival must not become passive and refuse to shoot entirely.
+
+The current goal is not “perfect AI.” The goal is to remove the discovered deterministic exploit while preserving readable paintball combat and creating a reason for the player to adapt again.
