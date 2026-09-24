@@ -430,158 +430,101 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
 
     const budget = this.getBudget();
     const upgradeLevel = Number(localStorage.getItem('shooters-trigger:upgrade-level') || 0);
-    const shootingAccuracy = Number(shooting?.accuracy || 0);
-    const shootingHits = Number(shooting?.targetHits || 0);
-    const shootingSkill = !shooting ? 'UNTRAINED'
-      : shootingAccuracy >= 75 && shootingHits >= 5 ? 'REALLY GOOD'
-      : shootingAccuracy >= 45 && shootingHits >= 3 ? 'GOOD'
-      : 'DEVELOPING';
-    const evasionSurvived = Number(evasion?.survived || 0) / 1000;
-    const evasionCover = Number(evasion?.coverBlocks || 0);
-    const evasionSkill = !evasion ? 'UNTRAINED'
-      : evasionSurvived >= 50 && evasionCover >= 3 ? 'REALLY GOOD'
-      : evasionSurvived >= 30 || evasionCover >= 2 ? 'GOOD'
-      : 'DEVELOPING';
+    const evasionPlayer = Number(training?.evasion?.playerScore ?? training?.evasion?.score ?? 50);
+    const evasionBot = Number(training?.evasion?.botShootingScore ?? 50);
+    const shootingPlayer = Number(training?.shooting?.playerShootingScore ?? training?.shooting?.score ?? 50);
+    const shootingBot = Number(training?.shooting?.botEvasionScore ?? 50);
 
-    const readiness = !training && !arena ? 'NEW PLAYER'
-      : training && !arena ? 'FIELD READY · ODDS READY' : arena?.result === 'WIN' ? 'PROVEN' : 'TESTED';
+    const verdict = (player: number, bot: number) =>
+      player > bot + 5 ? ['YOU HAVE THE EDGE', 'PLAYER'] :
+      player < bot - 5 ? ['BOT HAS THE EDGE', 'BOT'] :
+      ['EVEN FIGHT', 'TIE'];
 
-    const next = fieldAlert
-      ? ['FIELD ALERT', fieldAlert.message || 'FIELD UPDATE · READ AND CONTINUE']
-      : !training
-      ? ['TRAINING CAMP FIRST', 'Start with EVASION, take the break, then switch roles for SHOOTING. Your phone will calculate the Arena edge.']
-        : !arena
-          ? ['FIELD READY', 'The ARENA is open. A win earns cash for upgrades. You can fight now or train again first.']
-          : arena?.result === 'WIN'
-            ? ['ARENA WIN · FIELD REPORT READY', 'Match complete. Review your headshots, paint hits and scrapes on the phone, then visit ARMORY & OUTFITTER or fight again.']
-            : ['ARENA LOSS · FIELD REPORT READY', 'Match complete. Review what landed, what scraped and where you took hits, then retrain before the next Arena fight.'];
+    const evasionVerdict = verdict(evasionPlayer, evasionBot);
+    const shootingVerdict = verdict(shootingPlayer, shootingBot);
+    const overall = training?.edge?.overall || 'TIE';
 
     const modal = document.createElement('div');
     Object.assign(modal.style, {
-      position: 'fixed',
-      inset: '0',
-      width: '100%',
-      height: '100dvh',
-      zIndex: '1550',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      boxSizing: 'border-box',
-      padding: 'max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px))',
-      background: 'rgba(12,18,14,.72)',
-      fontFamily: 'monospace',
-      touchAction: 'manipulation',
-      overflow: 'hidden',
+      position:'fixed', inset:'0', zIndex:'1550', display:'flex', alignItems:'center', justifyContent:'center',
+      padding:'max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px))',
+      background:'rgba(8,14,10,.78)', fontFamily:'monospace', touchAction:'manipulation', overflow:'hidden',
     });
     const card = document.createElement('div');
     Object.assign(card.style, {
-      width: 'min(440px, calc(100vw - 24px))',
-      maxHeight: 'calc(100dvh - 24px)',
-      minHeight: '0',
-      overflowY: 'auto',
-      overscrollBehavior: 'contain',
-      WebkitOverflowScrolling: 'touch',
-      boxSizing: 'border-box',
-      padding: '20px',
-      background: '#151a16',
-      color: '#f4f1df',
-      border: '2px solid #e8c95c',
-      borderRadius: '12px',
-      boxShadow: '0 12px 34px rgba(0,0,0,.45)',
+      width:'min(430px,calc(100vw - 24px))', maxHeight:'calc(100dvh - 24px)', overflowY:'auto',
+      boxSizing:'border-box', padding:'18px', background:'#151a16', color:'#f4f1df',
+      border:'2px solid #e8c95c', borderRadius:'16px', boxShadow:'0 14px 40px rgba(0,0,0,.48)',
     });
-    const title = document.createElement('div');
-    title.textContent = 'FIELD PHONE';
-    title.style.cssText = 'font-size:10px;font-weight:800;color:#9fbda8;letter-spacing:1px;margin-bottom:8px;';
-    const headline = document.createElement('div');
-    headline.textContent = next[0];
-    headline.style.cssText = 'font-size:17px;font-weight:800;color:#e8c95c;letter-spacing:1px;margin-bottom:10px;';
-    const message = document.createElement('div');
-    message.textContent = next[1];
-    message.style.cssText = 'font-size:11px;line-height:1.7;margin-bottom:16px;';
 
-    const playerNews = document.createElement('div');
-    playerNews.innerHTML = [
-      '<b>PLAYER NEWS</b>',
-      shooting ? 'Latest shooting record · ' + shooting.accuracy + '% accuracy · ' + shooting.targetHits + ' target hits.' : 'No shooting record yet · your first field report starts at SHOOTING.',
-      evasion ? 'Latest evasion record · survived ' + (evasion.survived / 1000).toFixed(1) + 's · ' + evasion.coverBlocks + ' cover blocks.' : 'No evasion record yet · your next evidence comes from EVASION.',
-      arena ? 'Latest Arena · ' + arena.result + ' · score ' + arena.score.join(' — ') + ' · budget earned ' + Number(arena.budgetEarned || 0) + '.' : 'No Arena result yet · your phone is tracking your progress, not a rival.'
-    ].join('<br>');
-    playerNews.style.cssText = 'font-size:10px;line-height:1.8;padding:12px;border:1px solid #496556;border-radius:8px;margin-bottom:12px;';
+    const icon = (kind: 'shield'|'target'|'runner'|'money') => {
+      const paths = {
+        shield:'<path d="M12 2 20 5v6c0 5-3.3 9-8 11-4.7-2-8-6-8-11V5l8-3Z"/><path d="m8 12 2.5 2.5L16 9"/>',
+        target:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>',
+        runner:'<circle cx="15" cy="4" r="2"/><path d="m13 8-3 4 4 2 2 6M10 12l-5 3M13 9l5 2"/>',
+        money:'<circle cx="12" cy="12" r="9"/><path d="M15 8.5c-.7-.7-1.6-1-3-1-1.7 0-3 .8-3 2s1.3 2 3 2 3 .8 3 2-1.3 2-3 2c-1.4 0-2.3-.3-3-1M12 6v12"/>'
+      } as any;
+      return '<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#e8c95c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+paths[kind]+'</svg>';
+    };
+    const header = document.createElement('div');
+    header.innerHTML = '<div style="font-size:10px;font-weight:800;color:#9fbda8;letter-spacing:2px">FIELD PHONE</div><div style="font-size:21px;font-weight:900;color:#e8c95c;margin-top:3px">YOUR FIELD READOUT</div><div style="font-size:10px;color:#b9c8bd;margin-top:5px;line-height:1.5">Simple answer: what are you good at, and what should you work on?</div>';
+    header.style.marginBottom='14px';
 
-    const state = document.createElement('div');
-    state.innerHTML = [
-      '<b>PLAYER STATE</b>',
-      'READINESS · ' + readiness,
-      training ? 'EVASION EDGE · ' + training.edge.evasion + ' · SHOOTING EDGE · ' + training.edge.shooting + '<br>OVERALL EDGE · ' + training.edge.overall + ' · ODDS ONLY' : 'TRAINING EDGE · NOT SET',
-      'SHOOTING SKILL · ' + shootingSkill,
-      'EVASION SKILL · ' + evasionSkill,
-      'BUDGET · ' + budget,
-      'ARENA · ' + (arena?.result || 'UNTESTED'),
-      'LOADOUT · ' + (upgradeLevel ? 'LEVEL ' + upgradeLevel : 'BASIC'),
-    ].join('<br>');
-    state.style.cssText = 'font-size:10px;line-height:1.8;padding:12px;border:1px solid #496556;border-radius:8px;margin-bottom:12px;';
+    const makeCard = (title:string, subtitle:string, left:number, right:number, leftLabel:string, rightLabel:string, verdictText:string, kind:'shield'|'target'|'runner') => {
+      const box=document.createElement('div');
+      box.style.cssText='padding:13px;border:1px solid #496556;border-radius:12px;background:#102018;margin-bottom:10px;';
+      box.innerHTML =
+        '<div style="display:flex;align-items:center;gap:10px">'+icon(kind)+'<div><div style="font-size:13px;font-weight:900;color:#f4f1df">'+title+'</div><div style="font-size:9px;color:#9fbda8;margin-top:2px">'+subtitle+'</div></div></div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">'+
+          '<div style="text-align:center;padding:9px;background:#182b20;border-radius:9px"><div style="font-size:23px;font-weight:900;color:#e8c95c">'+left+'</div><div style="font-size:8px;color:#b9c8bd;margin-top:2px">'+leftLabel+'</div></div>'+
+          '<div style="text-align:center;padding:9px;background:#241b18;border-radius:9px"><div style="font-size:23px;font-weight:900;color:#d66a3d">'+right+'</div><div style="font-size:8px;color:#b9c8bd;margin-top:2px">'+rightLabel+'</div></div>'+
+        '</div>'+
+        '<div style="margin-top:9px;text-align:center;font-size:10px;font-weight:900;color:#f4f1df">'+verdictText+'</div>';
+      return box;
+    };
 
-    const records = document.createElement('div');
-    records.innerHTML = [
-      '<b>TRAINING RECORD</b>',
-      shooting
-        ? 'Shots ' + shooting.shots + ' · Hits ' + shooting.targetHits + ' · Accuracy ' + shooting.accuracy + '%'
-          + '<br>Center-mass ' + Number(shooting.centerMassHits || 0)
-          + ' · Exceptional ' + Number(shooting.exceptionalHits || 0)
-          + ' · Misses ' + Number(shooting.misses || 0)
-          + ' · Cover hits ' + Number(shooting.coverHits || 0)
-        : 'No shooting record yet.',
-      '<br><br><b>EVASION RECORD</b>',
-      evasion
-        ? 'Survived ' + (evasion.survived / 1000).toFixed(1) + 's · Incoming ' + evasion.incomingShots
-          + '<br>Hits ' + evasion.hits + ' · Misses ' + evasion.misses + ' · Scrapes ' + evasion.scrapes
-          + ' · Cover blocks ' + evasion.coverBlocks
-        : 'No evasion record yet.',
-      '<br><br><b>ARENA FIELD REPORT</b>',
-      arena
-        ? 'Result ' + arena.result + ' · Score ' + arena.score.join(' — ') +
-          '<br>Headshots you ' + Number(arena.headshots?.player || 0) +
-          ' · Body hits you ' + Number(arena.bodyHits?.player || 0) +
-          '<br>Scrapes you ' + Number(arena.scrapes?.player || 0) +
-          ' · Paint landed ' + Number(arena.paintCoverage?.player || 0) +
-          '<br>Headshots received ' + Number(arena.headshots?.rival || 0) +
-          ' · Body hits received ' + Number(arena.bodyHits?.rival || 0) +
-          '<br>Rival scrapes ' + Number(arena.scrapes?.rival || 0) +
-          ' · Budget earned ' + Number(arena.budgetEarned || 0)
-        : 'No Arena field report yet.',
-    ].join('<br>');
-    records.innerHTML += [
-      '<br><br><b>RIVAL INTEL · POST-MATCH ONLY</b>',
-      arena
-        ? 'Operator ' + arena.rival?.operator +
-          ' · Profile ' + String(arena.rival?.profile || '').toUpperCase() +
-          '<br>Shooting ' + Number(arena.rival?.shooting || 0) +
-          ' · Movement ' + Number(arena.rival?.movement || 0) +
-          '<br>Pressure ' + Number(arena.rival?.pressure || 0) +
-          ' · Cover use ' + Number(arena.rival?.coverUse || 0) +
-          '<br>Weapon knockouts you landed ' + Number(arena.weaponKnockouts?.player || 0)
-        : 'Rival information appears only after a completed Arena match.',
-    ].join('<br>');
-    records.style.cssText = 'font-size:10px;line-height:1.8;padding:12px;border:1px solid #38493d;border-radius:8px;margin-bottom:12px;';
+    card.appendChild(header);
+    if (fieldAlert) {
+      const alert=document.createElement('div');
+      alert.style.cssText='padding:11px;border:1px solid #d66a3d;border-radius:10px;margin-bottom:10px;background:#241b18;font-size:10px;line-height:1.6;';
+      alert.innerHTML='<b style="color:#e8c95c">FIELD ALERT</b><br>'+String(fieldAlert.message || 'Field update ready.');
+      card.appendChild(alert);
+    }
 
-    const route = document.createElement('div');
-    route.textContent = [
-      'FIELD ROUTE',
-      training ? 'TRAINING CAMP · COMPLETE' : 'TRAINING CAMP · START HERE · EVASION → SHOOTING',
-      arena ? 'ARENA · ' + arena.result : 'ARENA · TRAINING EDGE APPLIES',
-      'ARMORY · SPEND EARNED CASH ON UPGRADES',
-    ].join('\n');
-    route.style.cssText = 'white-space:pre-line;font-size:10px;line-height:1.8;color:#e8c95c;padding:12px;border:1px solid #695d32;border-radius:8px;margin-bottom:12px;';
+    if (training) {
+      card.appendChild(makeCard('EVASION','You were unarmed. The bot had the gun and tried to tag you.',evasionPlayer,evasionBot,'YOUR EVASION','BOT SHOOTING',evasionVerdict[0],'shield'));
+      card.appendChild(makeCard('SHOOTING','Roles reversed. You had the gun. The bot tried to stay alive.',shootingPlayer,shootingBot,'YOUR SHOOTING','BOT EVASION',shootingVerdict[0],'target'));
+      const overallBox=document.createElement('div');
+      overallBox.style.cssText='padding:14px;border:2px solid #e8c95c;border-radius:12px;text-align:center;margin-bottom:10px;background:linear-gradient(145deg,#17251c,#151a16);';
+      const overallText=overall==='PLAYER'?'YOU TAKE THE TRAINING EDGE':overall==='BOT'?'THE BOT TAKES THE TRAINING EDGE':'TRAINING IS EVEN';
+      overallBox.innerHTML=icon('runner')+'<div style="font-size:9px;color:#9fbda8;letter-spacing:1px;margin-top:4px">OVERALL</div><div style="font-size:16px;font-weight:900;color:#e8c95c;margin-top:3px">'+overallText+'</div><div style="font-size:9px;color:#b9c8bd;margin-top:6px">This changes your Arena odds. It does not guarantee the result.</div>';
+      card.appendChild(overallBox);
+    } else {
+      const start=document.createElement('div');
+      start.style.cssText='padding:18px;text-align:center;border:1px solid #496556;border-radius:12px;background:#102018;margin-bottom:10px;';
+      start.innerHTML=icon('shield')+'<div style="font-size:14px;font-weight:900;color:#e8c95c;margin-top:7px">TRAINING CAMP FIRST</div><div style="font-size:10px;line-height:1.6;color:#b9c8bd;margin-top:6px">EVASION → BREAK → SHOOTING<br>Your phone will turn both drills into a simple field readout.</div>';
+      card.appendChild(start);
+    }
 
-    const freedom = document.createElement('div');
-    freedom.textContent = 'FIELD AREA · TRAINING CAMP · ARMORY & OUTFITTER · ARENA';
-    freedom.style.cssText = 'font-size:9px;color:#9fbda8;line-height:1.6;margin-bottom:16px;';
+    const snapshot=document.createElement('div');
+    snapshot.style.cssText='padding:12px;border:1px solid #38493d;border-radius:10px;margin-bottom:10px;font-size:10px;line-height:1.8;';
+    snapshot.innerHTML='<b style="color:#9fbda8">FIELD SNAPSHOT</b><br>'+
+      '💰 CASH · '+budget+'<br>'+
+      '🧰 LOADOUT · '+(upgradeLevel?'LEVEL '+upgradeLevel:'STARTER')+'<br>'+
+      '🏟️ ARENA · '+(arena ? (arena.result==='WIN'?'WIN':'RESULT SAVED') : 'NOT PLAYED')+
+      (arena ? '<br>💵 LAST ARENA CASH · '+Number(arena.budgetEarned||0) : '');
+    card.appendChild(snapshot);
 
-    const close = document.createElement('button');
+    const route=document.createElement('div');
+    route.style.cssText='font-size:9px;line-height:1.7;color:#9fbda8;padding:8px 2px 13px;text-align:center;';
+    route.textContent=training ? 'TRAINING ✓  →  ARMORY  →  ARENA' : 'TRAINING CAMP  →  ARMORY  →  ARENA';
+    card.appendChild(route);
+
+    const close=document.createElement('button');
     close.type='button'; close.textContent='CLOSE PHONE';
-    Object.assign(close.style,{width:'100%',minHeight:'48px',border:'2px solid #f4f1df',borderRadius:'8px',background:'#102018',color:'#f4f1df',fontFamily:'monospace',fontSize:'10px',fontWeight:'800'});
+    Object.assign(close.style,{width:'100%',minHeight:'48px',border:'2px solid #f4f1df',borderRadius:'9px',background:'#102018',color:'#f4f1df',fontFamily:'monospace',fontSize:'10px',fontWeight:'800'});
     close.addEventListener('pointerdown',(event)=>{event.preventDefault();event.stopPropagation();modal.remove();this.phoneModal=undefined;});
-    card.append(title,headline,message,playerNews,state,records,route,freedom,close);
+    card.appendChild(close);
     modal.appendChild(card); document.body.appendChild(modal); this.phoneModal=modal;
   }
 
