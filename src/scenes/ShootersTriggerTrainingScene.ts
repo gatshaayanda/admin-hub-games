@@ -159,6 +159,9 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   private trainingDone = false;
   private trainingCoverBlocks = 0;
   private trainingEvasionStats?: any;
+  private trainingEvasionSurvivalMs = 0;
+  private trainingEvasionEliminations = 0;
+  private trainingEvasionLifeStartedAt = 0;
   private trainingBreakPanel?: HTMLDivElement;
   private trainingResultPanel?: HTMLDivElement;
 
@@ -177,6 +180,9 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     this.trainingDone = false;
     this.trainingCoverBlocks = 0;
     this.trainingEvasionStats = undefined;
+    this.trainingEvasionSurvivalMs = 0;
+    this.trainingEvasionEliminations = 0;
+    this.trainingEvasionLifeStartedAt = Date.now();
     this.playerSkill = 50;
     this.evasionSkill = 50;
     this.trainingEdge = { overall: 'TIE', evasion: 'TIE', shooting: 'TIE' };
@@ -337,6 +343,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
   private finishTrainingStage() {
     if (this.trainingDone) return;
+    if (this.trainingStage === 'EVASION') this.recordCurrentEvasionLife();
     this.clearShots();
     this.fire = false;
     this.setMoveVector(0, 0);
@@ -345,9 +352,19 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       const incoming = this.rivalShotsFired;
       const landed = this.rivalPaintHits;
       const headshots = this.rivalHeadshots;
+      const misses = this.rivalMisses;
       const accuracy = incoming > 0 ? landed / incoming : 0;
+      const survivalRatio = clamp(this.trainingEvasionSurvivalMs / TRAINING_STAGE_MS, 0, 1);
+      const coverRatio = incoming > 0 ? clamp(this.trainingCoverBlocks / incoming, 0, 1) : 0;
+      // Evasion is primarily about staying alive. Accuracy against the player,
+      // cover interceptions, and repeated eliminations then refine the odds.
       const score = clamp(
-        Math.round((1 - accuracy) * 100 + Math.min(15, this.trainingCoverBlocks * 3)),
+        Math.round(
+          survivalRatio * 60 +
+          (1 - accuracy) * 30 +
+          coverRatio * 10 -
+          this.trainingEvasionEliminations * 8,
+        ),
         0,
         100,
       );
@@ -360,7 +377,9 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         headshots,
         coverBlocks: this.trainingCoverBlocks,
         scrapes: this.rivalScrapes,
-        survived: TRAINING_STAGE_MS,
+        misses,
+        survived: Math.round(this.trainingEvasionSurvivalMs),
+        eliminations: this.trainingEvasionEliminations,
       };
       this.showTrainingBreak();
       return;
@@ -460,7 +479,9 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         shots: shootingShots,
         hits: shootingHits,
         headshots: this.playerHeadshots,
+        bodyHits: this.playerBodyHits,
         scrapes: this.playerScrapes,
+        misses: this.playerMisses,
       },
       edge: { evasion: evasion.edge, shooting: shootingEdge, overall },
       completedAt: Date.now(),
@@ -474,13 +495,19 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         headshots: evasion.headshots,
         coverBlocks: evasion.coverBlocks,
         scrapes: evasion.scrapes,
+        misses: evasion.misses,
         score: evasion.score,
+        eliminations: evasion.eliminations,
+        survived: evasion.survived,
         edge: evasion.edge,
       }));
       localStorage.setItem('shooters-trigger:last-shooting', JSON.stringify({
         accuracy: accuracy * 100,
         targetHits: shootingHits,
+        bodyHits: this.playerBodyHits,
         headshots: this.playerHeadshots,
+        scrapes: this.playerScrapes,
+        misses: this.playerMisses,
         shotsFired: shootingShots,
         score: shootingScore,
         edge: shootingEdge,
@@ -1541,12 +1568,17 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       this.clearShots();
       const eliminated = winner === 'player' ? this.rival : this.player;
       const isPlayer = eliminated === this.player;
+      if (this.trainingStage === 'EVASION' && isPlayer) {
+        this.recordCurrentEvasionLife();
+        this.trainingEvasionEliminations += 1;
+      }
       this.time.delayedCall(260, () => {
         if (this.trainingDone || this.paused || this.trainingStage === 'BREAK') return;
         this.clearSplatter();
         if (isPlayer) {
           this.resetTrainingCombatant(this.player, this.trainingStage === 'SHOOTING');
           this.player.body.setPosition(ARENA_PLAYER_SPAWN.x, ARENA_PLAYER_SPAWN.y);
+          if (this.trainingStage === 'EVASION') this.trainingEvasionLifeStartedAt = Date.now();
         } else {
           this.resetTrainingCombatant(this.rival, this.trainingStage === 'EVASION');
           this.rival.body.setPosition(ARENA_RIVAL_SPAWN.x, ARENA_RIVAL_SPAWN.y);
@@ -1560,6 +1592,17 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       });
       return;
     }
+  }
+
+  private recordCurrentEvasionLife() {
+    if (this.trainingStage !== 'EVASION' || this.trainingEvasionLifeStartedAt <= 0) return;
+    const elapsed = Math.max(0, Date.now() - this.trainingEvasionLifeStartedAt);
+    this.trainingEvasionSurvivalMs = clamp(
+      this.trainingEvasionSurvivalMs + elapsed,
+      0,
+      TRAINING_STAGE_MS,
+    );
+    this.trainingEvasionLifeStartedAt = Date.now();
   }
 
   private clearShots() {
