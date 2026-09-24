@@ -396,9 +396,13 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         0,
         100,
       );
-      const edge = score > 55 ? 'PLAYER' : score < 45 ? 'BOT' : 'TIE';
+      const botShootingScore = clamp(Math.round(accuracy * 100), 0, 100);
+      const edge = score > botShootingScore + 5 ? 'PLAYER'
+        : score < botShootingScore - 5 ? 'BOT' : 'TIE';
       this.trainingEvasionStats = {
         score,
+        playerScore: score,
+        botShootingScore,
         edge,
         shots: incoming,
         hits: this.rivalBodyHits + this.rivalHeadshots,
