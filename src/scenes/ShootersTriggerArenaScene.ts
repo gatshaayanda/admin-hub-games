@@ -144,6 +144,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private locatorCanvas?: HTMLCanvasElement;
   private locatorCtx?: CanvasRenderingContext2D | null;
   private locatorArrow?: HTMLDivElement;
+  private locatorDistance?: HTMLDivElement;
 
   constructor() {
     super('ShootersTriggerArenaScene');
@@ -198,6 +199,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       this.stealthIndicators = [];
       this.locatorPanel?.remove();
       this.locatorArrow?.remove();
+      this.locatorDistance?.remove();
       this.locatorPanel = undefined;
       this.locatorCanvas = undefined;
       this.locatorCtx = undefined;
@@ -1315,6 +1317,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       this.pausePanel?.remove();
       this.locatorPanel?.remove();
       this.locatorArrow?.remove();
+      this.locatorDistance?.remove();
       this.locatorPanel = undefined;
       this.locatorCanvas = undefined;
       this.locatorCtx = undefined;
@@ -1383,62 +1386,97 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private createEnemyLocator() {
     this.locatorPanel?.remove();
     this.locatorArrow?.remove();
+    this.locatorDistance?.remove();
 
+    // The radar is deliberately player-centred: people understand relative
+    // position faster when the player stays fixed and the rival moves around
+    // them. Concentric rings make the numeric distance meaningful rather than
+    // leaving the player to decode a compressed full-field map.
     const panel = document.createElement('div');
     Object.assign(panel.style, {
       position: 'fixed',
       top: 'calc(60px + env(safe-area-inset-top, 0px))',
       right: 'max(10px, env(safe-area-inset-right, 0px))',
-      width: '108px',
-      height: '108px',
-      padding: '4px',
+      width: '132px',
+      height: '132px',
+      padding: '5px',
       boxSizing: 'border-box',
-      border: '1px solid rgba(244,241,223,.52)',
-      borderRadius: '10px',
-      background: 'rgba(16,32,24,.82)',
+      border: '1px solid rgba(244,241,223,.58)',
+      borderRadius: '12px',
+      background: 'rgba(16,32,24,.88)',
       zIndex: '1440',
       pointerEvents: 'none',
       overflow: 'hidden',
-      boxShadow: '0 2px 10px rgba(0,0,0,.22)',
+      boxShadow: '0 2px 12px rgba(0,0,0,.26)',
     });
 
+    const title = document.createElement('div');
+    Object.assign(title.style, {
+      position: 'absolute',
+      left: '8px',
+      top: '6px',
+      right: '8px',
+      color: '#f4f1df',
+      font: '800 8px/1 monospace',
+      letterSpacing: '.7px',
+      textAlign: 'center',
+      opacity: '.88',
+      zIndex: '2',
+    });
+    title.textContent = 'RIVAL RADAR';
+    panel.appendChild(title);
+
     const canvas = document.createElement('canvas');
-    canvas.width = 98;
-    canvas.height = 98;
-    canvas.style.width = '98px';
-    canvas.style.height = '98px';
-    canvas.setAttribute('aria-label', 'Arena tactical map');
+    canvas.width = 120;
+    canvas.height = 120;
+    canvas.style.width = '120px';
+    canvas.style.height = '120px';
+    canvas.setAttribute('aria-label', 'Rival direction and distance radar');
     panel.appendChild(canvas);
 
     const arrow = document.createElement('div');
     Object.assign(arrow.style, {
       position: 'fixed',
-      width: '46px',
-      minHeight: '28px',
-      padding: '5px 6px',
-      boxSizing: 'border-box',
-      borderRadius: '7px',
-      background: 'rgba(155,63,63,.94)',
-      border: '1px solid #fff4d4',
-      color: '#fff4d4',
-      font: '800 8px/1 monospace',
-      letterSpacing: '.4px',
-      textAlign: 'center',
+      width: '0',
+      height: '0',
+      borderLeft: '9px solid transparent',
+      borderRight: '9px solid transparent',
+      borderBottom: '18px solid #e44f3d',
+      filter: 'drop-shadow(0 1px 3px rgba(0,0,0,.45))',
       zIndex: '1445',
       pointerEvents: 'none',
-      transformOrigin: '50% 50%',
+      transformOrigin: '50% 100%',
       display: 'none',
-      whiteSpace: 'pre',
-      boxShadow: '0 2px 8px rgba(0,0,0,.22)',
     });
-    arrow.textContent = 'RIVAL';
+
+    const distance = document.createElement('div');
+    Object.assign(distance.style, {
+      position: 'fixed',
+      minWidth: '74px',
+      padding: '5px 7px',
+      boxSizing: 'border-box',
+      borderRadius: '7px',
+      background: 'rgba(155,63,63,.96)',
+      border: '1px solid #fff4d4',
+      color: '#fff4d4',
+      font: '800 9px/1 monospace',
+      letterSpacing: '.3px',
+      textAlign: 'center',
+      zIndex: '1446',
+      pointerEvents: 'none',
+      display: 'none',
+      whiteSpace: 'nowrap',
+      boxShadow: '0 2px 8px rgba(0,0,0,.24)',
+    });
 
     document.body.appendChild(panel);
     document.body.appendChild(arrow);
+    document.body.appendChild(distance);
     this.locatorPanel = panel;
     this.locatorCanvas = canvas;
     this.locatorCtx = canvas.getContext('2d');
     this.locatorArrow = arrow;
+    this.locatorDistance = distance;
     this.updateEnemyLocator();
   }
 
@@ -1451,66 +1489,87 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     const h = canvas.height;
     ctx.clearRect(0, 0, w, h);
 
-    // Keep the map tactical, not decorative: field boundary, major cover, player,
-    // rival and orientation. No labels or UI furniture inside the map.
+    const radarCx = w / 2;
+    const radarCy = h / 2 + 5;
+    const radarRadius = 47;
+    const maxRadarDistance = 720;
+
+    // A dark field plus a few stable range rings gives the player an immediate
+    // visual grammar: centre = me, red = rival, rings = increasing distance.
     ctx.fillStyle = '#263c2a';
     ctx.fillRect(0, 0, w, h);
-    ctx.strokeStyle = 'rgba(244,241,223,.30)';
+
+    ctx.strokeStyle = 'rgba(244,241,223,.16)';
     ctx.lineWidth = 1;
-    ctx.strokeRect(4, 4, w - 8, h - 8);
-
-    const sx = (w - 10) / 2400;
-    const sy = (h - 10) / 1400;
-
-    ctx.fillStyle = 'rgba(117,86,59,.82)';
-    for (const cover of this.covers) {
-      ctx.fillRect(
-        5 + cover.x * sx,
-        5 + cover.y * sy,
-        Math.max(1.5, cover.width * sx),
-        Math.max(1.5, cover.height * sy),
-      );
-    }
-
-    for (const zone of this.concealments) {
-      ctx.fillStyle = 'rgba(159,189,168,.10)';
+    for (const range of [180, 360, 540, 720]) {
+      const radius = radarRadius * (range / maxRadarDistance);
       ctx.beginPath();
-      ctx.arc(5 + zone.x * sx, 5 + zone.y * sy, Math.max(3, zone.radius * sx), 0, Math.PI * 2);
-      ctx.fill();
+      ctx.arc(radarCx, radarCy, radius, 0, Math.PI * 2);
+      ctx.stroke();
     }
 
-    const px = 5 + this.player.body.x * sx;
-    const py = 5 + this.player.body.y * sy;
-    const rx = 5 + this.rival.body.x * sx;
-    const ry = 5 + this.rival.body.y * sy;
-
-    ctx.fillStyle = '#f4f1df';
+    ctx.strokeStyle = 'rgba(244,241,223,.10)';
     ctx.beginPath();
-    ctx.arc(px, py, 4, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = '#f4f1df';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(px, py);
-    ctx.lineTo(px + this.aim.x * 8, py + this.aim.y * 8);
+    ctx.moveTo(radarCx - radarRadius, radarCy);
+    ctx.lineTo(radarCx + radarRadius, radarCy);
+    ctx.moveTo(radarCx, radarCy - radarRadius);
+    ctx.lineTo(radarCx, radarCy + radarRadius);
     ctx.stroke();
 
-    if (!this.isRivalConcealed()) {
-      ctx.fillStyle = '#e44f3d';
-      ctx.beginPath();
-      ctx.moveTo(rx, ry - 5);
-      ctx.lineTo(rx + 5, ry + 4);
-      ctx.lineTo(rx - 5, ry + 4);
-      ctx.closePath();
-      ctx.fill();
-    }
-
-    const distance = Phaser.Math.Distance.Between(
+    const distanceValue = Phaser.Math.Distance.Between(
       this.player.body.x,
       this.player.body.y,
       this.rival.body.x,
       this.rival.body.y,
+    );
+
+    const concealed = this.isRivalConcealed();
+    const dx = this.rival.body.x - this.player.body.x;
+    const dy = this.rival.body.y - this.player.body.y;
+    const length = Math.hypot(dx, dy) || 1;
+    const clampedDistance = Math.min(distanceValue, maxRadarDistance);
+    const rivalX = radarCx + (dx / length) * radarRadius * (clampedDistance / maxRadarDistance);
+    const rivalY = radarCy + (dy / length) * radarRadius * (clampedDistance / maxRadarDistance);
+
+    // Player marker: a small directional chevron rather than a generic dot.
+    ctx.fillStyle = '#f4f1df';
+    ctx.beginPath();
+    ctx.moveTo(radarCx, radarCy - 6);
+    ctx.lineTo(radarCx + 5, radarCy + 5);
+    ctx.lineTo(radarCx, radarCy + 2);
+    ctx.lineTo(radarCx - 5, radarCy + 5);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = concealed ? 'rgba(228,79,61,.28)' : '#e44f3d';
+    ctx.beginPath();
+    ctx.arc(rivalX, rivalY, concealed ? 4 : 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (!concealed) {
+      ctx.strokeStyle = 'rgba(228,79,61,.72)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(rivalX, rivalY, 8, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = '#f4f1df';
+    ctx.font = '700 7px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('0', radarCx + 5, radarCy - 4);
+    ctx.fillText('180', radarCx + 13, radarCy - 3);
+    ctx.fillText('360', radarCx + 24, radarCy - 3);
+    ctx.fillText('540', radarCx + 35, radarCy - 3);
+    ctx.fillText('720', radarCx + 38, radarCy + 7);
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = concealed ? 'rgba(244,241,223,.68)' : '#f4f1df';
+    ctx.font = '800 8px monospace';
+    ctx.fillText(
+      concealed ? 'SIGNAL LOST' : Math.round(distanceValue) + 'm',
+      radarCx,
+      h - 4,
     );
 
     const camera = this.cameras.main;
@@ -1524,19 +1583,22 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       this.rival.body.y >= viewTop &&
       this.rival.body.y <= viewBottom;
 
-    // The edge arrow only appears when the rival is outside the phone viewport.
-    // This keeps the map useful without adding another permanent HUD panel.
     const arrow = this.locatorArrow;
-    if (!arrow) return;
-    if (this.isRivalConcealed() || onScreen) {
+    const distanceLabel = this.locatorDistance;
+    if (!arrow || !distanceLabel) return;
+
+    if (concealed || onScreen) {
       arrow.style.display = 'none';
+      distanceLabel.style.display = 'none';
       return;
     }
 
+    // When the rival leaves the camera, convert the off-screen threat into a
+    // peripheral cue: the arrow tells the player where to turn; the horizontal
+    // pill tells them how far away without making them read a rotating label.
     const centerX = viewLeft + camera.width / 2;
     const centerY = viewTop + camera.height / 2;
-    const dx = this.rival.body.x - centerX;
-    const dy = this.rival.body.y - centerY;
+    const directionAngle = Math.atan2(dy, dx);
     const scale = 1 / Math.max(
       Math.abs(dx) / Math.max(1, camera.width / 2 - 34),
       Math.abs(dy) / Math.max(1, camera.height / 2 - 34),
@@ -1544,12 +1606,24 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     );
     const edgeX = camera.width / 2 + dx * scale;
     const edgeY = camera.height / 2 + dy * scale;
+    const screenX = Math.max(20, Math.min(window.innerWidth - 20, edgeX));
+    const screenY = Math.max(88, Math.min(window.innerHeight - 72, edgeY));
 
     arrow.style.display = 'block';
-    arrow.style.left = Math.max(52, Math.min(window.innerWidth - 52, edgeX - 23)) + 'px';
-    arrow.style.top = Math.max(82, Math.min(window.innerHeight - 90, edgeY - 14)) + 'px';
-    arrow.style.transform = 'rotate(' + (Math.atan2(dy, dx) * 180 / Math.PI + 90) + 'deg)';
-    arrow.textContent = 'RIVAL\\n' + Math.round(distance) + 'm';
+    arrow.style.left = (screenX - 9) + 'px';
+    arrow.style.top = (screenY - 18) + 'px';
+    arrow.style.transform = 'rotate(' + (directionAngle * 180 / Math.PI + 90) + 'deg)';
+
+    const dxScreen = this.rival.body.x - centerX;
+    const dyScreen = this.rival.body.y - centerY;
+    const horizontal = Math.abs(dxScreen) > Math.abs(dyScreen)
+      ? (dxScreen < 0 ? 'LEFT' : 'RIGHT')
+      : (dyScreen < 0 ? 'AHEAD' : 'BEHIND');
+
+    distanceLabel.style.display = 'block';
+    distanceLabel.style.left = Math.max(8, Math.min(window.innerWidth - 86, screenX - 38)) + 'px';
+    distanceLabel.style.top = Math.max(66, Math.min(window.innerHeight - 48, screenY + 8)) + 'px';
+    distanceLabel.textContent = horizontal + ' · ' + Math.round(distanceValue) + 'm';
   }
 
   private togglePause() {
