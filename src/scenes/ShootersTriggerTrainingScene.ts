@@ -249,8 +249,11 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
     const playerShouldBeArmed = this.trainingStage === 'SHOOTING';
     const rivalShouldBeArmed = this.trainingStage === 'EVASION';
-    if (this.player.weaponDropped === playerShouldBeArmed) this.setTrainingArmed(this.player, playerShouldBeArmed);
-    if (this.rival.weaponDropped === rivalShouldBeArmed) this.setTrainingArmed(this.rival, rivalShouldBeArmed);
+    // Only enforce the unarmed side of the role contract here. An armed fighter
+    // may legitimately have been disarmed by a gun hit and must be allowed to
+    // recover that dropped weapon instead of having the gun silently respawn.
+    if (!playerShouldBeArmed && !this.player.weaponDropped) this.setTrainingArmed(this.player, false);
+    if (!rivalShouldBeArmed && !this.rival.weaponDropped) this.setTrainingArmed(this.rival, false);
     this.movePlayer(delta);
     this.tryPickupWeapon(this.player);
     this.updateTrainingRival(delta);
@@ -1315,6 +1318,13 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   }
 
   private tryPickupWeapon(target: Fighter) {
+    // Training role rules are strict: the unarmed participant cannot
+    // accidentally pick up the hidden placeholder weapon at spawn.
+    if (
+      this.trainingMode &&
+      ((target === this.player && this.trainingStage === 'EVASION') ||
+       (target === this.rival && this.trainingStage === 'SHOOTING'))
+    ) return;
     if (!target.weaponDropped || target.downed) return;
     const distance = Phaser.Math.Distance.Between(target.body.x, target.body.y, target.droppedWeapon.x, target.droppedWeapon.y);
     if (distance <= 54) this.pickupWeapon(target);
