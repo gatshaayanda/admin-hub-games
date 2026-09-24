@@ -441,7 +441,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       }
 
       if (this.rivalSeekingAmmo) {
-        this.rivalTargetPoint.set(this.rivalAmmoStation.x, this.rivalAmmoStation.y);
+        this.rivalTargetPoint.set(this.rivalAmmoStation.centerX, this.rivalAmmoStation.centerY);
       } else if (canSeePlayer && distance < 520 && Math.random() < 0.55) {
         this.rivalMode = Math.random() < 0.62 ? 'FLANK' : 'PRESSURE';
       } else {
@@ -514,8 +514,8 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         );
       }
     } else if (this.rivalSeekingAmmo) {
-      const dx = this.rivalAmmoStation.x - this.rival.body.x;
-      const dy = this.rivalAmmoStation.y - this.rival.body.y;
+      const dx = this.rivalAmmoStation.centerX - this.rival.body.x;
+      const dy = this.rivalAmmoStation.centerY - this.rival.body.y;
       if (Math.hypot(dx, dy) < 42) {
         this.rivalSeekingAmmo = false;
         this.rivalMode = 'REGROUP';
@@ -524,7 +524,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         // the reload trap. Re-evaluate the other station on the next decision.
         if (canSeePlayer && Phaser.Math.Distance.Between(
           this.player.body.x, this.player.body.y,
-          this.rivalAmmoStation.x, this.rivalAmmoStation.y,
+          this.rivalAmmoStation.centerX, this.rivalAmmoStation.centerY,
         ) < 260) {
           this.rivalAmmoStation = this.chooseSaferAmmoStation(this.rivalAmmoStation.centerX, this.rivalAmmoStation.centerY);
         }
