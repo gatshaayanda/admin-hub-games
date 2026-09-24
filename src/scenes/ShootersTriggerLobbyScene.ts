@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { getShootersTriggerPhoneAlert, markShootersTriggerPhoneAlertRead, recoverInterruptedShootersTriggerSession } from '../shooters-trigger-session';
 
 type Location = {
-  id: 'shooting' | 'evasion' | 'upgrades' | 'arena';
+  id: 'training' | 'upgrades' | 'arena';
   name: string;
   subtitle: string;
   x: number;
@@ -36,10 +36,9 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
   private phoneAudioContext?: AudioContext;
 
   private locations: Location[] = [
-    { id: 'shooting', name: 'SHOOTING RANGE', subtitle: '01 · AIM · FIRE · TRAIN', x: 1580, y: 690, color: 0xd66a3d },
-    { id: 'evasion', name: 'EVASION YARD', subtitle: '02 · MOVE · COVER · SURVIVE', x: 780, y: 690, color: 0x2f7775 },
-    { id: 'upgrades', name: 'ARMORY & OUTFITTER', subtitle: '03 · GEAR · UPGRADE · PREP', x: 760, y: 1080, color: 0xe8c95c },
-    { id: 'arena', name: 'ARENA', subtitle: '04 · 1v1 · FIRST TO 3', x: 1180, y: 420, color: 0xd66a3d },
+    { id: 'training', name: 'TRAINING CAMP', subtitle: '01 · EVASION → SHOOTING · 30s + 30s', x: 780, y: 690, color: 0x2f7775 },
+    { id: 'upgrades', name: 'ARMORY & OUTFITTER', subtitle: '02 · GEAR · UPGRADE · PREP', x: 760, y: 1080, color: 0xe8c95c },
+    { id: 'arena', name: 'ARENA', subtitle: '03 · 1v1 · FIRST TO 3', x: 1180, y: 420, color: 0xd66a3d },
   ];
 
   private playerMoving = false;
@@ -192,11 +191,8 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
 
     const location = nearby.location;
     switch (location.id) {
-      case 'shooting':
+      case 'training':
         this.scene.start('ShootersTriggerTrainingScene');
-        break;
-      case 'evasion':
-        this.scene.start('ShootersTriggerEvasionScene');
         break;
       case 'upgrades':
         this.openEquipmentStore();
@@ -291,16 +287,16 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
 
   private getPhoneNextLabel() {
     const fieldAlert = getShootersTriggerPhoneAlert();
-    let shooting: any = null, evasion: any = null, arena: any = null;
+    let shooting: any = null, evasion: any = null, arena: any = null, training: any = null;
     try {
       shooting = JSON.parse(localStorage.getItem('shooters-trigger:last-shooting') || 'null');
       evasion = JSON.parse(localStorage.getItem('shooters-trigger:last-evasion') || 'null');
       arena = JSON.parse(localStorage.getItem('shooters-trigger:last-arena') || 'null');
+      training = JSON.parse(localStorage.getItem('shooters-trigger:training-report') || 'null');
     } catch {}
 
-    if (!shooting) return 'PLAYER NEWS · START SHOOTING';
-    if (!evasion) return 'PLAYER NEWS · BUILD EVASION RECORD';
-    if (!arena) return 'PLAYER NEWS · ARENA IS OPEN';
+    if (!shooting || !evasion) return 'PLAYER NEWS · TRAINING CAMP FIRST · EVASION → SHOOTING';
+    if (!arena) return 'PLAYER NEWS · TRAINING COMPLETE · ARENA ODDS READY';
     if (arena?.result === 'WIN') return 'NEXT · ARMORY';
     return 'NEXT · RETRAIN';
   }
@@ -438,17 +434,13 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
       : evasionSurvived >= 30 || evasionCover >= 2 ? 'GOOD'
       : 'DEVELOPING';
 
-    const readiness = !shooting && !evasion && !arena ? 'NEW PLAYER'
-      : shooting && !evasion ? 'SHOOTING TRAINED'
-      : shooting && evasion && !arena ? 'FIELD READY'
-      : arena?.result === 'WIN' ? 'PROVEN' : 'TESTED';
+    const readiness = !training && !arena ? 'NEW PLAYER'
+      : training && !arena ? 'FIELD READY · ODDS READY' : arena?.result === 'WIN' ? 'PROVEN' : 'TESTED';
 
     const next = fieldAlert
       ? ['FIELD ALERT', fieldAlert.message || 'FIELD UPDATE · READ AND CONTINUE']
-      : !shooting
-      ? ['WELCOME TO THE FIELD', 'Start at SHOOTING. Build your first shooting record.']
-      : !evasion
-        ? ['SHOOTING RECORDED', 'Next recommended stop: EVASION. Learn movement, cover and survival under pressure.']
+      : !training
+      ? ['TRAINING CAMP FIRST', 'Start with EVASION, take the break, then switch roles for SHOOTING. Your phone will calculate the Arena edge.']
         : !arena
           ? ['FIELD READY', 'The ARENA is open. A win earns cash for upgrades. You can fight now or train again first.']
           : arena?.result === 'WIN'
@@ -511,6 +503,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     state.innerHTML = [
       '<b>PLAYER STATE</b>',
       'READINESS · ' + readiness,
+      training ? 'EVASION EDGE · ' + training.edge.evasion + ' · SHOOTING EDGE · ' + training.edge.shooting + '<br>OVERALL EDGE · ' + training.edge.overall + ' · ODDS ONLY' : 'TRAINING EDGE · NOT SET',
       'SHOOTING SKILL · ' + shootingSkill,
       'EVASION SKILL · ' + evasionSkill,
       'BUDGET · ' + budget,
@@ -564,16 +557,15 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
 
     const route = document.createElement('div');
     route.textContent = [
-      'RECOMMENDED ROUTE',
-      shooting ? 'SHOOTING · RECORDED' : 'SHOOTING · START HERE',
-      evasion ? 'EVASION · RECORDED' : 'EVASION · NEXT',
-      arena ? 'ARENA · ' + arena.result : 'ARENA · WIN TO EARN CASH',
+      'FIELD ROUTE',
+      training ? 'TRAINING CAMP · COMPLETE' : 'TRAINING CAMP · START HERE · EVASION → SHOOTING',
+      arena ? 'ARENA · ' + arena.result : 'ARENA · TRAINING EDGE APPLIES',
       'ARMORY · SPEND EARNED CASH ON UPGRADES',
     ].join('\n');
     route.style.cssText = 'white-space:pre-line;font-size:10px;line-height:1.8;color:#e8c95c;padding:12px;border:1px solid #695d32;border-radius:8px;margin-bottom:12px;';
 
     const freedom = document.createElement('div');
-    freedom.textContent = 'OPEN FIELD · YOU CAN VISIT ANY LOCATION IN ANY ORDER';
+    freedom.textContent = 'FIELD AREA · TRAINING CAMP · ARMORY & OUTFITTER · ARENA';
     freedom.style.cssText = 'font-size:9px;color:#9fbda8;line-height:1.6;margin-bottom:16px;';
 
     const close = document.createElement('button');
