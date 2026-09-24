@@ -4,6 +4,7 @@ type ShooterScene = {
   setMoveVector?: (x: number, y: number) => void;
   setFireHeld?: (held: boolean) => void;
   setAimVector?: (x: number, y: number) => void;
+  isFireAvailable?: () => boolean;
   isPhoneSession?: () => boolean;
 };
 
@@ -306,7 +307,7 @@ export function installShootersTriggerMobileControls() {
   const sync = () => {
     const active = getActiveScene();
     const isPhone = Boolean(active?.scene.isPhoneSession?.()) || TOUCH_DEVICE;
-    const hasFire = Boolean(active?.scene.setFireHeld);
+    const hasFire = Boolean(active?.scene.setFireHeld) && (active?.scene.isFireAvailable?.() ?? true);
     root.classList.toggle('is-active', Boolean(active) && isPhone);
     fire.style.display = hasFire ? 'block' : 'none';
 
