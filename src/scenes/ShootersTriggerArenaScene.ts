@@ -551,6 +551,13 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       );
     }
 
+    // Reaching an ammo station is enough to begin a tactical refill;
+    // the magazine does not have to be completely empty first.
+    if (this.rival.ammo < this.rival.maxAmmo && this.isInAmmoStation(this.rival.body.x, this.rival.body.y)) {
+      this.updateRivalRefill(delta);
+      return;
+    }
+
     const rivalHidden = this.isRivalConcealed();
     const nowDistance = Phaser.Math.Distance.Between(
       this.player.body.x,
