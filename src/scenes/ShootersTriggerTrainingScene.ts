@@ -1539,58 +1539,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       });
       return;
     }
-
-  private roundPoint(winner: 'player' | 'rival') {
-    if (this.matchOver || this.roundTransition || this.resolvingRound) return;
-
-    this.resolvingRound = true;
-    this.fire = false;
-    this.setMoveVector(0, 0);
-
-    if (winner === 'player') this.player.score += 1;
-    else this.rival.score += 1;
-
-    this.clearShots();
-
-    if (this.player.score >= 3 || this.rival.score >= 3) {
-      this.matchOver = true;
-      this.resolvingRound = false;
-      return;
-    }
-
-    const eliminated = winner === 'player' ? this.rival : this.player;
-    this.roundTransition = true;
-    this.resolvingRound = false;
-    this.statusHud?.setText(
-      (winner === 'player' ? 'ELIMINATED  ·  YOU ' : 'YOU ARE ELIMINATED  ·  YOU ') +
-      this.player.score + ' — ' + this.rival.score +
-      '  ·  RESPAWN',
-    );
-
-    this.time.delayedCall(700, () => {
-      if (this.matchOver || this.paused) return;
-      this.clearSplatter();
-      if (eliminated === this.player) {
-        this.resetFighter(this.player, ARENA_PLAYER_SPAWN.x, ARENA_PLAYER_SPAWN.y);
-      } else {
-        this.resetFighter(this.rival, ARENA_RIVAL_SPAWN.x, ARENA_RIVAL_SPAWN.y);
-      }
-      eliminated.cooldown = 700;
-      if (eliminated === this.rival) {
-        this.rivalCanFireAt = Date.now() + ARENA_RIVAL_OPENING_DELAY_MS;
-        this.rivalDecisionAt = Date.now() + 250;
-        this.rivalMode = 'PRESSURE';
-        this.rivalRevealedUntil = Date.now() + 700;
-      }
-      this.roundTransition = false;
-      this.statusHud?.setText(
-        this.player.score === 2 && this.rival.score === 2
-          ? 'FINAL POINT  ·  FIRST TO 3'
-          : 'FIGHT CONTINUES  ·  MOVE · AIM · FIRE',
-      );
-    });
   }
-
 
   private clearShots() {
     this.shots.forEach((shot) => shot.body.destroy());
