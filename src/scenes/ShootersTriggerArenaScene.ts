@@ -458,6 +458,10 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
 
       if (this.rivalSeekingAmmo) {
         this.rivalTargetPoint.set(this.rivalAmmoStation.centerX, this.rivalAmmoStation.centerY);
+      } else if (this.trainingEdge.overall === 'BOT' && canSeePlayer && distance < 560) {
+        this.rivalMode = Math.random() < 0.72 ? 'PRESSURE' : 'FLANK';
+      } else if (this.trainingEdge.overall === 'PLAYER' && canSeePlayer) {
+        this.rivalMode = Math.random() < 0.68 ? 'FLANK' : 'PRESSURE';
       } else if (canSeePlayer && distance < 520 && Math.random() < 0.55) {
         this.rivalMode = Math.random() < 0.62 ? 'FLANK' : 'PRESSURE';
       } else {
