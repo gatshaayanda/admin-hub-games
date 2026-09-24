@@ -195,18 +195,18 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       coverUse: 50,
     };
 
-    this.player = this.createFighter(ARENA_PLAYER_SPAWN.x, ARENA_PLAYER_SPAWN.y, 0x2f6b4e, 'YOU', true);
-    this.rival = this.createFighter(ARENA_RIVAL_SPAWN.x, ARENA_RIVAL_SPAWN.y, 0x9b3f3f, 'TRAINING BOT', false);
+    // Role is part of fighter construction, not a visual state applied a frame later.
+    // This prevents the training player from ever spawning with the Arena weapon pose.
+    this.player = this.createFighter(ARENA_PLAYER_SPAWN.x, ARENA_PLAYER_SPAWN.y, 0x2f6b4e, 'YOU', true, false);
+    this.rival = this.createFighter(ARENA_RIVAL_SPAWN.x, ARENA_RIVAL_SPAWN.y, 0x9b3f3f, 'TRAINING BOT', false, true);
 
     this.player.speed = ARENA_BASE_SPEED;
     this.rival.speed = ARENA_BASE_SPEED;
     this.player.cooldown = 0;
     this.rival.cooldown = 0;
 
-    // Evasion starts unarmed: same Arena fighter, weapon system simply disabled.
-    // Evasion: player unarmed, bot armed. No hiding and no ammo stations.
-    this.setTrainingArmed(this.player, false);
-    this.setTrainingArmed(this.rival, true);
+    // Evasion is authoritative: player unarmed, bot armed. No hiding and no ammo stations.
+    this.applyTrainingRoleContract();
     this.player.ammo = Number.POSITIVE_INFINITY;
     this.rival.ammo = Number.POSITIVE_INFINITY;
 
@@ -253,13 +253,10 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   update(_time: number, delta: number) {
     if (this.trainingDone || this.paused || this.trainingStage === 'BREAK' || this.roundTransition || this.resolvingRound) return;
 
-    const playerShouldBeArmed = this.trainingStage === 'SHOOTING';
-    const rivalShouldBeArmed = this.trainingStage === 'EVASION';
-    // Only enforce the unarmed side of the role contract here. An armed fighter
-    // may legitimately have been disarmed by a gun hit and must be allowed to
-    // recover that dropped weapon instead of having the gun silently respawn.
-    if (!playerShouldBeArmed && !this.player.weaponDropped) this.setTrainingArmed(this.player, false);
-    if (!rivalShouldBeArmed && !this.rival.weaponDropped) this.setTrainingArmed(this.rival, false);
+    // Training roles are a hard gameplay contract. The unarmed side is always
+    // visually and mechanically unarmed; the armed side may still lose its gun
+    // through the normal Arena weapon-knockout mechanic and must recover it.
+    this.applyTrainingRoleContract();
     this.movePlayer(delta);
     this.tryPickupWeapon(this.player);
     this.updateTrainingRival(delta);
@@ -326,6 +323,30 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       175,
       false,
     );
+  }
+
+  private applyTrainingRoleContract() {
+    if (!this.player || !this.rival) return;
+    const playerShouldBeArmed = this.trainingStage === 'SHOOTING';
+    const rivalShouldBeArmed = this.trainingStage === 'EVASION';
+
+    if (!playerShouldBeArmed) {
+      this.player.weaponDropped = true;
+      this.player.body.setData('combatState', 'UNARMED');
+      this.updateWeaponVisibility(this.player, false);
+      this.player.droppedWeapon.setVisible(false);
+    } else if (this.player.weaponDropped) {
+      this.updateWeaponVisibility(this.player, false);
+    }
+
+    if (!rivalShouldBeArmed) {
+      this.rival.weaponDropped = true;
+      this.rival.body.setData('combatState', 'UNARMED');
+      this.updateWeaponVisibility(this.rival, false);
+      this.rival.droppedWeapon.setVisible(false);
+    } else if (this.rival.weaponDropped) {
+      this.updateWeaponVisibility(this.rival, false);
+    }
   }
 
   private setTrainingArmed(target: Fighter, armed: boolean) {
@@ -428,7 +449,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       this.clearShots();
       this.player.cooldown = 0;
       this.rival.cooldown = 0;
-      this.statusHud?.setText('ROLES SWITCHED · AIM · FIRE · 30 SEC');
+      this.applyTrainingRoleContract();
+      this.statusHud?.setText('ROLES SWITCHED · YOU ARMED · BOT UNARMED · 30 SEC');
     };
     card.appendChild(button);
     panel.appendChild(card);
@@ -450,6 +472,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     const name = target.body.getData('nameLabel') as Phaser.GameObjects.Text | undefined;
     name?.setAlpha(1);
     this.updateWeaponVisibility(target, keepArmed);
+    if (!keepArmed) target.droppedWeapon.setVisible(false);
   }
 
   private finishTraining() {
@@ -559,7 +582,16 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     this.joystickVector.set(Phaser.Math.Clamp(x, -1, 1), Phaser.Math.Clamp(y, -1, 1));
   }
 
+  public isFireAvailable() {
+    return this.trainingStage === 'SHOOTING' && !this.trainingDone && !this.paused && this.trainingStage !== 'BREAK';
+  }
+
   public setFireHeld(value: boolean) {
+    if (!this.isFireAvailable()) {
+      this.fire = false;
+      this.manualAim = false;
+      return;
+    }
     if (!value) {
       this.manualAim = false;
     } else if (!this.manualAim && !this.player.weaponDropped && !this.player.downed && this.rival && !this.isRivalConcealed()) {
@@ -575,6 +607,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   }
 
   public setAimVector(x: number, y: number) {
+    if (!this.isFireAvailable()) return;
     const length = Math.hypot(x, y);
     if (length > 0.05) {
       this.aim.set(x / length, y / length);
@@ -1128,7 +1161,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   }
 
   private playerFire() {
-    if (this.player.weaponDropped || this.player.refilling || this.player.cooldown > 0) return;
+    if (!this.isFireAvailable() || this.player.weaponDropped || this.player.refilling || this.player.cooldown > 0) return;
     this.player.cooldown = ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(130, 330 - this.playerSkill * 1.15);
     if (!this.trainingMode) this.player.ammo -= 1;
     this.playerShotsFired += 1;
@@ -2284,7 +2317,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     muzzle.fillCircle(0, 0, 3);
   }
 
-  private createFighter(x: number, y: number, color: number, label: string, player: boolean) {
+  private createFighter(x: number, y: number, color: number, label: string, player: boolean, initiallyArmed: boolean) {
     const container = this.add.container(x, y).setDepth(30);
     const shadow = this.add.ellipse(0, 34, 27, 10, 0x3d3025, 0.28);
 
@@ -2318,6 +2351,10 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     const muzzle = this.add.graphics();
     const damagePaint = this.add.graphics().setDepth(35).setVisible(false);
     const droppedWeapon = this.add.graphics().setDepth(22).setVisible(false);
+    // Do not construct an armed-looking fighter and fix it one frame later.
+    arms.setVisible(initiallyArmed);
+    weapon.setVisible(initiallyArmed);
+    muzzle.setVisible(initiallyArmed);
     droppedWeapon.fillStyle(0x151b18, 1).fillRoundedRect(-25, -5, 50, 10, 4);
     droppedWeapon.fillStyle(0x53635c, 1).fillRect(-9, -10, 14, 5);
     droppedWeapon.fillStyle(0x493b31, 1).fillRoundedRect(-22, 6, 13, 6, 2);
@@ -2356,7 +2393,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       downed: false,
       damagePaint,
       droppedWeapon,
-      weaponDropped: false,
+      weaponDropped: !initiallyArmed,
       maxAmmo: ARENA_AMMO_CAPACITY,
       ammo: ARENA_AMMO_CAPACITY,
       refilling: false,
