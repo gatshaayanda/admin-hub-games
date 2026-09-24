@@ -718,34 +718,21 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     this.drawCrates(1510, 1140, 2);
     this.drawInfoBoard(1180, 790, 'FIELD BOARD');
 
-    // Shooting station: target stands and a short marked firing lane.
-    this.drawFence(1400, 470, 420, 70);
-    this.drawTargetStand(1540, 455);
-    this.drawTargetStand(1690, 455);
-    this.drawLane(1400, 560, 420, '01 · SHOOTING RANGE');
-
-    // Evasion station: an irregular cover/movement course.
+    // Three physical field destinations: Training Camp, Armory, Arena.
     this.drawBunker(430, 620, 230, 70, 0x76563b);
     this.drawBunker(680, 760, 170, 64, 0x5f6e69);
     this.drawTireStack(470, 870);
     this.drawTireStack(700, 950);
     this.drawCourseFence(380, 530, 560, 470);
-    this.drawSign(780, 500, '02', 'EVASION YARD', 0x2f7775);
+    this.drawSign(780, 500, '01', 'TRAINING CAMP', 0x2f7775);
 
-    // Armory: a physical equipment tent/rack area, not a building.
     this.drawShelter(580, 1110, 360, 150, 'ARMORY');
     this.drawEquipmentRack(580, 1310);
     this.drawCrates(800, 1310, 3);
-    this.drawSign(760, 1060, '03', 'ARMORY & OUTFITTER', 0xe8c95c);
+    this.drawSign(760, 1060, '02', 'ARMORY & OUTFITTER', 0xe8c95c);
 
-    // Arena: an open physical play field. There is no gate or artificial entry point.
     this.drawArenaField(980, 300, 400, 240);
-
-    // Grounded wayfinding signs replace floating destination markers.
-    this.drawSign(1580, 640, '01', 'SHOOTING', 0xd66a3d);
-    this.drawSign(780, 640, '02', 'EVASION', 0x2f7775);
-    this.drawSign(760, 1030, '03', 'ARMORY', 0xe8c95c);
-    this.drawSign(1180, 560, '04', 'ARENA', 0xd66a3d);
+    this.drawSign(1180, 560, '03', 'ARENA', 0xd66a3d);
 
     this.drawTree(300, 280, 1.15);
     this.drawTree(2110, 330, 0.95);
