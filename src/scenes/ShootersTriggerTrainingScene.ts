@@ -162,6 +162,9 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   private trainingEvasionSurvivalMs = 0;
   private trainingEvasionEliminations = 0;
   private trainingEvasionLifeStartedAt = 0;
+  private trainingShootingBotSurvivalMs = 0;
+  private trainingShootingBotLifeStartedAt = 0;
+  private trainingShootingBotEliminations = 0;
   private trainingBreakPanel?: HTMLDivElement;
   private trainingResultPanel?: HTMLDivElement;
 
@@ -183,6 +186,9 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     this.trainingEvasionSurvivalMs = 0;
     this.trainingEvasionEliminations = 0;
     this.trainingEvasionLifeStartedAt = Date.now();
+    this.trainingShootingBotSurvivalMs = 0;
+    this.trainingShootingBotLifeStartedAt = 0;
+    this.trainingShootingBotEliminations = 0;
     this.playerSkill = 50;
     this.evasionSkill = 50;
     this.trainingEdge = { overall: 'TIE', evasion: 'TIE', shooting: 'TIE' };
@@ -300,7 +306,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       const dx = this.player.body.x - this.rival.body.x;
       const dy = this.player.body.y - this.rival.body.y;
       const d = Math.hypot(dx, dy) || 1;
-      this.moveRival(dx, dy, delta, 170, false);
+      this.moveRival(dx, dy, delta, 205, false);
       if (this.rival.cooldown <= 0 && d <= ARENA_BASE_RIVAL_FIRE_RANGE && this.hasLineOfSight(
         this.rival.body.x, this.rival.body.y, this.player.body.x, this.player.body.y,
       )) {
@@ -365,6 +371,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   private finishTrainingStage() {
     if (this.trainingDone) return;
     if (this.trainingStage === 'EVASION') this.recordCurrentEvasionLife();
+    if (this.trainingStage === 'SHOOTING') this.recordCurrentShootingBotLife();
     this.clearShots();
     this.fire = false;
     this.setMoveVector(0, 0);
@@ -436,6 +443,9 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       this.trainingBreakPanel = undefined;
       this.trainingStage = 'SHOOTING';
       this.trainingStartedAt = Date.now();
+      this.trainingShootingBotSurvivalMs = 0;
+      this.trainingShootingBotEliminations = 0;
+      this.trainingShootingBotLifeStartedAt = Date.now();
       this.player.body.setPosition(ARENA_PLAYER_SPAWN.x, ARENA_PLAYER_SPAWN.y);
       this.rival.body.setPosition(ARENA_RIVAL_SPAWN.x, ARENA_RIVAL_SPAWN.y);
       this.resetTrainingCombatant(this.player, false);
@@ -480,15 +490,17 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     const shootingShots = this.playerShotsFired;
     const shootingHits = this.playerBodyHits + this.playerHeadshots;
     const accuracy = shootingShots > 0 ? shootingHits / shootingShots : 0;
-    const shootingScore = clamp(
-      Math.round(accuracy * 100 + Math.min(15, this.playerHeadshots * 3)),
-      0,
-      100,
-    );
-    const shootingEdge = shootingScore > 55 ? 'PLAYER' : shootingScore < 45 ? 'BOT' : 'TIE';
+    const shootingScore = clamp(Math.round(accuracy * 100 + Math.min(15, this.playerHeadshots * 3)), 0, 100);
+    const botEvasionSurvival = clamp(this.trainingShootingBotSurvivalMs / TRAINING_STAGE_MS, 0, 1);
+    const botEvasionAccuracy = shootingShots > 0 ? shootingHits / shootingShots : 0;
+    const botEvasionScore = clamp(Math.round(botEvasionSurvival * 60 + (1 - botEvasionAccuracy) * 30 + Math.min(10, this.trainingShootingBotEliminations * 2)), 0, 100);
+    const shootingEdge = shootingScore > botEvasionScore + 5 ? 'PLAYER'
+      : shootingScore < botEvasionScore - 5 ? 'BOT' : 'TIE';
     const evasion = this.trainingEvasionStats || {
       score: 50, edge: 'TIE', shots: 0, hits: 0, headshots: 0, coverBlocks: 0, scrapes: 0, survived: TRAINING_STAGE_MS,
     };
+    evasion.playerScore = evasion.score;
+    evasion.botShootingScore = clamp(Math.round((evasion.hits / Math.max(1, evasion.shots)) * 100), 0, 100);
     const playerEdges = [evasion.edge, shootingEdge].filter(x => x === 'PLAYER').length;
     const botEdges = [evasion.edge, shootingEdge].filter(x => x === 'BOT').length;
     const overall = playerEdges > botEdges ? 'PLAYER' : botEdges > playerEdges ? 'BOT' : 'TIE';
@@ -498,6 +510,9 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       evasion,
       shooting: {
         score: shootingScore,
+        playerShootingScore: shootingScore,
+        botEvasionScore,
+        botSurvived: Math.round(this.trainingShootingBotSurvivalMs),
         edge: shootingEdge,
         shots: shootingShots,
         hits: shootingHits,
@@ -520,6 +535,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         scrapes: evasion.scrapes,
         misses: evasion.misses,
         score: evasion.score,
+        playerScore: evasion.playerScore,
+        botShootingScore: evasion.botShootingScore,
         eliminations: evasion.eliminations,
         survived: evasion.survived,
         edge: evasion.edge,
@@ -1179,7 +1196,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   private rivalFire(direction: Phaser.Math.Vector2) {
     const accuracy = this.rivalProfile.shooting;
     const aim = direction.clone().normalize();
-    this.rival.cooldown = ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(330, 930 - accuracy * 5.4);
+    this.rival.cooldown = this.trainingMode ? Math.max(155, 260 - accuracy * 1.5) : ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(330, 930 - accuracy * 5.4);
     if (!this.trainingMode) this.rival.ammo -= 1;
     this.rivalShotsFired += 1;
     this.rivalLastFiredAt = Date.now();
@@ -1605,6 +1622,10 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         this.recordCurrentEvasionLife();
         this.trainingEvasionEliminations += 1;
       }
+      if (this.trainingStage === 'SHOOTING' && !isPlayer) {
+        this.recordCurrentShootingBotLife();
+        this.trainingShootingBotEliminations += 1;
+      }
       this.time.delayedCall(260, () => {
         if (this.trainingDone || this.paused || this.trainingStage === 'BREAK') return;
         this.clearSplatter();
@@ -1615,6 +1636,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         } else {
           this.resetTrainingCombatant(this.rival, this.trainingStage === 'EVASION');
           this.rival.body.setPosition(ARENA_RIVAL_SPAWN.x, ARENA_RIVAL_SPAWN.y);
+          if (this.trainingStage === 'SHOOTING') this.trainingShootingBotLifeStartedAt = Date.now();
         }
         this.player.cooldown = 350;
         this.rival.cooldown = 350;
@@ -1636,6 +1658,13 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       TRAINING_STAGE_MS,
     );
     this.trainingEvasionLifeStartedAt = Date.now();
+  }
+
+  private recordCurrentShootingBotLife() {
+    if (this.trainingStage !== 'SHOOTING' || this.trainingShootingBotLifeStartedAt <= 0) return;
+    const elapsed = Math.max(0, Date.now() - this.trainingShootingBotLifeStartedAt);
+    this.trainingShootingBotSurvivalMs = clamp(this.trainingShootingBotSurvivalMs + elapsed, 0, TRAINING_STAGE_MS);
+    this.trainingShootingBotLifeStartedAt = Date.now();
   }
 
   private clearShots() {
