@@ -1494,15 +1494,16 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     const radarRadius = 47;
     const maxRadarDistance = 720;
 
-    // A dark field plus a few stable range rings gives the player an immediate
-    // visual grammar: centre = me, red = rival, rings = increasing distance.
+    // Player-centred tactical map: keep the useful physical field objects from
+    // the old map, while making the rival direction much easier to read.
     ctx.fillStyle = '#263c2a';
     ctx.fillRect(0, 0, w, h);
 
-    ctx.strokeStyle = 'rgba(244,241,223,.16)';
+    // Range is intentionally a simple 1–4 field scale, not metres.
+    ctx.strokeStyle = 'rgba(244,241,223,.18)';
     ctx.lineWidth = 1;
-    for (const range of [180, 360, 540, 720]) {
-      const radius = radarRadius * (range / maxRadarDistance);
+    for (const level of [1, 2, 3, 4]) {
+      const radius = radarRadius * (level / 4);
       ctx.beginPath();
       ctx.arc(radarCx, radarCy, radius, 0, Math.PI * 2);
       ctx.stroke();
@@ -1515,6 +1516,47 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     ctx.moveTo(radarCx, radarCy - radarRadius);
     ctx.lineTo(radarCx, radarCy + radarRadius);
     ctx.stroke();
+
+    const drawWorldPoint = (
+      x: number,
+      y: number,
+      style: 'cover' | 'ammo' | 'hide',
+      size = 3,
+    ) => {
+      const dx = x - this.player.body.x;
+      const dy = y - this.player.body.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance > maxRadarDistance) return;
+      const scale = distance / maxRadarDistance;
+      const px = radarCx + (dx / Math.max(1, distance)) * radarRadius * scale;
+      const py = radarCy + (dy / Math.max(1, distance)) * radarRadius * scale;
+
+      if (style === 'cover') {
+        ctx.fillStyle = 'rgba(181,140,88,.9)';
+        ctx.fillRect(px - size * 1.8, py - size * .8, size * 3.6, size * 1.6);
+      } else if (style === 'ammo') {
+        ctx.fillStyle = '#e8c95c';
+        ctx.fillRect(px - size, py - size, size * 2, size * 2);
+        ctx.strokeStyle = 'rgba(244,241,223,.85)';
+        ctx.strokeRect(px - size - 1, py - size - 1, size * 2 + 2, size * 2 + 2);
+      } else {
+        ctx.strokeStyle = '#9fbda8';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(px, py, size + 1, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    };
+
+    for (const cover of this.covers) {
+      drawWorldPoint(cover.x + cover.width / 2, cover.y + cover.height / 2, 'cover', 3);
+    }
+    for (const station of ARENA_AMMO_STATIONS) {
+      drawWorldPoint(station.centerX, station.centerY, 'ammo', 3);
+    }
+    for (const zone of this.concealments) {
+      drawWorldPoint(zone.x, zone.y, 'hide', 3);
+    }
 
     const distanceValue = Phaser.Math.Distance.Between(
       this.player.body.x,
@@ -1531,7 +1573,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     const rivalX = radarCx + (dx / length) * radarRadius * (clampedDistance / maxRadarDistance);
     const rivalY = radarCy + (dy / length) * radarRadius * (clampedDistance / maxRadarDistance);
 
-    // Player marker: a small directional chevron rather than a generic dot.
+    // Player = white. Rival = red. Field objects stay visually secondary.
     ctx.fillStyle = '#f4f1df';
     ctx.beginPath();
     ctx.moveTo(radarCx, radarCy - 6);
@@ -1557,20 +1599,16 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     ctx.fillStyle = '#f4f1df';
     ctx.font = '700 7px monospace';
     ctx.textAlign = 'left';
-    ctx.fillText('0', radarCx + 5, radarCy - 4);
-    ctx.fillText('180', radarCx + 13, radarCy - 3);
-    ctx.fillText('360', radarCx + 24, radarCy - 3);
-    ctx.fillText('540', radarCx + 35, radarCy - 3);
-    ctx.fillText('720', radarCx + 38, radarCy + 7);
+    for (const level of [1, 2, 3, 4]) {
+      const radius = radarRadius * (level / 4);
+      ctx.fillText(String(level), radarCx + radius + 2, radarCy - 2);
+    }
 
     ctx.textAlign = 'center';
     ctx.fillStyle = concealed ? 'rgba(244,241,223,.68)' : '#f4f1df';
     ctx.font = '800 8px monospace';
-    ctx.fillText(
-      concealed ? 'SIGNAL LOST' : Math.round(distanceValue) + 'm',
-      radarCx,
-      h - 4,
-    );
+    const distanceLevel = Math.max(1, Math.min(4, Math.ceil(distanceValue / (maxRadarDistance / 4))));
+    ctx.fillText(concealed ? 'SIGNAL LOST' : 'RANGE ' + distanceLevel, radarCx, h - 4);
 
     const camera = this.cameras.main;
     const viewLeft = camera.scrollX;
@@ -1593,9 +1631,6 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       return;
     }
 
-    // When the rival leaves the camera, convert the off-screen threat into a
-    // peripheral cue: the arrow tells the player where to turn; the horizontal
-    // pill tells them how far away without making them read a rotating label.
     const centerX = viewLeft + camera.width / 2;
     const centerY = viewTop + camera.height / 2;
     const directionAngle = Math.atan2(dy, dx);
@@ -1623,9 +1658,8 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     distanceLabel.style.display = 'block';
     distanceLabel.style.left = Math.max(8, Math.min(window.innerWidth - 86, screenX - 38)) + 'px';
     distanceLabel.style.top = Math.max(66, Math.min(window.innerHeight - 48, screenY + 8)) + 'px';
-    distanceLabel.textContent = horizontal + ' · ' + Math.round(distanceValue) + 'm';
+    distanceLabel.textContent = horizontal + ' · RANGE ' + distanceLevel;
   }
-
   private togglePause() {
     if (this.matchOver || this.roundTransition || this.resolvingRound) return;
     if (this.paused) {

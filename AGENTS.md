@@ -3735,3 +3735,19 @@ Wardrobe is the experimentation surface. Future improvements may add:
 Keep this work **Wardrobe-only** until an approved character change is intentionally transferred to Shooters Trigger. Do not refactor or alter Shooters Trigger gameplay simply to support Wardrobe experiments.
 
 The dependency-light rule still applies: do not add an art package, editor plugin, animation library or paid asset service merely to continue the lab. Phaser already supports Containers, transforms/tweening, and frame-based Sprite/SpriteSheet/Texture Atlas animation; use those native capabilities first. Inspect free/open art tools before selecting one for production artwork.
+
+
+## Shooters Trigger — Tactical Radar Contract
+
+The Shooters Trigger Arena locator is intentionally a **player-centred tactical map**, not a compressed copy of the whole battlefield.
+
+The radar must preserve three kinds of physical information:
+- **Rival:** red contact; direction and simple range are the primary threat information.
+- **Ammo:** visible station markers so the player can understand nearby resupply options.
+- **Concealment:** visible hide-zone markers; concealed rivals may show **SIGNAL LOST** rather than revealing their position.
+
+Use a simple **RANGE 1–4** scale instead of metres on the player-facing radar. The exact world distance remains an internal gameplay value; the UI should communicate relative proximity quickly on a phone.
+
+Keep cover objects visible but visually secondary. Do not turn the radar into a dense mini-map or add unnecessary floating labels. Any future radar change must preserve the distinction between **where the rival is**, **where I can resupply**, and **where I can hide**.
+
+For Shooters Trigger work, protect this radar contract unless a real phone playtest demonstrates a usability problem.
