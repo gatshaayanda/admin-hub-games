@@ -139,7 +139,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private rivalHiddenSearchStartedAt = 0;
   private rivalHiddenPatrolAttempts = 0;
   private rivalSeekingAmmo = false;
-  private rivalAmmoStation = new Phaser.Math.Vector2(0, 0);
+  private rivalAmmoStation = new Phaser.Geom.Rectangle(0, 0, 0, 0);
   private readonly rivalPatrolSpeed = 92;
   private stealthIndicators: Array<{ ring: Phaser.GameObjects.Graphics; label: Phaser.GameObjects.Text; x: number; y: number; radius: number }> = [];
   private locatorPanel?: HTMLDivElement;
@@ -625,12 +625,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     if (this.rival.downed || this.rival.weaponDropped) return;
 
     const station = this.rivalSeekingAmmo
-      ? new Phaser.Geom.Rectangle(
-        this.rivalAmmoStation.x - 95,
-        this.rivalAmmoStation.y - 65,
-        190,
-        130,
-      )
+      ? this.rivalAmmoStation
       : this.getNearestAmmoStation(this.rival.body.x, this.rival.body.y);
     const stationCenterX = station.centerX;
     const stationCenterY = station.centerY;
