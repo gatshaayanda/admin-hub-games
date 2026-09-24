@@ -301,6 +301,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
       evasion = JSON.parse(localStorage.getItem('shooters-trigger:last-evasion') || 'null');
       arena = JSON.parse(localStorage.getItem('shooters-trigger:last-arena') || 'null');
       training = JSON.parse(localStorage.getItem('shooters-trigger:training-report') || 'null');
+      training = JSON.parse(localStorage.getItem('shooters-trigger:training-report') || 'null');
     } catch {}
 
     if (!shooting || !evasion) return 'PLAYER NEWS · TRAINING CAMP FIRST · EVASION → SHOOTING';
@@ -420,7 +421,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     const fieldAlert = getShootersTriggerPhoneAlert();
     this.markPhoneRead();
 
-    let shooting: any = null, evasion: any = null, arena: any = null;
+    let shooting: any = null, evasion: any = null, arena: any = null, training: any = null;
     try {
       shooting = JSON.parse(localStorage.getItem('shooters-trigger:last-shooting') || 'null');
       evasion = JSON.parse(localStorage.getItem('shooters-trigger:last-evasion') || 'null');
