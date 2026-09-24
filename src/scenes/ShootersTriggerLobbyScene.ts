@@ -149,6 +149,10 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     try { return !!localStorage.getItem('shooters-trigger:last-' + key); } catch { return false; }
   }
 
+  private hasTrainingReport() {
+    try { return !!localStorage.getItem('shooters-trigger:training-report'); } catch { return false; }
+  }
+
   private hasUpgrade() {
     try { return Number(localStorage.getItem('shooters-trigger:upgrade-level') || 0) > 0; } catch { return false; }
   }
@@ -198,6 +202,10 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
         this.openEquipmentStore();
         break;
       case 'arena':
+        if (!this.hasTrainingReport()) {
+          this.showStatus('TRAINING CAMP FIRST · EVASION → SHOOTING');
+          break;
+        }
         this.scene.start('ShootersTriggerArenaScene');
         break;
     }
