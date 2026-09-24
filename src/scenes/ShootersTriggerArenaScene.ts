@@ -526,7 +526,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
           this.player.body.x, this.player.body.y,
           this.rivalAmmoStation.x, this.rivalAmmoStation.y,
         ) < 260) {
-          this.rivalAmmoStation = this.chooseSaferAmmoStation(this.rivalAmmoStation.x, this.rivalAmmoStation.y);
+          this.rivalAmmoStation = this.chooseSaferAmmoStation(this.rivalAmmoStation.centerX, this.rivalAmmoStation.centerY);
         }
         this.moveRival(dx, dy, delta);
       }
@@ -632,8 +632,8 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         130,
       )
       : this.getNearestAmmoStation(this.rival.body.x, this.rival.body.y);
-    const stationCenterX = 'centerX' in station ? station.centerX : this.rivalAmmoStation.x;
-    const stationCenterY = 'centerY' in station ? station.centerY : this.rivalAmmoStation.y;
+    const stationCenterX = station.centerX;
+    const stationCenterY = station.centerY;
     const dx = stationCenterX - this.rival.body.x;
     const dy = stationCenterY - this.rival.body.y;
     const distance = Math.hypot(dx, dy) || 1;
