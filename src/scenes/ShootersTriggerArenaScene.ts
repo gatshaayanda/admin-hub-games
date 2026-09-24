@@ -43,7 +43,7 @@ type RivalProfile = {
 };
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
-const ARENA_NEUTRAL_BASELINE = true;
+const ARENA_NEUTRAL_BASELINE = false;
 const ARENA_BASE_SPEED = 170;
 const ARENA_BASE_COOLDOWN = 240;
 const ARENA_AMMO_CAPACITY = 24;
@@ -139,6 +139,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private rivalHiddenSearchStartedAt = 0;
   private rivalHiddenPatrolAttempts = 0;
   private rivalSeekingAmmo = false;
+  private trainingEdge: { overall: 'PLAYER' | 'BOT' | 'TIE'; evasion: 'PLAYER' | 'BOT' | 'TIE'; shooting: 'PLAYER' | 'BOT' | 'TIE' } = { overall: 'TIE', evasion: 'TIE', shooting: 'TIE' };
   private rivalAmmoStation = new Phaser.Geom.Rectangle(0, 0, 0, 0);
   private readonly rivalPatrolSpeed = 92;
   private stealthIndicators: Array<{ ring: Phaser.GameObjects.Graphics; label: Phaser.GameObjects.Text; x: number; y: number; radius: number }> = [];
@@ -272,27 +273,36 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   }
 
   private loadPreparation() {
-    if (ARENA_NEUTRAL_BASELINE) {
-      this.playerSkill = 50;
-      this.evasionSkill = 50;
-      return;
-    }
     try {
       const shooting = JSON.parse(localStorage.getItem('shooters-trigger:last-shooting') || 'null');
       const evasion = JSON.parse(localStorage.getItem('shooters-trigger:last-evasion') || 'null');
+      const report = JSON.parse(localStorage.getItem('shooters-trigger:training-report') || 'null');
+      this.trainingEdge = {
+        overall: report?.edge?.overall === 'PLAYER' || report?.edge?.overall === 'BOT' ? report.edge.overall : 'TIE',
+        evasion: report?.edge?.evasion === 'PLAYER' || report?.edge?.evasion === 'BOT' ? report.edge.evasion : 'TIE',
+        shooting: report?.edge?.shooting === 'PLAYER' || report?.edge?.shooting === 'BOT' ? report.edge.shooting : 'TIE',
+      };
+      if (this.trainingEdge.overall === 'TIE') {
+        this.playerSkill = 50;
+        this.evasionSkill = 50;
+        return;
+      }
       this.playerSkill = clamp(Number(shooting?.accuracy || 0), 0, 100);
-      const survived = clamp(Number(evasion?.survived || 0) / 600, 0, 100);
+      const survived = clamp(Number(evasion?.survived || 0) / 300, 0, 100);
       const cover = clamp(Number(evasion?.coverBlocks || 0) * 8, 0, 35);
-      const scrapeAvoidance = clamp(Number(evasion?.scrapes || 0) * 1.5, 0, 20);
-      this.evasionSkill = clamp(survived + cover + scrapeAvoidance, 0, 100);
+      this.evasionSkill = clamp(survived + cover, 0, 100);
+      const playerBoost = this.trainingEdge.overall === 'PLAYER' ? 8 : -8;
+      this.playerSkill = clamp(this.playerSkill + playerBoost, 0, 100);
+      this.evasionSkill = clamp(this.evasionSkill + playerBoost, 0, 100);
     } catch {
-      this.playerSkill = 0;
-      this.evasionSkill = 0;
+      this.trainingEdge = { overall: 'TIE', evasion: 'TIE', shooting: 'TIE' };
+      this.playerSkill = 50;
+      this.evasionSkill = 50;
     }
   }
 
   private chooseRivalProfile(): RivalProfile {
-    if (ARENA_NEUTRAL_BASELINE) {
+    if (this.trainingEdge.overall === 'TIE') {
       return Phaser.Utils.Array.GetRandom([
         { id: 'marksman', operator: 'OPERATOR 12', shooting: 50, movement: 50, pressure: 50, coverUse: 45 },
         { id: 'runner', operator: 'OPERATOR 07', shooting: 50, movement: 50, pressure: 50, coverUse: 45 },
@@ -433,6 +443,12 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       // Ammo is now a tactical resource, not a trigger to mindlessly empty the
       // magazine. When the rival gets low, it picks the safer of the two stations
       // rather than automatically taking whichever one is closest.
+      if (this.trainingEdge.overall === 'BOT' && canSeePlayer && distance < 560) {
+        this.rivalMode = Math.random() < 0.72 ? 'PRESSURE' : 'FLANK';
+      } else if (this.trainingEdge.overall === 'PLAYER' && canSeePlayer) {
+        this.rivalMode = Math.random() < 0.68 ? 'FLANK' : 'PRESSURE';
+      }
+
       if (this.rival.ammo <= 7) {
         this.rivalSeekingAmmo = true;
         this.rivalAmmoStation = this.chooseSaferAmmoStation();
@@ -949,12 +965,24 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
 
   private resolveWeaponHit(owner: 'player' | 'rival', target: Fighter, hitX: number, hitY: number) {
     if (this.matchOver || this.roundTransition || this.resolvingRound || target.weaponDropped || target.downed) return;
+    const knockoutChance = this.getWeaponKnockoutChance(owner);
+    if (Math.random() > knockoutChance) {
+      this.recordScrape(owner, hitX, hitY);
+      return;
+    }
     if (owner === 'player') this.playerWeaponKnockouts += 1;
     else this.rivalWeaponKnockouts += 1;
     this.addSplatter(hitX, hitY, 0.7);
     this.showCombatHighlight(owner === 'player' ? 'GUN HIT · GUN DOWN' : 'YOUR GUN IS DOWN', '#e8c95c', hitX, hitY, 0.95);
     this.dropWeapon(target);
     this.statusHud?.setText(target === this.player ? 'GUN DOWN  ·  RECOVER OR REPOSITION' : 'RIVAL GUN DOWN  ·  PRESS THE RECOVERY');
+  }
+
+  private getWeaponKnockoutChance(owner: 'player' | 'rival') {
+    const edge = this.trainingEdge.shooting;
+    const ownerHasEdge = (owner === 'player' && edge === 'PLAYER') || (owner === 'rival' && edge === 'BOT');
+    const ownerHasDisadvantage = (owner === 'player' && edge === 'BOT') || (owner === 'rival' && edge === 'PLAYER');
+    return clamp(0.50 + (ownerHasEdge ? 0.14 : 0) - (ownerHasDisadvantage ? 0.14 : 0), 0.34, 0.66);
   }
 
   private dropWeapon(target: Fighter) {
@@ -1326,7 +1354,8 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
             player: this.playerWeaponKnockouts,
             rival: this.rivalWeaponKnockouts,
           },
-          mode: ARENA_NEUTRAL_BASELINE ? 'NEUTRAL' : 'PREPARED',
+          mode: 'PREPARED',
+          trainingEdge: this.trainingEdge,
           completedAt,
           durationMs: Math.max(0, completedAt - this.arenaStartedAt),
           budgetEarned: reward,
@@ -1380,6 +1409,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       '<br>HEADSHOTS YOU ' + this.playerHeadshots +
       ' · BODY HITS YOU ' + this.playerBodyHits +
       '<br>SCRAPES YOU ' + this.playerScrapes + ' · PAINT ' + this.playerPaintHits +
+      '<br>TRAINING EDGE · ' + this.trainingEdge.overall + ' · ODDS ONLY' +
       '<br>BUDGET EARNED · ' + reward +
       '</div>';
 
