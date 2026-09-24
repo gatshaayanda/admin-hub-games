@@ -138,6 +138,8 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private rivalWasPlayerHidden = false;
   private rivalHiddenSearchStartedAt = 0;
   private rivalHiddenPatrolAttempts = 0;
+  private rivalSeekingAmmo = false;
+  private rivalAmmoStation = new Phaser.Math.Vector2(0, 0);
   private readonly rivalPatrolSpeed = 92;
   private stealthIndicators: Array<{ ring: Phaser.GameObjects.Graphics; label: Phaser.GameObjects.Text; x: number; y: number; radius: number }> = [];
   private locatorPanel?: HTMLDivElement;
@@ -387,7 +389,10 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       if (distance <= 38) { this.pickupWeapon(this.rival); return; }
       this.moveRival(dx, dy, delta); return;
     }
-    if (this.rival.ammo <= 0 || this.rival.refilling) { this.updateRivalRefill(delta); return; }
+    if (this.rival.ammo <= 0 || this.rival.refilling) {
+      this.updateRivalRefill(delta);
+      return;
+    }
 
     const now = Date.now();
     const playerHidden = this.isPlayerConcealed();
@@ -424,13 +429,26 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
 
     if (!playerHidden && now >= this.rivalDecisionAt) {
       this.rivalDecisionAt = now + Phaser.Math.Between(900, 1700);
-      if (canSeePlayer && distance < 520 && Math.random() < 0.55) {
+
+      // Ammo is now a tactical resource, not a trigger to mindlessly empty the
+      // magazine. When the rival gets low, it picks the safer of the two stations
+      // rather than automatically taking whichever one is closest.
+      if (this.rival.ammo <= 7) {
+        this.rivalSeekingAmmo = true;
+        this.rivalAmmoStation = this.chooseSaferAmmoStation();
+      } else if (this.rival.ammo >= 14) {
+        this.rivalSeekingAmmo = false;
+      }
+
+      if (this.rivalSeekingAmmo) {
+        this.rivalTargetPoint.set(this.rivalAmmoStation.x, this.rivalAmmoStation.y);
+      } else if (canSeePlayer && distance < 520 && Math.random() < 0.55) {
         this.rivalMode = Math.random() < 0.62 ? 'FLANK' : 'PRESSURE';
       } else {
         this.rivalMode = Math.random() < 0.58 ? 'FLANK' : 'PRESSURE';
       }
 
-      if (this.rivalMode === 'FLANK') {
+      if (!this.rivalSeekingAmmo && this.rivalMode === 'FLANK') {
         const angle =
           Math.atan2(
             this.player.body.y - this.rival.body.y,
@@ -441,7 +459,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
           Phaser.Math.Clamp(this.player.body.x + Math.cos(angle) * flankDistance, 90, 2310),
           Phaser.Math.Clamp(this.player.body.y + Math.sin(angle) * flankDistance, 110, 1290),
         );
-      } else {
+      } else if (!this.rivalSeekingAmmo) {
         this.rivalTargetPoint.set(this.player.body.x, this.player.body.y);
       }
     }
@@ -495,6 +513,23 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
           true,
         );
       }
+    } else if (this.rivalSeekingAmmo) {
+      const dx = this.rivalAmmoStation.x - this.rival.body.x;
+      const dy = this.rivalAmmoStation.y - this.rival.body.y;
+      if (Math.hypot(dx, dy) < 42) {
+        this.rivalSeekingAmmo = false;
+        this.rivalMode = 'REGROUP';
+      } else {
+        // If the player is already threatening this station, do not walk into
+        // the reload trap. Re-evaluate the other station on the next decision.
+        if (canSeePlayer && Phaser.Math.Distance.Between(
+          this.player.body.x, this.player.body.y,
+          this.rivalAmmoStation.x, this.rivalAmmoStation.y,
+        ) < 260) {
+          this.rivalAmmoStation = this.chooseSaferAmmoStation(this.rivalAmmoStation.x, this.rivalAmmoStation.y);
+        }
+        this.moveRival(dx, dy, delta);
+      }
     } else if (this.rivalMode === 'FLANK') {
       const dx = this.rivalTargetPoint.x - this.rival.body.x;
       const dy = this.rivalTargetPoint.y - this.rival.body.y;
@@ -525,12 +560,14 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     );
 
     if (
+      !this.rivalSeekingAmmo &&
       !rivalHidden &&
       !playerHidden &&
       canSeePlayer &&
       this.rival.cooldown <= 0 &&
       now >= this.rivalCanFireAt &&
-      nowDistance < this.getRivalFireRange()
+      nowDistance < this.getRivalFireRange() &&
+      this.shouldRivalFire(nowDistance, now)
     ) {
       const direction = new Phaser.Math.Vector2(
         this.player.body.x - this.rival.body.x,
@@ -545,7 +582,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   }
 
   private updatePlayerRefill(delta: number) {
-    if (this.player.downed || this.player.weaponDropped || this.player.ammo > 0) {
+    if (this.player.downed || this.player.weaponDropped || this.player.ammo >= this.player.maxAmmo) {
       this.player.refilling = false;
       this.player.refillElapsed = 0;
       return;
@@ -580,9 +617,18 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private updateRivalRefill(delta: number) {
     if (this.rival.downed || this.rival.weaponDropped) return;
 
-    const station = this.getNearestAmmoStation(this.rival.body.x, this.rival.body.y);
-    const dx = station.centerX - this.rival.body.x;
-    const dy = station.centerY - this.rival.body.y;
+    const station = this.rivalSeekingAmmo
+      ? new Phaser.Geom.Rectangle(
+        this.rivalAmmoStation.x - 95,
+        this.rivalAmmoStation.y - 65,
+        190,
+        130,
+      )
+      : this.getNearestAmmoStation(this.rival.body.x, this.rival.body.y);
+    const stationCenterX = 'centerX' in station ? station.centerX : this.rivalAmmoStation.x;
+    const stationCenterY = 'centerY' in station ? station.centerY : this.rivalAmmoStation.y;
+    const dx = stationCenterX - this.rival.body.x;
+    const dy = stationCenterY - this.rival.body.y;
     const distance = Math.hypot(dx, dy) || 1;
 
     if (distance > 42) {
@@ -604,7 +650,53 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       this.rival.ammo = this.rival.maxAmmo;
       this.rival.refilling = false;
       this.rival.refillElapsed = 0;
+      this.rivalSeekingAmmo = false;
+      this.rivalDecisionAt = Date.now() + Phaser.Math.Between(700, 1200);
     }
+  }
+
+  private chooseSaferAmmoStation(excludeX?: number, excludeY?: number) {
+    const playerX = this.player.body.x;
+    const playerY = this.player.body.y;
+    const candidates = ARENA_AMMO_STATIONS.filter((station) =>
+      excludeX === undefined ||
+      Phaser.Math.Distance.Between(station.centerX, station.centerY, excludeX, excludeY ?? 0) > 1
+    );
+
+    const scored = (candidates.length ? candidates : ARENA_AMMO_STATIONS).map((station) => {
+      const rivalDistance = Phaser.Math.Distance.Between(
+        this.rival.body.x, this.rival.body.y, station.centerX, station.centerY,
+      );
+      const playerDistance = Phaser.Math.Distance.Between(
+        playerX, playerY, station.centerX, station.centerY,
+      );
+      const playerCanSeeStation = this.hasLineOfSight(
+        playerX, playerY, station.centerX, station.centerY,
+      );
+      const danger = playerDistance < 320 ? 520 : playerDistance < 520 ? 220 : 0;
+      const exposed = playerCanSeeStation ? 150 : 0;
+      return { station, score: rivalDistance + danger + exposed };
+    }).sort((a, b) => a.score - b.score);
+
+    return scored[0].station;
+  }
+
+  private shouldRivalFire(distance: number, now: number) {
+    if (this.rival.ammo <= 7) return false;
+
+    // If the player is actively spending paint, the rival deliberately stops
+    // feeding the exchange. This creates the counter-play: the player can no
+    // longer bait an endless bot spray and then punish its forced reload.
+    const playerRecentlyFired = now - this.playerLastFiredAt < 700;
+    const playerNearlyEmpty = this.player.ammo <= 5;
+    if (playerNearlyEmpty) return false;
+    if (playerRecentlyFired && this.player.ammo <= 10) return Math.random() < 0.18;
+
+    let chance = distance < 260 ? 0.72 : distance < 430 ? 0.48 : 0.28;
+    if (this.rival.ammo <= 12) chance *= 0.68;
+    if (this.rival.ammo <= 9) chance *= 0.55;
+
+    return Math.random() < chance;
   }
 
   private rivalRefillProgressReset() {
