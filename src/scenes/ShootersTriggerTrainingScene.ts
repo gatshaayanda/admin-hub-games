@@ -198,8 +198,11 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     this.rival.cooldown = 0;
 
     // Evasion starts unarmed: same Arena fighter, weapon system simply disabled.
+    // Evasion: player unarmed, bot armed. No hiding and no ammo stations.
     this.setTrainingArmed(this.player, false);
     this.setTrainingArmed(this.rival, true);
+    this.player.ammo = Number.POSITIVE_INFINITY;
+    this.rival.ammo = Number.POSITIVE_INFINITY;
 
     this.cameras.main.setBounds(0, 0, 2400, 1400);
     this.cameras.main.startFollow(this.player.body, true, 0.08, 0.08);
@@ -244,6 +247,10 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   update(_time: number, delta: number) {
     if (this.trainingDone || this.paused || this.trainingStage === 'BREAK' || this.roundTransition || this.resolvingRound) return;
 
+    const playerShouldBeArmed = this.trainingStage === 'SHOOTING';
+    const rivalShouldBeArmed = this.trainingStage === 'EVASION';
+    if (this.player.weaponDropped === playerShouldBeArmed) this.setTrainingArmed(this.player, playerShouldBeArmed);
+    if (this.rival.weaponDropped === rivalShouldBeArmed) this.setTrainingArmed(this.rival, rivalShouldBeArmed);
     this.movePlayer(delta);
     this.tryPickupWeapon(this.player);
     this.updateTrainingRival(delta);
@@ -316,7 +323,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     target.weaponDropped = !armed;
     target.downed = false;
     target.wounded = false;
-    target.ammo = target.maxAmmo;
+    target.ammo = Number.POSITIVE_INFINITY;
     target.refilling = false;
     target.refillElapsed = 0;
     target.droppedWeapon.setVisible(false);
@@ -390,8 +397,11 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       this.rival.body.setPosition(ARENA_RIVAL_SPAWN.x, ARENA_RIVAL_SPAWN.y);
       this.resetTrainingCombatant(this.player, false);
       this.resetTrainingCombatant(this.rival, true);
+      // Shooting: player armed, bot unarmed. No hiding and no ammo stations.
       this.setTrainingArmed(this.player, true);
       this.setTrainingArmed(this.rival, false);
+      this.player.ammo = Number.POSITIVE_INFINITY;
+      this.rival.ammo = Number.POSITIVE_INFINITY;
       this.clearSplatter();
       this.clearShots();
       this.player.cooldown = 0;
@@ -408,7 +418,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     target.wounded = false;
     target.downed = false;
     target.weaponDropped = !keepArmed;
-    target.ammo = target.maxAmmo;
+    target.ammo = Number.POSITIVE_INFINITY;
     target.refilling = false;
     target.refillElapsed = 0;
     target.droppedWeapon.setVisible(false);
@@ -883,6 +893,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   }
 
   private updatePlayerRefill(delta: number) {
+    if (this.trainingMode) return;
     if (this.player.downed || this.player.weaponDropped || this.player.ammo >= this.player.maxAmmo) {
       this.player.refilling = false;
       this.player.refillElapsed = 0;
@@ -916,6 +927,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   }
 
   private updateRivalRefill(delta: number) {
+    if (this.trainingMode) return;
     if (this.rival.downed || this.rival.weaponDropped) return;
 
     const station = this.rivalSeekingAmmo
@@ -1001,16 +1013,15 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   }
 
   private isRivalConcealed() {
+    if (this.trainingMode) return false;
     if (this.rival.downed || this.rival.weaponDropped) return false;
     if (Date.now() < this.rivalRevealedUntil) return false;
     if (Date.now() - this.rivalLastFiredAt < ARENA_STEALTH_BREAK_MS) return false;
     return this.inConcealment(this.rival.body.x, this.rival.body.y);
   }
 
-  private inConcealment(x: number, y: number, padding = 0) {
-    return this.concealments.some((zone) =>
-      Phaser.Math.Distance.Between(x, y, zone.x, zone.y) <= zone.radius + padding
-    );
+  private inConcealment(_x: number, _y: number, _padding = 0) {
+    return false;
   }
 
   private chooseHiddenPatrolPoint() {
@@ -1087,12 +1098,12 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   }
 
   private playerFire() {
-    if (this.player.weaponDropped || this.player.refilling || (!this.trainingMode && this.player.ammo <= 0) || this.player.cooldown > 0) return;
+    if (this.player.weaponDropped || this.player.refilling || this.player.cooldown > 0) return;
     this.player.cooldown = ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(130, 330 - this.playerSkill * 1.15);
     if (!this.trainingMode) this.player.ammo -= 1;
     this.playerShotsFired += 1;
     this.playerLastFiredAt = Date.now();
-    this.playerRevealedUntil = Date.now() + 1800;
+    this.playerRevealedUntil = Number.POSITIVE_INFINITY;
     this.flashMuzzle(this.playerMuzzle);
     this.spawnShot(
       this.player.body.x + this.aim.x * 42,
@@ -1109,7 +1120,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     if (!this.trainingMode) this.rival.ammo -= 1;
     this.rivalShotsFired += 1;
     this.rivalLastFiredAt = Date.now();
-    this.rivalRevealedUntil = Date.now() + 1800;
+    this.rivalRevealedUntil = Number.POSITIVE_INFINITY;
     this.flashMuzzle(this.rivalMuzzle);
     this.spawnShot(
       this.rival.body.x + aim.x * 42,
@@ -1472,7 +1483,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     target.wounded = false;
     target.downed = false;
     target.weaponDropped = false;
-    target.ammo = target.maxAmmo;
+    target.ammo = Number.POSITIVE_INFINITY;
     target.refilling = false;
     target.refillElapsed = 0;
     target.droppedWeapon.setVisible(false);
@@ -1524,7 +1535,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         if (this.trainingDone || this.paused || this.trainingStage === 'BREAK') return;
         this.clearSplatter();
         if (isPlayer) {
-          this.resetTrainingCombatant(this.player, false);
+          this.resetTrainingCombatant(this.player, this.trainingStage === 'SHOOTING');
           this.player.body.setPosition(ARENA_PLAYER_SPAWN.x, ARENA_PLAYER_SPAWN.y);
         } else {
           this.resetTrainingCombatant(this.rival, this.trainingStage === 'EVASION');
@@ -1744,8 +1755,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     this.scoreHud?.setText('TRAINING CAMP · ' + stageLabel + ' · ' + (remaining / 1000).toFixed(1) + 's');
     this.ammoHud?.setText(
       this.trainingStage === 'EVASION'
-        ? 'YOU UNARMED · BOT ARMED'
-        : 'GUN · UNLIMITED AMMO'
+        ? 'YOU UNARMED · BOT ARMED · COVER ONLY'
+        : 'GUN · UNLIMITED AMMO · BOT UNARMED'
     );
   }
 
@@ -1933,13 +1944,6 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     for (const cover of this.covers) {
       drawWorldPoint(cover.x + cover.width / 2, cover.y + cover.height / 2, 'cover', 3);
     }
-    for (const station of ARENA_AMMO_STATIONS) {
-      drawWorldPoint(station.centerX, station.centerY, 'ammo', 3);
-    }
-    for (const zone of this.concealments) {
-      drawWorldPoint(zone.x, zone.y, 'hide', 3);
-    }
-
     const distanceValue = Phaser.Math.Distance.Between(
       this.player.body.x,
       this.player.body.y,
@@ -1947,7 +1951,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       this.rival.body.y,
     );
 
-    const concealed = this.isRivalConcealed();
+    const concealed = false;
     const dx = this.rival.body.x - this.player.body.x;
     const dy = this.rival.body.y - this.player.body.y;
     const length = Math.hypot(dx, dy) || 1;
@@ -1965,9 +1969,9 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     ctx.closePath();
     ctx.fill();
 
-    ctx.fillStyle = concealed ? 'rgba(228,79,61,.28)' : '#e44f3d';
+    ctx.fillStyle = '#e44f3d';
     ctx.beginPath();
-    ctx.arc(rivalX, rivalY, concealed ? 4 : 5, 0, Math.PI * 2);
+    ctx.arc(rivalX, rivalY, 5, 0, Math.PI * 2);
     ctx.fill();
 
     if (!concealed) {
@@ -1987,10 +1991,10 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     }
 
     ctx.textAlign = 'center';
-    ctx.fillStyle = concealed ? 'rgba(244,241,223,.68)' : '#f4f1df';
+    ctx.fillStyle = '#f4f1df';
     ctx.font = '800 8px monospace';
     const distanceLevel = Math.max(1, Math.min(4, Math.ceil(distanceValue / (maxRadarDistance / 4))));
-    ctx.fillText(concealed ? 'SIGNAL LOST' : 'RANGE ' + distanceLevel, radarCx, h - 4);
+    ctx.fillText('RANGE ' + distanceLevel, radarCx, h - 4);
 
     const camera = this.cameras.main;
     const viewLeft = camera.scrollX;
@@ -2007,7 +2011,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     const distanceLabel = this.locatorDistance;
     if (!arrow || !distanceLabel) return;
 
-    if (concealed || onScreen) {
+    if (onScreen) {
       arrow.style.display = 'none';
       distanceLabel.style.display = 'none';
       return;
@@ -2317,9 +2321,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   private drawField() {
     const g = this.add.graphics();
 
-    // Deliberately mirrors the Shooting Training field: same scale, ground,
-    // lanes, perimeter, trees, bunkers and tire stacks. Arena removes targets
-    // and uses the open space for the rival match.
+    // Arena-scale combat field with physical cover only. Training has no trees, concealment, or hiding spots.
     const worldWidth = 2400;
     const worldHeight = 1400;
 
@@ -2331,11 +2333,6 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
     g.lineStyle(5, 0xf4f1df, 0.48);
     g.strokeRect(55, 70, worldWidth - 110, worldHeight - 120);
-
-    this.drawTree(300, 280, 1.15);
-    this.drawTree(2050, 300, 0.95);
-    this.drawTree(350, 1110, 0.90);
-    this.drawTree(2070, 1090, 1.10);
 
     this.drawBunker(690, 360, 190, 72, 0x76563b);
     this.drawBunker(1470, 350, 230, 76, 0x5f6e69);
@@ -2407,24 +2404,6 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(6).setAlpha(0.55);
   }
 
-  private drawTree(x: number, y: number, scale: number) {
-    const g = this.add.graphics();
-    g.fillStyle(0x65472f, 1).fillRect(x - 6 * scale, y + 18 * scale, 12 * scale, 60 * scale);
-    g.fillStyle(0x405638, 1).fillCircle(x, y, 34 * scale).fillCircle(x - 28 * scale, y + 9 * scale, 28 * scale).fillCircle(x + 28 * scale, y + 9 * scale, 29 * scale);
-    g.fillStyle(0x526d3c, 0.75).fillCircle(x + 5 * scale, y - 16 * scale, 23 * scale);
-    this.concealments.push(new Phaser.Geom.Circle(x, y, ARENA_STEALTH_RADIUS * scale));
-    this.covers.push(new Phaser.Geom.Rectangle(x - 8 * scale, y + 14 * scale, 16 * scale, 52 * scale));
-
-    // World-space cue: concealment spots are obvious without adding another HUD/map widget.
-    const ring = this.add.graphics().setDepth(7);
-    ring.lineStyle(3, 0x9fbda8, 0.55).strokeCircle(x, y, Math.max(42, ARENA_STEALTH_RADIUS * scale * 0.72));
-    const label = this.add.text(x, y + 58 * scale, 'HIDE', {
-      fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold',
-      color: '#d8eadf', stroke: '#203326', strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(8);
-    this.stealthIndicators.push({ ring, label, x, y, radius: ARENA_STEALTH_RADIUS * scale });
-  }
-
   private drawBunker(x: number, y: number, width: number, height: number, color: number) {
     const g = this.add.graphics();
     g.fillStyle(0x493526, 0.24).fillRect(x + 8, y + 9, width, height);
@@ -2485,6 +2464,10 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   }
 
   private updatePlayerAwareness() {
+    if (this.trainingMode) {
+      this.playerLastKnown.set(this.player.body.x, this.player.body.y);
+      return;
+    }
     if (!this.isPlayerConcealed()) {
       this.playerLastKnown.set(this.player.body.x, this.player.body.y);
       this.playerRevealedUntil = Math.max(this.playerRevealedUntil, Date.now());
