@@ -3751,3 +3751,185 @@ Use a simple **RANGE 1–4** scale instead of metres on the player-facing radar.
 Keep cover objects visible but visually secondary. Do not turn the radar into a dense mini-map or add unnecessary floating labels. Any future radar change must preserve the distinction between **where the rival is**, **where I can resupply**, and **where I can hide**.
 
 For Shooters Trigger work, protect this radar contract unless a real phone playtest demonstrates a usability problem.
+
+## Shooters Trigger — Product Understanding / Context Handoff Contract — September 24, 2026
+
+This section exists so a future chat/agent can recover the **why**, not just the list of features.
+
+### What Shooters Trigger is becoming
+
+Shooters Trigger is not being treated as a collection of disconnected Phaser mini-games. It is a small competitive field system built around a persistent player loop:
+
+```
+LEARN → TRAIN → PREPARE → COMPETE → REVIEW → ADAPT → RETRAIN
+```
+
+The intended player experience is:
+
+```
+HOME FIELD
+  ↓
+TRAINING / EVASION
+  ↓
+SHOOTING
+  ↓
+FIELD PHONE / TRAINING PASSPORT
+  ↓
+ARENA
+  ↓
+RESULT / MEDIA
+  ↓
+MONEY / EQUIPMENT
+  ↓
+ARMORY TRIAL
+  ↓
+ARENA AGAIN
+  ↓
+BOT ADAPTS TO PLAYER
+```
+
+The core design idea is **"the game remembers how you play."** Training and match behaviour should eventually influence the player's field profile, the rival's behaviour, progression and tactical choices. This is the trajectory; do not turn it into a generic stat-inflation game.
+
+### Current product maturity
+
+As of September 24, 2026, the Arena combat foundation is the protected Golden Pre-V1 Core. The project is moving from **playable combat prototype** toward **systems/gameplay prototype**.
+
+The next meaningful work is not automatically more visual content or more power-ups. It is to prove the competitive loop:
+1. observe how the player beats the current rival;
+2. identify the rival's predictable response;
+3. implement a readable counter/variation;
+4. make training produce useful evidence;
+5. carry that evidence into Arena;
+6. make Arena results affect the phone/progression;
+7. introduce special equipment one piece at a time.
+
+When the owner says they have "figured out how to beat the bot," treat that as valuable gameplay evidence, not as a request to simply increase bot speed/accuracy/damage.
+
+### Bot design direction
+
+The bot should become **adaptive, not merely harder**.
+
+Document changes as:
+```
+PLAYER TENDENCY → CURRENT BOT RESPONSE → EXPLOIT → DESIRED COUNTER
+```
+
+Use readable rival styles such as:
+- **MARKSMAN** — holds useful distance, seeks clear shots and punishes exposure;
+- **RUNNER** — closes distance, changes position and pressures;
+- **ALL-ROUNDER** — mixes approaches.
+
+Styles should vary their response based on observed player tendencies without becoming arbitrary or impossible to read. The goal is tactical uncertainty, not random behaviour.
+
+Do not add many personalities before the current exploit is understood and countered.
+
+### Training trajectory
+
+The planned Training Camp evolution is:
+```
+EVASION → SHOOTING → TRAINING REPORT / PASSPORT
+```
+
+Training should feel like preparation for Arena, not two unrelated mini-games. A completed training record should communicate useful human-readable strengths/weaknesses and eventually determine part of the player's Arena edge.
+
+The Field Phone should evolve into the player's persistent operating layer:
+- field route/guide;
+- training record;
+- Arena results;
+- money;
+- equipment;
+- actionable news/results;
+- future Training Passport / field-readiness state.
+
+The phone can explain what is possible without becoming a pointless gate.
+
+### Progression / economy direction
+
+The intended long-term loop is:
+```
+WIN → EARN → CHOOSE → BUY/TRY → NEW TACTICAL OPTION → BOT RESPONSE → ARENA → RETRAIN
+```
+
+The first special equipment candidate is a **grenade**, with an Armory **TRY EQUIPMENT** trial before purchase. Later candidates discussed are tactical teleport, sniper and landmine, but these are explicitly future work, not current requirements.
+
+Power-ups must create decisions rather than remove them:
+- grenade should deny/force movement rather than guarantee a kill;
+- teleport should create positional advantage rather than automatically kill;
+- sniper should trade power for constraints/positioning;
+- landmine should create tactical area control and be avoidable/backfire-capable.
+
+Do not build the whole power-up/economy stack before the bot + training loop is proven.
+
+### Tactical map / radar intent
+
+The Arena tactical locator is deliberately a **hybrid player-centred tactical map**.
+
+It must communicate at a glance:
+- **YOU** — fixed centre;
+- **RIVAL** — red contact/direction;
+- **AMMO** — resupply locations;
+- **COVER** — useful field structures;
+- **CONCEALMENT** — places where hiding is possible;
+- **RANGE 1–4** — simple relative proximity.
+
+The player-facing radar must not make a phone player read metres while under pressure. Exact world distance can remain an internal gameplay value; the UI communicates relative range.
+
+The radar is not supposed to become a dense full-field mini-map. Objects are contextual aids; rival direction/visibility remains the primary combat signal. A concealed rival may show SIGNAL LOST rather than cheating by revealing them.
+
+### Protected combat feel
+
+The owner has repeatedly preferred the proven discrete paintball engagement over flashy projectile effects.
+
+Protect unless explicitly changed:
+- visible discrete 4px paintballs;
+- direct readable trajectory;
+- organic circular paint splatter with droplets;
+- no fire/laser/tracer/streak projectile treatment;
+- cover genuinely blocks shots;
+- gun hits disarm and create a recoverable dropped weapon;
+- headshot = immediate elimination;
+- clean body hit = 1 of 2 body hits;
+- second clean body hit = elimination;
+- scrape = paint only;
+- true miss = no effect;
+- respawn clears combat paint evidence as intended.
+
+When combat feels wrong, inspect the complete shot → projectile → cover → geometry → hit resolution → weapon/drop → elimination/respawn pipeline before casually tuning HUD, AI or visuals.
+
+### Change discipline for this game
+
+The owner is particularly concerned that Shooters Trigger work must not accidentally disturb the shared Admin Hub Games platform or other games.
+
+Therefore:
+- inspect current `main` before every meaningful change;
+- protect Hall and other games;
+- keep Shooters Trigger changes inside its relevant scene/data/UI boundary whenever possible;
+- make the smallest controlled change;
+- review the exact diff;
+- build/test the affected path;
+- checkpoint to `main` when requested;
+- explicitly state what changed and what was not touched.
+
+For gameplay work, the owner prefers a real phone playthrough as the next decision gate. **Do not add features just because the roadmap contains them.** An observed play result outranks an imagined improvement.
+
+### Current immediate working order
+
+Unless the owner explicitly changes direction, the intended sequence is:
+1. real phone playthrough and exact bot exploit report;
+2. inspect current Arena AI/engagement code;
+3. implement the smallest readable adaptive counter;
+4. rebuild/reshape Training Camp around Evasion → Shooting → Report;
+5. make the Training Passport meaningful;
+6. feed training evidence into Arena;
+7. connect Arena result to Field Phone/media and money;
+8. add one Armory trial power-up (grenade);
+9. only then evaluate further economy/power-up layers.
+
+The owner may change this order after playtesting. Do not treat this list as permission to implement all items in one pass.
+
+### Communication / handoff rule
+
+Future chats should explain Shooters Trigger in plain language first:
+> **"You train, the game learns how you play, you fight, you earn, you buy an advantage, and the rival learns to fight back."**
+
+Technical implementation details come after the gameplay reason. If a future agent only sees a feature request, it should recover this product context from AGENTS.md before changing the code.
