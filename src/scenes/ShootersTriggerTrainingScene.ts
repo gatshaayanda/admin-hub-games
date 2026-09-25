@@ -604,7 +604,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   }
 
   public isFireAvailable() {
-    return this.trainingStage === 'SHOOTING' && !this.trainingDone && !this.paused && this.trainingStage !== 'BREAK';
+    return this.trainingStage === 'SHOOTING' && !this.trainingDone && !this.paused;
   }
 
   public setFireHeld(value: boolean) {
