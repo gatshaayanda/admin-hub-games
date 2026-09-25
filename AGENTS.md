@@ -4071,3 +4071,10 @@ After Training Camp is declared playtest-complete, the **next gameplay task is A
 - The phone is styled as a compact futuristic field device: readable first, atmospheric second. It may use animated rings/signal accents and emojis, but must not become a hologram-heavy sci-fi dashboard.
 - The world feed uses clearly fictional in-game Botswana-flavoured media/social voices. Never present invented reactions as real reporting or impersonate a real Botswana outlet. The purpose is to make the player feel watched by the game's world while keeping the source obviously fictional.
 - The Arena receives the underlying numerical training evidence/edge; the phone translates that evidence for the player. Do not replace the internal data with the 1–4 presentation.
+
+
+### Training elimination recovery hardening
+
+- Training elimination recovery must not depend on the Phaser update loop alone. Use a short browser-timer recovery path plus the update-loop safety fallback.
+- A player/bot elimination must always return the drill to active combat unless the user explicitly paused or left training.
+- Do not reintroduce the old delayed-callback-only lifecycle that allowed a downed fighter to appear frozen.
