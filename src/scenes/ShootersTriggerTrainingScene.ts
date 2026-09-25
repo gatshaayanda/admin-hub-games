@@ -176,6 +176,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   private trainingCameraFocus?: Phaser.GameObjects.Zone;
   private trainingResultPanel?: HTMLDivElement;
   private trainingRespawnAt = 0;
+  private trainingRespawnTimer?: number;
 
 
   constructor() {
@@ -199,6 +200,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     this.trainingShootingBotLifeStartedAt = 0;
     this.trainingShootingBotEliminations = 0;
     this.trainingRespawnAt = 0;
+    if (this.trainingRespawnTimer) window.clearTimeout(this.trainingRespawnTimer);
+    this.trainingRespawnTimer = undefined;
     this.playerSkill = 50;
     this.evasionSkill = 50;
     this.trainingEdge = { overall: 'TIE', evasion: 'TIE', shooting: 'TIE' };
@@ -253,6 +256,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       this.pausePanel?.remove();
       this.resultPanel?.remove();
       this.trainingBreakPanel?.remove();
+      if (this.trainingRespawnTimer) window.clearTimeout(this.trainingRespawnTimer);
+      this.trainingRespawnTimer = undefined;
       this.clearSplatter();
       this.clearShots();
       this.player?.droppedWeapon?.destroy();
@@ -1726,13 +1731,31 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         this.recordCurrentShootingBotLife();
         this.trainingShootingBotEliminations += 1;
       }
-      this.trainingRespawnAt = Date.now() + 260;
+      // Do not depend on the Phaser update loop to perform the reset. A hit can
+      // occur during projectile resolution, and any lifecycle guard raised in
+      // that same frame can otherwise make the downed state look like a freeze.
+      this.scheduleTrainingRespawn();
       return;
     }
   }
 
+  private scheduleTrainingRespawn() {
+    this.trainingRespawnAt = Date.now() + 220;
+    if (this.trainingRespawnTimer) window.clearTimeout(this.trainingRespawnTimer);
+    this.trainingRespawnTimer = window.setTimeout(() => {
+      this.trainingRespawnTimer = undefined;
+      // Browser timer is the hard recovery path. The update-loop check remains
+      // as a second safety net if the tab throttles timers.
+      if (this.trainingRespawnAt > 0 && this.scene.isActive() && !this.paused) {
+        this.finishTrainingRespawn();
+      }
+    }, 220);
+  }
+
   private finishTrainingRespawn() {
     if (this.trainingRespawnAt <= 0) return;
+    if (this.trainingRespawnTimer) window.clearTimeout(this.trainingRespawnTimer);
+    this.trainingRespawnTimer = undefined;
     this.trainingRespawnAt = 0;
     this.clearSplatter();
 
