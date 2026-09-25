@@ -237,7 +237,6 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
     this.createHud();
     this.createPauseButton();
-    this.createEnemyLocator();
 
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.cleanup = installShootersTriggerMobileControls();
@@ -269,14 +268,15 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number) {
-    if (this.trainingDone || this.paused || this.trainingStage === 'BREAK' || this.roundTransition || this.resolvingRound) return;
-
-    // Training deaths use an explicit respawn state instead of depending on a
-    // delayed callback. This keeps a hit from ever leaving the mobile controls
-    // looking alive while the fighter is still downed.
-    if (this.trainingRespawnAt > 0 && Date.now() >= this.trainingRespawnAt) {
+    // IMPORTANT: the respawn check must run before the normal combat early-return.
+    // A player elimination intentionally leaves the fighter downed for a short
+    // readable beat; if a lifecycle flag is raised during that beat, putting the
+    // respawn check behind the guard can leave the scene looking frozen forever.
+    if (this.trainingRespawnAt > 0 && !this.paused && Date.now() >= this.trainingRespawnAt) {
       this.finishTrainingRespawn();
     }
+
+    if (this.trainingDone || this.paused || this.trainingStage === 'BREAK' || this.roundTransition || this.resolvingRound) return;
 
     // Training roles are a hard gameplay contract. The unarmed side is always
     // visually and mechanically unarmed; the armed side may still lose its gun
@@ -1906,25 +1906,20 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   }
 
   private createHud() {
-    this.scoreHud = this.add.text(this.scale.width / 2, 16, 'TRAINING CAMP · EVASION', {
-      fontFamily: 'monospace', fontSize: '13px', fontStyle: 'bold', color: '#f4f1df',
-      backgroundColor: 'rgba(16,32,24,.62)', padding: { left: 8, right: 8, top: 5, bottom: 5 },
+    // Training already keeps both fighters in the camera. A radar and a second
+    // role/ammo banner only compete with the combat view on a phone, so the
+    // training HUD is intentionally reduced to one compact stage/timer readout.
+    this.scoreHud = this.add.text(this.scale.width / 2, 14, 'EVASION · 30.0s', {
+      fontFamily: 'monospace', fontSize: '12px', fontStyle: 'bold', color: '#f4f1df',
+      backgroundColor: 'rgba(16,32,24,.70)', padding: { left: 9, right: 9, top: 5, bottom: 5 },
     }).setOrigin(.5, 0).setScrollFactor(0).setDepth(90);
-    this.ammoHud = this.add.text(this.scale.width - 14, 16, 'UNARMED', {
-      fontFamily: 'monospace', fontSize: '10px', fontStyle: 'bold', color: '#e8c95c',
-      backgroundColor: 'rgba(16,32,24,.62)', padding: { left: 7, right: 7, top: 5, bottom: 5 },
-    }).setOrigin(1, 0).setScrollFactor(0).setDepth(90);
+    this.ammoHud = undefined;
   }
 
   private updateHud() {
     const remaining = Math.max(0, TRAINING_STAGE_MS - (Date.now() - this.trainingStartedAt));
     const stageLabel = this.trainingStage === 'EVASION' ? 'EVASION' : 'SHOOTING';
-    this.scoreHud?.setText('TRAINING CAMP · ' + stageLabel + ' · ' + (remaining / 1000).toFixed(1) + 's');
-    this.ammoHud?.setText(
-      this.trainingStage === 'EVASION'
-        ? 'YOU UNARMED · BOT ARMED · COVER ONLY'
-        : 'GUN · UNLIMITED AMMO · BOT UNARMED'
-    );
+    this.scoreHud?.setText(stageLabel + ' · ' + (remaining / 1000).toFixed(1) + 's');
   }
 
   private createPauseButton() {
