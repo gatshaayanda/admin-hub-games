@@ -4081,3 +4081,9 @@ After Training Camp is declared playtest-complete, the **next gameplay task is A
 
 - Latest playtest finding (September 25): the browser-timer recovery removed the original frozen-downed state, but a second freeze-like failure remained when the surviving fighter had chased close to the eliminated fighter's fixed spawn. Respawning only the downed side could restart combat at point-blank range.
 - Training respawn recovery must therefore also enforce separation: when the survivor is within 420px of the respawned fighter, return the survivor to its own training spawn before combat resumes.
+
+### Training contact-overlap hardening — September 25
+
+- The 420px respawn separation fixed one lifecycle case, but the bot could still physically close the gap during normal CQE and touch/overlap the player.
+- Training must maintain a hard 110px minimum separation. The aggressive Evasion bot may pressure into CQE, but it must stop advancing at contact range; a safety pass separates the fighters before the next combat frame.
+- This is a collision/lifecycle safety invariant, not a damage or difficulty boost.
