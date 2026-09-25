@@ -4003,3 +4003,17 @@ Training Camp rules:
 Do not reintroduce separate Shooting Range and Evasion Yard field destinations unless the product owner explicitly asks for them. They are now one Training Camp experience.
 
 Current implementation checkpoint is on main after the Training Camp rebuild and Arena edge integration. Vercel may still reject builds during an account-level build-rate-limit window; a GitHub checkpoint is not proof of production deployment.
+
+
+## Shooters Trigger — Training mobile framing contract — September 25, 2026
+
+Training is an evaluation drill, so its camera must serve judgment rather than copy Arena framing.
+- Do not reuse Arena's asymmetric player/rival spawn framing for Training.
+- Training starts both combatants in a readable shared engagement area.
+- The mobile camera centers between the player and training bot, with a small upward bias so the bottom-corner joystick/fire controls do not hide trajectory or impacts.
+- Camera zoom dynamically responds to the distance between the two combatants: closer engagement gets more readable detail; wider evasion gets enough field of view to keep both actors visible.
+- Use smooth camera movement; do not snap every frame.
+- Preserve direct projectile visibility, cover blocking, paint splatter and hit feedback. The camera should make those easier to evaluate, not decorate them.
+- Training is specifically testing **survival/evasion** and **shot quality**, so a frame that loses the opponent or projectile path is a gameplay defect, not merely a visual preference.
+
+The camera approach is based on established combat-framing practice: center the focal position on combatants and zoom out as needed to keep the encounter inside the view. Phaser supports camera follow, deadzones, bounds and zoom for this pattern. citeturn1search24turn0search1
