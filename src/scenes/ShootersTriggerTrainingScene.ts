@@ -254,6 +254,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
     this.createHud();
     this.createPauseButton();
+    this.createEnemyLocator();
 
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.cleanup = installShootersTriggerMobileControls();
