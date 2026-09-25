@@ -369,20 +369,37 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       return;
     }
 
-    // Shooting stage: the bot is unarmed and evasive. Its movement is the same
-    // Arena movement primitive, but it does not fire or hide.
+    // Shooting stage: the bot is unarmed and evasive. It still has to behave
+    // like a real target: if cover blocks the player's route, it works around it
+    // instead of repeatedly walking into the obstacle.
     if (this.rival.downed) return;
     const dx = this.player.body.x - this.rival.body.x;
     const dy = this.player.body.y - this.rival.body.y;
     const d = Math.hypot(dx, dy) || 1;
-    const side = Math.sin(Date.now() / 420) >= 0 ? 1 : -1;
-    this.moveRival(
-      d > 420 ? dx / d * 0.22 + (-dy / d) * side : (-dy / d) * side,
-      d > 420 ? dy / d * 0.22 + (dx / d) * side : (dx / d) * side,
-      delta,
-      175,
-      false,
+    const hasSight = this.hasLineOfSight(
+      this.rival.body.x,
+      this.rival.body.y,
+      this.player.body.x,
+      this.player.body.y,
     );
+
+    if (!hasSight) {
+      const route = this.getTrainingObstacleRoute();
+      this.moveRival(route.x, route.y, delta, 175, false);
+      return;
+    }
+
+    // Keep the bot in a readable engagement band. At close range it slips
+    // laterally; at longer range it keeps moving away without hiding.
+    const side = Math.sin(Date.now() / 420) >= 0 ? 1 : -1;
+    const desiredX = d < TRAINING_CQE_HARD_RANGE
+      ? (-dy / d) * side
+      : dx / d * (d > TRAINING_CQE_RANGE ? -1 : 0.16) + (-dy / d) * side;
+    const desiredY = d < TRAINING_CQE_HARD_RANGE
+      ? (dx / d) * side
+      : dy / d * (d > TRAINING_CQE_RANGE ? -1 : 0.16) + (dx / d) * side;
+
+    this.moveRival(desiredX, desiredY, delta, 175, false);
   }
 
   private applyTrainingRoleContract() {
@@ -501,6 +518,20 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       this.trainingBreakPanel = undefined;
       this.trainingStage = 'SHOOTING';
       this.trainingStartedAt = Date.now();
+      // Shooting is a clean second experiment. Evasion evidence is already
+      // stored in trainingEvasionStats, so the reversed drill starts fresh.
+      this.playerShotsFired = 0;
+      this.playerBodyHits = 0;
+      this.playerHeadshots = 0;
+      this.playerScrapes = 0;
+      this.playerMisses = 0;
+      this.playerPaintHits = 0;
+      this.rivalShotsFired = 0;
+      this.rivalBodyHits = 0;
+      this.rivalHeadshots = 0;
+      this.rivalScrapes = 0;
+      this.rivalMisses = 0;
+      this.rivalPaintHits = 0;
       this.trainingShootingBotSurvivalMs = 0;
       this.trainingShootingBotEliminations = 0;
       this.trainingShootingBotLifeStartedAt = Date.now();
@@ -629,13 +660,17 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       width:'min(440px,94vw)', padding:'22px', background:'#151a16', color:'#f4f1df',
       border:'2px solid #e8c95c', borderRadius:'12px', textAlign:'center',
     });
+    const range = (score:number) => score < 40 ? '1/4' : score < 60 ? '2/4' : score < 80 ? '3/4' : '4/4';
+    const read = (score:number, kind:'EVASION'|'SHOOTING') => {
+      if (kind === 'EVASION') return score >= 80 ? 'CALM UNDER FIRE' : score >= 60 ? 'MOVES WITH INTENT' : score >= 40 ? 'STILL FINDING SPACE' : 'EXPOSED UNDER PRESSURE';
+      return score >= 80 ? 'CLEAN FINISHER' : score >= 60 ? 'CONTROLLED PRESSURE' : score >= 40 ? 'FINDING THE RHYTHM' : 'WASTES TOO MUCH PAINT';
+    };
     card.innerHTML =
-      '<div style="color:#e8c95c;font-size:19px;font-weight:800">TRAINING REPORT</div>' +
-      '<div style="margin:12px 0;font-size:11px;line-height:1.8">' +
-      '<b>EVASION</b> · ' + report.evasion.edge + ' EDGE · ' + report.evasion.score +
-      '<br><b>SHOOTING</b> · ' + report.shooting.edge + ' EDGE · ' + report.shooting.score +
-      '<br><br><b>OVERALL EDGE · ' + report.edge.overall + '</b>' +
-      '<br><span style="color:#9fbda8">EDGE = ODDS, NOT A GUARANTEED WIN.</span></div>';
+      '<div style="color:#e8c95c;font-size:19px;font-weight:800">FIELD READOUT</div>' +
+      '<div style="margin:8px 0 14px;font-size:10px;line-height:1.55;color:#b9c8bd">Two drills. One read. The field is measuring how you behave when the gun is on the other side.</div>' +
+      '<div style="padding:11px;border:1px solid #496556;border-radius:10px;background:#102018;text-align:left;margin-bottom:8px"><b>🛡️ EVASION · '+range(report.evasion.score)+'</b><br><span style="font-size:10px;color:#b9c8bd">'+read(report.evasion.score,'EVASION')+' · '+report.evasion.edge+' edge</span></div>' +
+      '<div style="padding:11px;border:1px solid #496556;border-radius:10px;background:#102018;text-align:left;margin-bottom:8px"><b>🎯 SHOOTING · '+range(report.shooting.score)+'</b><br><span style="font-size:10px;color:#b9c8bd">'+read(report.shooting.score,'SHOOTING')+' · '+report.shooting.edge+' edge</span></div>' +
+      '<div style="margin-top:10px;padding:12px;border:2px solid #e8c95c;border-radius:10px;background:#182b20"><b>OVERALL · '+report.edge.overall+'</b><br><span style="font-size:9px;color:#b9c8bd">EDGE changes your Arena odds. It does not guarantee the result.</span></div>';
     const button = document.createElement('button');
     button.textContent = 'RETURN TO FIELD';
     Object.assign(button.style, {
