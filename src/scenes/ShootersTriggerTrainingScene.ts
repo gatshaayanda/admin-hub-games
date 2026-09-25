@@ -66,6 +66,10 @@ const ARENA_PROJECTILE_MIN_VISIBLE_MS = 34;
 const ARENA_HIDDEN_SEARCH_MS = 3200;
 
 const TRAINING_STAGE_MS = 30000;
+const TRAINING_PLAYER_SPAWN = new Phaser.Math.Vector2(620, 700);
+const TRAINING_RIVAL_SPAWN = new Phaser.Math.Vector2(1740, 700);
+const TRAINING_CAMERA_MIN_ZOOM = 0.50;
+const TRAINING_CAMERA_MAX_ZOOM = 0.82;
 
 type TrainingStage = 'EVASION' | 'BREAK' | 'SHOOTING';
 
@@ -166,6 +170,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   private trainingShootingBotLifeStartedAt = 0;
   private trainingShootingBotEliminations = 0;
   private trainingBreakPanel?: HTMLDivElement;
+  private trainingCameraFocus?: Phaser.GameObjects.Zone;
   private trainingResultPanel?: HTMLDivElement;
 
 
@@ -203,8 +208,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
     // Role is part of fighter construction, not a visual state applied a frame later.
     // This prevents the training player from ever spawning with the Arena weapon pose.
-    this.player = this.createFighter(ARENA_PLAYER_SPAWN.x, ARENA_PLAYER_SPAWN.y, 0x2f6b4e, 'YOU', true, false);
-    this.rival = this.createFighter(ARENA_RIVAL_SPAWN.x, ARENA_RIVAL_SPAWN.y, 0x9b3f3f, 'TRAINING BOT', false, true);
+    this.player = this.createFighter(TRAINING_PLAYER_SPAWN.x, TRAINING_PLAYER_SPAWN.y, 0x2f6b4e, 'YOU', true, false);
+    this.rival = this.createFighter(TRAINING_RIVAL_SPAWN.x, TRAINING_RIVAL_SPAWN.y, 0x9b3f3f, 'TRAINING BOT', false, true);
 
     this.player.speed = ARENA_BASE_SPEED;
     this.rival.speed = ARENA_BASE_SPEED;
@@ -217,11 +222,14 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     this.rival.ammo = Number.POSITIVE_INFINITY;
 
     this.cameras.main.setBounds(0, 0, 2400, 1400);
-    this.cameras.main.startFollow(this.player.body, true, 0.08, 0.08);
-    this.cameras.main.setDeadzone(
-      Math.min(this.scale.width * 0.28, 320),
-      Math.min(this.scale.height * 0.22, 150),
-    );
+    // Training is an evaluation, not an Arena traversal. Keep both combatants in
+    // the mobile frame so trajectory, evasion and hit distance remain judgeable.
+    this.trainingCameraFocus = this.add.zone(
+      (this.player.body.x + this.rival.body.x) / 2,
+      (this.player.body.y + this.rival.body.y) / 2,
+    ).setVisible(false);
+    this.cameras.main.startFollow(this.trainingCameraFocus, true, 0.12, 0.12);
+    this.cameras.main.setDeadzone(0, 0);
 
     this.createHud();
     this.createPauseButton();
@@ -293,6 +301,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     this.updateAnimations(delta);
     this.updateWeaponPoses();
     this.updateHud();
+    this.updateTrainingCamera(delta);
     this.updateEnemyLocator();
 
     if (Date.now() - this.trainingStartedAt >= TRAINING_STAGE_MS) {
@@ -450,8 +459,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       this.trainingShootingBotSurvivalMs = 0;
       this.trainingShootingBotEliminations = 0;
       this.trainingShootingBotLifeStartedAt = Date.now();
-      this.player.body.setPosition(ARENA_PLAYER_SPAWN.x, ARENA_PLAYER_SPAWN.y);
-      this.rival.body.setPosition(ARENA_RIVAL_SPAWN.x, ARENA_RIVAL_SPAWN.y);
+      this.player.body.setPosition(TRAINING_PLAYER_SPAWN.x, TRAINING_PLAYER_SPAWN.y);
+      this.rival.body.setPosition(TRAINING_RIVAL_SPAWN.x, TRAINING_RIVAL_SPAWN.y);
       this.resetTrainingCombatant(this.player, false);
       this.resetTrainingCombatant(this.rival, true);
       // Shooting: player armed, bot unarmed. No hiding and no ammo stations.
@@ -1416,8 +1425,9 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     hitX?: number,
     hitY?: number,
   ) {
-    if (this.matchOver || this.roundTransition || this.resolvingRound) return;
+    if (!this.scene.isActive() || this.matchOver || this.roundTransition || this.resolvingRound) return;
     const target = owner === 'player' ? this.rival : this.player;
+    if (!target?.body?.active || target.downed) return;
     const shooter = owner === 'player' ? this.player : this.rival;
     const x = hitX ?? target.body.x;
     const y = hitY ?? target.body.y;
@@ -1634,11 +1644,11 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         this.clearSplatter();
         if (isPlayer) {
           this.resetTrainingCombatant(this.player, this.trainingStage === 'SHOOTING');
-          this.player.body.setPosition(ARENA_PLAYER_SPAWN.x, ARENA_PLAYER_SPAWN.y);
+          this.player.body.setPosition(TRAINING_PLAYER_SPAWN.x, TRAINING_PLAYER_SPAWN.y);
           if (this.trainingStage === 'EVASION') this.trainingEvasionLifeStartedAt = Date.now();
         } else {
           this.resetTrainingCombatant(this.rival, this.trainingStage === 'EVASION');
-          this.rival.body.setPosition(ARENA_RIVAL_SPAWN.x, ARENA_RIVAL_SPAWN.y);
+          this.rival.body.setPosition(TRAINING_RIVAL_SPAWN.x, TRAINING_RIVAL_SPAWN.y);
           if (this.trainingStage === 'SHOOTING') this.trainingShootingBotLifeStartedAt = Date.now();
         }
         this.player.cooldown = 350;
@@ -1854,6 +1864,17 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     panel.appendChild(card);
     document.body.appendChild(panel);
     this.resultPanel = panel;
+  }
+
+  private updateTrainingCamera(delta: number) {
+    if (!this.trainingCameraFocus || !this.player || !this.rival) return;
+    const px = this.player.body.x, py = this.player.body.y;
+    const rx = this.rival.body.x, ry = this.rival.body.y;
+    const distance = Phaser.Math.Distance.Between(px, py, rx, ry);
+    this.trainingCameraFocus.setPosition((px + rx) * 0.5, (py + ry) * 0.5 + 70);
+    const targetZoom = Phaser.Math.Clamp(700 / Math.max(620, distance + 180), TRAINING_CAMERA_MIN_ZOOM, TRAINING_CAMERA_MAX_ZOOM);
+    const smoothing = 1 - Math.pow(0.001, delta / 1000);
+    this.cameras.main.setZoom(Phaser.Math.Linear(this.cameras.main.zoom, targetZoom, smoothing));
   }
 
   private createHud() {
@@ -2559,10 +2580,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
   private handleResize(width: number, height: number) {
     this.cameras.main.setViewport(0, 0, width, height);
-    this.cameras.main.setDeadzone(
-      Math.min(width * 0.28, 320),
-      Math.min(height * 0.22, 150),
-    );
+    this.cameras.main.setDeadzone(0, 0);
+    if (this.trainingMode && this.trainingCameraFocus) this.cameras.main.setZoom(TRAINING_CAMERA_MIN_ZOOM);
     this.scoreHud?.setPosition(width / 2, 16);
     this.ammoHud?.setPosition(width - 14, 16);
   }
