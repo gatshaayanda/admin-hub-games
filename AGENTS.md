@@ -4096,3 +4096,21 @@ Latest observed phone playtest found three presentation/combat issues and they a
 - Shooting bot must remain an actual target, not continuously run away. Above a bounded 620px engagement band it closes distance; inside the band it uses lateral evasive movement. Very close fire response is tightened to an 85ms CQE cooldown for the training bot. This improves the measurement without giving the bot automatic hits.
 - Preserve the existing Evasion role contract, respawn recovery, 110px contact separation and discrete paintball/hit rules.
 
+
+
+## Permanent Mobile Screen & Combat-Feedback Contract
+
+For **Shooters Trigger**, mobile screen usability and readable combat feedback are permanent product requirements, not temporary playtest fixes.
+
+### Screen / modal discipline
+- Every training/field overlay must fit inside the phone viewport, including safe-area padding, without pushing buttons off-screen.
+- Fixed panels/cards must use viewport-constrained sizing and `box-sizing: border-box`; long content must scroll inside the card rather than overflow the screen.
+- Shooting/engagement camera framing must keep both fighters readable on phone screens; do not return to the old tiny-fighter framing merely because the world is large.
+- Responsive resize/orientation changes must preserve the active combat flow and touch controls.
+- Any future screen-framing regression is a **product bug** and must be fixed at the source, not worked around with player instructions.
+
+### Close-range impact
+- A clean hit at close engagement distance must **look and feel more consequential** while preserving the core paintball rules: headshot = instant elimination, two clean body hits = elimination, scrape = paint only, miss = no effect.
+- Close-range clean hits are recorded separately in training and contribute a bounded bonus to the shooting score; they must never become an unbounded damage cheat.
+- Combat feedback must remain discrete/readable: visible paintball trajectory, impact/splatter, and a clear hit state rather than laser/tracer treatment.
+- Any change to close-range impact, hit feedback, or scoring must preserve the Training → Report → Arena relationship and be based on observed playtest evidence.
