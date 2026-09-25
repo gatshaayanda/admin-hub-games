@@ -436,25 +436,36 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     const shootingBot = Number(training?.shooting?.botEvasionScore ?? 50);
 
     const verdict = (player: number, bot: number) =>
-      player > bot + 5 ? ['YOU HAVE THE EDGE', 'PLAYER'] :
-      player < bot - 5 ? ['BOT HAS THE EDGE', 'BOT'] :
-      ['EVEN FIGHT', 'TIE'];
+      player > bot + 5 ? 'YOU' : player < bot - 5 ? 'BOT' : 'EVEN';
 
     const evasionVerdict = verdict(evasionPlayer, evasionBot);
     const shootingVerdict = verdict(shootingPlayer, shootingBot);
     const overall = training?.edge?.overall || 'TIE';
 
+    // Mobile/working-memory rule: put the decision and next action first;
+    // keep raw evidence available only when the player asks for it.
+    const advice = () => {
+      if (!training) return { title:'START WITH TRAINING', body:'Run Evasion first, then Shooting. Your phone will turn the result into one clear field read.', icon:'shield' };
+      if (evasionVerdict === 'BOT' && shootingVerdict === 'BOT') return { title:'WORK ON BOTH SIDES', body:'Stay alive longer in Evasion and take cleaner shots in Shooting. Training is evidence, not a guarantee.', icon:'runner' };
+      if (evasionVerdict === 'BOT') return { title:'NEXT: MOVE BETTER', body:'Your evasion leg needs work. Use cover to break the bot’s line of fire and keep moving.', icon:'shield' };
+      if (shootingVerdict === 'BOT') return { title:'NEXT: SHOOT CLEANER', body:'Your shooting leg is the weaker side of this training read. Prioritize controlled engagements over wasted paint.', icon:'target' };
+      if (overall === 'PLAYER') return { title:'NEXT: PREPARE', body:'Training gives you the edge on paper. Check the Armory, then take that advantage into Arena.', icon:'target' };
+      return { title:'NEXT: TEST IT', body:'Your training read is balanced. The Arena is where the read becomes a real fight.', icon:'runner' };
+    };
+    const next = advice();
+
     const modal = document.createElement('div');
     Object.assign(modal.style, {
       position:'fixed', inset:'0', zIndex:'1550', display:'flex', alignItems:'center', justifyContent:'center',
-      padding:'max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px))',
-      background:'rgba(8,14,10,.78)', fontFamily:'monospace', touchAction:'manipulation', overflow:'hidden',
+      padding:'max(10px, env(safe-area-inset-top, 0px)) max(10px, env(safe-area-inset-right, 0px)) max(10px, env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px))',
+      background:'rgba(8,14,10,.82)', fontFamily:'monospace', touchAction:'manipulation', overflow:'hidden',
     });
+
     const card = document.createElement('div');
     Object.assign(card.style, {
-      width:'min(430px,calc(100vw - 24px))', maxHeight:'calc(100dvh - 24px)', overflowY:'auto',
-      boxSizing:'border-box', padding:'18px', background:'#151a16', color:'#f4f1df',
-      border:'2px solid #e8c95c', borderRadius:'16px', boxShadow:'0 14px 40px rgba(0,0,0,.48)',
+      width:'min(430px,calc(100vw - 20px))', maxHeight:'calc(100dvh - 20px)', overflowY:'auto',
+      boxSizing:'border-box', padding:'16px', background:'#151a16', color:'#f4f1df',
+      border:'2px solid #e8c95c', borderRadius:'16px', boxShadow:'0 14px 40px rgba(0,0,0,.5)',
     });
 
     const icon = (kind: 'shield'|'target'|'runner'|'money') => {
@@ -464,59 +475,83 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
         runner:'<circle cx="15" cy="4" r="2"/><path d="m13 8-3 4 4 2 2 6M10 12l-5 3M13 9l5 2"/>',
         money:'<circle cx="12" cy="12" r="9"/><path d="M15 8.5c-.7-.7-1.6-1-3-1-1.7 0-3 .8-3 2s1.3 2 3 2 3 .8 3 2-1.3 2-3 2c-1.4 0-2.3-.3-3-1M12 6v12"/>'
       } as any;
-      return '<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#e8c95c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+paths[kind]+'</svg>';
+      return '<svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#e8c95c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+paths[kind]+'</svg>';
     };
+
     const header = document.createElement('div');
-    header.innerHTML = '<div style="font-size:10px;font-weight:800;color:#9fbda8;letter-spacing:2px">FIELD PHONE</div><div style="font-size:21px;font-weight:900;color:#e8c95c;margin-top:3px">YOUR FIELD READOUT</div><div style="font-size:10px;color:#b9c8bd;margin-top:5px;line-height:1.5">Simple answer: what are you good at, and what should you work on?</div>';
-    header.style.marginBottom='14px';
-
-    const makeCard = (title:string, subtitle:string, left:number, right:number, leftLabel:string, rightLabel:string, verdictText:string, kind:'shield'|'target'|'runner') => {
-      const box=document.createElement('div');
-      box.style.cssText='padding:13px;border:1px solid #496556;border-radius:12px;background:#102018;margin-bottom:10px;';
-      box.innerHTML =
-        '<div style="display:flex;align-items:center;gap:10px">'+icon(kind)+'<div><div style="font-size:13px;font-weight:900;color:#f4f1df">'+title+'</div><div style="font-size:9px;color:#9fbda8;margin-top:2px">'+subtitle+'</div></div></div>'+
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">'+
-          '<div style="text-align:center;padding:9px;background:#182b20;border-radius:9px"><div style="font-size:23px;font-weight:900;color:#e8c95c">'+left+'</div><div style="font-size:8px;color:#b9c8bd;margin-top:2px">'+leftLabel+'</div></div>'+
-          '<div style="text-align:center;padding:9px;background:#241b18;border-radius:9px"><div style="font-size:23px;font-weight:900;color:#d66a3d">'+right+'</div><div style="font-size:8px;color:#b9c8bd;margin-top:2px">'+rightLabel+'</div></div>'+
-        '</div>'+
-        '<div style="margin-top:9px;text-align:center;font-size:10px;font-weight:900;color:#f4f1df">'+verdictText+'</div>';
-      return box;
-    };
-
+    header.innerHTML =
+      '<div style="font-size:9px;font-weight:900;color:#9fbda8;letter-spacing:2px">FIELD PHONE · INTELLIGENCE</div>' +
+      '<div style="font-size:22px;font-weight:900;color:#e8c95c;margin-top:2px">WHAT MATTERS NOW</div>' +
+      '<div style="font-size:10px;color:#b9c8bd;margin-top:5px;line-height:1.45">One screen. One read. One next move.</div>';
+    header.style.marginBottom='12px';
     card.appendChild(header);
+
     if (fieldAlert) {
       const alert=document.createElement('div');
-      alert.style.cssText='padding:11px;border:1px solid #d66a3d;border-radius:10px;margin-bottom:10px;background:#241b18;font-size:10px;line-height:1.6;';
+      alert.style.cssText='padding:10px 11px;border:1px solid #d66a3d;border-radius:10px;margin-bottom:10px;background:#241b18;font-size:10px;line-height:1.5;';
       alert.innerHTML='<b style="color:#e8c95c">FIELD ALERT</b><br>'+String(fieldAlert.message || 'Field update ready.');
       card.appendChild(alert);
     }
 
+    const nextBox=document.createElement('div');
+    nextBox.style.cssText='padding:13px;border:2px solid #e8c95c;border-radius:12px;background:linear-gradient(145deg,#17251c,#151a16);margin-bottom:10px;';
+    nextBox.innerHTML='<div style="display:flex;align-items:center;gap:10px">'+icon(next.icon as any)+
+      '<div><div style="font-size:9px;color:#9fbda8;letter-spacing:1px">FIELD ADVICE</div>'+
+      '<div style="font-size:15px;font-weight:900;color:#f4f1df;margin-top:2px">'+next.title+'</div></div></div>'+
+      '<div style="font-size:10px;color:#d6dfd8;line-height:1.55;margin-top:10px">'+next.body+'</div>';
+    card.appendChild(nextBox);
+
     if (training) {
-      card.appendChild(makeCard('EVASION','You were unarmed. The bot had the gun and tried to tag you.',evasionPlayer,evasionBot,'YOUR EVASION','BOT SHOOTING',evasionVerdict[0],'shield'));
-      card.appendChild(makeCard('SHOOTING','Roles reversed. You had the gun. The bot tried to stay alive.',shootingPlayer,shootingBot,'YOUR SHOOTING','BOT EVASION',shootingVerdict[0],'target'));
+      const makeLeg = (
+        title:string, iconKind:'shield'|'target', headline:string,
+        player:number, opponent:number, playerLabel:string, opponentLabel:string, result:string,
+      ) => {
+        const box=document.createElement('div');
+        box.style.cssText='padding:12px;border:1px solid #496556;border-radius:12px;background:#102018;margin-bottom:9px;';
+        const resultText = result === 'YOU' ? 'YOUR SIDE READS STRONGER' : result === 'BOT' ? 'BOT SIDE READS STRONGER' : 'EVEN READ';
+        box.innerHTML='<div style="display:flex;align-items:center;gap:9px">'+icon(iconKind)+
+          '<div><div style="font-size:13px;font-weight:900;color:#f4f1df">'+title+'</div>'+
+          '<div style="font-size:9px;color:#9fbda8;margin-top:2px">'+headline+'</div></div></div>'+
+          '<div style="margin-top:9px;padding:8px;border-radius:8px;background:#182b20;font-size:10px;color:#f4f1df;line-height:1.45">'+
+          '<b>'+resultText+'</b><br><span style="color:#b9c8bd">'+playerLabel+' · '+Math.round(player)+' &nbsp; | &nbsp; '+opponentLabel+' · '+Math.round(opponent)+'</span></div>';
+        return box;
+      };
+
+      card.appendChild(makeLeg('EVASION','shield','You were unarmed. The bot had the gun.',evasionPlayer,evasionBot,'YOUR EVASION','BOT SHOOTING',evasionVerdict));
+      card.appendChild(makeLeg('SHOOTING','target','You had the gun. The bot tried to stay alive.',shootingPlayer,shootingBot,'YOUR SHOOTING','BOT EVASION',shootingVerdict));
+
       const overallBox=document.createElement('div');
-      overallBox.style.cssText='padding:14px;border:2px solid #e8c95c;border-radius:12px;text-align:center;margin-bottom:10px;background:linear-gradient(145deg,#17251c,#151a16);';
-      const overallText=overall==='PLAYER'?'YOU TAKE THE TRAINING EDGE':overall==='BOT'?'THE BOT TAKES THE TRAINING EDGE':'TRAINING IS EVEN';
-      overallBox.innerHTML=icon('runner')+'<div style="font-size:9px;color:#9fbda8;letter-spacing:1px;margin-top:4px">OVERALL</div><div style="font-size:16px;font-weight:900;color:#e8c95c;margin-top:3px">'+overallText+'</div><div style="font-size:9px;color:#b9c8bd;margin-top:6px">This changes your Arena odds. It does not guarantee the result.</div>';
+      const overallText=overall==='PLAYER'?'YOU HAVE THE TRAINING EDGE':overall==='BOT'?'THE BOT HAS THE TRAINING EDGE':'TRAINING IS EVEN';
+      overallBox.style.cssText='padding:11px;border:1px solid #e8c95c;border-radius:10px;text-align:center;margin-bottom:9px;background:#182b20;';
+      overallBox.innerHTML='<div style="font-size:9px;color:#9fbda8;letter-spacing:1px">ARENA ODDS</div>'+
+        '<div style="font-size:15px;font-weight:900;color:#e8c95c;margin-top:3px">'+overallText+'</div>'+
+        '<div style="font-size:9px;color:#b9c8bd;margin-top:5px">Training changes the odds. It never guarantees the result.</div>';
       card.appendChild(overallBox);
+
+      const details=document.createElement('details');
+      details.style.cssText='margin-bottom:10px;border:1px solid #38493d;border-radius:10px;background:#111813;';
+      details.innerHTML='<summary style="padding:10px;color:#9fbda8;font-size:9px;font-weight:900;cursor:pointer">SHOW TRAINING EVIDENCE</summary>'+
+        '<div style="padding:0 10px 10px;font-size:9px;color:#aebbb2;line-height:1.8">'+
+        'EVASION · survival '+Math.round(Number(evasion?.survivedMs || 0)/1000)+'s · cover blocks '+Number(evasion?.coverBlocks || 0)+' · scrapes '+Number(evasion?.scrapes || 0)+'<br>'+
+        'SHOOTING · shots '+Number(shooting?.shotsFired || 0)+' · hits '+Number(shooting?.targetHits || 0)+' · headshots '+Number(shooting?.headshots || 0)+' · misses '+Number(shooting?.misses || 0)+'</div>';
+      card.appendChild(details);
     } else {
-      const start=document.createElement('div');
-      start.style.cssText='padding:18px;text-align:center;border:1px solid #496556;border-radius:12px;background:#102018;margin-bottom:10px;';
-      start.innerHTML=icon('shield')+'<div style="font-size:14px;font-weight:900;color:#e8c95c;margin-top:7px">TRAINING CAMP FIRST</div><div style="font-size:10px;line-height:1.6;color:#b9c8bd;margin-top:6px">EVASION → BREAK → SHOOTING<br>Your phone will turn both drills into a simple field readout.</div>';
-      card.appendChild(start);
+      const startBox=document.createElement('div');
+      startBox.style.cssText='padding:16px;text-align:center;border:1px solid #496556;border-radius:12px;background:#102018;margin-bottom:10px;';
+      startBox.innerHTML=icon('shield')+'<div style="font-size:14px;font-weight:900;color:#e8c95c;margin-top:6px">TRAINING CAMP FIRST</div>'+
+        '<div style="font-size:10px;line-height:1.55;color:#b9c8bd;margin-top:6px">EVASION → BREAK → SHOOTING<br>The phone will turn both drills into a simple field read.</div>';
+      card.appendChild(startBox);
     }
 
     const snapshot=document.createElement('div');
-    snapshot.style.cssText='padding:12px;border:1px solid #38493d;border-radius:10px;margin-bottom:10px;font-size:10px;line-height:1.8;';
-    snapshot.innerHTML='<b style="color:#9fbda8">FIELD SNAPSHOT</b><br>'+
-      '💰 CASH · '+budget+'<br>'+
-      '🧰 LOADOUT · '+(upgradeLevel?'LEVEL '+upgradeLevel:'STARTER')+'<br>'+
-      '🏟️ ARENA · '+(arena ? (arena.result==='WIN'?'WIN':'RESULT SAVED') : 'NOT PLAYED')+
-      (arena ? '<br>💵 LAST ARENA CASH · '+Number(arena.budgetEarned||0) : '');
+    snapshot.style.cssText='display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:9px;';
+    snapshot.innerHTML='<div style="padding:9px 5px;border:1px solid #38493d;border-radius:9px;text-align:center;background:#111813"><div style="font-size:16px">💰</div><div style="font-size:8px;color:#9fbda8;margin-top:3px">CASH</div><div style="font-size:11px;font-weight:900;margin-top:2px">'+budget+'</div></div>'+
+      '<div style="padding:9px 5px;border:1px solid #38493d;border-radius:9px;text-align:center;background:#111813"><div style="font-size:16px">🧰</div><div style="font-size:8px;color:#9fbda8;margin-top:3px">LOADOUT</div><div style="font-size:11px;font-weight:900;margin-top:2px">'+(upgradeLevel?'LV '+upgradeLevel:'START')+'</div></div>'+
+      '<div style="padding:9px 5px;border:1px solid #38493d;border-radius:9px;text-align:center;background:#111813"><div style="font-size:16px">🏟️</div><div style="font-size:8px;color:#9fbda8;margin-top:3px">ARENA</div><div style="font-size:11px;font-weight:900;margin-top:2px">'+(arena ? (arena.result==='WIN'?'WIN':'PLAYED') : 'READY')+'</div></div>';
     card.appendChild(snapshot);
 
     const route=document.createElement('div');
-    route.style.cssText='font-size:9px;line-height:1.7;color:#9fbda8;padding:8px 2px 13px;text-align:center;';
+    route.style.cssText='font-size:9px;line-height:1.6;color:#9fbda8;padding:4px 2px 11px;text-align:center;';
     route.textContent=training ? 'TRAINING ✓  →  ARMORY  →  ARENA' : 'TRAINING CAMP  →  ARMORY  →  ARENA';
     card.appendChild(route);
 
