@@ -4078,3 +4078,6 @@ After Training Camp is declared playtest-complete, the **next gameplay task is A
 - Training elimination recovery must not depend on the Phaser update loop alone. Use a short browser-timer recovery path plus the update-loop safety fallback.
 - A player/bot elimination must always return the drill to active combat unless the user explicitly paused or left training.
 - Do not reintroduce the old delayed-callback-only lifecycle that allowed a downed fighter to appear frozen.
+
+- Latest playtest finding (September 25): the browser-timer recovery removed the original frozen-downed state, but a second freeze-like failure remained when the surviving fighter had chased close to the eliminated fighter's fixed spawn. Respawning only the downed side could restart combat at point-blank range.
+- Training respawn recovery must therefore also enforce separation: when the survivor is within 420px of the respawned fighter, return the survivor to its own training spawn before combat resumes.
