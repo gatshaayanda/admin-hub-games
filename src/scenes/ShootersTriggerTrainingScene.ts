@@ -74,6 +74,7 @@ const TRAINING_CQE_RANGE = 240;
 const TRAINING_CQE_HARD_RANGE = 150;
 const TRAINING_CQE_COOLDOWN = 85;
 const TRAINING_SHOOTING_ENGAGEMENT_RANGE = 620;
+const TRAINING_CLOSE_IMPACT_RANGE = 240;
 // Never allow the two training fighters to occupy the same contact space.
 // Point-blank overlap was causing the aggressive bot to physically collapse
 // into the player during CQE and could restart the elimination lifecycle
@@ -118,6 +119,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   private rivalScrapes = 0;
   private playerPaintHits = 0;
   private rivalPaintHits = 0;
+  private playerCloseHits = 0;
+  private rivalCloseHits = 0;
   private playerMoving = false;
   private rivalMoving = false;
   private playerFacing = 1;
@@ -643,7 +646,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     const shootingShots = this.playerShotsFired;
     const shootingHits = this.playerBodyHits + this.playerHeadshots;
     const accuracy = shootingShots > 0 ? shootingHits / shootingShots : 0;
-    const shootingScore = clamp(Math.round(accuracy * 100 + Math.min(15, this.playerHeadshots * 3)), 0, 100);
+    const closeImpactBonus = Math.min(8, this.playerCloseHits * 2);
+    const shootingScore = clamp(Math.round(accuracy * 100 + Math.min(15, this.playerHeadshots * 3) + closeImpactBonus), 0, 100);
     const botEvasionSurvival = clamp(this.trainingShootingBotSurvivalMs / TRAINING_STAGE_MS, 0, 1);
     const botEvasionAccuracy = shootingShots > 0 ? shootingHits / shootingShots : 0;
     const botEvasionScore = clamp(Math.round(botEvasionSurvival * 60 + (1 - botEvasionAccuracy) * 30 + Math.min(10, this.trainingShootingBotEliminations * 2)), 0, 100);
@@ -671,6 +675,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         hits: shootingHits,
         headshots: this.playerHeadshots,
         bodyHits: this.playerBodyHits,
+        closeHits: this.playerCloseHits,
         scrapes: this.playerScrapes,
         misses: this.playerMisses,
       },
@@ -697,6 +702,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         accuracy: accuracy * 100,
         targetHits: shootingHits,
         bodyHits: this.playerBodyHits,
+        closeHits: this.playerCloseHits,
         headshots: this.playerHeadshots,
         scrapes: this.playerScrapes,
         misses: this.playerMisses,
@@ -1582,9 +1588,18 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     const shooter = owner === 'player' ? this.player : this.rival;
     const x = hitX ?? target.body.x;
     const y = hitY ?? target.body.y;
+    const engagementDistance = Phaser.Math.Distance.Between(
+      shooter.body.x,
+      shooter.body.y,
+      target.body.x,
+      target.body.y,
+    );
+    const closeImpact = engagementDistance <= TRAINING_CLOSE_IMPACT_RANGE;
+
     if (owner === 'player') {
       if (headshot) this.playerHeadshots += 1;
       else this.playerBodyHits += 1;
+      if (closeImpact) this.playerCloseHits += 1;
       this.playerPaintHits += 1;
     } else if (headshot) {
       this.rivalHeadshots += 1;
@@ -1594,15 +1609,15 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       this.rivalPaintHits += 1;
     }
 
-    this.addSplatter(x, y, headshot ? 1.25 : 1);
+    this.addSplatter(x, y, headshot ? 1.25 : closeImpact ? 1.18 : 1);
     this.showCombatHighlight(
       owner === 'player'
-        ? (headshot ? 'HEADSHOT!' : 'PAINT HIT')
-        : (headshot ? 'HEADSHOT ON YOU' : 'PAINT HIT ON YOU'),
+        ? (headshot ? 'HEADSHOT!' : closeImpact ? 'CLOSE PAINT HIT · IMPACT' : 'PAINT HIT')
+        : (headshot ? 'HEADSHOT ON YOU' : closeImpact ? 'CLOSE PAINT HIT ON YOU' : 'PAINT HIT ON YOU'),
       headshot ? '#e8c95c' : '#d66a3d',
       x,
       y,
-      headshot ? 1.12 : 1,
+      headshot ? 1.12 : closeImpact ? 1.08 : 1,
     );
 
     if (headshot) {
