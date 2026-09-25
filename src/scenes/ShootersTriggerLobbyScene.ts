@@ -435,6 +435,12 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     const shootingPlayer = Number(training?.shooting?.playerShootingScore ?? training?.shooting?.score ?? 50);
     const shootingBot = Number(training?.shooting?.botEvasionScore ?? 50);
 
+    const range = (score: number) => score < 40 ? 1 : score < 60 ? 2 : score < 80 ? 3 : 4;
+    const rangeLabel = (score: number, kind: 'EVASION'|'SHOOTING') => {
+      const r = range(score);
+      if (kind === 'EVASION') return r === 4 ? 'CALM UNDER FIRE' : r === 3 ? 'MOVES WITH INTENT' : r === 2 ? 'FINDING SPACE' : 'EXPOSED UNDER PRESSURE';
+      return r === 4 ? 'CLEAN FINISHER' : r === 3 ? 'CONTROLLED PRESSURE' : r === 2 ? 'FINDING THE RHYTHM' : 'WASTES TOO MUCH PAINT';
+    };
     const verdict = (player: number, bot: number) =>
       player > bot + 5 ? 'YOU' : player < bot - 5 ? 'BOT' : 'EVEN';
 
@@ -442,15 +448,38 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     const shootingVerdict = verdict(shootingPlayer, shootingBot);
     const overall = training?.edge?.overall || 'TIE';
 
-    // Mobile/working-memory rule: put the decision and next action first;
-    // keep raw evidence available only when the player asks for it.
+    const temperament = () => {
+      if (!training) return { label:'NO FIELD READ YET', body:'Run both drills. The device needs your movement and shooting behaviour before it can describe your style.' };
+      const evasionCover = Number(evasion?.coverBlocks || 0);
+      const evasionDeaths = Number(evasion?.eliminations || 0);
+      const shootingShots = Number(shooting?.shotsFired || 0);
+      const shootingMisses = Number(shooting?.misses || 0);
+      const missRate = shootingShots ? shootingMisses / shootingShots : 0;
+      if (evasionDeaths >= 3) return { label:'PRESSURE SEEKER', body:'You kept re-entering danger. You play forward instead of waiting for the field to become safe.' };
+      if (evasionCover >= 5 && evasionPlayer >= 60) return { label:'FIELD READER', body:'You used the map and cover as information. You look for the next safe angle before committing.' };
+      if (missRate > 0.45) return { label:'TRIGGER-HAPPY', body:'You created pressure, but too much paint went wide. Your next step is choosing the shot, not just taking it.' };
+      if (shootingPlayer >= 70 && evasionPlayer >= 60) return { label:'CONTROLLED OPERATOR', body:'You can move under pressure and still make the important shot when the window opens.' };
+      return { label:'ADAPTIVE PLAYER', body:'Your style is still forming. The Arena will give the system more evidence to work with.' };
+    };
+    const temperamentRead = temperament();
+
+    const feed = () => {
+      if (!training) return { source:'FIELD DESK', text:'No report yet. The device is waiting for a complete training read.' };
+      if (overall === 'PLAYER') return { source:'GABS FIELDWIRE · IN-GAME', text:'“Training read puts the operator ahead. Now the question is whether the Arena proves it.”' };
+      if (overall === 'BOT') return { source:'KALAHARI PULSE · IN-GAME', text:'“The bot has the current read. Someone is going to have to change the story in the Arena.”' };
+      return { source:'THE FIELD FEED · IN-GAME', text:'“Even read at the camp. No easy headline here — Arena decides the next chapter.”' };
+    };
+    const media = feed();
+
+    // The phone is deliberately a fictional in-game device. Botswana's real
+    // digital environment is mobile/social-heavy, so the fiction uses short
+    // radio/news/social-style snippets rather than a spreadsheet dashboard.
+    // These outlets are not real news organisations.
     const advice = () => {
-      if (!training) return { title:'START WITH TRAINING', body:'Run Evasion first, then Shooting. Your phone will turn the result into one clear field read.', icon:'shield' };
-      if (evasionVerdict === 'BOT' && shootingVerdict === 'BOT') return { title:'WORK ON BOTH SIDES', body:'Stay alive longer in Evasion and take cleaner shots in Shooting. Training is evidence, not a guarantee.', icon:'runner' };
-      if (evasionVerdict === 'BOT') return { title:'NEXT: MOVE BETTER', body:'Your evasion leg needs work. Use cover to break the bot’s line of fire and keep moving.', icon:'shield' };
-      if (shootingVerdict === 'BOT') return { title:'NEXT: SHOOT CLEANER', body:'Your shooting leg is the weaker side of this training read. Prioritize controlled engagements over wasted paint.', icon:'target' };
-      if (overall === 'PLAYER') return { title:'NEXT: PREPARE', body:'Training gives you the edge on paper. Check the Armory, then take that advantage into Arena.', icon:'target' };
-      return { title:'NEXT: TEST IT', body:'Your training read is balanced. The Arena is where the read becomes a real fight.', icon:'runner' };
+      if (!training) return { title:'START WITH TRAINING', body:'Run Evasion, then Shooting. The device will translate what you did into one simple field read.', icon:'shield' };
+      if (overall === 'PLAYER') return { title:'THE FIELD IS LEANING YOUR WAY', body:'Your combined training read gives you the current edge. Arm up, check the kit, then test it in Arena.', icon:'target' };
+      if (overall === 'BOT') return { title:'THE BOT HAS THE READ', body:'The training evidence currently leans toward the bot. Change the way you move or shoot before the Arena.', icon:'runner' };
+      return { title:'NO CLEAR EDGE', body:'Your two drills balanced out. The Arena is where behaviour under real pressure gets tested.', icon:'runner' };
     };
     const next = advice();
 
@@ -480,9 +509,13 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
 
     const header = document.createElement('div');
     header.innerHTML =
-      '<div style="font-size:9px;font-weight:900;color:#9fbda8;letter-spacing:2px">FIELD PHONE · INTELLIGENCE</div>' +
-      '<div style="font-size:22px;font-weight:900;color:#e8c95c;margin-top:2px">WHAT MATTERS NOW</div>' +
-      '<div style="font-size:10px;color:#b9c8bd;margin-top:5px;line-height:1.45">One screen. One read. One next move.</div>';
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'+
+      '<div><div style="font-size:9px;font-weight:900;color:#9fbda8;letter-spacing:2px">FIELD DEVICE // LIVE READ</div>'+
+      '<div style="font-size:22px;font-weight:900;color:#e8c95c;margin-top:2px">FIELD SIGNAL</div></div>'+
+      '<div style="width:38px;height:38px;border:1px solid #6f9b7f;border-radius:50%;position:relative;animation:stPulse 1.8s ease-in-out infinite"><div style="position:absolute;inset:7px;border:1px solid #e8c95c;border-radius:50%"></div><div style="position:absolute;left:50%;top:4px;width:1px;height:14px;background:#e8c95c;transform-origin:bottom;animation:stScan 1.5s linear infinite"></div></div>'+
+      '</div>'+
+      '<div style="font-size:10px;color:#b9c8bd;margin-top:5px;line-height:1.45">Your field behaviour, translated into a simple signal.</div>'+
+      '<style>@keyframes stPulse{50%{box-shadow:0 0 0 6px rgba(232,201,92,.06)}}@keyframes stScan{to{transform:rotate(360deg)}}</style>';
     header.style.marginBottom='12px';
     card.appendChild(header);
 
@@ -496,7 +529,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     const nextBox=document.createElement('div');
     nextBox.style.cssText='padding:13px;border:2px solid #e8c95c;border-radius:12px;background:linear-gradient(145deg,#17251c,#151a16);margin-bottom:10px;';
     nextBox.innerHTML='<div style="display:flex;align-items:center;gap:10px">'+icon(next.icon as any)+
-      '<div><div style="font-size:9px;color:#9fbda8;letter-spacing:1px">🧭 FIELD ADVICE</div>'+
+      '<div><div style="font-size:9px;color:#9fbda8;letter-spacing:1px">🧭 NEXT SIGNAL</div>'+
       '<div style="font-size:15px;font-weight:900;color:#f4f1df;margin-top:2px">'+next.title+'</div></div></div>'+
       '<div style="font-size:10px;color:#d6dfd8;line-height:1.55;margin-top:10px">'+next.body+'</div>';
     card.appendChild(nextBox);
@@ -506,35 +539,57 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
         title:string, iconKind:'shield'|'target', headline:string,
         player:number, opponent:number, playerLabel:string, opponentLabel:string, result:string,
       ) => {
+        const playerRange = range(player);
+        const opponentRange = range(opponent);
+        const resultText = result === 'YOU' ? '🟢 YOUR SIDE HAS THE EDGE' : result === 'BOT' ? '🔴 BOT HAS THE EDGE' : '🟡 EVEN';
         const box=document.createElement('div');
-        box.style.cssText='padding:12px;border:1px solid #496556;border-radius:12px;background:#102018;margin-bottom:9px;';
-        const resultText = result === 'YOU' ? 'YOUR SIDE READS STRONGER' : result === 'BOT' ? 'BOT SIDE READS STRONGER' : 'EVEN READ';
-        box.innerHTML='<div style="display:flex;align-items:center;gap:9px">'+icon(iconKind)+
-          '<div><div style="font-size:13px;font-weight:900;color:#f4f1df">'+title+'</div>'+
+        box.style.cssText='padding:12px;border:1px solid #496556;border-radius:12px;background:linear-gradient(145deg,#102018,#0c1711);margin-bottom:9px;position:relative;overflow:hidden;';
+        box.innerHTML='<div style="position:absolute;right:-18px;top:-18px;width:70px;height:70px;border:1px solid #365442;border-radius:50%"></div>'+
+          '<div style="display:flex;align-items:center;gap:9px">'+icon(iconKind)+
+          '<div><div style="font-size:13px;font-weight:900;color:#f4f1df">'+title+' · '+playerRange+'/4</div>'+
           '<div style="font-size:9px;color:#9fbda8;margin-top:2px">'+headline+'</div></div></div>'+
-          '<div style="margin-top:9px;padding:8px;border-radius:8px;background:#182b20;font-size:10px;color:#f4f1df;line-height:1.45">'+
-          '<b>'+resultText+'</b><br><span style="color:#b9c8bd">'+playerLabel+' · '+Math.round(player)+' &nbsp; | &nbsp; '+opponentLabel+' · '+Math.round(opponent)+'</span></div>';
+          '<div style="margin-top:9px;padding:9px;border-radius:8px;background:#182b20;font-size:10px;color:#f4f1df;line-height:1.5">'+
+          '<b>'+resultText+'</b><br><span style="color:#b9c8bd">'+playerLabel+' · '+rangeLabel(player,title==='EVASION'?'EVASION':'SHOOTING')+
+          ' &nbsp; | &nbsp; '+opponentLabel+' · '+rangeLabel(opponent,title==='EVASION'?'SHOOTING':'EVASION')+'</span>'+
+          '<br><span style="font-size:9px;color:#82978a">Range is simple: 1 = learning · 2 = developing · 3 = field-ready · 4 = sharp.</span></div>';
         return box;
       };
 
-      card.appendChild(makeLeg('EVASION','shield','You were unarmed. The bot had the gun.',evasionPlayer,evasionBot,'YOUR EVASION','BOT SHOOTING',evasionVerdict));
-      card.appendChild(makeLeg('SHOOTING','target','You had the gun. The bot tried to stay alive.',shootingPlayer,shootingBot,'YOUR SHOOTING','BOT EVASION',shootingVerdict));
+      card.appendChild(makeLeg('EVASION','shield','Unarmed. The bot hunted you.',evasionPlayer,evasionBot,'YOU','BOT',evasionVerdict));
+      card.appendChild(makeLeg('SHOOTING','target','Armed. The bot tried to stay alive.',shootingPlayer,shootingBot,'YOU','BOT',shootingVerdict));
+
+      const styleBox=document.createElement('div');
+      styleBox.style.cssText='padding:12px;border:1px solid #38493d;border-radius:11px;background:#111813;margin-bottom:9px;';
+      styleBox.innerHTML='<div style="font-size:9px;color:#9fbda8;letter-spacing:1px">🧠 FIELD TEMPERAMENT · NOT A DIAGNOSIS</div>'+
+        '<div style="font-size:15px;font-weight:900;color:#e8c95c;margin-top:4px">'+temperamentRead.label+'</div>'+
+        '<div style="font-size:10px;color:#c9d5cc;line-height:1.55;margin-top:6px">'+temperamentRead.body+'</div>';
+      card.appendChild(styleBox);
 
       const overallBox=document.createElement('div');
       const overallText=overall==='PLAYER'?'YOU HAVE THE TRAINING EDGE':overall==='BOT'?'THE BOT HAS THE TRAINING EDGE':'TRAINING IS EVEN';
       overallBox.style.cssText='padding:11px;border:1px solid #e8c95c;border-radius:10px;text-align:center;margin-bottom:9px;background:#182b20;';
-      overallBox.innerHTML='<div style="font-size:9px;color:#9fbda8;letter-spacing:1px">🏆 ARENA ODDS</div>'+
+      overallBox.innerHTML='<div style="font-size:9px;color:#9fbda8;letter-spacing:1px">🏆 ARENA SIGNAL</div>'+
         '<div style="font-size:15px;font-weight:900;color:#e8c95c;margin-top:3px">'+overallText+'</div>'+
-        '<div style="font-size:9px;color:#b9c8bd;margin-top:5px">Training changes the odds. It never guarantees the result.</div>';
+        '<div style="font-size:9px;color:#b9c8bd;margin-top:5px">The training read changes the Arena odds. It is not a guaranteed result.</div>'+
+        '<div style="font-size:9px;color:#6f9b7f;margin-top:7px">EVA '+range(evasionPlayer)+'/4 · SHOOT '+range(shootingPlayer)+'/4</div>';
       card.appendChild(overallBox);
 
       const details=document.createElement('details');
       details.style.cssText='margin-bottom:10px;border:1px solid #38493d;border-radius:10px;background:#111813;';
-      details.innerHTML='<summary style="padding:10px;color:#9fbda8;font-size:9px;font-weight:900;cursor:pointer">📊 SHOW TRAINING EVIDENCE</summary>'+
+      details.innerHTML='<summary style="padding:10px;color:#9fbda8;font-size:9px;font-weight:900;cursor:pointer">📡 SHOW FIELD LOG</summary>'+
         '<div style="padding:0 10px 10px;font-size:9px;color:#aebbb2;line-height:1.8">'+
-        'EVASION · survival '+Math.round(Number(evasion?.survivedMs || 0)/1000)+'s · cover blocks '+Number(evasion?.coverBlocks || 0)+' · scrapes '+Number(evasion?.scrapes || 0)+'<br>'+
-        'SHOOTING · shots '+Number(shooting?.shotsFired || 0)+' · hits '+Number(shooting?.targetHits || 0)+' · headshots '+Number(shooting?.headshots || 0)+' · misses '+Number(shooting?.misses || 0)+'</div>';
+        'EVASION · survival '+Math.round(Number(evasion?.survivedMs || 0)/1000)+'s · cover used '+Number(evasion?.coverBlocks || 0)+' · resets '+Number(evasion?.eliminations || 0)+'<br>'+
+        'SHOOTING · shots '+Number(shooting?.shotsFired || 0)+' · hits '+Number(shooting?.targetHits || 0)+' · clean headshots '+Number(shooting?.headshots || 0)+' · misses '+Number(shooting?.misses || 0)+'<br>'+
+        'These are the reasons behind the simple 1–4 field read — not a scorecard you need to study.</div>';
       card.appendChild(details);
+
+      const mediaBox=document.createElement('div');
+      mediaBox.style.cssText='padding:12px;border:1px solid #38493d;border-radius:11px;background:#0d1510;margin-bottom:10px;';
+      mediaBox.innerHTML='<div style="font-size:9px;color:#9fbda8;letter-spacing:1px">📻 WORLD FEED · FICTIONAL IN-GAME MEDIA</div>'+
+        '<div style="font-size:10px;font-weight:900;color:#e8c95c;margin-top:5px">'+media.source+'</div>'+
+        '<div style="font-size:10px;color:#d6dfd8;line-height:1.55;margin-top:5px">'+media.text+'</div>'+
+        '<div style="font-size:9px;color:#718678;margin-top:6px">📱 FIELD CHAT: “The device has spoken.”</div>';
+      card.appendChild(mediaBox);
     } else {
       const startBox=document.createElement('div');
       startBox.style.cssText='padding:16px;text-align:center;border:1px solid #496556;border-radius:12px;background:#102018;margin-bottom:10px;';
