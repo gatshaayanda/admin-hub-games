@@ -4022,6 +4022,12 @@ The camera approach is based on established combat-framing practice: center the 
 
 The current main checkpoint is the protected **Golden Baseline v2** for Shooters Trigger. Training Camp is the evaluation layer immediately before Arena. Do not change its combat feel, scoring semantics, camera framing or role rules casually; tune only from observed playtest evidence.
 
+### Training CQE baseline now implemented
+- Training Evasion now aggressively closes for contact, fires whenever line-of-sight is available, and routes around blocking cover instead of repeatedly shooting an obstacle.
+- Close engagement is a pressure/response window, not an automatic hit or damage cheat.
+- Player deaths remain part of evasion scoring: survival time is primary, bot accuracy is compared against player evasion, and repeated eliminations reduce the player's evasion score.
+- A death resets that combat life while the same 30-second stage continues; the stage timer does not restart.
+
 ### Training Camp completion gate
 
 Before adding new progression systems, finish and playtest the Training Camp as a complete loop:
