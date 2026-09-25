@@ -172,6 +172,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   private trainingBreakPanel?: HTMLDivElement;
   private trainingCameraFocus?: Phaser.GameObjects.Zone;
   private trainingResultPanel?: HTMLDivElement;
+  private trainingRespawnAt = 0;
 
 
   constructor() {
@@ -194,6 +195,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     this.trainingShootingBotSurvivalMs = 0;
     this.trainingShootingBotLifeStartedAt = 0;
     this.trainingShootingBotEliminations = 0;
+    this.trainingRespawnAt = 0;
     this.playerSkill = 50;
     this.evasionSkill = 50;
     this.trainingEdge = { overall: 'TIE', evasion: 'TIE', shooting: 'TIE' };
@@ -268,6 +270,13 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
   update(_time: number, delta: number) {
     if (this.trainingDone || this.paused || this.trainingStage === 'BREAK' || this.roundTransition || this.resolvingRound) return;
+
+    // Training deaths use an explicit respawn state instead of depending on a
+    // delayed callback. This keeps a hit from ever leaving the mobile controls
+    // looking alive while the fighter is still downed.
+    if (this.trainingRespawnAt > 0 && Date.now() >= this.trainingRespawnAt) {
+      this.finishTrainingRespawn();
+    }
 
     // Training roles are a hard gameplay contract. The unarmed side is always
     // visually and mechanically unarmed; the armed side may still lose its gun
@@ -695,7 +704,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   }
 
   private movePlayer(delta: number) {
-    if (this.player.refilling) {
+    if (this.player.downed || this.player.refilling) {
       this.playerMoving = false;
       return;
     }
@@ -1645,27 +1654,37 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         this.recordCurrentShootingBotLife();
         this.trainingShootingBotEliminations += 1;
       }
-      this.time.delayedCall(260, () => {
-        if (this.trainingDone || this.paused || this.trainingStage === 'BREAK') return;
-        this.clearSplatter();
-        if (isPlayer) {
-          this.resetTrainingCombatant(this.player, this.trainingStage === 'SHOOTING');
-          this.player.body.setPosition(TRAINING_PLAYER_SPAWN.x, TRAINING_PLAYER_SPAWN.y);
-          if (this.trainingStage === 'EVASION') this.trainingEvasionLifeStartedAt = Date.now();
-        } else {
-          this.resetTrainingCombatant(this.rival, this.trainingStage === 'EVASION');
-          this.rival.body.setPosition(TRAINING_RIVAL_SPAWN.x, TRAINING_RIVAL_SPAWN.y);
-          if (this.trainingStage === 'SHOOTING') this.trainingShootingBotLifeStartedAt = Date.now();
-        }
-        this.player.cooldown = 350;
-        this.rival.cooldown = 350;
-        this.rivalRevealedUntil = Date.now() + 350;
-        this.statusHud?.setText(
-          isPlayer ? 'TAGGED · RESET · KEEP MOVING' : 'TARGET DOWN · RESET · KEEP ENGAGING'
-        );
-      });
+      this.trainingRespawnAt = Date.now() + 260;
       return;
     }
+  }
+
+  private finishTrainingRespawn() {
+    if (this.trainingRespawnAt <= 0) return;
+    this.trainingRespawnAt = 0;
+    this.clearSplatter();
+
+    const playerDown = this.player.downed;
+    const rivalDown = this.rival.downed;
+
+    if (playerDown) {
+      this.resetTrainingCombatant(this.player, this.trainingStage === 'SHOOTING');
+      this.player.body.setPosition(TRAINING_PLAYER_SPAWN.x, TRAINING_PLAYER_SPAWN.y);
+      if (this.trainingStage === 'EVASION') this.trainingEvasionLifeStartedAt = Date.now();
+    }
+
+    if (rivalDown) {
+      this.resetTrainingCombatant(this.rival, this.trainingStage === 'EVASION');
+      this.rival.body.setPosition(TRAINING_RIVAL_SPAWN.x, TRAINING_RIVAL_SPAWN.y);
+      if (this.trainingStage === 'SHOOTING') this.trainingShootingBotLifeStartedAt = Date.now();
+    }
+
+    this.player.cooldown = 350;
+    this.rival.cooldown = 350;
+    this.rivalRevealedUntil = Date.now() + 350;
+    this.statusHud?.setText(
+      playerDown ? 'TAGGED · RESET · KEEP MOVING' : 'TARGET DOWN · RESET · KEEP ENGAGING',
+    );
   }
 
   private recordCurrentEvasionLife() {
