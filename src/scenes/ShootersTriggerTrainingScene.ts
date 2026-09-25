@@ -72,7 +72,8 @@ const TRAINING_CAMERA_MIN_ZOOM = 0.50;
 const TRAINING_CAMERA_MAX_ZOOM = 0.82;
 const TRAINING_CQE_RANGE = 240;
 const TRAINING_CQE_HARD_RANGE = 150;
-const TRAINING_CQE_COOLDOWN = 135;
+const TRAINING_CQE_COOLDOWN = 85;
+const TRAINING_SHOOTING_ENGAGEMENT_RANGE = 620;
 // Never allow the two training fighters to occupy the same contact space.
 // Point-blank overlap was causing the aggressive bot to physically collapse
 // into the player during CQE and could restart the elimination lifecycle
@@ -405,10 +406,14 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     const side = Math.sin(Date.now() / 420) >= 0 ? 1 : -1;
     const desiredX = d < TRAINING_CQE_HARD_RANGE
       ? (-dy / d) * side
-      : dx / d * (d > TRAINING_CQE_RANGE ? -1 : 0.16) + (-dy / d) * side;
+      : d > TRAINING_SHOOTING_ENGAGEMENT_RANGE
+        ? dx / d
+        : dx / d * 0.10 + (-dy / d) * side;
     const desiredY = d < TRAINING_CQE_HARD_RANGE
       ? (dx / d) * side
-      : dy / d * (d > TRAINING_CQE_RANGE ? -1 : 0.16) + (dx / d) * side;
+      : d > TRAINING_SHOOTING_ENGAGEMENT_RANGE
+        ? dy / d
+        : dy / d * 0.10 + (dx / d) * side;
 
     this.moveRival(desiredX, desiredY, delta, 175, false);
   }
@@ -2067,7 +2072,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     // visible. The camera follows the midpoint, not the player, because this
     // scene measures the interaction between two fighters.
     this.trainingCameraFocus.setPosition((px + rx) * 0.5, (py + ry) * 0.5 - 55);
-    const targetZoom = Phaser.Math.Clamp(720 / Math.max(660, distance + 190), TRAINING_CAMERA_MIN_ZOOM, TRAINING_CAMERA_MAX_ZOOM);
+    const targetZoom = Phaser.Math.Clamp(1000 / Math.max(750, distance + 250), 0.62, 0.88);
     const smoothing = 1 - Math.pow(0.001, delta / 1000);
     this.cameras.main.setZoom(Phaser.Math.Linear(this.cameras.main.zoom, targetZoom, smoothing));
   }
