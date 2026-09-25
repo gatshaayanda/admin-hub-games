@@ -542,7 +542,6 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         playerScore: evasion.playerScore,
         botShootingScore: evasion.botShootingScore,
         eliminations: evasion.eliminations,
-        survived: evasion.survived,
         edge: evasion.edge,
       }));
       localStorage.setItem('shooters-trigger:last-shooting', JSON.stringify({
