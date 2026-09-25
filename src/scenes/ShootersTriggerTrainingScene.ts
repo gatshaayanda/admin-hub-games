@@ -73,6 +73,11 @@ const TRAINING_CAMERA_MAX_ZOOM = 0.82;
 const TRAINING_CQE_RANGE = 240;
 const TRAINING_CQE_HARD_RANGE = 150;
 const TRAINING_CQE_COOLDOWN = 135;
+// Never allow the two training fighters to occupy the same contact space.
+// Point-blank overlap was causing the aggressive bot to physically collapse
+// into the player during CQE and could restart the elimination lifecycle
+// repeatedly on touch.
+const TRAINING_MIN_SEPARATION = 110;
 
 type TrainingStage = 'EVASION' | 'BREAK' | 'SHOOTING';
 
@@ -293,6 +298,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     this.movePlayer(delta);
     this.tryPickupWeapon(this.player);
     this.updateTrainingRival(delta);
+    this.enforceTrainingSeparation();
     this.updateShots(delta);
     this.player.cooldown = Math.max(0, this.player.cooldown - delta);
     this.rival.cooldown = Math.max(0, this.rival.cooldown - delta);
@@ -360,8 +366,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
           ? 0
           : (this.player.body.y >= this.rival.body.y ? -1 : 1);
         this.moveRival(
-          d > TRAINING_CQE_HARD_RANGE ? (-dy / d) * side : dx / d,
-          d > TRAINING_CQE_HARD_RANGE ? (dx / d) * side : dy / d,
+          d > TRAINING_CQE_HARD_RANGE ? (-dy / d) * side : 0,
+          d > TRAINING_CQE_HARD_RANGE ? (dx / d) * side : 0,
           delta,
           205,
           false,
@@ -405,6 +411,54 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       : dy / d * (d > TRAINING_CQE_RANGE ? -1 : 0.16) + (dx / d) * side;
 
     this.moveRival(desiredX, desiredY, delta, 175, false);
+  }
+
+  private enforceTrainingSeparation() {
+    if (!this.trainingMode || this.trainingStage === 'BREAK' || this.trainingDone) return;
+
+    const dx = this.rival.body.x - this.player.body.x;
+    const dy = this.rival.body.y - this.player.body.y;
+    const distance = Math.hypot(dx, dy);
+    if (distance >= TRAINING_MIN_SEPARATION) return;
+
+    // The rival is the aggressive mover, so resolve contact by backing it away
+    // from the player. If both actors somehow land on the exact same point,
+    // use a deterministic direction rather than normalizing a zero vector.
+    const safeDistance = Math.max(distance, 1);
+    const awayX = distance > 1 ? dx / safeDistance : 1;
+    const awayY = distance > 1 ? dy / safeDistance : 0;
+    const targetX = Phaser.Math.Clamp(
+      this.player.body.x + awayX * TRAINING_MIN_SEPARATION,
+      42,
+      2358,
+    );
+    const targetY = Phaser.Math.Clamp(
+      this.player.body.y + awayY * TRAINING_MIN_SEPARATION,
+      90,
+      1350,
+    );
+
+    if (!this.inCover(targetX, targetY, 14)) {
+      this.rival.body.setPosition(targetX, targetY);
+      return;
+    }
+
+    // If the direct escape point is inside cover, move the player back instead
+    // of leaving the fighters overlapped. This is a safety net, not a combat
+    // advantage: it only runs while the minimum contact distance is violated.
+    const playerX = Phaser.Math.Clamp(
+      this.rival.body.x - awayX * TRAINING_MIN_SEPARATION,
+      42,
+      2358,
+    );
+    const playerY = Phaser.Math.Clamp(
+      this.rival.body.y - awayY * TRAINING_MIN_SEPARATION,
+      90,
+      1350,
+    );
+    if (!this.inCover(playerX, playerY, 14)) {
+      this.player.body.setPosition(playerX, playerY);
+    }
   }
 
   private applyTrainingRoleContract() {
