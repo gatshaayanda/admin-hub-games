@@ -70,6 +70,9 @@ const TRAINING_PLAYER_SPAWN = new Phaser.Math.Vector2(620, 700);
 const TRAINING_RIVAL_SPAWN = new Phaser.Math.Vector2(1740, 700);
 const TRAINING_CAMERA_MIN_ZOOM = 0.50;
 const TRAINING_CAMERA_MAX_ZOOM = 0.82;
+const TRAINING_CQE_RANGE = 240;
+const TRAINING_CQE_HARD_RANGE = 150;
+const TRAINING_CQE_COOLDOWN = 135;
 
 type TrainingStage = 'EVASION' | 'BREAK' | 'SHOOTING';
 
@@ -326,11 +329,42 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       const dx = this.player.body.x - this.rival.body.x;
       const dy = this.player.body.y - this.rival.body.y;
       const d = Math.hypot(dx, dy) || 1;
-      this.moveRival(dx, dy, delta, 205, false);
-      if (this.rival.cooldown <= 0 && d <= ARENA_BASE_RIVAL_FIRE_RANGE && this.hasLineOfSight(
-        this.rival.body.x, this.rival.body.y, this.player.body.x, this.player.body.y,
-      )) {
-        this.rivalFire(new Phaser.Math.Vector2(dx / d, dy / d));
+      const hasSight = this.hasLineOfSight(
+        this.rival.body.x,
+        this.rival.body.y,
+        this.player.body.x,
+        this.player.body.y,
+      );
+
+      // Evasion is a shooting test for the bot and an evasion test for the
+      // player. If an obstacle breaks the shot, the bot does not sit there
+      // shooting a wall: it picks the nearest usable corner that restores LOS.
+      // This is deliberately lightweight pathing for Phaser's small training
+      // arena, rather than introducing a full navigation system.
+      if (!hasSight) {
+        const route = this.getTrainingObstacleRoute();
+        this.moveRival(route.x, route.y, delta, 205, false);
+      } else if (d > TRAINING_CQE_RANGE) {
+        // Close the distance aggressively so the training bot gets real
+        // engagements instead of spending the 30 seconds jogging around.
+        this.moveRival(dx / d, dy / d, delta, 205, false);
+      } else {
+        // Inside CQE, stay engaged rather than orbiting. Very close combat gets
+        // a short response window; this makes close-range pressure measurable.
+        const side = d <= TRAINING_CQE_HARD_RANGE
+          ? 0
+          : (this.player.body.y >= this.rival.body.y ? -1 : 1);
+        this.moveRival(
+          d > TRAINING_CQE_HARD_RANGE ? (-dy / d) * side : dx / d,
+          d > TRAINING_CQE_HARD_RANGE ? (dx / d) * side : dy / d,
+          delta,
+          205,
+          false,
+        );
+      }
+
+      if (this.rival.cooldown <= 0 && d <= ARENA_BASE_RIVAL_FIRE_RANGE && hasSight) {
+        this.rivalFire(new Phaser.Math.Vector2(dx / d, dy / d), d);
       }
       return;
     }
@@ -1216,10 +1250,13 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     );
   }
 
-  private rivalFire(direction: Phaser.Math.Vector2) {
+  private rivalFire(direction: Phaser.Math.Vector2, engagementDistance = Number.POSITIVE_INFINITY) {
     const accuracy = this.rivalProfile.shooting;
     const aim = direction.clone().normalize();
-    this.rival.cooldown = this.trainingMode ? Math.max(155, 260 - accuracy * 1.5) : ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(330, 930 - accuracy * 5.4);
+    const trainingCooldown = engagementDistance <= TRAINING_CQE_RANGE
+      ? Math.min(TRAINING_CQE_COOLDOWN, Math.max(110, 210 - accuracy * 0.75))
+      : Math.max(155, 260 - accuracy * 1.5);
+    this.rival.cooldown = this.trainingMode ? trainingCooldown : ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(330, 930 - accuracy * 5.4);
     if (!this.trainingMode) this.rival.ammo -= 1;
     this.rivalShotsFired += 1;
     this.rivalLastFiredAt = Date.now();
@@ -2653,6 +2690,46 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     return ARENA_AMMO_STATIONS
       .slice()
       .sort((a, b) => Phaser.Math.Distance.Between(x, y, a.centerX, a.centerY) - Phaser.Math.Distance.Between(x, y, b.centerX, b.centerY))[0];
+  }
+
+  private getTrainingObstacleRoute() {
+    const dx = this.player.body.x - this.rival.body.x;
+    const dy = this.player.body.y - this.rival.body.y;
+    const blockers = this.covers.filter((cover) =>
+      Phaser.Geom.Intersects.LineToRectangle(
+        new Phaser.Geom.Line(this.rival.body.x, this.rival.body.y, this.player.body.x, this.player.body.y),
+        cover,
+      ),
+    );
+    if (!blockers.length) return { x: dx, y: dy };
+
+    const blocker = blockers[0];
+    const margin = 32;
+    const candidates = [
+      { x: blocker.x - margin, y: blocker.y - margin },
+      { x: blocker.x + blocker.width + margin, y: blocker.y - margin },
+      { x: blocker.x - margin, y: blocker.y + blocker.height + margin },
+      { x: blocker.x + blocker.width + margin, y: blocker.y + blocker.height + margin },
+    ].map((point) => ({
+      x: Phaser.Math.Clamp(point.x, 42, 2358),
+      y: Phaser.Math.Clamp(point.y, 90, 1350),
+    })).filter((point) => !this.inCover(point.x, point.y, 16));
+
+    const scored = candidates
+      .map((point) => ({
+        point,
+        distance: Phaser.Math.Distance.Between(this.rival.body.x, this.rival.body.y, point.x, point.y),
+        canShoot: this.hasLineOfSight(point.x, point.y, this.player.body.x, this.player.body.y),
+      }))
+      .sort((a, b) =>
+        Number(b.canShoot) - Number(a.canShoot) || a.distance - b.distance,
+      );
+
+    const best = scored[0];
+    return best ? {
+      x: best.point.x - this.rival.body.x,
+      y: best.point.y - this.rival.body.y,
+    } : { x: dx, y: dy };
   }
 
   private hasLineOfSight(fromX: number, fromY: number, toX: number, toY: number) {
