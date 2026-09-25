@@ -227,6 +227,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     this.trainingCameraFocus = this.add.zone(
       (this.player.body.x + this.rival.body.x) / 2,
       (this.player.body.y + this.rival.body.y) / 2,
+      1,
+      1,
     ).setVisible(false);
     this.cameras.main.startFollow(this.trainingCameraFocus, true, 0.12, 0.12);
     this.cameras.main.setDeadzone(0, 0);
@@ -1310,7 +1312,11 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
           );
         }
 
-        if (this.matchOver || this.roundTransition || this.resolvingRound) break;
+        // A hit can resolve a training life immediately. That path clears the
+        // projectile array before returning here, so never touch a stale shot.
+        if (!this.shots.includes(shot) || !shot.body.active || this.matchOver || this.roundTransition || this.resolvingRound) {
+          continue;
+        }
         this.holdShotAtImpact(shot, shot.body.x, shot.body.y);
         if (shot.impactHoldMs <= 0) {
           shot.body.destroy();
@@ -1871,8 +1877,11 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     const px = this.player.body.x, py = this.player.body.y;
     const rx = this.rival.body.x, ry = this.rival.body.y;
     const distance = Phaser.Math.Distance.Between(px, py, rx, ry);
-    this.trainingCameraFocus.setPosition((px + rx) * 0.5, (py + ry) * 0.5 + 70);
-    const targetZoom = Phaser.Math.Clamp(700 / Math.max(620, distance + 180), TRAINING_CAMERA_MIN_ZOOM, TRAINING_CAMERA_MAX_ZOOM);
+    // Keep the combat lane above the thumb controls and keep both fighters
+    // visible. The camera follows the midpoint, not the player, because this
+    // scene measures the interaction between two fighters.
+    this.trainingCameraFocus.setPosition((px + rx) * 0.5, (py + ry) * 0.5 - 55);
+    const targetZoom = Phaser.Math.Clamp(720 / Math.max(660, distance + 190), TRAINING_CAMERA_MIN_ZOOM, TRAINING_CAMERA_MAX_ZOOM);
     const smoothing = 1 - Math.pow(0.001, delta / 1000);
     this.cameras.main.setZoom(Phaser.Math.Linear(this.cameras.main.zoom, targetZoom, smoothing));
   }
