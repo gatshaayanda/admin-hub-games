@@ -4054,3 +4054,20 @@ For adaptive tuning, prefer bounded performance-based adjustments rather than ab
 ### CQE implementation rule
 
 After Training Camp is declared playtest-complete, the **next gameplay task is Arena Close Quarter Engagement**. Do not start unrelated game features before this baseline is implemented and tested. Preserve the current Arena bot movement/evasion/ammo behaviour while adding CQE as a narrow engagement layer.
+
+
+### Shooters Trigger — Training readout and reversed-drill contract
+
+- Training Evasion and Shooting are one paired evaluation. Evasion: player unarmed, bot armed and aggressive. Shooting: player armed, bot unarmed and evasive.
+- A downed fighter must never leave the Training scene frozen. Both directions use the same short reset lifecycle: record the current life, clear combat paint/projectiles, respawn the eliminated side, restore its correct role, and continue the same 30-second stage clock.
+- Shooting begins as a clean second experiment. Its shot/hit/miss counters are reset after the Evasion report is captured so the two reads cannot contaminate each other.
+- The Shooting bot must route around blocking cover rather than repeatedly walking into an obstacle. It remains evasive, does not hide, and does not gain magical immunity.
+- The player-facing Training/Phone read is intentionally not an analytics dashboard. Internally the system keeps detailed evidence, but the human-facing language uses a simple **1–4 Field Signal**:
+  - **1/4** = learning
+  - **2/4** = developing
+  - **3/4** = field-ready
+  - **4/4** = sharp
+- Evasion and Shooting each explain *what the player actually did* in plain language, then give a non-clinical **Field Temperament** such as FIELD READER, PRESSURE SEEKER, TRIGGER-HAPPY, CONTROLLED OPERATOR or ADAPTIVE PLAYER. This is gameplay-style feedback, not a psychological diagnosis.
+- The phone is styled as a compact futuristic field device: readable first, atmospheric second. It may use animated rings/signal accents and emojis, but must not become a hologram-heavy sci-fi dashboard.
+- The world feed uses clearly fictional in-game Botswana-flavoured media/social voices. Never present invented reactions as real reporting or impersonate a real Botswana outlet. The purpose is to make the player feel watched by the game's world while keeping the source obviously fictional.
+- The Arena receives the underlying numerical training evidence/edge; the phone translates that evidence for the player. Do not replace the internal data with the 1–4 presentation.
