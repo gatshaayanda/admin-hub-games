@@ -496,7 +496,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     const nextBox=document.createElement('div');
     nextBox.style.cssText='padding:13px;border:2px solid #e8c95c;border-radius:12px;background:linear-gradient(145deg,#17251c,#151a16);margin-bottom:10px;';
     nextBox.innerHTML='<div style="display:flex;align-items:center;gap:10px">'+icon(next.icon as any)+
-      '<div><div style="font-size:9px;color:#9fbda8;letter-spacing:1px">FIELD ADVICE</div>'+
+      '<div><div style="font-size:9px;color:#9fbda8;letter-spacing:1px">🧭 FIELD ADVICE</div>'+
       '<div style="font-size:15px;font-weight:900;color:#f4f1df;margin-top:2px">'+next.title+'</div></div></div>'+
       '<div style="font-size:10px;color:#d6dfd8;line-height:1.55;margin-top:10px">'+next.body+'</div>';
     card.appendChild(nextBox);
@@ -523,14 +523,14 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
       const overallBox=document.createElement('div');
       const overallText=overall==='PLAYER'?'YOU HAVE THE TRAINING EDGE':overall==='BOT'?'THE BOT HAS THE TRAINING EDGE':'TRAINING IS EVEN';
       overallBox.style.cssText='padding:11px;border:1px solid #e8c95c;border-radius:10px;text-align:center;margin-bottom:9px;background:#182b20;';
-      overallBox.innerHTML='<div style="font-size:9px;color:#9fbda8;letter-spacing:1px">ARENA ODDS</div>'+
+      overallBox.innerHTML='<div style="font-size:9px;color:#9fbda8;letter-spacing:1px">🏆 ARENA ODDS</div>'+
         '<div style="font-size:15px;font-weight:900;color:#e8c95c;margin-top:3px">'+overallText+'</div>'+
         '<div style="font-size:9px;color:#b9c8bd;margin-top:5px">Training changes the odds. It never guarantees the result.</div>';
       card.appendChild(overallBox);
 
       const details=document.createElement('details');
       details.style.cssText='margin-bottom:10px;border:1px solid #38493d;border-radius:10px;background:#111813;';
-      details.innerHTML='<summary style="padding:10px;color:#9fbda8;font-size:9px;font-weight:900;cursor:pointer">SHOW TRAINING EVIDENCE</summary>'+
+      details.innerHTML='<summary style="padding:10px;color:#9fbda8;font-size:9px;font-weight:900;cursor:pointer">📊 SHOW TRAINING EVIDENCE</summary>'+
         '<div style="padding:0 10px 10px;font-size:9px;color:#aebbb2;line-height:1.8">'+
         'EVASION · survival '+Math.round(Number(evasion?.survivedMs || 0)/1000)+'s · cover blocks '+Number(evasion?.coverBlocks || 0)+' · scrapes '+Number(evasion?.scrapes || 0)+'<br>'+
         'SHOOTING · shots '+Number(shooting?.shotsFired || 0)+' · hits '+Number(shooting?.targetHits || 0)+' · headshots '+Number(shooting?.headshots || 0)+' · misses '+Number(shooting?.misses || 0)+'</div>';
