@@ -338,6 +338,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     if (Date.now() - this.trainingStartedAt >= TRAINING_STAGE_MS && !this.trainingStageFinishing) {
       this.trainingStageFinishing = true;
       this.finishTrainingStage();
+      return;
     }
   }
 
@@ -1354,11 +1355,30 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     this.playerShotsFired += 1;
     this.playerLastFiredAt = Date.now();
     this.playerRevealedUntil = Number.POSITIVE_INFINITY;
+    // The fire control is also the aim control. When the player has not
+    // explicitly dragged the aim, resolve the direction from the live target
+    // at the exact moment of the shot. This keeps Shooting symmetrical with
+    // the rival's live-direction fire and prevents a stale aim vector from
+    // sending otherwise valid paintballs past a moving target.
+    const shotAim = this.aim.clone();
+    if (!this.manualAim && this.rival && !this.rival.downed) {
+      const dx = this.rival.body.x - this.player.body.x;
+      const dy = this.rival.body.y - this.player.body.y;
+      const distance = Math.hypot(dx, dy);
+      if (
+        distance > 1 &&
+        distance <= this.getPlayerAimRange() &&
+        this.hasLineOfSight(this.player.body.x, this.player.body.y, this.rival.body.x, this.rival.body.y)
+      ) {
+        shotAim.set(dx / distance, dy / distance);
+        this.aim.copy(shotAim);
+      }
+    }
     this.flashMuzzle(this.playerMuzzle);
     this.spawnShot(
-      this.player.body.x + this.aim.x * 42,
-      this.player.body.y + this.aim.y * 42,
-      this.aim.clone(),
+      this.player.body.x + shotAim.x * 42,
+      this.player.body.y + shotAim.y * 42,
+      shotAim,
       'player',
     );
   }
