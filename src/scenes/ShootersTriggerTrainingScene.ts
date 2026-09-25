@@ -1774,6 +1774,24 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       if (this.trainingStage === 'SHOOTING') this.trainingShootingBotLifeStartedAt = Date.now();
     }
 
+    // If the surviving fighter chased the eliminated fighter all the way to
+    // its spawn, resetting only the downed side can create an immediate
+    // point-blank re-engagement. Put the survivor back at its own side before
+    // combat resumes so a respawn is always a clean new engagement.
+    const trainingRespawnDistance = Phaser.Math.Distance.Between(
+      this.player.body.x,
+      this.player.body.y,
+      this.rival.body.x,
+      this.rival.body.y,
+    );
+    if (trainingRespawnDistance < 420) {
+      if (playerDown && !rivalDown) {
+        this.rival.body.setPosition(TRAINING_RIVAL_SPAWN.x, TRAINING_RIVAL_SPAWN.y);
+      } else if (rivalDown && !playerDown) {
+        this.player.body.setPosition(TRAINING_PLAYER_SPAWN.x, TRAINING_PLAYER_SPAWN.y);
+      }
+    }
+
     this.player.cooldown = 350;
     this.rival.cooldown = 350;
     this.rivalRevealedUntil = Date.now() + 350;
