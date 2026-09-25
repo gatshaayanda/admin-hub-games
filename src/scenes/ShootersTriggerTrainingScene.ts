@@ -68,8 +68,8 @@ const ARENA_HIDDEN_SEARCH_MS = 3200;
 const TRAINING_STAGE_MS = 30000;
 const TRAINING_PLAYER_SPAWN = new Phaser.Math.Vector2(620, 700);
 const TRAINING_RIVAL_SPAWN = new Phaser.Math.Vector2(1740, 700);
-const TRAINING_CAMERA_MIN_ZOOM = 0.50;
-const TRAINING_CAMERA_MAX_ZOOM = 0.82;
+const TRAINING_CAMERA_MIN_ZOOM = 0.62;
+const TRAINING_CAMERA_MAX_ZOOM = 0.88;
 const TRAINING_CQE_RANGE = 240;
 const TRAINING_CQE_HARD_RANGE = 150;
 const TRAINING_CQE_COOLDOWN = 85;
@@ -186,6 +186,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   private trainingResultPanel?: HTMLDivElement;
   private trainingRespawnAt = 0;
   private trainingRespawnTimer?: number;
+  private trainingStageFinishing = false;
 
 
   constructor() {
@@ -200,6 +201,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     this.trainingStage = 'EVASION';
     this.trainingStartedAt = Date.now();
     this.trainingDone = false;
+    this.trainingStageFinishing = false;
     this.trainingCoverBlocks = 0;
     this.trainingEvasionStats = undefined;
     this.trainingEvasionSurvivalMs = 0;
@@ -333,7 +335,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     this.updateTrainingCamera(delta);
     this.updateEnemyLocator();
 
-    if (Date.now() - this.trainingStartedAt >= TRAINING_STAGE_MS) {
+    if (Date.now() - this.trainingStartedAt >= TRAINING_STAGE_MS && !this.trainingStageFinishing) {
+      this.trainingStageFinishing = true;
       this.finishTrainingStage();
     }
   }
@@ -507,7 +510,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   }
 
   private finishTrainingStage() {
-    if (this.trainingDone) return;
+    if (this.trainingDone || this.trainingStageFinishing) return;
     if (this.trainingStage === 'EVASION') this.recordCurrentEvasionLife();
     if (this.trainingStage === 'SHOOTING') this.recordCurrentShootingBotLife();
     this.clearShots();
@@ -560,15 +563,17 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
   private showTrainingBreak() {
     this.trainingStage = 'BREAK';
+    this.fire = false;
+    this.setMoveVector(0, 0);
     const panel = document.createElement('div');
     this.trainingBreakPanel = panel;
     Object.assign(panel.style, {
       position: 'fixed', inset: '0', zIndex: '1550', display: 'grid', placeItems: 'center',
-      padding: '20px', background: 'rgba(12,18,14,.78)', fontFamily: 'monospace',
+      padding: 'max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px))', background: 'rgba(12,18,14,.78)', fontFamily: 'monospace', boxSizing: 'border-box', overflow: 'auto',
     });
     const card = document.createElement('div');
     Object.assign(card.style, {
-      width: 'min(420px,92vw)', padding: '24px', background: '#151a16', color: '#f4f1df',
+      width: 'min(420px, calc(100vw - 24px))', maxHeight: 'calc(100dvh - 24px)', overflowY: 'auto', boxSizing: 'border-box', padding: '20px', background: '#151a16', color: '#f4f1df',
       border: '2px solid #e8c95c', borderRadius: '12px', textAlign: 'center',
     });
     card.innerHTML =
@@ -583,10 +588,12 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     button.onclick = () => {
       panel.remove();
       this.trainingBreakPanel = undefined;
+      this.trainingStageFinishing = false;
       this.trainingStage = 'SHOOTING';
       this.trainingStartedAt = Date.now();
       // Shooting is a clean second experiment. Evasion evidence is already
       // stored in trainingEvasionStats, so the reversed drill starts fresh.
+      this.trainingStageFinishing = false;
       this.playerShotsFired = 0;
       this.playerBodyHits = 0;
       this.playerHeadshots = 0;
@@ -643,6 +650,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
   private finishTraining() {
     this.trainingDone = true;
+    this.trainingStageFinishing = false;
     const shootingShots = this.playerShotsFired;
     const shootingHits = this.playerBodyHits + this.playerHeadshots;
     const accuracy = shootingShots > 0 ? shootingHits / shootingShots : 0;
@@ -723,11 +731,11 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     this.trainingResultPanel = panel;
     Object.assign(panel.style, {
       position:'fixed', inset:'0', zIndex:'1600', display:'grid', placeItems:'center',
-      padding:'16px', background:'rgba(12,18,14,.82)', fontFamily:'monospace',
+      padding:'max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px))', background:'rgba(12,18,14,.82)', fontFamily:'monospace', boxSizing:'border-box', overflow:'auto',
     });
     const card = document.createElement('div');
     Object.assign(card.style, {
-      width:'min(440px,94vw)', padding:'22px', background:'#151a16', color:'#f4f1df',
+      width:'min(440px, calc(100vw - 24px))', maxHeight:'calc(100dvh - 24px)', overflowY:'auto', boxSizing:'border-box', padding:'20px', background:'#151a16', color:'#f4f1df',
       border:'2px solid #e8c95c', borderRadius:'12px', textAlign:'center',
     });
     const range = (score:number) => score < 40 ? '1/4' : score < 60 ? '2/4' : score < 80 ? '3/4' : '4/4';
@@ -1397,7 +1405,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     owner: 'player' | 'rival',
   ) {
     // Same proven projectile as Shooting Range: a discrete, visible paintball.
-    const ball = this.add.circle(x, y, 4, owner === 'player' ? 0xf0dfb6 : 0xe44f3d).setDepth(50);
+    const ball = this.add.circle(x, y, 4, 0xe44f3d).setDepth(50);
     this.shots.push({
       body: ball,
       vx: direction.x * 520,
