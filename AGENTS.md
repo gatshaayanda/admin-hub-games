@@ -4087,3 +4087,12 @@ After Training Camp is declared playtest-complete, the **next gameplay task is A
 - The 420px respawn separation fixed one lifecycle case, but the bot could still physically close the gap during normal CQE and touch/overlap the player.
 - Training must maintain a hard 110px minimum separation. The aggressive Evasion bot may pressure into CQE, but it must stop advancing at contact range; a safety pass separates the fighters before the next combat frame.
 - This is a collision/lifecycle safety invariant, not a damage or difficulty boost.
+
+### Training playtest fixes — September 25
+
+Latest observed phone playtest found three presentation/combat issues and they are now addressed on main:
+- Break panel must fit inside a mobile viewport: use border-box sizing plus a viewport-constrained scrollable card so the START SHOOTING control cannot fall below the screen.
+- Shooting camera must keep the player and evasive target readable rather than starting too zoomed out. Training camera uses a tighter 0.62–0.88 zoom band and remains centered on the combat midpoint with upward bias.
+- Shooting bot must remain an actual target, not continuously run away. Above a bounded 620px engagement band it closes distance; inside the band it uses lateral evasive movement. Very close fire response is tightened to an 85ms CQE cooldown for the training bot. This improves the measurement without giving the bot automatic hits.
+- Preserve the existing Evasion role contract, respawn recovery, 110px contact separation and discrete paintball/hit rules.
+
