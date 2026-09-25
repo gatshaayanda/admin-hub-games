@@ -510,7 +510,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   }
 
   private finishTrainingStage() {
-    if (this.trainingDone || this.trainingStageFinishing) return;
+    if (this.trainingDone) return;
     if (this.trainingStage === 'EVASION') this.recordCurrentEvasionLife();
     if (this.trainingStage === 'SHOOTING') this.recordCurrentShootingBotLife();
     this.clearShots();
