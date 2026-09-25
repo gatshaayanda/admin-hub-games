@@ -4114,3 +4114,14 @@ For **Shooters Trigger**, mobile screen usability and readable combat feedback a
 - Close-range clean hits are recorded separately in training and contribute a bounded bonus to the shooting score; they must never become an unbounded damage cheat.
 - Combat feedback must remain discrete/readable: visible paintball trajectory, impact/splatter, and a clear hit state rather than laser/tracer treatment.
 - Any change to close-range impact, hit feedback, or scoring must preserve the Training → Report → Arena relationship and be based on observed playtest evidence.
+
+## Shooters Trigger — Training break / Shooting lifecycle fix — September 25, 2026
+
+Latest phone playtest exposed three concrete Training Camp defects:
+- The Evasion → Shooting break card could still exceed a small phone viewport because its width/padding used content-box sizing. The break overlay is now safe-area padded, border-boxed, viewport-constrained, and internally scrollable.
+- Shooting could appear to die at the 0.0s boundary while the stage was transitioning to the report. Stage completion is now guarded so the 30-second handoff runs once and the combat update exits immediately after the transition.
+- Player paintballs were visually different from the rival's and player firing could retain a stale aim vector against the moving target. Training paintballs now use the same visible paintball treatment for both sides, and player auto-fire resolves the live rival direction at the exact shot moment unless the player explicitly drags aim.
+- The Shooting report/result overlay follows the same mobile viewport contract as the break screen.
+
+These are source-level gameplay fixes, not instructions for the player. Preserve them when tuning Training. The protected combat contract remains: discrete visible paintballs, real trajectory, cover blocking, two body hits/headshot rules, scrape-only near misses, and readable impact/splatter.
+
