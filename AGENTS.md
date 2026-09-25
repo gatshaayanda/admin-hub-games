@@ -4017,3 +4017,34 @@ Training is an evaluation drill, so its camera must serve judgment rather than c
 - Training is specifically testing **survival/evasion** and **shot quality**, so a frame that loses the opponent or projectile path is a gameplay defect, not merely a visual preference.
 
 The camera approach is based on established combat-framing practice: center the focal position on combatants and zoom out as needed to keep the encounter inside the view. Phaser supports camera follow, deadzones, bounds and zoom for this pattern. citeturn1search24turn0search1
+
+## Shooters Trigger — Golden Baseline v2 Contract
+
+The current main checkpoint is the protected **Golden Baseline v2** for Shooters Trigger. Training Camp is the evaluation layer immediately before Arena. Do not change its combat feel, scoring semantics, camera framing or role rules casually; tune only from observed playtest evidence.
+
+### Training Camp completion gate
+
+Before adding new progression systems, finish and playtest the Training Camp as a complete loop:
+- Evasion first: player unarmed, bot armed, unlimited ammo, cover blocks, no concealment/hiding.
+- Break / role switch.
+- Shooting second: player armed, bot unarmed/evasive, unlimited ammo, same readable paintball combat.
+- Two clean body hits eliminate; headshot is instant; scrape is paint-only; true miss has no effect.
+- Training report compares **player evasion vs bot shooting** and **player shooting vs bot evasion**.
+- The overall training edge is the combined result of the two categories.
+- Phone readout must remain field intelligence: simple, visual, understandable, and explicitly odds-only.
+
+### Golden baseline v2 engagement calibration
+
+The training edge is the primary adaptive metric. For the baseline, tune the Arena so the player who takes the overall training edge wins the engagement approximately **2 times out of 3** in ordinary engagements (~67%), not every fight.
+
+Add and tune a distinct **Close Quarter Engagement (CQE)** state immediately after Training Camp is proven. When player and rival are very close and actively firing at each other, the edge should have a stronger but still non-guaranteed effect: the edge-holder should win approximately **2.5 times out of 3** (~83%) in controlled CQE tests.
+
+CQE must not be a simple damage cheat. It should be a bounded combination of engagement distance, hit/response window, movement pressure and the existing training edge. The baseline should remain readable and fair: close range shortens the engagement, increases consequence, and rewards the trained edge without making the outcome deterministic.
+
+Use engagement distance + time-to-kill as the tuning model: shooter-game design guidance treats the distribution of engagement distances and the resulting TTK as coupled balance variables, so do not tune CQE independently of weapon cadence, projectile speed, movement and map space. citeturn1search0turn1search1
+
+For adaptive tuning, prefer bounded performance-based adjustments rather than abrupt difficulty jumps. The training report supplies the player-ability signal; Arena should use it to shift odds, not guarantee results. citeturn1search6turn1search9
+
+### CQE implementation rule
+
+After Training Camp is declared playtest-complete, the **next gameplay task is Arena Close Quarter Engagement**. Do not start unrelated game features before this baseline is implemented and tested. Preserve the current Arena bot movement/evasion/ammo behaviour while adding CQE as a narrow engagement layer.
