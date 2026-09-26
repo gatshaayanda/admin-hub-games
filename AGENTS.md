@@ -4366,3 +4366,36 @@ This map records inspected source boundaries; it is not permission to refactor. 
 The accepted gameplay spine is real, but the code is not yet a clean generic shooter engine: combat mechanics are substantially implemented inside the two scene classes, while profile/session/mobile-control utilities are separate modules. The first safe reusable-core work should be a source-and-test exercise around small pure helpers (geometry classification, profile normalization, event record types/selection) with table-driven tests, then incremental adoption by one scene at a time. No broad combat extraction until the same behavior is demonstrated by tests and a phone playthrough.
 
 Do not mistake the standalone legacy Evasion scene for the current integrated Training Evasion drill. Do not describe Media as already supporting recorded video or Peak Highlights. Do not describe the four-skill profile as complete beyond the currently stored four Training measurements and the existing phone/Arena handoff.
+
+## Wardrobe — Field Operator 01 Visual Identity Contract
+
+Field Operator 01 is the initial original Shooters Trigger character prototype. The current Wardrobe prototype uses a CC0 Kenney Toon Characters base as a temporary cartoon construction layer, with Shooters Trigger-specific paintball mask, jersey, trousers, marker, yellow shoulder marking and operator identifier layered over it. This is a Wardrobe experiment only; production artwork can replace the base without changing combat rules.
+
+### Directional Facing
+
+- NORTH/UP = rear view.
+- SOUTH/DOWN = front view.
+- EAST/WEST = distinct side views.
+- Diagonal directions should be architecturally supportable later.
+- Do not rotate one directional sprite to fake facing.
+
+### Technical Separation
+
+- Sprite artwork is presentation only.
+- Authoritative combat geometry remains separate from sprite bounds.
+- Wardrobe visual work must not alter Golden Hit behavior, projectile authority, cover/LOS, damage, weapon drops or recovery rules.
+
+### Wardrobe Lab
+
+Wardrobe is the experimental environment for character/sprite/animation development before integration into Shooters Trigger. It owns the visual prototype, directional presentation, animation timing and asset experiments; Shooters Trigger remains the protected working game.
+
+### Acceptance
+
+The visual system must eventually be verified for:
+
+- four cardinal directions;
+- diagonal extensibility;
+- idle and walking;
+- mobile readability;
+- independent movement/facing versus aim where applicable;
+- no change to Golden combat rules.
