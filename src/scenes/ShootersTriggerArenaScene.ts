@@ -747,8 +747,6 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     // especially during the final shots of a magazine. The rival's own magazine
     // is the only ammo constraint; tactical concealment/LOS/range are checked by
     // the caller, and a rival heading to refill may still return fire until empty.
-    const playerRecentlyFired = now - this.playerLastFiredAt < 700;
-
     let chance = distance < 260 ? 0.82 : distance < 430 ? 0.64 : 0.44;
     if (this.rival.ammo <= 12) chance *= 0.88;
     if (this.rival.ammo <= 9) chance *= 0.82;
