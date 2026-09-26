@@ -65,6 +65,15 @@ const ARENA_BODY_CORE_RADIUS = 34;
 const ARENA_SCRAPE_RADIUS = 44;
 const ARENA_PROJECTILE_MIN_VISIBLE_MS = 34;
 const ARENA_HIDDEN_SEARCH_MS = 3200;
+// Aim spread is a trajectory mechanic, not a hitbox mechanic. The Golden Hit
+// radii below remain fixed; training skill and target movement only influence
+// where a paintball is actually sent. Close range therefore remains dangerous
+// without manufacturing a larger target.
+const ARENA_AIM_SPREAD_MIN_DEG = 0.8;
+const ARENA_AIM_SPREAD_MAX_DEG = 5.5;
+const ARENA_EVASION_SPREAD_MAX_DEG = 2.8;
+const ARENA_CLOSE_RANGE = 240;
+const ARENA_LONG_RANGE = 720;
 const ARENA_CQE_RANGE = 220;
 const ARENA_CQE_ACTIVE_WINDOW_MS = 650;
 const ARENA_CQE_COOLDOWN_SHIFT_MS = 55;
@@ -934,10 +943,11 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.playerLastFiredAt = Date.now();
     this.playerRevealedUntil = Date.now() + 1800;
     this.flashMuzzle(this.playerMuzzle);
+    const playerShotDirection = this.getShotDirection(this.player, this.rival, this.aim);
     this.spawnShot(
-      this.player.body.x + this.aim.x * 42,
-      this.player.body.y + this.aim.y * 42,
-      this.aim.clone(),
+      this.player.body.x + playerShotDirection.x * 42,
+      this.player.body.y + playerShotDirection.y * 42,
+      playerShotDirection,
       'player',
     );
   }
@@ -945,6 +955,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private rivalFire(direction: Phaser.Math.Vector2) {
     const accuracy = this.rivalProfile.shooting;
     const aim = direction.clone().normalize();
+    const shotDirection = this.getShotDirection(this.rival, this.player, aim);
     const baseCooldown = ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(330, 930 - accuracy * 5.4);
     this.rival.cooldown = Math.max(300, baseCooldown + this.getCqeCooldownShift('rival', this.player));
     this.rival.ammo -= 1;
@@ -953,11 +964,48 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.rivalRevealedUntil = Date.now() + 1800;
     this.flashMuzzle(this.rivalMuzzle);
     this.spawnShot(
-      this.rival.body.x + aim.x * 42,
-      this.rival.body.y + aim.y * 42,
-      aim,
+      this.rival.body.x + shotDirection.x * 42,
+      this.rival.body.y + shotDirection.y * 42,
+      shotDirection,
       'rival',
     );
+  }
+
+  private getShotDirection(shooter: Fighter, target: Fighter, intended: Phaser.Math.Vector2) {
+    const distance = Phaser.Math.Distance.Between(
+      shooter.body.x,
+      shooter.body.y,
+      target.body.x,
+      target.body.y,
+    );
+    const shootingSkill = shooter === this.player ? this.playerSkill : this.rivalProfile.shooting;
+    const targetEvasion = target === this.player ? this.evasionSkill : this.rivalProfile.movement;
+
+    // Better shooting tightens the trajectory. Better evasion adds bounded
+    // movement pressure to the trajectory without ever changing collision
+    // geometry. The distance curve makes close engagements naturally lethal:
+    // the same angular error covers less world-space at short range.
+    const skillSpread = Phaser.Math.Linear(
+      ARENA_AIM_SPREAD_MAX_DEG,
+      ARENA_AIM_SPREAD_MIN_DEG,
+      clamp(shootingSkill / 100, 0, 1),
+    );
+    const evasionSpread = ARENA_EVASION_SPREAD_MAX_DEG * clamp(targetEvasion / 100, 0, 1);
+    const distanceFactor = Phaser.Math.Clamp(
+      Phaser.Math.Linear(0.42, 1.0, Phaser.Math.Clamp(
+        (distance - ARENA_CLOSE_RANGE) / (ARENA_LONG_RANGE - ARENA_CLOSE_RANGE),
+        0,
+        1,
+      )),
+      0.42,
+      1,
+    );
+    const spreadDeg = (skillSpread + evasionSpread) * distanceFactor;
+    if (spreadDeg <= 0.01) return intended.clone().normalize();
+
+    return intended.clone()
+      .rotate(Phaser.Math.DegToRad(Phaser.Math.FloatBetween(-spreadDeg, spreadDeg)))
+      .normalize();
   }
 
   private getPlayerAimRange() {

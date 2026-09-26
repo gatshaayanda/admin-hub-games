@@ -4215,3 +4215,37 @@ These are source-level gameplay fixes, not instructions for the player. Preserve
 - Rival engagement contract: player ammo level must never suppress the rival's firing decisions. Rival only pauses firing when its own magazine is empty/refilling, it is concealed, the player is concealed, line of sight/range fails, or a valid tactical state prevents engagement. While moving to a selected safer ammo station, the rival may continue returning fire until its own magazine is empty. Ammo-based chance reductions on the rival are modest and apply only to its own remaining rounds.
 - Arena weapon-hit geometry must not place the weapon marker directly on the incoming shooter-to-torso centerline. That caused most center-mass shots to be intercepted as weapon hits/scrapes before body damage, making ordinary eliminations seem to require point-blank or oblique shots. Keep weapon hit as a separate exposed target while preserving head/body radii (20/34), scrape radius (44), weapon-before-body ordering, cover blocking, and the 2-body-hit/headshot elimination rules.
 - Phaser references used for this hardening: Game Object scale is an explicit transform and must be reset after temporary effects; Tweens support `onComplete` for deterministic cleanup; pointer-up events can report releases outside a Game Object; Geometry line intersections remain authoritative for swept paintball collision.
+
+## Shooters Trigger — Arena Engagement Model (2026-09-26)
+
+Arena combat uses the fixed Golden Hit geometry plus bounded trajectory skill. The
+projectile remains authoritative: Phaser line/segment intersection checks the
+actual paintball path against cover, weapon, head, body and scrape geometry.
+Training does **not** enlarge hitboxes, add damage, or create proximity auto-hits.
+
+### Engagement dynamics
+
+- Training shooting/evasion scores are real preparation inputs to Arena.
+- Shooting skill affects fire cadence and now tightens the angular trajectory
+  spread of each paintball.
+- Target evasion adds bounded angular pressure to the incoming trajectory.
+- Distance scales the effect: close-range shots are naturally more dangerous
+  because the same angular error spans less world-space; long-range shots are
+  less certain.
+- A trajectory that misses the clean head/body radius can still enter the fixed
+  scrape radius, so good movement can produce scrapes rather than guaranteed
+  clean hits. This is probabilistic, not a guaranteed evasion result.
+- CQE remains bounded to its existing range/window and response/cooldown effects.
+  It does not enlarge hitboxes, redirect player aim, or add damage.
+- Weapon hits remain a separate exposed target. A successful weapon knockout
+  drops the weapon into the field; the affected fighter is unarmed until the
+  dropped weapon is recovered. A failed weapon-knockout roll records a scrape
+  and does not become body damage.
+- Player ammo is never used to make the rival artificially passive. Only the
+  firing side's own ammo, tactical concealment/LOS/range, cooldown and training
+  profile constrain its fire decision.
+
+This model deliberately keeps **training edge → trajectory/cadence → engagement**
+separate from **collision geometry → hit result**. Do not solve difficulty by
+inflating hitboxes or inventing damage bonuses.
+
