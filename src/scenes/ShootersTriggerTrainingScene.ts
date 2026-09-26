@@ -375,20 +375,16 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         // engagements instead of spending the 30 seconds jogging around.
         this.moveRival(dx / d, dy / d, delta, 205, false);
       } else {
-        // CQE is the decisive close-fight band. The bot keeps closing until the
-        // minimum physical separation, then holds that contact distance and
-        // fires down the direct line. No damage bonus is added: the Arena hit
-        // rules remain the rules here (head = instant, body = two, scrape = paint).
-        const side = d <= TRAINING_CQE_HARD_RANGE
-          ? 0
-          : (this.player.body.y >= this.rival.body.y ? -1 : 1);
-        this.moveRival(
-          d > TRAINING_CQE_HARD_RANGE ? (-dy / d) * side : 0,
-          d > TRAINING_CQE_HARD_RANGE ? (dx / d) * side : 0,
-          delta,
-          205,
-          false,
-        );
+        // Golden CQE: keep pressing straight into the direct engagement until
+        // the physical 72px separation guard stops overlap. Do not park at
+        // RANGE 1 or orbit the player while an easy clean firing line is open.
+        // Hit geometry/resolution is locked; this changes movement only.
+        const pressDistance = Math.max(0, d - TRAINING_MIN_SEPARATION);
+        if (pressDistance > 0) {
+          this.moveRival(dx / d, dy / d, delta, 205, false);
+        } else {
+          this.rivalMoving = false;
+        }
       }
 
       if (this.rival.cooldown <= 0 && d <= ARENA_BASE_RIVAL_FIRE_RANGE && hasSight) {
@@ -422,21 +418,17 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       return;
     }
 
-    // Keep the bot in a readable engagement band. At close range it slips
-    // laterally; at longer range it keeps moving away without hiding.
-    const side = Math.sin(Date.now() / 420) >= 0 ? 1 : -1;
-    const desiredX = d < TRAINING_CQE_HARD_RANGE
-      ? (-dy / d) * side
-      : d > TRAINING_SHOOTING_ENGAGEMENT_RANGE
-        ? dx / d
-        : dx / d * 0.10 + (-dy / d) * side;
-    const desiredY = d < TRAINING_CQE_HARD_RANGE
-      ? (dx / d) * side
-      : d > TRAINING_SHOOTING_ENGAGEMENT_RANGE
-        ? dy / d
-        : dy / d * 0.10 + (dx / d) * side;
+    // The unarmed target prioritizes creating real separation from the
+    // armed player. Blend a strong radial retreat with lateral breaks so it
+    // does not simply orbit inside the player's easy auto-aim band.
+    // No concealment or hit/damage changes: this is movement behaviour only.
+    const side = Math.sin(Date.now() / 520) >= 0 ? 1 : -1;
+    const retreatWeight = d < TRAINING_SHOOTING_ENGAGEMENT_RANGE ? 1 : 0.72;
+    const lateralWeight = d < TRAINING_CQE_RANGE ? 0.62 : 0.38;
+    const desiredX = (dx / d) * retreatWeight + (-dy / d) * side * lateralWeight;
+    const desiredY = (dy / d) * retreatWeight + (dx / d) * side * lateralWeight;
 
-    this.moveRival(desiredX, desiredY, delta, 175, false);
+    this.moveRival(desiredX, desiredY, delta, 205, false);
   }
 
   private enforceTrainingSeparation() {
@@ -807,7 +799,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       width:'min(440px, calc(100vw - 24px))', maxHeight:'calc(100dvh - 24px)', overflowY:'auto', boxSizing:'border-box', padding:'20px', background:'#151a16', color:'#f4f1df',
       border:'2px solid #e8c95c', borderRadius:'12px', textAlign:'center',
     });
-    const range = (score:number) => score < 40 ? '1/4' : score < 60 ? '2/4' : score < 80 ? '3/4' : '4/4';
+    const range = (score:number) => score < 40 ? '1' : score < 60 ? '2' : score < 80 ? '3' : '4';
     const read = (score:number, kind:'EVASION'|'SHOOTING') => {
       if (kind === 'EVASION') return score >= 80 ? 'CALM UNDER FIRE' : score >= 60 ? 'MOVES WITH INTENT' : score >= 40 ? 'STILL FINDING SPACE' : 'EXPOSED UNDER PRESSURE';
       return score >= 80 ? 'CLEAN FINISHER' : score >= 60 ? 'CONTROLLED PRESSURE' : score >= 40 ? 'FINDING THE RHYTHM' : 'WASTES TOO MUCH PAINT';

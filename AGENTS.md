@@ -4018,6 +4018,23 @@ Training is an evaluation drill, so its camera must serve judgment rather than c
 
 The camera approach is based on established combat-framing practice: center the focal position on combatants and zoom out as needed to keep the encounter inside the view. Phaser supports camera follow, deadzones, bounds and zoom for this pattern. citeturn1search24turn0search1
 
+## Shooters Trigger — LOCKED Golden Hit System & Training Character Contract
+
+**Do not modify the Golden Hit System without Ayanda explicitly requesting a combat-hit redesign.** It is the validated baseline and is locked across Arena and Training:
+- Discrete visible paintballs and swept projectile collision remain authoritative.
+- Cover blocks a projectile before fighter hit resolution.
+- Head clean-hit volume = 20px and causes instant elimination.
+- Body clean-hit volume = 34px; two clean body hits eliminate.
+- Scrape-only outer radius = 44px; scrapes paint but do not damage/eliminate.
+- A true miss has no effect. No proximity/CQE auto-hit, bonus damage, or hitbox inflation.
+- Training uses the same clean-hit rules as Arena. The currently validated collision geometry, collision ordering, paint impact presentation, and elimination/respawn recovery are GOLDEN. Do not tune these while adjusting bot movement.
+
+**Training character behaviours are separate from hit resolution:**
+- Evasion drill: player UNARMED, bot ARMED. When LOS is clear, the bot continuously pressures toward point-blank, stopping only at the hard physical 72px anti-overlap separation. It must not idle/orbit at RANGE 1 while a clean direct firing line is available. If cover blocks LOS, route around it to regain LOS.
+- Shooting drill: player ARMED, bot UNARMED. The bot must actively retreat from the player while varying laterally, creating real distance and forcing the player to pursue/aim. It must not merely circle inside easy firing range. No hiding/concealment.
+- Preserve unlimited Training ammo, 30-second stage clocks, same-clock respawns, and the break between drills.
+- Field readout displays four skill grades as 1/4, 2/4, 3/4, 4/4. The formatter must return the numerator only when the UI appends /4; never produce malformed 1/4/4 or similar.
+- Like-for-like fields stay: YOUR EVASION vs BOT EVASION; YOUR SHOOTING vs BOT SHOOTING.
 ## Shooters Trigger — Golden Baseline v2 Contract
 
 The current main checkpoint is the protected **Golden Baseline v2** for Shooters Trigger. Training Camp is the evaluation layer immediately before Arena. Do not change its combat feel, scoring semantics, camera framing or role rules casually; tune only from observed playtest evidence.
