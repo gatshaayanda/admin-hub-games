@@ -4144,3 +4144,8 @@ These are source-level gameplay fixes, not instructions for the player. Preserve
 - Overall Arena signal is derived from the four like-for-like skills, not from cross-category comparisons.
 - Training projectile collision must use swept/continuous segment checks so fast paintballs cannot tunnel through a fighter between frames. Phaser documents line-to-circle/line geometry specifically for continuous segment intersection; preserve discrete visible paintball presentation while making hit registration reliable.
 - Training fire cadence and projectile speed must remain readable. Do not reintroduce machine-gun cadence or overly fast projectile presentation while tuning CQE.
+### Training CQE hit contract
+- Training CQE uses the same hit semantics as Arena: headshot = instant elimination; clean center-mass body hit = 1 of 2; second clean body hit = elimination; scrape = paint only; miss = no effect.
+- Training uses the Arena body core and scrape radii for hit classification; continuous swept projectile collision is retained for reliable close-range registration.
+- Evasion bot intent is to close tactically into the CQE band and maintain a very close but non-overlapping firing distance, rather than orbiting outside the engagement. CQE changes engagement pressure/response time, not damage rules.
+- Do not add a special Training-only damage multiplier or make close-range hits deterministic.
