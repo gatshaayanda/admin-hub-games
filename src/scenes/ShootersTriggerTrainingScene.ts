@@ -552,8 +552,9 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         0,
         100,
       );
-      const edge = score > botShootingScore + 5 ? 'PLAYER'
-        : score < botShootingScore - 5 ? 'BOT' : 'TIE';
+      // Evasion is stored independently. Its edge is decided after Shooting
+      // because BOT EVASION is only measured in the reversed drill.
+      const edge = 'TIE';
       this.trainingEvasionStats = {
         score,
         playerScore: score,
@@ -697,18 +698,21 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       0,
       100,
     );
-    const shootingEdge = shootingScore > botEvasionScore + 5 ? 'PLAYER'
-      : shootingScore < botEvasionScore - 5 ? 'BOT' : 'TIE';
+    const shootingEdge = shootingScore > (this.trainingEvasionStats?.botShootingScore ?? 50) + 5 ? 'PLAYER'
+      : shootingScore < (this.trainingEvasionStats?.botShootingScore ?? 50) - 5 ? 'BOT' : 'TIE';
     const evasion = this.trainingEvasionStats || {
       score: 50, edge: 'TIE', shots: 0, hits: 0, headshots: 0, coverBlocks: 0, scrapes: 0, misses: 0, survived: TRAINING_STAGE_MS,
     };
-    evasion.playerScore = evasion.score;
-    evasion.botShootingScore = evasion.botShootingScore ?? 50;
-    // The overall Arena signal compares like-for-like ability profiles:
-    // YOUR EVASION + YOUR SHOOTING versus BOT EVASION + BOT SHOOTING.
-    // We never compare a player's evasion score directly against the bot's shooting score.
-    const playerOverallScore = Math.round((Number(evasion.playerScore) + shootingScore) / 2);
-    const botOverallScore = Math.round((Number(evasion.botShootingScore) + botEvasionScore) / 2);
+    evasion.playerScore = Number(evasion.playerScore ?? evasion.score ?? 50);
+    evasion.botShootingScore = Number(evasion.botShootingScore ?? 50);
+    // The final profile is like-for-like:
+    // EVASION = YOUR EVASION vs BOT EVASION.
+    // SHOOTING = YOUR SHOOTING vs BOT SHOOTING.
+    const evasionEdge = evasion.playerScore > botEvasionScore + 5 ? 'PLAYER'
+      : evasion.playerScore < botEvasionScore - 5 ? 'BOT' : 'TIE';
+    evasion.edge = evasionEdge;
+    const playerOverallScore = Math.round((evasion.playerScore + shootingScore) / 2);
+    const botOverallScore = Math.round((botEvasionScore + evasion.botShootingScore) / 2);
     const overall = playerOverallScore > botOverallScore + 5 ? 'PLAYER'
       : playerOverallScore < botOverallScore - 5 ? 'BOT' : 'TIE';
 
@@ -729,7 +733,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         scrapes: this.playerScrapes,
         misses: this.playerMisses,
       },
-      edge: { evasion: evasion.edge, shooting: shootingEdge, overall },
+      edge: { evasion: evasionEdge, shooting: shootingEdge, overall },
       profile: {
         playerOverallScore,
         botOverallScore,
@@ -753,7 +757,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         score: evasion.score,
         playerScore: evasion.playerScore,
         botShootingScore: evasion.botShootingScore,
-        botEvasionScore: evasion.botEvasionScore ?? null,
+        botEvasionScore,
         eliminations: evasion.eliminations,
         edge: evasion.edge,
       }));
