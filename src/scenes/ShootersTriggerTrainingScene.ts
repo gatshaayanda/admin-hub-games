@@ -2333,12 +2333,24 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     if (!this.trainingCameraFocus || !this.player || !this.rival) return;
     const px = this.player.body.x, py = this.player.body.y;
     const rx = this.rival.body.x, ry = this.rival.body.y;
+    const dx = rx - px, dy = ry - py;
     const distance = Phaser.Math.Distance.Between(px, py, rx, ry);
-    // Keep the combat lane above the thumb controls and keep both fighters
-    // visible. The camera follows the midpoint, not the player, because this
-    // scene measures the interaction between two fighters.
-    this.trainingCameraFocus.setPosition((px + rx) * 0.5, (py + ry) * 0.5 - 55);
-    const targetZoom = Phaser.Math.Clamp(1000 / Math.max(750, distance + 250), 0.62, 0.88);
+    // Shooting is player-aimed: anchor the frame near the player so movement
+    // and aim remain legible on phones. Give the target a capped directional
+    // lead, rather than centering the midpoint (which can drag the camera
+    // toward a fleeing bot and leave the player disoriented/off-center).
+    const lead = Math.min(210, distance * 0.28);
+    const leadX = distance > 1 ? (dx / distance) * lead : 0;
+    const leadY = distance > 1 ? (dy / distance) * lead : 0;
+    const shooting = this.trainingStage === 'SHOOTING';
+    const focusX = shooting ? px + leadX : (px + rx) * 0.5;
+    const focusY = shooting ? py + leadY : (py + ry) * 0.5;
+    this.trainingCameraFocus.setPosition(focusX, focusY - 55);
+    // Keep zoom changes gradual and avoid extreme zoom-out when the bot runs
+    // far away; the on-screen locator remains available for targets off-frame.
+    const targetZoom = shooting
+      ? Phaser.Math.Clamp(900 / Math.max(850, distance + 180), 0.72, 0.9)
+      : Phaser.Math.Clamp(1000 / Math.max(750, distance + 250), 0.62, 0.88);
     const smoothing = 1 - Math.pow(0.001, delta / 1000);
     this.cameras.main.setZoom(Phaser.Math.Linear(this.cameras.main.zoom, targetZoom, smoothing));
   }
