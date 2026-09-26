@@ -1550,8 +1550,6 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
       const targetHeadCenter = new Phaser.Math.Vector2(target.body.x, target.body.y - 25);
       const targetBodyCenter = new Phaser.Math.Vector2(target.body.x, target.body.y + 1);
-      const weaponPoint = this.getWeaponPoint(target);
-
       // Training measures only the six field outcomes: headshot, two-hit
       // body damage, scrape, miss, and cover block. A weapon collision must
       // not intercept a valid body/head trajectory and turn a close CQE shot
