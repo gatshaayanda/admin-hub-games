@@ -4332,3 +4332,37 @@ The existing portrait recording can be reviewed as FIELD REPORT 001 after upload
 7. Return to expanded four-skill/profile presentation and Peak Highlights only after the foundation and instrumentation work is understood and protected.
 
 **Priority:** Golden Playthrough stability → architecture/source map → regression protection → authoritative event instrumentation → Field Report/media handling → richer profile and Peak Highlights. Keep unrelated games and Admin Hub platform features out of scope unless an actual shared regression is found.
+---
+
+## Shooters Trigger — Initial Source Map (verified against main, 2026-09-26)
+
+This map records inspected source boundaries; it is not permission to refactor. Re-check current files before every change.
+
+### Admin Hub platform
+
+- `src/main.ts`: dynamically loads Phaser, PWA registration and scene classes; constructs the Phaser game and registers the scene list.
+- `src/catalog.ts`: HTML overlay Game Library and actual game cards; keep unrelated game entries and launch behavior intact.
+- `src/scenes/BootScene.ts`, `PublisherIntroScene.ts`, `NameEntryScene.ts`, `HallIntroScene.ts`, `GameShellScene.ts`: shared shell and Hall path. Hall is protected.
+- `src/pwa.ts`, `public/sw.js`, `public/manifest.webmanifest`, `src/style.css`: install/update/offline shell and shared presentation.
+- `src/storage/offlineStore.ts`, `src/firebase/firebase.ts`: shared IndexedDB and Firebase/World Notes infrastructure. Shooters local records should not be routed into World Notes or require Firebase.
+- `.github/workflows/build.yml` and `verify.yml`: both install dependencies, run Vitest, and build. `package.json` currently defines Vitest but the repository tree has no committed test files/test directory; the test script uses `--passWithNoTests`. Therefore green CI can currently mean zero tests executed. Do not call the shooter regression suite automated-protected until real tests exist and CI confirms they ran.
+
+### Shooters Trigger registration and game flow
+
+- `src/main.ts` registers Shooter Intro, Setup, Training, Lobby, Media and Arena. The canonical Training scene is `ShootersTriggerTrainingScene.ts`; its internal stage state owns Evasion → Break → Shooting and writes the report before the Arena handoff.
+- `ShootersTriggerIntroScene.ts` hands to `ShootersTriggerSetupScene.ts`; Setup hands to `ShootersTriggerLobbyScene.ts`.
+- `ShootersTriggerLobbyScene.ts` owns Home Field navigation, location interactions, phone UI, equipment/upgrade interaction and recovery check on lobby entry.
+- `ShootersTriggerTrainingScene.ts` owns both 30-second drills, role reversal, combat simulation, training report scoring/profile save, break/transition and Training session completion/quit recovery.
+- `ShootersTriggerArenaScene.ts` owns Arena round/match rules, rival profile/AI, Arena ammo/weapon state, Arena combat and match result/quit recovery.
+- `ShootersTriggerMediaScene.ts` is currently a simple readout screen of shooting/evasion/loadout/budget values and returns to the field. It is not yet a video player, event timeline or replay system.
+- `src/shooters-trigger-field-profile.ts` normalizes, validates and stores the versioned canonical four-measurement Training profile. `src/shooters-trigger-session.ts` snapshots/restores selected local keys on interrupted sessions and exposes phone alerts.
+- `src/shooters-trigger-mobile-controls.ts` is the shared DOM touch-control layer used by the Training and Arena scenes; it also contains a scene lookup entry for the separate legacy Evasion scene.
+- `src/scenes/ShootersTriggerEvasionScene.ts` is a separate legacy/standalone scene in the source tree, currently not registered in `src/main.ts`. Its inspected source describes a 60-second, multi-bot evasion exercise, which conflicts with the current Golden Playthrough's integrated 30-second Evasion drill. Do not register, revive, or reuse it as the current Evasion implementation without explicit source reconciliation and owner approval. Its presence in the mobile-control scene key list is a stale coupling to review separately, not proof it is an active game route.
+- `src/scenes/ShootersTriggerArenaScene.ts` and `ShootersTriggerTrainingScene.ts` currently contain large, parallel combat implementations (including their own projectile update and hit-resolution methods). Treat them as behaviorally related but not yet a safely extracted shared engine. A future extraction must first isolate pure geometry/resolution helpers and add behavior tests; do not copy/paste or broadly rewrite either scene.
+- `src/audio.ts` provides shared audio support. `src/ui/` contains shared native note/location UI helpers; inspect before modifying shared UI.
+
+### Current architecture assessment and safe next step
+
+The accepted gameplay spine is real, but the code is not yet a clean generic shooter engine: combat mechanics are substantially implemented inside the two scene classes, while profile/session/mobile-control utilities are separate modules. The first safe reusable-core work should be a source-and-test exercise around small pure helpers (geometry classification, profile normalization, event record types/selection) with table-driven tests, then incremental adoption by one scene at a time. No broad combat extraction until the same behavior is demonstrated by tests and a phone playthrough.
+
+Do not mistake the standalone legacy Evasion scene for the current integrated Training Evasion drill. Do not describe Media as already supporting recorded video or Peak Highlights. Do not describe the four-skill profile as complete beyond the currently stored four Training measurements and the existing phone/Arena handoff.
