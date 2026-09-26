@@ -4189,3 +4189,16 @@ These are source-level gameplay fixes, not instructions for the player. Preserve
 
 - During Shooting, camera framing is player-anchored with only a capped lead toward the fleeing target. Never center the midpoint between player and target when that can pull the player off-frame or disorient movement/aim on mobile.
 - Keep zoom within a readable mobile range; use the enemy locator when the bot is outside the viewport. Evasion may use shared two-combatant framing.
+
+
+### Shooters Trigger — Training Phone → Arena field-profile handoff hardening — September 26, 2026
+
+- Training Camp now writes a versioned canonical preparation profile through `src/shooters-trigger-field-profile.ts`.
+- The canonical profile contains exactly four like-for-like measured dimensions: **YOUR EVASION, BOT EVASION, YOUR SHOOTING, BOT SHOOTING**, plus derived category/overall edges and completion time.
+- The Field Phone and Arena must consume this same normalized profile. They must not independently reconstruct scores from raw drill fields when the canonical profile is valid.
+- An incomplete/malformed profile is invalid; do not silently turn missing preparation evidence into a neutral 50. Arena falls back to an explicit neutral baseline only when no valid Training Camp profile exists.
+- Arena preparation now maps player shooting/evasion directly from the measured player scores and rival shooting/movement directly from the measured bot scores. Rival archetype specialization may add a bounded identity bias, but must never replace the measured bot baseline with the player's scores.
+- CQE preparation uses bounded score gaps from the canonical four dimensions. It may affect cadence/AI response windows only; it must not alter Golden Hit geometry, damage, projectile collision, player aim or proximity hit resolution.
+- The phone is presentation, not a second gameplay model. Changes to phone wording/layout must not change the stored field profile or Arena combat rules.
+- Phaser's Game Registry is appropriate for in-session Scene-to-Scene communication, but the Training profile is intentionally persisted in localStorage because the field result must survive Scene changes and browser/PWA reloads. Phaser documents the Registry as game-wide Scene communication; it is not the persistence boundary.
+- Before changing this handoff, verify: Training completion → canonical profile exists → Phone shows the same four values → Arena consumes the same values → leaving/restarting Arena does not rewrite Training evidence.
