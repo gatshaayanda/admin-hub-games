@@ -513,8 +513,8 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     const header = document.createElement('div');
     header.innerHTML =
       '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'+
-      '<div><div style="font-size:9px;font-weight:900;color:#9fbda8;letter-spacing:2px">FIELD DEVICE // LIVE READ</div>'+
-      '<div style="font-size:22px;font-weight:900;color:#e8c95c;margin-top:2px">FIELD SIGNAL</div></div>'+
+      '<div><div style="font-size:9px;font-weight:900;color:#9fbda8;letter-spacing:2px">FIELD REPORT // TRAINING + ARENA</div>'+
+      '<div style="font-size:22px;font-weight:900;color:#e8c95c;margin-top:2px">FIELD REPORT</div></div>'+
       '<div style="width:38px;height:38px;border:1px solid #6f9b7f;border-radius:50%;position:relative;animation:stPulse 1.8s ease-in-out infinite"><div style="position:absolute;inset:7px;border:1px solid #e8c95c;border-radius:50%"></div><div style="position:absolute;left:50%;top:4px;width:1px;height:14px;background:#e8c95c;transform-origin:bottom;animation:stScan 1.5s linear infinite"></div></div>'+
       '</div>'+
       '<div style="font-size:10px;color:#b9c8bd;margin-top:5px;line-height:1.45">Your field behaviour, translated into a simple signal.</div>'+
@@ -538,62 +538,84 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     card.appendChild(nextBox);
 
     if (training) {
-      const makeLeg = (
-        title:string, iconKind:'shield'|'target', headline:string,
-        player:number, opponent:number, playerLabel:string, opponentLabel:string, result:string,
+      // Human-facing report: keep the internal evidence detailed, but make the
+      // phone answer three questions quickly: how did I do, where is the edge,
+      // and what should I do next?
+      const grade = (score: number) => score < 40 ? 1 : score < 60 ? 2 : score < 80 ? 3 : 4;
+      const gradeLabel = (score: number) => {
+        const value = grade(score);
+        return value === 4 ? 'SHARP' : value === 3 ? 'FIELD-READY' : value === 2 ? 'DEVELOPING' : 'LEARNING';
+      };
+      const edgeText = (value: string) => value === 'YOU' ? 'YOU' : value === 'BOT' ? 'BOT' : 'EVEN';
+      const reportRow = (
+        title: string,
+        glyph: 'shield'|'target',
+        player: number,
+        opponent: number,
+        edge: string,
+        note: string,
       ) => {
-        const playerRange = range(player);
-        const opponentRange = range(opponent);
-        const resultText = result === 'YOU' ? '🟢 YOUR SIDE HAS THE EDGE' : result === 'BOT' ? '🔴 BOT HAS THE EDGE' : '🟡 EVEN';
-        const box=document.createElement('div');
-        box.style.cssText='padding:12px;border:1px solid #496556;border-radius:12px;background:linear-gradient(145deg,#102018,#0c1711);margin-bottom:9px;position:relative;overflow:hidden;';
-        box.innerHTML='<div style="position:absolute;right:-18px;top:-18px;width:70px;height:70px;border:1px solid #365442;border-radius:50%"></div>'+
-          '<div style="display:flex;align-items:center;gap:9px">'+icon(iconKind)+
+        const box = document.createElement('div');
+        box.style.cssText='padding:11px;border:1px solid #496556;border-radius:11px;background:#102018;margin-bottom:8px;';
+        box.innerHTML =
+          '<div style="display:flex;align-items:center;gap:8px">'+icon(glyph)+
           '<div><div style="font-size:13px;font-weight:900;color:#f4f1df">'+title+'</div>'+
-          '<div style="font-size:9px;color:#9fbda8;margin-top:2px">'+headline+'</div></div></div>'+
-          '<div style="margin-top:9px;padding:9px;border-radius:8px;background:#182b20;font-size:10px;color:#f4f1df;line-height:1.5">'+
-          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:7px">'+
-          '<div style="padding:8px;border:1px solid #315845;border-radius:7px"><b>'+playerLabel+' · '+playerRange+'/4</b><br><span style="font-size:9px;color:#b9c8bd">'+rangeLabel(player,title==='EVASION'?'EVASION':'SHOOTING')+'</span></div>'+
-          '<div style="padding:8px;border:1px solid #315845;border-radius:7px"><b>'+opponentLabel+' · '+opponentRange+'/4</b><br><span style="font-size:9px;color:#b9c8bd">'+rangeLabel(opponent,title==='EVASION'?'EVASION':'SHOOTING')+'</span></div></div>'+
-          '<b>'+resultText+'</b>'+
-          '<br><span style="font-size:9px;color:#82978a">Range is simple: 1 = learning · 2 = developing · 3 = field-ready · 4 = sharp.</span></div>';
+          '<div style="font-size:9px;color:#9fbda8;margin-top:2px">'+note+'</div></div></div>'+
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:9px">'+
+          '<div style="padding:8px;border:1px solid #315845;border-radius:7px"><div style="font-size:8px;color:#9fbda8">YOU</div><b style="font-size:18px;color:#e8c95c">'+grade(player)+'/4</b><br><span style="font-size:8px;color:#b9c8bd">'+gradeLabel(player)+'</span></div>'+
+          '<div style="padding:8px;border:1px solid #315845;border-radius:7px"><div style="font-size:8px;color:#9fbda8">BOT</div><b style="font-size:18px;color:#f4f1df">'+grade(opponent)+'/4</b><br><span style="font-size:8px;color:#b9c8bd">'+gradeLabel(opponent)+'</span></div></div>'+
+          '<div style="margin-top:7px;font-size:9px;font-weight:900;color:'+(edge==='YOU'?'#9fbda8':edge==='BOT'?'#d66a3d':'#e8c95c')+'">'+edgeText(edge)+' HAS THE EDGE</div>';
         return box;
       };
 
-      card.appendChild(makeLeg('EVASION','shield','Unarmed. The bot hunted you.',evasionPlayer,evasionBot,'YOU','BOT',evasionVerdict));
-      card.appendChild(makeLeg('SHOOTING','target','Armed. The bot tried to stay alive.',shootingPlayer,shootingBot,'YOU','BOT',shootingVerdict));
-
-      const styleBox=document.createElement('div');
-      styleBox.style.cssText='padding:12px;border:1px solid #38493d;border-radius:11px;background:#111813;margin-bottom:9px;';
-      styleBox.innerHTML='<div style="font-size:9px;color:#9fbda8;letter-spacing:1px">🧠 FIELD TEMPERAMENT · NOT A DIAGNOSIS</div>'+
-        '<div style="font-size:15px;font-weight:900;color:#e8c95c;margin-top:4px">'+temperamentRead.label+'</div>'+
-        '<div style="font-size:10px;color:#c9d5cc;line-height:1.55;margin-top:6px">'+temperamentRead.body+'</div>';
-      card.appendChild(styleBox);
+      card.appendChild(reportRow(
+        'EVASION',
+        'shield',
+        evasionPlayer,
+        evasionBot,
+        evasionVerdict,
+        'UNARMED · SURVIVE · USE COVER',
+      ));
+      card.appendChild(reportRow(
+        'SHOOTING',
+        'target',
+        shootingPlayer,
+        shootingBot,
+        shootingVerdict,
+        'ARMED · CHOOSE CLEAN SHOTS',
+      ));
 
       const overallBox=document.createElement('div');
-      const overallText=overall==='PLAYER'?'YOU HAVE THE TRAINING EDGE':overall==='BOT'?'THE BOT HAS THE TRAINING EDGE':'TRAINING IS EVEN';
-      overallBox.style.cssText='padding:11px;border:1px solid #e8c95c;border-radius:10px;text-align:center;margin-bottom:9px;background:#182b20;';
-      overallBox.innerHTML='<div style="font-size:9px;color:#9fbda8;letter-spacing:1px">🏆 ARENA SIGNAL</div>'+
+      overallBox.style.cssText='padding:12px;border:2px solid #e8c95c;border-radius:11px;background:#182b20;margin-bottom:8px;text-align:center;';
+      const overallText=overall==='PLAYER'?'YOU HAVE THE TRAINING EDGE':overall==='BOT'?'BOT HAS THE TRAINING EDGE':'TRAINING IS EVEN';
+      overallBox.innerHTML =
+        '<div style="font-size:9px;color:#9fbda8;letter-spacing:1px">ARENA ODDS</div>'+
         '<div style="font-size:15px;font-weight:900;color:#e8c95c;margin-top:3px">'+overallText+'</div>'+
-        '<div style="font-size:9px;color:#b9c8bd;margin-top:5px">The training read changes the Arena odds. It is not a guaranteed result.</div>'+
-        '<div style="font-size:9px;color:#6f9b7f;margin-top:7px">EVA '+range(evasionPlayer)+'/4 · SHOOT '+range(shootingPlayer)+'/4</div>';
+        '<div style="font-size:9px;color:#b9c8bd;line-height:1.45;margin-top:5px">The Arena uses this read to shift behaviour and response windows. It never guarantees the result.</div>'+
+        '<div style="font-size:8px;color:#6f9b7f;margin-top:6px">EVA '+grade(evasionPlayer)+'/4 · SHOOT '+grade(shootingPlayer)+'/4</div>';
       card.appendChild(overallBox);
 
+      const styleBox=document.createElement('div');
+      styleBox.style.cssText='padding:10px;border:1px solid #38493d;border-radius:10px;background:#111813;margin-bottom:8px;';
+      styleBox.innerHTML =
+        '<div style="font-size:8px;color:#9fbda8;letter-spacing:1px">FIELD TEMPERAMENT · GAMEPLAY STYLE</div>'+
+        '<div style="font-size:14px;font-weight:900;color:#e8c95c;margin-top:4px">'+temperamentRead.label+'</div>'+
+        '<div style="font-size:9px;color:#c9d5cc;line-height:1.5;margin-top:4px">'+temperamentRead.body+'</div>';
+      card.appendChild(styleBox);
+
       const details=document.createElement('details');
-      details.style.cssText='margin-bottom:10px;border:1px solid #38493d;border-radius:10px;background:#111813;';
-      details.innerHTML='<summary style="padding:10px;color:#9fbda8;font-size:9px;font-weight:900;cursor:pointer">📡 SHOW FIELD LOG</summary>'+
-        '<div style="padding:0 10px 10px;font-size:9px;color:#aebbb2;line-height:1.8">'+
-        'EVASION · best uninterrupted life '+Math.round(Number(evasion?.survived || training?.evasion?.survived || 0)/1000)+'s · resets '+Number(evasion?.eliminations || 0)+' · cover blocks '+Number(evasion?.coverBlocks || 0)+'<br>'+
-        'SHOOTING · shots '+Number(shooting?.shotsFired || 0)+' · hits '+Number(shooting?.targetHits || 0)+' · clean headshots '+Number(shooting?.headshots || 0)+' · misses '+Number(shooting?.misses || 0)+'<br>'+
-        'These are the reasons behind the simple 1–4 field read — not a scorecard you need to study.</div>';
+      details.style.cssText='margin-bottom:8px;border:1px solid #38493d;border-radius:10px;background:#111813;';
+      details.innerHTML='<summary style="padding:10px;color:#9fbda8;font-size:9px;font-weight:900;cursor:pointer">SHOW FIELD LOG</summary>'+
+        '<div style="padding:0 10px 10px;font-size:8px;color:#aebbb2;line-height:1.8">'+
+        'EVASION · best life '+Math.round(Number(evasion?.survived || training?.evasion?.survived || 0)/1000)+'s · resets '+Number(evasion?.eliminations || 0)+' · cover '+Number(evasion?.coverBlocks || 0)+'<br>'+
+        'SHOOTING · shots '+Number(shooting?.shotsFired || 0)+' · hits '+Number(shooting?.targetHits || 0)+' · headshots '+Number(shooting?.headshots || 0)+' · misses '+Number(shooting?.misses || 0)+'</div>';
       card.appendChild(details);
 
       const mediaBox=document.createElement('div');
-      mediaBox.style.cssText='padding:12px;border:1px solid #38493d;border-radius:11px;background:#0d1510;margin-bottom:10px;';
-      mediaBox.innerHTML='<div style="font-size:9px;color:#9fbda8;letter-spacing:1px">📻 WORLD FEED · FICTIONAL IN-GAME MEDIA</div>'+
-        '<div style="font-size:10px;font-weight:900;color:#e8c95c;margin-top:5px">'+media.source+'</div>'+
-        '<div style="font-size:10px;color:#d6dfd8;line-height:1.55;margin-top:5px">'+media.text+'</div>'+
-        '<div style="font-size:9px;color:#718678;margin-top:6px">📱 FIELD CHAT: “The device has spoken.”</div>';
+      mediaBox.style.cssText='padding:10px;border:1px solid #38493d;border-radius:10px;background:#0d1510;margin-bottom:8px;';
+      mediaBox.innerHTML='<div style="font-size:8px;color:#9fbda8;letter-spacing:1px">WORLD FEED · FICTIONAL</div>'+
+        '<div style="font-size:9px;font-weight:900;color:#e8c95c;margin-top:4px">'+media.source+'</div>'+
+        '<div style="font-size:9px;color:#d6dfd8;line-height:1.5;margin-top:4px">'+media.text+'</div>';
       card.appendChild(mediaBox);
     } else {
       const startBox=document.createElement('div');
