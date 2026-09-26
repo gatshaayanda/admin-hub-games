@@ -64,6 +64,10 @@ const ARENA_BODY_CORE_RADIUS = 34;
 const ARENA_SCRAPE_RADIUS = 44;
 const ARENA_PROJECTILE_MIN_VISIBLE_MS = 34;
 const ARENA_HIDDEN_SEARCH_MS = 3200;
+const ARENA_CQE_RANGE = 220;
+const ARENA_CQE_ACTIVE_WINDOW_MS = 650;
+const ARENA_CQE_COOLDOWN_SHIFT_MS = 55;
+const ARENA_CQE_RESPONSE_SHIFT_MS = 0.22;
 
 export class ShootersTriggerArenaScene extends Phaser.Scene {
   public joystickVector = new Phaser.Math.Vector2();
@@ -165,9 +169,11 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.rival = this.createFighter(ARENA_RIVAL_SPAWN.x, ARENA_RIVAL_SPAWN.y, 0x9b3f3f, this.rivalProfile.operator, false);
 
     this.player.speed = ARENA_NEUTRAL_BASELINE ? ARENA_BASE_SPEED : 170 + this.evasionSkill * 0.45;
-    this.player.cooldown = ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(130, 330 - this.playerSkill * 1.15);
+    const baseCooldown = ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(130, 330 - this.playerSkill * 1.15);
+    this.player.cooldown = Math.max(110, baseCooldown + this.getCqeCooldownShift('player', this.rival));
     this.rival.speed = ARENA_NEUTRAL_BASELINE ? ARENA_BASE_SPEED : 145 + this.rivalProfile.movement * 0.55;
-    this.rival.cooldown = ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(360, 930 - this.rivalProfile.shooting * 5.4);
+    const baseCooldown = ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(330, 930 - this.rivalProfile.shooting * 5.4);
+    this.rival.cooldown = Math.max(300, baseCooldown + this.getCqeCooldownShift('rival', this.player));
 
     this.cameras.main.setBounds(0, 0, 2400, 1400);
     this.cameras.main.startFollow(this.player.body, true, 0.08, 0.08);
@@ -282,18 +288,19 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         evasion: report?.edge?.evasion === 'PLAYER' || report?.edge?.evasion === 'BOT' ? report.edge.evasion : 'TIE',
         shooting: report?.edge?.shooting === 'PLAYER' || report?.edge?.shooting === 'BOT' ? report.edge.shooting : 'TIE',
       };
-      if (this.trainingEdge.overall === 'TIE') {
-        this.playerSkill = 50;
-        this.evasionSkill = 50;
-        return;
-      }
-      this.playerSkill = clamp(Number(shooting?.accuracy || 0), 0, 100);
-      const survived = clamp(Number(evasion?.survived || 0) / 300, 0, 100);
-      const cover = clamp(Number(evasion?.coverBlocks || 0) * 8, 0, 35);
-      this.evasionSkill = clamp(survived + cover, 0, 100);
-      const playerBoost = this.trainingEdge.overall === 'PLAYER' ? 8 : -8;
-      this.playerSkill = clamp(this.playerSkill + playerBoost, 0, 100);
-      this.evasionSkill = clamp(this.evasionSkill + playerBoost, 0, 100);
+      // Arena consumes the four like-for-like training values directly.
+      // Overall edge is a combined read, not a replacement for the specific
+      // shooting/evasion evidence that created it.
+      this.playerSkill = clamp(
+        Number(profile?.playerShootingScore ?? shooting?.playerShootingScore ?? shooting?.accuracy ?? 50),
+        0,
+        100,
+      );
+      this.evasionSkill = clamp(
+        Number(profile?.playerEvasionScore ?? evasion?.playerScore ?? evasion?.score ?? 50),
+        0,
+        100,
+      );
     } catch {
       this.trainingEdge = { overall: 'TIE', evasion: 'TIE', shooting: 'TIE' };
       this.playerSkill = 50;
@@ -600,7 +607,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         this.player.body.x - this.rival.body.x,
         this.player.body.y - this.rival.body.y,
       ).normalize();
-      this.rivalFire(direction);
+      this.rivalFire(this.applyCqeResponseWindow(direction, this.rival, this.player));
     }
 
     this.rival.body.setAlpha(rivalHidden ? 0.28 : this.rival.downed ? 0.68 : 1);
@@ -706,19 +713,96 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private shouldRivalFire(distance: number, now: number) {
     if (this.rival.ammo <= 7) return false;
 
-    // If the player is actively spending paint, the rival deliberately stops
-    // feeding the exchange. This creates the counter-play: the player can no
-    // longer bait an endless bot spray and then punish its forced reload.
+    // Outside CQE the existing tactical cadence remains unchanged. Inside a
+    // live close exchange, the training edge changes the response window rather
+    // than changing hitboxes or damage.
     const playerRecentlyFired = now - this.playerLastFiredAt < 700;
     const playerNearlyEmpty = this.player.ammo <= 5;
     if (playerNearlyEmpty) return false;
-    if (playerRecentlyFired && this.player.ammo <= 10) return Math.random() < 0.18;
+    if (playerRecentlyFired && this.player.ammo <= 10) {
+      const cqe = this.isCqeActive();
+      return cqe ? Math.random() < 0.18 + Math.max(0, this.getCqeBias('rival', this.player)) * 0.18 : Math.random() < 0.18;
+    }
 
     let chance = distance < 260 ? 0.72 : distance < 430 ? 0.48 : 0.28;
     if (this.rival.ammo <= 12) chance *= 0.68;
     if (this.rival.ammo <= 9) chance *= 0.55;
 
+    if (this.isCqeActive()) {
+      chance = clamp(chance + this.getCqeBias('rival', this.player) * 0.18, 0.12, 0.92);
+    }
     return Math.random() < chance;
+  }
+
+  private isCqeActive() {
+    if (this.player.downed || this.rival.downed || this.isPlayerConcealed() || this.isRivalConcealed()) return false;
+    const distance = Phaser.Math.Distance.Between(
+      this.player.body.x,
+      this.player.body.y,
+      this.rival.body.x,
+      this.rival.body.y,
+    );
+    if (distance > ARENA_CQE_RANGE) return false;
+    const now = Date.now();
+    const bothRecentlyFiring =
+      now - this.playerLastFiredAt <= ARENA_CQE_ACTIVE_WINDOW_MS &&
+      now - this.rivalLastFiredAt <= ARENA_CQE_ACTIVE_WINDOW_MS;
+    return bothRecentlyFiring && this.hasLineOfSight(
+      this.player.body.x,
+      this.player.body.y,
+      this.rival.body.x,
+      this.rival.body.y,
+    );
+  }
+
+  private getCqeBias(owner: 'player' | 'rival', target: Fighter) {
+    if (!this.isCqeActive()) return 0;
+
+    const shooting = this.trainingEdge.shooting;
+    const evasion = this.trainingEdge.evasion;
+    const overall = this.trainingEdge.overall;
+
+    const ownerShooting = owner === 'player' ? 1 : -1;
+    const targetEvasion = target === this.player ? 1 : -1;
+    const shootingBias = shooting === 'TIE' ? 0 : shooting === (owner === 'player' ? 'PLAYER' : 'BOT') ? 1 : -1;
+    const evasionBias = evasion === 'TIE' ? 0 : evasion === (target === this.player ? 'PLAYER' : 'BOT') ? -1 : 1;
+    const overallBias = overall === 'TIE' ? 0 : overall === (owner === 'player' ? 'PLAYER' : 'BOT') ? 1 : -1;
+
+    // Shooting edge governs the shooter's execution. Evasion edge governs the
+    // target's response window. Overall edge is a smaller combined tie-breaker;
+    // it cannot erase either specific dimension.
+    return clamp(
+      shootingBias * 0.45 +
+      evasionBias * 0.35 +
+      overallBias * 0.20,
+      -1,
+      1,
+    );
+  }
+
+  private getCqeCooldownShift(owner: 'player' | 'rival', target: Fighter) {
+    if (!this.isCqeActive()) return 0;
+    // Positive bias = this shooter owns the current CQE advantage. Reduce its
+    // cadence slightly; negative bias = target has the response advantage.
+    return -this.getCqeBias(owner, target) * ARENA_CQE_COOLDOWN_SHIFT_MS;
+  }
+
+  private applyCqeResponseWindow(
+    direction: Phaser.Math.Vector2,
+    shooter: Fighter,
+    target: Fighter,
+  ) {
+    const bias = this.getCqeBias(shooter === this.player ? 'player' : 'rival', target);
+    if (!this.isCqeActive() || Math.abs(bias) < 0.01) return direction;
+
+    // Keep first-shot intent readable. Only the AI's close-response window is
+    // softened, and only by a bounded angular error tied to the target's
+    // movement pressure. No player projectile is redirected.
+    const movementPressure = clamp(target === this.player && this.playerMoving ? 1 : target === this.rival && this.rivalMoving ? 1 : 0, 0, 1);
+    const jitter = (1 - bias) * ARENA_CQE_RESPONSE_SHIFT_MS * 0.08 * movementPressure;
+    if (jitter <= 0) return direction;
+    const angle = Phaser.Math.FloatBetween(-jitter, jitter);
+    return direction.clone().rotate(angle).normalize();
   }
 
   private rivalRefillProgressReset() {
@@ -814,7 +898,8 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
 
   private playerFire() {
     if (this.player.weaponDropped || this.player.refilling || this.player.ammo <= 0 || this.player.cooldown > 0) return;
-    this.player.cooldown = ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(130, 330 - this.playerSkill * 1.15);
+    const baseCooldown = ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(130, 330 - this.playerSkill * 1.15);
+    this.player.cooldown = Math.max(110, baseCooldown + this.getCqeCooldownShift('player', this.rival));
     this.player.ammo -= 1;
     this.playerShotsFired += 1;
     this.playerLastFiredAt = Date.now();
@@ -831,7 +916,8 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private rivalFire(direction: Phaser.Math.Vector2) {
     const accuracy = this.rivalProfile.shooting;
     const aim = direction.clone().normalize();
-    this.rival.cooldown = ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(330, 930 - accuracy * 5.4);
+    const baseCooldown = ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(330, 930 - accuracy * 5.4);
+    this.rival.cooldown = Math.max(300, baseCooldown + this.getCqeCooldownShift('rival', this.player));
     this.rival.ammo -= 1;
     this.rivalShotsFired += 1;
     this.rivalLastFiredAt = Date.now();
@@ -898,16 +984,22 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         continue;
       }
 
-      shot.body.x += shot.vx * delta / 1000;
-      shot.body.y += shot.vy * delta / 1000;
+      // Sweep the full projectile segment. Phaser's Line/Circle and
+      // Line/Rectangle intersection helpers are authoritative here; checking
+      // only the new point can tunnel through a fighter between frames.
+      const startX = shot.body.x;
+      const startY = shot.body.y;
+      const nextX = startX + shot.vx * delta / 1000;
+      const nextY = startY + shot.vy * delta / 1000;
+      const shotLine = new Phaser.Geom.Line(startX, startY, nextX, nextY);
+      shot.body.setPosition(nextX, nextY);
 
       if (
         shot.ttl <= 0 ||
-        shot.body.x < 0 ||
-        shot.body.x > 2400 ||
-        shot.body.y < 0 ||
-        shot.body.y > 1400 ||
-        this.inCover(shot.body.x, shot.body.y, 0)
+        nextX < 0 ||
+        nextX > 2400 ||
+        nextY < 0 ||
+        nextY > 1400
       ) {
         if (shot.owner === 'player') this.playerMisses += 1;
         else this.rivalMisses += 1;
@@ -923,31 +1015,43 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         continue;
       }
 
-      const shotPoint = new Phaser.Math.Vector2(shot.body.x, shot.body.y);
       const targetHeadCenter = new Phaser.Math.Vector2(target.body.x, target.body.y - 25);
       const targetBodyCenter = new Phaser.Math.Vector2(target.body.x, target.body.y + 1);
       const weaponPoint = this.getWeaponPoint(target);
-      const weaponDistance = Phaser.Math.Distance.BetweenPoints(shotPoint, weaponPoint);
-      const headDistance = Phaser.Math.Distance.BetweenPoints(shotPoint, targetHeadCenter);
-      const bodyDistance = Phaser.Math.Distance.BetweenPoints(shotPoint, targetBodyCenter);
-      const hitsWeapon = !target.weaponDropped && weaponDistance <= 16;
-      const hitsHead = headDistance <= 20;
-      const hitsBody = bodyDistance <= 34;
+      const weaponHit = !target.weaponDropped ? this.getSegmentCircleHit(shotLine, weaponPoint.x, weaponPoint.y, 16) : null;
+      const headHit = this.getSegmentCircleHit(shotLine, targetHeadCenter.x, targetHeadCenter.y, 20);
+      const bodyHit = this.getSegmentCircleHit(shotLine, targetBodyCenter.x, targetBodyCenter.y, ARENA_BODY_CORE_RADIUS);
+      const headScrapeHit = this.getSegmentCircleHit(shotLine, targetHeadCenter.x, targetHeadCenter.y, ARENA_SCRAPE_RADIUS);
+      const bodyScrapeHit = this.getSegmentCircleHit(shotLine, targetBodyCenter.x, targetBodyCenter.y, ARENA_SCRAPE_RADIUS);
+      const scrapeHit = [headScrapeHit, bodyScrapeHit]
+        .filter(Boolean)
+        .sort((a, b) => a!.distance - b!.distance)[0] ?? null;
 
-      if (hitsWeapon || hitsHead || hitsBody) {
-        if (hitsWeapon) {
-          this.resolveWeaponHit(shot.owner, target, shot.body.x, shot.body.y);
+      const cleanHits = [
+        weaponHit ? { kind: 'weapon' as const, hit: weaponHit } : null,
+        headHit ? { kind: 'head' as const, hit: headHit } : null,
+        bodyHit ? { kind: 'body' as const, hit: bodyHit } : null,
+      ].filter(Boolean) as Array<{ kind: 'weapon' | 'head' | 'body'; hit: { x: number; y: number; distance: number } }>;
+      cleanHits.sort((a, b) => a.hit.distance - b.hit.distance);
+
+      const coverDistance = this.getFirstCoverIntersectionDistance(shotLine);
+      const cleanHit = cleanHits[0];
+      if (cleanHit && (coverDistance === null || cleanHit.hit.distance <= coverDistance)) {
+        if (cleanHit.kind === 'weapon') {
+          this.resolveWeaponHit(shot.owner, target, cleanHit.hit.x, cleanHit.hit.y);
         } else {
           this.resolveHit(
             shot.owner,
-            hitsHead && (!hitsBody || headDistance <= bodyDistance),
-            shot.body.x,
-            shot.body.y,
+            cleanHit.kind === 'head',
+            cleanHit.hit.x,
+            cleanHit.hit.y,
           );
         }
 
-        if (this.matchOver || this.roundTransition || this.resolvingRound) break;
-        this.holdShotAtImpact(shot, shot.body.x, shot.body.y);
+        if (!this.shots.includes(shot) || !shot.body.active || this.matchOver || this.roundTransition || this.resolvingRound) {
+          return;
+        }
+        this.holdShotAtImpact(shot, cleanHit.hit.x, cleanHit.hit.y);
         if (shot.impactHoldMs <= 0) {
           shot.body.destroy();
           this.shots.splice(i, 1);
@@ -955,16 +1059,52 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         continue;
       }
 
-      const scrapeDistance = Math.min(headDistance, bodyDistance);
-      if (scrapeDistance <= ARENA_SCRAPE_RADIUS) {
-        this.recordScrape(shot.owner, shot.body.x, shot.body.y);
-        this.holdShotAtImpact(shot, shot.body.x, shot.body.y);
+      if (coverDistance !== null && (!cleanHit || coverDistance < cleanHit.hit.distance)) {
+        if (shot.owner === 'player') this.playerMisses += 1;
+        else this.rivalMisses += 1;
+        shot.body.destroy();
+        this.shots.splice(i, 1);
+        continue;
+      }
+
+      if (scrapeHit) {
+        this.recordScrape(shot.owner, scrapeHit.x, scrapeHit.y);
+        this.holdShotAtImpact(shot, scrapeHit.x, scrapeHit.y);
         if (shot.impactHoldMs <= 0) {
           shot.body.destroy();
           this.shots.splice(i, 1);
         }
       }
     }
+  }
+
+  private getSegmentCircleHit(
+    line: Phaser.Geom.Line,
+    centerX: number,
+    centerY: number,
+    radius: number,
+  ) {
+    const nearest = new Phaser.Math.Vector2();
+    const circle = new Phaser.Geom.Circle(centerX, centerY, radius);
+    if (!Phaser.Geom.Intersects.LineToCircle(line, circle, nearest)) return null;
+    return {
+      x: nearest.x,
+      y: nearest.y,
+      distance: Phaser.Math.Distance.Between(line.x1, line.y1, nearest.x, nearest.y),
+    };
+  }
+
+  private getFirstCoverIntersectionDistance(line: Phaser.Geom.Line) {
+    let nearest = Number.POSITIVE_INFINITY;
+    for (const cover of this.covers) {
+      const intersections = Phaser.Geom.Intersects.GetLineToRectangle(line, cover);
+      for (const point of intersections) {
+        const distance = Phaser.Math.Distance.Between(line.x1, line.y1, point.x, point.y);
+        nearest = Math.min(nearest, distance);
+      }
+      if (cover.contains(line.x1, line.y1)) nearest = 0;
+    }
+    return Number.isFinite(nearest) ? nearest : null;
   }
 
   private holdShotAtImpact(shot: Shot, x: number, y: number) {
