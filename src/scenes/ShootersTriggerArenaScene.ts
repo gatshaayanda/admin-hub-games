@@ -650,12 +650,14 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     if (!this.player.refilling) {
       this.player.refilling = true;
       this.player.refillElapsed = 0;
-      this.fire = false;
       this.statusHud?.setText('AMMO REFILLING  ·  HOLD POSITION');
       this.showCombatHighlight('AMMO STATION', '#e8c95c', this.player.body.x, this.player.body.y - 42, 0.9);
     }
 
-    this.fire = false;
+    // Keep the fire-held state intact while refilling. playerFire() still
+    // rejects shots while refilling, but preserving the held input means a
+    // player holding the fire control can resume immediately when the refill
+    // completes instead of having to release and press it again.
     this.player.refillElapsed += delta;
     if (this.player.refillElapsed >= ARENA_REFILL_DURATION) {
       this.player.ammo = this.player.maxAmmo;
