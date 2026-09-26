@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { installShootersTriggerMobileControls } from '../shooters-trigger-mobile-controls';
 import { abandonShootersTriggerSession, beginShootersTriggerSession, completeShootersTriggerSession } from '../shooters-trigger-session';
+import { readShootersTriggerFieldProfile } from '../shooters-trigger-field-profile';
 
 type Fighter = {
   body: Phaser.GameObjects.Container;
@@ -131,6 +132,8 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private roundRivalHits = 0;
   private playerSkill = 0;
   private evasionSkill = 0;
+  private botShootingSkill = 0;
+  private botEvasionSkill = 0;
   private arenaStartedAt = 0;
   private rivalCanFireAt = 0;
   private rivalLastFiredAt = 0;
@@ -279,48 +282,62 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   }
 
   private loadPreparation() {
-    try {
-      const shooting = JSON.parse(localStorage.getItem('shooters-trigger:last-shooting') || 'null');
-      const evasion = JSON.parse(localStorage.getItem('shooters-trigger:last-evasion') || 'null');
-      const report = JSON.parse(localStorage.getItem('shooters-trigger:training-report') || 'null');
-      const profile = report?.profile;
-      this.trainingEdge = {
-        overall: report?.edge?.overall === 'PLAYER' || report?.edge?.overall === 'BOT' ? report.edge.overall : 'TIE',
-        evasion: report?.edge?.evasion === 'PLAYER' || report?.edge?.evasion === 'BOT' ? report.edge.evasion : 'TIE',
-        shooting: report?.edge?.shooting === 'PLAYER' || report?.edge?.shooting === 'BOT' ? report.edge.shooting : 'TIE',
-      };
-      // Arena consumes the four like-for-like training values directly.
-      // Overall edge is a combined read, not a replacement for the specific
-      // shooting/evasion evidence that created it.
-      this.playerSkill = clamp(
-        Number(profile?.playerShootingScore ?? shooting?.playerShootingScore ?? shooting?.accuracy ?? 50),
-        0,
-        100,
-      );
-      this.evasionSkill = clamp(
-        Number(profile?.playerEvasionScore ?? evasion?.playerScore ?? evasion?.score ?? 50),
-        0,
-        100,
-      );
-    } catch {
+    const profile = readShootersTriggerFieldProfile();
+    if (!profile) {
       this.trainingEdge = { overall: 'TIE', evasion: 'TIE', shooting: 'TIE' };
       this.playerSkill = 50;
       this.evasionSkill = 50;
+      this.botShootingSkill = 50;
+      this.botEvasionSkill = 50;
+      return;
     }
+
+    // This is the only preparation handoff Arena needs from Training Camp.
+    // Four measured dimensions cross the boundary directly:
+    // YOU EVASION, BOT EVASION, YOU SHOOTING, BOT SHOOTING.
+    // The phone is a presentation of this same record; it is not a second source.
+    this.trainingEdge = {
+      overall: profile.overall.edge,
+      evasion: profile.evasion.edge,
+      shooting: profile.shooting.edge,
+    };
+    this.playerSkill = profile.shooting.player;
+    this.evasionSkill = profile.evasion.player;
+    this.botShootingSkill = profile.shooting.bot;
+    this.botEvasionSkill = profile.evasion.bot;
   }
 
   private chooseRivalProfile(): RivalProfile {
-    if (this.trainingEdge.overall === 'TIE') {
-      return Phaser.Utils.Array.GetRandom([
-        { id: 'marksman', operator: 'OPERATOR 12', shooting: 50, movement: 50, pressure: 50, coverUse: 45 },
-        { id: 'runner', operator: 'OPERATOR 07', shooting: 50, movement: 50, pressure: 50, coverUse: 45 },
-        { id: 'all-rounder', operator: 'OPERATOR 21', shooting: 50, movement: 50, pressure: 50, coverUse: 45 },
-      ]);
-    }
+    // Rival ability is anchored to the BOT measurements from Training Camp.
+    // Profile identity adds a small specialization, but never replaces the
+    // measured shooting/evasion record with the player's scores.
+    const botShooting = this.botShootingSkill;
+    const botEvasion = this.botEvasionSkill;
     return Phaser.Utils.Array.GetRandom([
-      { id: 'marksman', operator: 'OPERATOR 12', shooting: clamp(this.playerSkill + 10, 38, 96), movement: clamp(this.evasionSkill - 8, 34, 88), pressure: clamp(this.playerSkill * 0.7 + 22, 35, 90), coverUse: clamp(this.evasionSkill * 0.45 + 25, 25, 82) },
-      { id: 'runner', operator: 'OPERATOR 07', shooting: clamp(this.playerSkill - 6, 30, 88), movement: clamp(this.evasionSkill + 14, 48, 97), pressure: clamp(this.evasionSkill * 0.75 + 20, 40, 95), coverUse: clamp(this.evasionSkill * 0.65 + 28, 30, 92) },
-      { id: 'all-rounder', operator: 'OPERATOR 21', shooting: clamp(this.playerSkill + 7, 36, 94), movement: clamp(this.evasionSkill + 7, 42, 94), pressure: clamp((this.playerSkill + this.evasionSkill) * 0.5 + 18, 38, 93), coverUse: clamp(this.evasionSkill * 0.55 + 30, 28, 88) },
+      {
+        id: 'marksman',
+        operator: 'OPERATOR 12',
+        shooting: clamp(botShooting + 8, 30, 98),
+        movement: clamp(botEvasion - 8, 25, 90),
+        pressure: clamp(botShooting * 0.7 + 22, 30, 92),
+        coverUse: clamp(botEvasion * 0.45 + 25, 25, 82),
+      },
+      {
+        id: 'runner',
+        operator: 'OPERATOR 07',
+        shooting: clamp(botShooting - 6, 25, 92),
+        movement: clamp(botEvasion + 14, 35, 99),
+        pressure: clamp(botEvasion * 0.75 + 20, 35, 97),
+        coverUse: clamp(botEvasion * 0.65 + 28, 30, 94),
+      },
+      {
+        id: 'all-rounder',
+        operator: 'OPERATOR 21',
+        shooting: clamp(botShooting + 3, 28, 95),
+        movement: clamp(botEvasion + 7, 35, 96),
+        pressure: clamp((botShooting + botEvasion) * 0.5 + 18, 35, 95),
+        coverUse: clamp(botEvasion * 0.55 + 30, 28, 90),
+      },
     ]);
   }
 
@@ -759,17 +776,26 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private getCqeBias(owner: 'player' | 'rival', target: Fighter) {
     if (!this.isCqeActive()) return 0;
 
-    const shooting = this.trainingEdge.shooting;
-    const evasion = this.trainingEdge.evasion;
-    const overall = this.trainingEdge.overall;
+    const ownerIsPlayer = owner === 'player';
+    const targetIsPlayer = target === this.player;
 
-    const shootingBias = shooting === 'TIE' ? 0 : shooting === (owner === 'player' ? 'PLAYER' : 'BOT') ? 1 : -1;
-    const evasionBias = evasion === 'TIE' ? 0 : evasion === (target === this.player ? 'PLAYER' : 'BOT') ? -1 : 1;
-    const overallBias = overall === 'TIE' ? 0 : overall === (owner === 'player' ? 'PLAYER' : 'BOT') ? 1 : -1;
+    // Use the measured score gap, not just the 3-state label. The phone and
+    // Arena therefore agree even when two scores fall inside the same +/-5
+    // "even" display band. This remains a bounded preparation effect only.
+    const shootingGap = (this.playerSkill - this.botShootingSkill) / 40;
+    const evasionGap = (this.playerSkill - this.botShootingSkill) / 40;
+    const playerEvasionGap = (this.evasionSkill - this.botEvasionSkill) / 40;
+    const overallGap = (
+      (this.playerSkill + this.evasionSkill) -
+      (this.botShootingSkill + this.botEvasionSkill)
+    ) / 80;
 
-    // Shooting edge governs the shooter's execution. Evasion edge governs the
-    // target's response window. Overall edge is a smaller combined tie-breaker;
-    // it cannot erase either specific dimension.
+    const shootingBias = clamp((ownerIsPlayer ? shootingGap : -shootingGap), -1, 1);
+    const evasionBias = clamp((targetIsPlayer ? playerEvasionGap : -playerEvasionGap), -1, 1);
+    const overallBias = clamp(ownerIsPlayer ? overallGap : -overallGap, -1, 1);
+
+    // Shooting execution is driven by shooting evidence; target response by
+    // evasion evidence; overall is deliberately the smallest component.
     return clamp(
       shootingBias * 0.45 +
       evasionBias * 0.35 +
