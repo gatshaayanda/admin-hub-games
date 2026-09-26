@@ -619,7 +619,6 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     );
 
     if (
-      !this.rivalSeekingAmmo &&
       !rivalHidden &&
       !playerHidden &&
       canSeePlayer &&
@@ -738,22 +737,21 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   }
 
   private shouldRivalFire(distance: number, now: number) {
-    if (this.rival.ammo <= 7) return false;
+    if (this.rival.ammo <= 0) return false;
 
     // Outside CQE the existing tactical cadence remains unchanged. Inside a
     // live close exchange, the training edge changes the response window rather
     // than changing hitboxes or damage.
+    // Player ammo must never make the rival passive. The earlier low-player-
+    // ammo branches accidentally protected the player exactly when vulnerable,
+    // especially during the final shots of a magazine. The rival's own magazine
+    // is the only ammo constraint; tactical concealment/LOS/range are checked by
+    // the caller, and a rival heading to refill may still return fire until empty.
     const playerRecentlyFired = now - this.playerLastFiredAt < 700;
-    const playerNearlyEmpty = this.player.ammo <= 5;
-    if (playerNearlyEmpty) return false;
-    if (playerRecentlyFired && this.player.ammo <= 10) {
-      const cqe = this.isCqeActive();
-      return cqe ? Math.random() < 0.18 + Math.max(0, this.getCqeBias('rival', this.player)) * 0.18 : Math.random() < 0.18;
-    }
 
-    let chance = distance < 260 ? 0.72 : distance < 430 ? 0.48 : 0.28;
-    if (this.rival.ammo <= 12) chance *= 0.68;
-    if (this.rival.ammo <= 9) chance *= 0.55;
+    let chance = distance < 260 ? 0.82 : distance < 430 ? 0.64 : 0.44;
+    if (this.rival.ammo <= 12) chance *= 0.88;
+    if (this.rival.ammo <= 9) chance *= 0.82;
 
     if (this.isCqeActive()) {
       chance = clamp(chance + this.getCqeBias('rival', this.player) * 0.18, 0.12, 0.92);
