@@ -4110,7 +4110,7 @@ After Training Camp is declared playtest-complete, the **next gameplay task is A
 Latest observed phone playtest found three presentation/combat issues and they are now addressed on main:
 - Break panel must fit inside a mobile viewport: use border-box sizing plus a viewport-constrained scrollable card so the START SHOOTING control cannot fall below the screen.
 - Shooting camera must keep the player and evasive target readable rather than starting too zoomed out. Training camera uses a tighter 0.62–0.88 zoom band and remains centered on the combat midpoint with upward bias.
-- Shooting bot must remain an actual target, not continuously run away. Above a bounded 620px engagement band it closes distance; inside the band it uses lateral evasive movement. Very close fire response is tightened to an 85ms CQE cooldown for the training bot. This improves the measurement without giving the bot automatic hits.
+- Shooting drill bot is unarmed and must retreat from the player. Direction vectors from bot to player must be negated for radial retreat. Lateral movement may supplement retreat but may not reverse it; movement candidates must have a positive component away from the player. At blocked cover/map edges, stop or select a retreating route—never use a generic fallback that can charge the player. No concealment or hit/damage changes.
 - Preserve the existing Evasion role contract, respawn recovery, 110px contact separation and discrete paintball/hit rules.
 
 
@@ -4166,3 +4166,11 @@ These are source-level gameplay fixes, not instructions for the player. Preserve
 - Training uses the same core hit semantics as Arena, with a bounded close-range body-core expansion (never damage multiplication) so a moving target becomes more likely to receive a clean hit rather than a scrape as distance collapses. Continuous swept projectile collision remains required.
 - Evasion bot intent is to close tactically into CQE, reaching the minimum non-overlap separation when possible and firing down the direct engagement line. CQE also gives the bot a short bounded lead against player movement so close shots do not repeatedly trail the target. CQE changes engagement pressure/shot placement, not damage rules.
 - Do not add a special Training-only damage multiplier or make close-range hits deterministic.
+
+
+### Field score integrity correction — September 26, 2026
+
+- Player Shooting and Bot Shooting grades must use the same normalized clean-hit-rate scale and comparable confirmed-hit quality weighting. Do not compare scores built from different formulas.
+- Never add unbounded per-hit/raw-count bonuses to a 0–100 field score. Long sprays and tiny samples must not automatically inflate grades; all skill bands derive from rates and actual drill evidence.
+- Preserve separate measures: YOUR EVASION (player survival/avoidance during armed-bot drill), BOT SHOOTING (bot clean hit rate in that drill), YOUR SHOOTING (player clean hit rate during armed-target drill), BOT EVASION (target survival/avoidance during that drill). The overall field profile must compare like-for-like.
+- Evasive target retreat vector points away from player. Validate movement direction geometrically; a sign error can make the target charge while code/comments claim retreat.
