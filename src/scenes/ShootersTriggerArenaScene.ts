@@ -748,22 +748,43 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private shouldRivalFire(distance: number, now: number) {
     if (this.rival.ammo <= 0) return false;
 
-    // Outside CQE the existing tactical cadence remains unchanged. Inside a
-    // live close exchange, the training edge changes the response window rather
-    // than changing hitboxes or damage.
-    // Player ammo must never make the rival passive. The earlier low-player-
-    // ammo branches accidentally protected the player exactly when vulnerable,
-    // especially during the final shots of a magazine. The rival's own magazine
-    // is the only ammo constraint; tactical concealment/LOS/range are checked by
-    // the caller, and a rival heading to refill may still return fire until empty.
-    let chance = distance < 260 ? 0.82 : distance < 430 ? 0.64 : 0.44;
+    // The rival cannot see the player's ammo counter. It can only react to
+    // things an opponent could actually observe: a recent shot (muzzle/reveal),
+    // an exposed refill at a station, distance, LOS and its own tactical state.
+    // Player ammo is deliberately absent from this decision.
+    const playerRecentlyFired = now - this.playerLastFiredAt < 900;
+    const playerRefilling = this.player.refilling;
+    const playerAtAmmoStation = this.isInAmmoStation(this.player.body.x, this.player.body.y);
+    const shootingGap = (this.botShootingSkill - this.playerSkill) / 100;
+    const evasionGap = (this.botEvasionSkill - this.evasionSkill) / 100;
+
+    let chance = distance < 260 ? 0.78 : distance < 430 ? 0.58 : 0.38;
+
+    // Tactical state chooses the moment to press rather than merely making the
+    // rival walk toward the player. Pressure takes the shot more readily;
+    // flanking is patient unless it has a visible opening.
+    if (this.rivalMode === 'PRESSURE') chance += 0.12;
+    if (this.rivalMode === 'FLANK') chance -= playerRecentlyFired ? 0.02 : 0.10;
+    if (this.rivalMode === 'REGROUP') chance -= 0.18;
+
+    // A visible firing/reload window is information the rival can legitimately
+    // exploit. A hidden player is handled by the caller and cannot be shot.
+    if (playerRecentlyFired) chance += 0.16;
+    if (playerRefilling || playerAtAmmoStation) chance += 0.14;
+
+    // Training edge affects willingness/execution, but never creates a hit or
+    // changes collision geometry.
+    chance += shootingGap * 0.22;
+    chance -= evasionGap * 0.10;
+
+    // Preserve the rival's own ammunition discipline.
     if (this.rival.ammo <= 12) chance *= 0.88;
     if (this.rival.ammo <= 9) chance *= 0.82;
 
     if (this.isCqeActive()) {
       chance = clamp(chance + this.getCqeBias('rival', this.player) * 0.18, 0.12, 0.92);
     }
-    return Math.random() < chance;
+    return Math.random() < clamp(chance, 0.10, 0.92);
   }
 
   private isCqeActive() {

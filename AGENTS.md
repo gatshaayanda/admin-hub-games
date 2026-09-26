@@ -4249,3 +4249,6 @@ This model deliberately keeps **training edge → trajectory/cadence → engagem
 separate from **collision geometry → hit result**. Do not solve difficulty by
 inflating hitboxes or inventing damage bonuses.
 
+
+- Rival information boundary: the Arena rival must never inspect or infer the player's exact ammo count. It may react only to observable state such as recent player fire/reveal, visible presence at or movement toward an ammo station, concealment/LOS, distance, and its own ammo/tactical state. Being low on paint is not itself an observable fact to the rival.
+- Rival strike timing: PRESSURE may fire more readily; FLANK should wait for observable openings; visible player firing or an exposed refill creates a legitimate tactical opening. Training shooting/evasion edge modulates this bounded firing decision, while projectile trajectory and Golden Hit geometry determine the actual result.
