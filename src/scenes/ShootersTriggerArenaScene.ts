@@ -227,10 +227,17 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
 
     this.movePlayer(delta);
     this.tryPickupWeapon(this.player);
+
+    // Combat resolution is deliberately first. Ammo-station/refill state is
+    // never allowed to gate or reorder incoming projectile collision. A player
+    // caught in a vulnerable position, including while refilling, remains a
+    // normal hit target and can be eliminated by the same Golden Hit rules.
+    this.updateShots(delta);
+    if (this.matchOver || this.roundTransition || this.resolvingRound) return;
+
     const wasPlayerRefilling = this.player.refilling;
     this.updatePlayerRefill(delta);
     this.updateRival(delta);
-    this.updateShots(delta);
     this.player.cooldown = Math.max(0, this.player.cooldown - delta);
     this.rival.cooldown = Math.max(0, this.rival.cooldown - delta);
 
