@@ -151,7 +151,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
   }
 
   private hasTrainingReport() {
-    try { return !!localStorage.getItem('shooters-trigger:training-report'); } catch { return false; }
+    return !!readShootersTriggerFieldProfile();
   }
 
   private hasUpgrade() {
@@ -283,6 +283,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     const keys = [
       'shooters-trigger:last-shooting',
       'shooters-trigger:last-evasion',
+      'shooters-trigger:training-report',
       'shooters-trigger:last-arena',
       'shooters-trigger:budget',
       'shooters-trigger:upgrade-level',
@@ -296,15 +297,13 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
 
   private getPhoneNextLabel() {
     const fieldAlert = getShootersTriggerPhoneAlert();
-    let shooting: any = null, evasion: any = null, arena: any = null, training: any = null;
+    let arena: any = null;
     try {
-      shooting = JSON.parse(localStorage.getItem('shooters-trigger:last-shooting') || 'null');
-      evasion = JSON.parse(localStorage.getItem('shooters-trigger:last-evasion') || 'null');
       arena = JSON.parse(localStorage.getItem('shooters-trigger:last-arena') || 'null');
-      training = JSON.parse(localStorage.getItem('shooters-trigger:training-report') || 'null');
     } catch {}
 
-    if (!shooting || !evasion) return 'PLAYER NEWS · TRAINING CAMP FIRST · EVASION → SHOOTING';
+    const fieldProfile = readShootersTriggerFieldProfile();
+    if (!fieldProfile) return 'PLAYER NEWS · TRAINING CAMP FIRST · EVASION → SHOOTING';
     if (!arena) return 'PLAYER NEWS · TRAINING COMPLETE · ARENA ODDS READY';
     if (arena?.result === 'WIN') return 'NEXT · ARMORY';
     return 'NEXT · RETRAIN';
