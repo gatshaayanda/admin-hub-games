@@ -4174,3 +4174,9 @@ These are source-level gameplay fixes, not instructions for the player. Preserve
 - Never add unbounded per-hit/raw-count bonuses to a 0–100 field score. Long sprays and tiny samples must not automatically inflate grades; all skill bands derive from rates and actual drill evidence.
 - Preserve separate measures: YOUR EVASION (player survival/avoidance during armed-bot drill), BOT SHOOTING (bot clean hit rate in that drill), YOUR SHOOTING (player clean hit rate during armed-target drill), BOT EVASION (target survival/avoidance during that drill). The overall field profile must compare like-for-like.
 - Evasive target retreat vector points away from player. Validate movement direction geometrically; a sign error can make the target charge while code/comments claim retreat.
+
+
+### Training camera orientation
+
+- During Shooting, camera framing is player-anchored with only a capped lead toward the fleeing target. Never center the midpoint between player and target when that can pull the player off-frame or disorient movement/aim on mobile.
+- Keep zoom within a readable mobile range; use the enemy locator when the bot is outside the viewport. Evasion may use shared two-combatant framing.
