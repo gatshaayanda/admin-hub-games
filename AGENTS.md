@@ -4125,3 +4125,12 @@ Latest phone playtest exposed three concrete Training Camp defects:
 
 These are source-level gameplay fixes, not instructions for the player. Preserve them when tuning Training. The protected combat contract remains: discrete visible paintballs, real trajectory, cover blocking, two body hits/headshot rules, scrape-only near misses, and readable impact/splatter.
 
+
+
+## Shooters Trigger — projectile impact lifecycle hardening — September 26, 2026
+
+- Training and Arena use the same discrete 520 world-unit/second paintball projectile speed. Do not increase projectile velocity to make CQE feel stronger; use engagement distance, cadence, movement pressure and hit resolution instead.
+- A paintball that reaches a hit/scrape gets a short visual impact hold and must stop participating in collision checks during that hold. It must then be destroyed and removed from the shot list.
+- Reprocessing a stationary impact-hold projectile every frame is a critical bug: it can repeatedly count one scrape and continuously allocate splatter/highlight objects, producing intermittent mobile freezes especially during close-range fire.
+- Training close-range fire cadence is intentionally aggressive but bounded at 180ms. This is separate from projectile travel speed. Arena remains the reference combat implementation.
+- Preserve the exact hit rules: headshot instant, two clean body hits, scrape paint-only, true miss no effect.
