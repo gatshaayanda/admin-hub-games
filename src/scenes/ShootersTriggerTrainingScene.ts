@@ -1574,8 +1574,13 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
           );
         }
 
+        // resolveHit / resolveWeaponHit can end a training life and clear the
+        // entire projectile array. updateShots is iterating that same array, so
+        // continuing here would make the next loop iteration read an undefined
+        // shot and kill the Phaser update step. Exit this frame and let the next
+        // frame start cleanly after the respawn lifecycle.
         if (!this.shots.includes(shot) || !shot.body.active || this.matchOver || this.roundTransition || this.resolvingRound) {
-          continue;
+          return;
         }
         this.holdShotAtImpact(shot, cleanHit.hit.x, cleanHit.hit.y);
         if (shot.impactHoldMs <= 0) {
