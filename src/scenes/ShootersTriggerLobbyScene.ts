@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { getShootersTriggerPhoneAlert, markShootersTriggerPhoneAlertRead, recoverInterruptedShootersTriggerSession } from '../shooters-trigger-session';
+import { fieldGrade, readShootersTriggerFieldProfile } from '../shooters-trigger-field-profile';
 
 type Location = {
   id: 'training' | 'upgrades' | 'arena';
@@ -433,12 +434,15 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     // The phone is a like-for-like field profile:
     // EVASION compares YOUR EVASION vs BOT EVASION.
     // SHOOTING compares YOUR SHOOTING vs BOT SHOOTING.
-    const evasionPlayer = Number(training?.profile?.playerEvasionScore ?? training?.evasion?.playerScore ?? 50);
-    const evasionBot = Number(training?.profile?.botEvasionScore ?? 50);
-    const shootingPlayer = Number(training?.profile?.playerShootingScore ?? training?.shooting?.playerShootingScore ?? 50);
-    const shootingBot = Number(training?.profile?.botShootingScore ?? training?.evasion?.botShootingScore ?? 50);
+    const fieldProfile = readShootersTriggerFieldProfile();
+    // Phone display and Arena now read the same normalized Training Camp record.
+    // No gameplay state is inferred from the human-facing text below.
+    const evasionPlayer = fieldProfile?.evasion.player ?? Number(training?.profile?.playerEvasionScore ?? training?.evasion?.playerScore ?? 50);
+    const evasionBot = fieldProfile?.evasion.bot ?? Number(training?.profile?.botEvasionScore ?? 50);
+    const shootingPlayer = fieldProfile?.shooting.player ?? Number(training?.profile?.playerShootingScore ?? training?.shooting?.playerShootingScore ?? 50);
+    const shootingBot = fieldProfile?.shooting.bot ?? Number(training?.profile?.botShootingScore ?? training?.evasion?.botShootingScore ?? 50);
 
-    const range = (score: number) => score < 40 ? 1 : score < 60 ? 2 : score < 80 ? 3 : 4;
+    const range = (score: number) => fieldGrade(score);
     const rangeLabel = (score: number, kind: 'EVASION'|'SHOOTING') => {
       const r = range(score);
       if (kind === 'EVASION') return r === 4 ? 'CALM UNDER FIRE' : r === 3 ? 'MOVES WITH INTENT' : r === 2 ? 'FINDING SPACE' : 'EXPOSED UNDER PRESSURE';
@@ -449,7 +453,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
 
     const evasionVerdict = verdict(evasionPlayer, evasionBot);
     const shootingVerdict = verdict(shootingPlayer, shootingBot);
-    const overall = training?.edge?.overall || 'TIE';
+    const overall = fieldProfile?.overall.edge || training?.edge?.overall || 'TIE';
 
     const temperament = () => {
       if (!training) return { label:'NO FIELD READ YET', body:'Run both drills. The device needs your movement and shooting behaviour before it can describe your style.' };
