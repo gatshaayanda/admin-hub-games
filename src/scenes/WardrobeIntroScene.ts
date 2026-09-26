@@ -56,6 +56,20 @@ export class WardrobeIntroScene extends Phaser.Scene {
     super('WardrobeIntroScene');
   }
 
+  preload() {
+    const base = '/assets/wardrobe/field-operator-01/';
+    this.load.image('field-operator-down', base + 'front-idle.svg');
+    this.load.image('field-operator-up', base + 'back-idle.svg');
+    this.load.image('field-operator-left', base + 'left-idle.svg');
+    this.load.image('field-operator-right', base + 'right-idle.svg');
+    this.load.image('field-operator-down-walk0', base + 'front-walk0.svg');
+    this.load.image('field-operator-down-walk1', base + 'front-walk1.svg');
+    this.load.image('field-operator-left-walk0', base + 'left-walk0.svg');
+    this.load.image('field-operator-left-walk1', base + 'left-walk1.svg');
+    this.load.image('field-operator-right-walk0', base + 'right-walk0.svg');
+    this.load.image('field-operator-right-walk1', base + 'right-walk1.svg');
+  }
+
   create() {
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor('#171b19');
@@ -276,6 +290,8 @@ export class WardrobeLabScene extends Phaser.Scene {
   private actionButtons: Phaser.GameObjects.Rectangle[] = [];
   private variantButtons: Phaser.GameObjects.Rectangle[] = [];
   private variantIndex = 0;
+  private direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT' = 'DOWN';
+  private previewSprite!: Phaser.GameObjects.Image;
 
   constructor() {
     super('WardrobeLabScene');
@@ -293,7 +309,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     });
 
     this.add.text(18, compact ? 40 : 48,
-      compact ? 'SHOOTERS TRIGGER · CHARACTER COPY' : 'SHOOTERS TRIGGER · HOME FIELD CHARACTER COPY · SAFE EXPERIMENT AREA',
+      compact ? 'FIELD OPERATOR 01 · CARTOON SPRITE PROTOTYPE' : 'FIELD OPERATOR 01 · CARTOON SPRITE PROTOTYPE · SAFE EXPERIMENT AREA',
       {
         fontFamily: 'monospace', fontSize: compact ? '8px' : '9px', fontStyle: 'bold', color: '#8fb39b'
       });
@@ -332,6 +348,21 @@ export class WardrobeLabScene extends Phaser.Scene {
       this.variantButtons.push(button);
     });
 
+    const directionTop = compact ? 166 : 186;
+    this.add.text(width / 2, directionTop, 'FACING · TAP A DIRECTION', {
+      fontFamily: 'monospace', fontSize: '8px', fontStyle: 'bold', color: '#e8c95c'
+    }).setOrigin(0.5);
+    const directions: Array<'DOWN' | 'UP' | 'LEFT' | 'RIGHT'> = ['DOWN', 'UP', 'LEFT', 'RIGHT'];
+    directions.forEach((direction, index) => {
+      const button = this.add.rectangle(width / 2 - 108 + index * 72, directionTop + 20, 66, 28, 0x202a24, 1)
+        .setStrokeStyle(1, 0x526d5d, 1).setInteractive({ useHandCursor: false });
+      this.add.text(button.x, button.y, direction, {
+        fontFamily: 'monospace', fontSize: '7px', fontStyle: 'bold', color: '#f4f1df'
+      }).setOrigin(0.5);
+      button.on('pointerdown', () => this.setDirection(direction));
+      (button as Phaser.GameObjects.Rectangle & { direction?: string }).direction = direction;
+    });
+
     const benchW = compact ? Math.min(width * 0.90, 520) : Math.min(width * 0.72, 560);
     const benchH = compact ? Math.min(height * 0.30, 220) : Math.min(height * 0.54, 380);
     const benchX = compact ? width / 2 : width * 0.43;
@@ -340,14 +371,15 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.add.rectangle(benchX, benchY, benchW, benchH, 0x202a24, 1)
       .setStrokeStyle(2, 0x526d5d, 1);
 
-    this.add.text(benchX, benchY - benchH / 2 + 16, compact ? 'LIVE PREVIEW' : 'LIVE PREVIEW · PROCEDURAL BASELINE', {
+    this.add.text(benchX, benchY - benchH / 2 + 16, compact ? 'LIVE SPRITE PREVIEW' : 'LIVE SPRITE PREVIEW · KENNEY TOON BASE + ORIGINAL PAINTBALL GEAR', {
       fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold', color: '#8fb39b'
     }).setOrigin(0.5);
 
     this.shadow = this.add.ellipse(benchX, benchY + (compact ? benchH * 0.30 : 125), compact ? 68 : 92, compact ? 20 : 28, 0x000000, 0.28);
     this.character = this.add.container(benchX, benchY + (compact ? 42 : 82));
+    this.previewSprite = this.add.image(0, -4, 'field-operator-down').setDisplaySize(48, 64);
     this.preview = this.add.graphics();
-    this.character.add(this.preview);
+    this.character.add([this.previewSprite, this.preview]);
     this.character.setScale(compact
       ? Math.min(4.0, Math.max(2.8, Math.min(width, height) / 155))
       : Math.min(5.2, Math.max(3.2, Math.min(width, height) / 145)));
@@ -441,7 +473,7 @@ export class WardrobeLabScene extends Phaser.Scene {
       button.setStrokeStyle(i === this.variantIndex ? 2 : 1, i === this.variantIndex ? 0xe8c95c : 0x526d5d, 1);
     });
     this.drawPreview(ACTIONS[this.actionIndex]);
-    this.detailText.setText(this.describe(ACTIONS[this.actionIndex]) + ' · ' + VARIANTS[this.variantIndex].name);
+    this.detailText.setText(this.describe(ACTIONS[this.actionIndex]) + ' · ' + this.direction + ' · FIELD OPERATOR 01');
   }
 
   private showAction(index: number, stopPlayback = true) {
@@ -462,130 +494,62 @@ export class WardrobeLabScene extends Phaser.Scene {
 
     this.preview.clear();
     this.drawPreview(action);
-    this.detailText.setText(this.describe(action) + ' · ' + VARIANTS[this.variantIndex].name);
+    this.detailText.setText(this.describe(action) + ' · ' + this.direction + ' · FIELD OPERATOR 01');
 
     this.playActionMotion(action);
   }
 
   private drawPreview(action: WardrobeAction) {
-    const variant = VARIANTS[this.variantIndex];
     const walking = action === 'WALK' || action === 'WALK LEFT' || action === 'WALK RIGHT';
-    const step = walking ? 2 : 0;
-    const lean = action === 'WALK LEFT' ? -2 : action === 'WALK RIGHT' ? 2 : 0;
-    const aim = action === 'AIM LEFT' || action === 'AIM RIGHT' || action === 'FIRE';
-    const aimDir = action === 'AIM LEFT' ? -1 : 1;
-    const bob = walking ? 1 : 0;
+    const frame = walking && Math.floor(this.time.now / 180) % 2 === 1 ? 1 : 0;
+    const key = this.getSpriteKey(frame);
+    this.previewSprite.setTexture(key).setDisplaySize(48, 64).setOrigin(0.5, 0.5);
+    this.preview.clear().setRotation(0);
 
-    if (action !== 'DEATH') {
-      this.preview.fillStyle(0x3b2f28, 1).fillEllipse(lean, -20 + bob, 24, 18);
-      this.preview.fillStyle(0xd8a66b, 1).fillEllipse(lean, -17 + bob, 13, 12);
-      this.preview.fillStyle(0xd4a45d, 1)
-        .fillCircle(-7 + lean, -17 + bob, 2.5)
-        .fillCircle(7 + lean, -17 + bob, 2.5);
-      this.preview.fillStyle(variant.hat, 1).fillEllipse(lean, -23 + bob, 25, 12);
-      this.preview.fillStyle(0xd4a45d, 1).fillRoundedRect(-4 + lean, -8 + bob, 8, 7, 2);
-      this.preview.fillStyle(variant.shirt, 1).fillRoundedRect(-15 + lean, -4 + bob, 30, 22, 8);
-      this.preview.fillStyle(variant.shirtLight, 1).fillRoundedRect(-10 + lean, -1 + bob, 20, 14, 4);
-
-      if (variant.gear === 'VEST') {
-        this.preview.fillStyle(0x202522, 0.92).fillRoundedRect(-14 + lean, -2 + bob, 5, 18, 2).fillRoundedRect(9 + lean, -2 + bob, 5, 18, 2);
-        this.preview.fillStyle(variant.accent, 1).fillRoundedRect(-4 + lean, 0 + bob, 8, 3, 1);
-      } else if (variant.gear === 'BANDANA') {
-        this.preview.fillStyle(variant.accent, 0.95).fillRoundedRect(-11 + lean, -6 + bob, 22, 4, 1);
-      } else if (variant.gear === 'HOODIE') {
-        this.preview.lineStyle(3, variant.shirtLight, 1).strokeCircle(0 + lean, -5 + bob, 11);
-        this.preview.fillStyle(variant.accent, 0.95).fillRoundedRect(-2 + lean, 6 + bob, 4, 5, 1);
-      } else {
-        this.preview.fillStyle(variant.accent, 0.95).fillRoundedRect(-9 + lean, 7 + bob, 18, 2, 1);
-      }
-
-      if (variant.style === 'UTILITY') {
-        this.preview.fillStyle(0x202522, 0.9).fillRoundedRect(-13 + lean, 0 + bob, 5, 13, 2);
-        this.preview.fillStyle(0x202522, 0.9).fillRoundedRect(8 + lean, 0 + bob, 5, 13, 2);
-      } else if (variant.style === 'TRAIL') {
-        this.preview.lineStyle(3, variant.accent, 0.9);
-        this.preview.strokeLineShape(new Phaser.Geom.Line(-12 + lean, -2 + bob, 12 + lean, 15 + bob));
-      } else if (variant.style === 'URBAN') {
-        this.preview.fillStyle(variant.accent, 0.9).fillRoundedRect(-9 + lean, 9 + bob, 18, 3, 1);
-      }
-
-      if (aim) {
-        this.preview.fillStyle(0x2f6b4e, 1)
-          .fillRoundedRect(-16 + lean, -2 + bob, 7, 17, 3)
-          .fillRoundedRect(9 + lean, -9 + bob, 7, 20, 3);
-        this.preview.fillStyle(0xd4a45d, 1)
-          .fillCircle(-13 + lean, 14 + bob, 3)
-          .fillCircle(15 + lean, -11 + bob, 3);
-        this.drawMarkerPreview(aimDir, 15 + lean, -12 + bob, action === 'FIRE');
-      } else {
-        this.preview.fillStyle(0x2f6b4e, 1)
-          .fillRoundedRect(-17 + lean, 0 + bob, 7, 15, 3)
-          .fillRoundedRect(10 + lean, 0 + bob, 7, 15, 3);
-        this.preview.fillStyle(0xd4a45d, 1)
-          .fillCircle(-14 + lean, 15 + bob, 3)
-          .fillCircle(14 + lean, 15 + bob, 3);
-      }
-
-      this.preview.fillStyle(0x29372f, 1).fillRoundedRect(-11 + lean, 16 + bob, 22, 7, 3);
-      this.preview.fillStyle(variant.pants, 1)
-        .fillRoundedRect(-10 + lean + step, 20 + bob, 8, 13, 2)
-        .fillRoundedRect(2 + lean - step, 20 + bob, 8, 13, 2);
-
-      if (variant.style === 'UTILITY') {
-        this.preview.fillStyle(variant.accent, 0.95).fillRoundedRect(-11 + lean, 18 + bob, 3, 5, 1);
-        this.preview.fillStyle(variant.accent, 0.95).fillRoundedRect(8 + lean, 18 + bob, 3, 5, 1);
-      }
-      this.preview.fillStyle(0x202522, 1)
-        .fillRoundedRect(-12 + lean + step, 30 + bob, 10, 7, 2)
-        .fillRoundedRect(2 + lean - step, 30 + bob, 10, 7, 2);
-    } else {
-      this.preview.setRotation(-0.95);
-      this.preview.fillStyle(0x3b2f28, 1).fillEllipse(0, -20, 24, 18);
-      this.preview.fillStyle(0xd8a66b, 1).fillEllipse(0, -17, 13, 12);
-      this.preview.fillStyle(variant.hair, 1).fillEllipse(0, -20, 24, 18);
-      this.preview.fillStyle(variant.skin, 1).fillEllipse(0, -17, 13, 12);
-      this.preview.fillStyle(variant.hat, 1).fillEllipse(0, -23, 25, 12);
-      this.preview.fillStyle(variant.shirt, 1).fillRoundedRect(-15, -4, 30, 22, 8);
-      this.preview.fillStyle(variant.pants, 1).fillRoundedRect(-10, 20, 8, 13, 2).fillRoundedRect(2, 20, 8, 13, 2);
-      this.preview.fillStyle(0x202522, 1).fillRoundedRect(-12, 30, 10, 7, 2).fillRoundedRect(2, 30, 10, 7, 2);
+    if (action === 'AIM LEFT' || action === 'AIM RIGHT' || action === 'FIRE') {
+      const direction = action === 'AIM LEFT' ? -1 : 1;
+      const y = this.direction === 'UP' ? -2 : this.direction === 'DOWN' ? 7 : 2;
+      const x = this.direction === 'LEFT' ? -26 : this.direction === 'RIGHT' ? 26 : direction * 20;
+      this.preview.fillStyle(0x202522, 1).fillRoundedRect(x - direction * 12, y - 2, direction * 24, 4, 2);
+      this.preview.fillStyle(0x596a61, 1).fillCircle(x + direction * 14, y, 3);
     }
 
-    this.preview.fillStyle(variant.accent, 0.95);
-    if (variant.style === 'FIELD') {
-      this.preview.fillRoundedRect(-14, 2, 4, 7, 1);
-      this.preview.fillRoundedRect(10, 2, 4, 7, 1);
-    } else if (variant.style === 'TRAIL') {
-      this.preview.fillCircle(-11, 6, 3);
-    } else if (variant.style === 'URBAN') {
-      this.preview.fillRoundedRect(-3, -5, 6, 2, 1);
+    if (action === 'FIRE') {
+      const direction = this.direction === 'LEFT' ? -1 : 1;
+      const x = this.direction === 'UP' || this.direction === 'DOWN' ? direction * 34 : direction * 38;
+      this.preview.fillStyle(0xe8c95c, 1).fillTriangle(x, 0, x - direction * 10, -7, x - direction * 10, 7);
+      this.preview.fillStyle(0xd66a3d, 0.95).fillCircle(x - direction * 3, 0, 4);
     }
 
     if (action === 'BODY HIT') {
-      this.preview.fillStyle(0xd66a3d, 0.9).fillCircle(-10, 2, 5).fillCircle(9, 7, 4);
-      this.preview.lineStyle(2, 0xf0dfb6, 0.9).strokeCircle(-10, 2, 8).strokeCircle(9, 7, 7);
+      this.preview.fillStyle(0xd66a3d, 0.92).fillCircle(-11, 8, 5).fillCircle(10, 10, 4);
+      this.preview.lineStyle(2, 0xf0dfb6, 0.9).strokeCircle(-11, 8, 8).strokeCircle(10, 10, 7);
     }
 
     if (action === 'HEADSHOT') {
-      this.preview.fillStyle(0xd66a3d, 0.95).fillCircle(3, -20, 5);
-      this.preview.fillStyle(0xf0dfb6, 0.85).fillCircle(3, -20, 2);
+      this.preview.fillStyle(0xd66a3d, 0.95).fillCircle(8, -22, 5);
+      this.preview.fillStyle(0xf0dfb6, 0.85).fillCircle(8, -22, 2);
+    }
+
+    if (action === 'DEATH') {
+      this.previewSprite.setRotation(-0.85);
+      this.preview.setRotation(-0.85);
     }
   }
 
-  private drawMarkerPreview(direction: number, x: number, y: number, firing: boolean) {
-    const length = firing ? 30 : 25;
-    const endX = x + direction * length;
-    this.preview.fillStyle(0x202522, 1).fillRoundedRect(x, y - 3, direction * length, 6, 2);
-    this.preview.fillStyle(0x566052, 1).fillRoundedRect(endX - direction * 5, y - 5, 6, 10, 2);
-
-    if (firing) {
-      this.preview.fillStyle(0xf0dfb6, 1).fillTriangle(
-        endX + direction * 12, y,
-        endX + direction * 2, y - 7,
-        endX + direction * 2, y + 7,
-      );
-      this.preview.fillStyle(0xd66a3d, 0.9).fillCircle(endX + direction * 5, y, 4);
-    }
+  private getSpriteKey(frame: number) {
+    if (this.direction === 'UP') return 'field-operator-up';
+    if (this.direction === 'LEFT') return frame ? 'field-operator-left-walk1' : 'field-operator-left';
+    if (this.direction === 'RIGHT') return frame ? 'field-operator-right-walk1' : 'field-operator-right';
+    return frame ? 'field-operator-down-walk1' : 'field-operator-down';
   }
+
+  private setDirection(direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT') {
+    this.direction = direction;
+    this.drawPreview(ACTIONS[this.actionIndex]);
+    this.detailText?.setText(this.describe(ACTIONS[this.actionIndex]) + ' · ' + direction + ' · FIELD OPERATOR 01');
+  }
+
 
   private describe(action: WardrobeAction) {
     const descriptions: Record<WardrobeAction, string> = {
