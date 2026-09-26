@@ -4134,3 +4134,13 @@ These are source-level gameplay fixes, not instructions for the player. Preserve
 - Reprocessing a stationary impact-hold projectile every frame is a critical bug: it can repeatedly count one scrape and continuously allocate splatter/highlight objects, producing intermittent mobile freezes especially during close-range fire.
 - Training close-range fire cadence is intentionally aggressive but bounded at 180ms. This is separate from projectile travel speed. Arena remains the reference combat implementation.
 - Preserve the exact hit rules: headshot instant, two clean body hits, scrape paint-only, true miss no effect.
+
+### Training Camp scoring contract — like-for-like field profile
+- Training reports four independent skill measures: **YOUR EVASION**, **BOT EVASION**, **YOUR SHOOTING**, **BOT SHOOTING**.
+- Evasion drill measures player evasion and bot shooting separately; Shooting drill measures player shooting and bot evasion separately.
+- The final phone/report must compare like with like: **Evasion = player evasion vs bot evasion**; **Shooting = player shooting vs bot shooting**. Never present player evasion directly against bot shooting as the field profile.
+- The 1–4 read is a compressed performance band derived from observable play: accuracy/hits, survival, deaths/resets, cover use, headshots/body hits and misses. It is not a difficulty label and not simply a win/loss result.
+- Survival used for skill scoring must preserve the longest uninterrupted life; summing every life across respawns would falsely approach the full 30-second drill and hide repeated deaths.
+- Overall Arena signal is derived from the four like-for-like skills, not from cross-category comparisons.
+- Training projectile collision must use swept/continuous segment checks so fast paintballs cannot tunnel through a fighter between frames. Phaser documents line-to-circle/line geometry specifically for continuous segment intersection; preserve discrete visible paintball presentation while making hit registration reliable.
+- Training fire cadence and projectile speed must remain readable. Do not reintroduce machine-gun cadence or overly fast projectile presentation while tuning CQE.
