@@ -72,7 +72,7 @@ const TRAINING_CAMERA_MIN_ZOOM = 0.62;
 const TRAINING_CAMERA_MAX_ZOOM = 0.88;
 const TRAINING_CQE_RANGE = 240;
 const TRAINING_CQE_HARD_RANGE = 150;
-const TRAINING_CQE_COOLDOWN = 85;
+const TRAINING_CQE_COOLDOWN = 180;
 const TRAINING_SHOOTING_ENGAGEMENT_RANGE = 620;
 const TRAINING_CLOSE_IMPACT_RANGE = 240;
 // Never allow the two training fighters to occupy the same contact space.
@@ -1423,7 +1423,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     const accuracy = this.rivalProfile.shooting;
     const aim = direction.clone().normalize();
     const trainingCooldown = engagementDistance <= TRAINING_CQE_RANGE
-      ? Math.min(TRAINING_CQE_COOLDOWN, Math.max(110, 210 - accuracy * 0.75))
+      ? TRAINING_CQE_COOLDOWN
       : Math.max(155, 260 - accuracy * 1.5);
     this.rival.cooldown = this.trainingMode ? trainingCooldown : ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(330, 930 - accuracy * 5.4);
     if (!this.trainingMode) this.rival.ammo -= 1;
