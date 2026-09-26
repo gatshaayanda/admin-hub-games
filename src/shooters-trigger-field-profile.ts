@@ -25,9 +25,9 @@ export type ShootersTriggerFieldProfile = {
 
 const STORAGE_KEY = 'shooters-trigger:training-report';
 
-const finiteScore = (value: unknown, fallback = 50) => {
+const finiteScore = (value: unknown) => {
   const number = Number(value);
-  return Number.isFinite(number) ? Math.max(0, Math.min(100, number)) : fallback;
+  return Number.isFinite(number) ? Math.max(0, Math.min(100, number)) : null;
 };
 
 export const fieldEdge = (player: number, bot: number): FieldEdge =>
@@ -46,7 +46,16 @@ export function normalizeShootersTriggerFieldProfile(report: any): ShootersTrigg
   const botShooting = finiteScore(profile.botShootingScore ?? report.evasion?.botShootingScore);
 
   const completedAt = Number(report.completedAt);
-  if (!Number.isFinite(completedAt) || completedAt <= 0) return null;
+  // A preparation record is valid only when all four like-for-like skills are
+  // present. Never silently turn missing evidence into a neutral 50.
+  if (
+    !Number.isFinite(completedAt) ||
+    completedAt <= 0 ||
+    playerEvasion === null ||
+    botEvasion === null ||
+    playerShooting === null ||
+    botShooting === null
+  ) return null;
 
   const evasionEdge = fieldEdge(playerEvasion, botEvasion);
   const shootingEdge = fieldEdge(playerShooting, botShooting);
