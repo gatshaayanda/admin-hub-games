@@ -4129,10 +4129,10 @@ These are source-level gameplay fixes, not instructions for the player. Preserve
 
 ## Shooters Trigger — projectile impact lifecycle hardening — September 26, 2026
 
-- Training and Arena use the same discrete 520 world-unit/second paintball projectile speed. Do not increase projectile velocity to make CQE feel stronger; use engagement distance, cadence, movement pressure and hit resolution instead.
+- Training uses a discrete 400 world-unit/second paintball projectile so close engagements remain visually readable. Arena remains its own combat reference; do not solve CQE by making projectiles excessively fast.
 - A paintball that reaches a hit/scrape gets a short visual impact hold and must stop participating in collision checks during that hold. It must then be destroyed and removed from the shot list.
 - Reprocessing a stationary impact-hold projectile every frame is a critical bug: it can repeatedly count one scrape and continuously allocate splatter/highlight objects, producing intermittent mobile freezes especially during close-range fire.
-- Training close-range fire cadence is intentionally aggressive but bounded at 180ms. This is separate from projectile travel speed. Arena remains the reference combat implementation.
+- Training close-range fire cadence is bounded at 240ms. This is separate from projectile travel speed. Do not turn CQE into machine-gun fire.
 - Preserve the exact hit rules: headshot instant, two clean body hits, scrape paint-only, true miss no effect.
 
 ### Training Camp scoring contract — like-for-like field profile
@@ -4146,6 +4146,6 @@ These are source-level gameplay fixes, not instructions for the player. Preserve
 - Training fire cadence and projectile speed must remain readable. Do not reintroduce machine-gun cadence or overly fast projectile presentation while tuning CQE.
 ### Training CQE hit contract
 - Training CQE uses the same hit semantics as Arena: headshot = instant elimination; clean center-mass body hit = 1 of 2; second clean body hit = elimination; scrape = paint only; miss = no effect.
-- Training uses the Arena body core and scrape radii for hit classification; continuous swept projectile collision is retained for reliable close-range registration.
-- Evasion bot intent is to close tactically into the CQE band and maintain a very close but non-overlapping firing distance, rather than orbiting outside the engagement. CQE changes engagement pressure/response time, not damage rules.
+- Training uses the same core hit semantics as Arena, with a bounded close-range body-core expansion (never damage multiplication) so a moving target becomes more likely to receive a clean hit rather than a scrape as distance collapses. Continuous swept projectile collision remains required.
+- Evasion bot intent is to close tactically into CQE, reaching the minimum non-overlap separation when possible and firing down the direct engagement line. CQE also gives the bot a short bounded lead against player movement so close shots do not repeatedly trail the target. CQE changes engagement pressure/shot placement, not damage rules.
 - Do not add a special Training-only damage multiplier or make close-range hits deterministic.
