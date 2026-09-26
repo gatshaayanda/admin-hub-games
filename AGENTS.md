@@ -4252,3 +4252,83 @@ inflating hitboxes or inventing damage bonuses.
 
 - Rival information boundary: the Arena rival must never inspect or infer the player's exact ammo count. It may react only to observable state such as recent player fire/reveal, visible presence at or movement toward an ammo station, concealment/LOS, distance, and its own ammo/tactical state. Being low on paint is not itself an observable fact to the rival.
 - Rival strike timing: PRESSURE may fire more readily; FLANK should wait for observable openings; visible player firing or an exposed refill creates a legitimate tactical opening. Training shooting/evasion edge modulates this bounded firing decision, while projectile trajectory and Golden Hit geometry determine the actual result.
+
+---
+
+## Shooters Trigger — Golden Playthrough / Reusable Shooter Spine (AUTHORITATIVE, 2026-09-26)
+
+**Ayanda has playtested and accepted the complete Training → Arena experience as the Golden Playthrough. Treat this as a protected core function and reusable foundation for future shooter games, modes, settings and storylines.** This section supersedes older conflicting plans about what to build next. Historical sections remain context; current source plus this contract control implementation.
+
+### Protected Golden Playthrough
+
+Admin Hub Games shell → Shooters Trigger Intro / Setup → Home Field → Training Camp (Evasion → Break → Shooting) → Phone / field readout → Arena (training-informed rival; first to 3) → Result / return to field.
+
+The exact transition and recovery behavior in the current accepted source is authoritative. Do not casually rename, reorder, skip, duplicate, or rebuild these stages. Training death/respawn must not restart the 30-second drill; Evasion and Shooting reverse the armed role; interruption/recovery must not freeze, duplicate a lifecycle, or strand the player. Preserve the phone-to-Arena preparation-profile handoff and validated result/return path.
+
+### Golden Combat Rules — Do Not Regress
+
+- Head intersection = instant elimination.
+- Clean body hit = one of two required body hits; the second clean body hit eliminates.
+- Scrape paints/records a scrape only; it is not a clean hit.
+- Miss has no hit effect.
+- Cover blocks a projectile when its path intersects it.
+- The projectile's swept path and collision resolution are authoritative. Proximity/CQE must never manufacture a hit, enlarge a clean-hit target, grant automatic damage, or bypass cover.
+- Close engagement may influence bounded cadence, aim/response windows, AI pressure or movement only where approved; it must not change hit geometry, projectile collision, damage thresholds, or player aim.
+- Training Evasion is unarmed for the player. Do not introduce player-weapon collision assumptions into that drill.
+- Keep weapon-hit geometry and ordering specific to the current Arena contract; do not copy Arena weapon interception into unarmed Evasion.
+- Preserve current recovery/contact-separation hardening. Close contact, elimination, respawn, or simultaneous projectile events must not cause repeated lifecycle calls, scene freezes, or stuck controls.
+
+### Reusable Shooter Core vs Game-Specific Layers
+
+Future work must first classify changes into these boundaries:
+
+1. **Admin Hub platform (shared, protected):** publisher intro, game library, game registration/handoff, PWA/service worker, shared persistence conventions, shared mobile-control integration. Change only for a demonstrated platform need; regression-test Hall and the library when touched.
+2. **Shooter Core (candidate reusable foundation):** movement/aim inputs; projectile creation and travel; swept collision; cover/line-of-sight; head/body/scrape classification; damage/elimination; respawn/recovery; combat event timestamps; combat session lifecycle. Extract into small shared modules only when source inspection proves a stable boundary and tests preserve identical behavior. No speculative wholesale rewrite or parallel combat implementation.
+3. **Shooter mode rules (configurable, not duplicated engine):** role assignment, drill duration, respawn policy, win condition, ammo/reload rules, rival behavior, scoring. Training and Arena may configure these differently while sharing validated mechanics where behavior genuinely matches.
+4. **Shooters Trigger game-specific layer:** Home Field locations, phone presentation, operator fiction, field reports, budget/economy, equipment, progression, story and branded content.
+5. **Future shooter-game layer:** each future game owns setting, story, modes, characters, weapon/power-up definitions and progression. Reuse verified Shooter Core and mode contracts where suitable; do not couple future titles to Shooters Trigger scene names, player identity, budget keys, or fiction.
+
+Do not move code merely to make architecture look clean. Refactor only for a concrete reuse requirement, with a small reviewed diff and regression coverage against the Golden Playthrough.
+
+### Mandatory Golden Playthrough Regression Gate
+
+Before and after changes touching platform handoff, Shooter Core, Training, Arena, phone/profile handoff, session recovery or shared mobile controls:
+
+- [ ] Publisher Intro → Game Library → Shooters Trigger launch remains intact; Hall remains unaffected.
+- [ ] Home Field can enter Training and return to the field.
+- [ ] Evasion: player unarmed, rival armed, cover blocks, rival pursues/routes, timer remains one continuous 30 seconds across player deaths, no touch-lock/freeze.
+- [ ] Break completes once and hands off to Shooting.
+- [ ] Shooting: player armed, rival evasive/unarmed, same Golden Hit rules and continuous drill timer.
+- [ ] Phone shows the canonical training readout/profile; Arena consumes that same valid profile without silently inventing a score.
+- [ ] Arena remains first-to-3 with accepted rival/weapon/ammo behavior and Golden Hit rules.
+- [ ] Result and return/replay path works; no stuck controls, duplicate results, or lost local progress.
+- [ ] Build and automated tests pass; perform real phone playtest for changes affecting touch, camera, combat feel, recovery or PWA.
+- [ ] Report separately what was source-inspected, automated-tested, device-playtested and production-verified. Never claim a device or production test that was not performed.
+
+A source/build pass is not a substitute for playing the full flow on a phone. Unexpected freeze, collision result, lifecycle transition or regression means STOP → inspect actual state/diff/logs → isolate the smallest cause → fix and rerun the affected golden path.
+
+### Replay, Field Reports & Peak Highlights — Product Direction
+
+The owner's existing portrait recording is one complete Training-to-Arena playthrough ending in defeat. It is **not** a tutorial, permanent intro, or requirement to record again. Treat it as a potential first authored Field Report, with its result represented honestly, once the actual media file is available and reviewed.
+
+Peak Highlights remains planned, but do not implement a full video recorder or expensive media pipeline first. Preferred staged architecture:
+
+1. **Combat event instrumentation:** emit typed, timestamped match events from authoritative gameplay resolution (shot, clean hit, headshot, scrape, cover block, elimination, respawn, CQE engagement, round/match result). Generate events from resolved game state, not visuals or duplicated UI logic.
+2. **Highlight candidates:** a deterministic, bounded selector marks meaningful sequences (headshot/elimination, cover save, close exchange, comeback, longest evasion, match-ending event). Avoid rewarding meaningless event spam. Keep selection independent of presentation.
+3. **Replay data:** only after event instrumentation is reliable, determine whether deterministic state/input recording can reproduce a moment. Record only what is needed (state, seed, inputs, version); prove determinism in Phaser before promising replay. Otherwise use a clearly labelled event timeline or authored video clip.
+4. **Capture/export:** investigate browser/device support, memory/storage limits, consent, offline behavior and performance before live video capture. Do not assume MediaRecorder, canvas/audio capture or device encoding works uniformly on mobile.
+5. **Phone / Media Coverage Center:** ultimately presents Field Reports, saved match outcomes, event timelines, selected highlights and replay/watch actions. It is a presentation/history layer, not a second combat source of truth.
+
+The existing portrait recording can be reviewed as FIELD REPORT 001 after upload. Do not embed a large video in the app bundle or Git without inspecting duration, dimensions, codec, file size and storage/deployment impact. Do not upload it to a third-party host or publish it without the owner's explicit choice. Peak Highlights and the four-skill profile are subordinate to protecting and instrumenting the Golden Playthrough.
+
+### Current Work Order
+
+1. Preserve this contract and inspect live main source before each task.
+2. Finish top-down source mapping of platform and Shooters Trigger, including scene registration, shared modules, session/profile persistence, tests, assets, service worker and CI.
+3. Record a concise source map and identify existing seams before proposing extraction or new shared modules.
+4. Add focused automated regression tests around pure/shared logic and lifecycle invariants where testable without Phaser rendering. Do not use brittle source-string tests as a substitute for behavior tests.
+5. Instrument gameplay events as a narrow, isolated layer only after mapping authoritative event points.
+6. Review the owner's existing portrait recording when uploaded; treat it as a field report, not an intro.
+7. Return to expanded four-skill/profile presentation and Peak Highlights only after the foundation and instrumentation work is understood and protected.
+
+**Priority:** Golden Playthrough stability → architecture/source map → regression protection → authoritative event instrumentation → Field Report/media handling → richer profile and Peak Highlights. Keep unrelated games and Admin Hub platform features out of scope unless an actual shared regression is found.
