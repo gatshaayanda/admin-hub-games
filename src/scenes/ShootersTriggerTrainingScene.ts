@@ -527,19 +527,29 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       const accuracy = incoming > 0 ? landed / incoming : 0;
       const survivalRatio = clamp(this.trainingEvasionSurvivalMs / TRAINING_STAGE_MS, 0, 1);
       const coverRatio = incoming > 0 ? clamp(this.trainingCoverBlocks / incoming, 0, 1) : 0;
-      // Evasion is primarily about staying alive. Accuracy against the player,
-      // cover interceptions, and repeated eliminations then refine the odds.
+      // These are two independent role scores, not one score viewed from two
+      // angles. YOUR EVASION measures survival/avoidance; BOT SHOOTING measures
+      // conversion of fired paint into meaningful hits. That makes the phone
+      // comparison explain who was better at the job they were assigned.
       const score = clamp(
         Math.round(
-          survivalRatio * 60 +
+          survivalRatio * 50 +
           (1 - accuracy) * 30 +
-          coverRatio * 10 -
+          coverRatio * 20 -
           this.trainingEvasionEliminations * 8,
         ),
         0,
         100,
       );
-      const botShootingScore = clamp(Math.round(accuracy * 100), 0, 100);
+      const botShootingScore = clamp(
+        Math.round(
+          accuracy * 70 +
+          (this.rivalHeadshots / Math.max(1, incoming)) * 15 +
+          (this.rivalBodyHits / Math.max(1, incoming)) * 15,
+        ),
+        0,
+        100,
+      );
       const edge = score > botShootingScore + 5 ? 'PLAYER'
         : score < botShootingScore - 5 ? 'BOT' : 'TIE';
       this.trainingEvasionStats = {
@@ -656,11 +666,36 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     const shootingShots = this.playerShotsFired;
     const shootingHits = this.playerBodyHits + this.playerHeadshots;
     const accuracy = shootingShots > 0 ? shootingHits / shootingShots : 0;
+    // YOUR SHOOTING is judged on the quality of the shots you actually took.
+    // Close impacts and headshots sharpen the read, but cannot turn a tiny sample
+    // into an automatic 4/4.
     const closeImpactBonus = Math.min(8, this.playerCloseHits * 2);
-    const shootingScore = clamp(Math.round(accuracy * 100 + Math.min(15, this.playerHeadshots * 3) + closeImpactBonus), 0, 100);
+    const shootingScore = clamp(
+      Math.round(
+        accuracy * 70 +
+        (this.playerHeadshots / Math.max(1, shootingShots)) * 15 +
+        (this.playerBodyHits / Math.max(1, shootingShots)) * 10 +
+        (Math.min(1, this.playerCloseHits / Math.max(1, shootingHits || 1))) * 5 +
+        closeImpactBonus,
+      ),
+      0,
+      100,
+    );
+    // BOT EVASION is the mirror: how long the target stayed alive, how often
+    // the player missed it, and how often it forced another life reset.
+    // Eliminations are a penalty to evasion skill, never a bonus.
     const botEvasionSurvival = clamp(this.trainingShootingBotSurvivalMs / TRAINING_STAGE_MS, 0, 1);
     const botEvasionAccuracy = shootingShots > 0 ? shootingHits / shootingShots : 0;
-    const botEvasionScore = clamp(Math.round(botEvasionSurvival * 60 + (1 - botEvasionAccuracy) * 30 + Math.min(10, this.trainingShootingBotEliminations * 2)), 0, 100);
+    const botEvasionScore = clamp(
+      Math.round(
+        botEvasionSurvival * 50 +
+        (1 - botEvasionAccuracy) * 35 +
+        Math.min(15, this.trainingShootingBotEliminations * 5) -
+        this.trainingShootingBotEliminations * 8,
+      ),
+      0,
+      100,
+    );
     const shootingEdge = shootingScore > botEvasionScore + 5 ? 'PLAYER'
       : shootingScore < botEvasionScore - 5 ? 'BOT' : 'TIE';
     const evasion = this.trainingEvasionStats || {
@@ -748,8 +783,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     card.innerHTML =
       '<div style="color:#e8c95c;font-size:19px;font-weight:800">FIELD READOUT</div>' +
       '<div style="margin:8px 0 14px;font-size:10px;line-height:1.55;color:#b9c8bd">Two drills. One read. The field is measuring how you behave when the gun is on the other side.</div>' +
-      '<div style="padding:11px;border:1px solid #496556;border-radius:10px;background:#102018;text-align:left;margin-bottom:8px"><b>🛡️ EVASION · '+range(report.evasion.score)+'</b><br><span style="font-size:10px;color:#b9c8bd">'+read(report.evasion.score,'EVASION')+' · '+report.evasion.edge+' edge</span></div>' +
-      '<div style="padding:11px;border:1px solid #496556;border-radius:10px;background:#102018;text-align:left;margin-bottom:8px"><b>🎯 SHOOTING · '+range(report.shooting.score)+'</b><br><span style="font-size:10px;color:#b9c8bd">'+read(report.shooting.score,'SHOOTING')+' · '+report.shooting.edge+' edge</span></div>' +
+      '<div style="padding:11px;border:1px solid #496556;border-radius:10px;background:#102018;text-align:left;margin-bottom:8px"><b>🛡️ EVASION</b><br><span style="font-size:10px;color:#b9c8bd">YOUR EVASION · '+range(report.evasion.playerScore)+'/4 &nbsp; | &nbsp; BOT SHOOTING · '+range(report.evasion.botShootingScore)+'/4</span><br><span style="font-size:10px;color:#f4f1df">'+(report.evasion.edge==='PLAYER'?'🟢 YOU EVADED BETTER':report.evasion.edge==='BOT'?'🔴 BOT SHOT BETTER':'🟡 EVEN')+'</span></div>' +
+      '<div style="padding:11px;border:1px solid #496556;border-radius:10px;background:#102018;text-align:left;margin-bottom:8px"><b>🎯 SHOOTING</b><br><span style="font-size:10px;color:#b9c8bd">YOUR SHOOTING · '+range(report.shooting.playerShootingScore)+'/4 &nbsp; | &nbsp; BOT EVASION · '+range(report.shooting.botEvasionScore)+'/4</span><br><span style="font-size:10px;color:#f4f1df">'+(report.shooting.edge==='PLAYER'?'🟢 YOU SHOT BETTER':report.shooting.edge==='BOT'?'🔴 BOT EVADED BETTER':'🟡 EVEN')+'</span></div>' +
       '<div style="margin-top:10px;padding:12px;border:2px solid #e8c95c;border-radius:10px;background:#182b20"><b>OVERALL · '+report.edge.overall+'</b><br><span style="font-size:9px;color:#b9c8bd">EDGE changes your Arena odds. It does not guarantee the result.</span></div>';
     const button = document.createElement('button');
     button.textContent = 'RETURN TO FIELD';
