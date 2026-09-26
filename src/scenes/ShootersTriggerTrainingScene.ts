@@ -71,7 +71,7 @@ const TRAINING_RIVAL_SPAWN = new Phaser.Math.Vector2(1740, 700);
 const TRAINING_CAMERA_MIN_ZOOM = 0.62;
 const TRAINING_CAMERA_MAX_ZOOM = 0.88;
 const TRAINING_CQE_RANGE = 240;
-const TRAINING_CQE_HARD_RANGE = 120;
+const TRAINING_CQE_HARD_RANGE = 82;
 const TRAINING_CQE_COOLDOWN = 240;
 const TRAINING_PROJECTILE_SPEED = 400;
 const TRAINING_SHOOTING_ENGAGEMENT_RANGE = 620;
@@ -392,7 +392,12 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       }
 
       if (this.rival.cooldown <= 0 && d <= ARENA_BASE_RIVAL_FIRE_RANGE && hasSight) {
-        this.rivalFire(new Phaser.Math.Vector2(dx / d, dy / d), d);
+        // CQE rewards getting close through better shot placement, not bonus
+        // damage. Lead a moving player by a short, bounded amount so the bot
+        // does not repeatedly fire at the position the player occupied a frame
+        // ago and turn a point-blank exchange into meaningless scrapes.
+        const aim = this.getTrainingRivalAim(d);
+        this.rivalFire(aim, d);
       }
       return;
     }
@@ -1547,11 +1552,21 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       const targetBodyCenter = new Phaser.Math.Vector2(target.body.x, target.body.y + 1);
       const weaponPoint = this.getWeaponPoint(target);
 
-      const weaponHit = !target.weaponDropped
-        ? this.getSegmentCircleHit(shotLine, weaponPoint.x, weaponPoint.y, 20)
-        : null;
+      // Training measures only the six field outcomes: headshot, two-hit
+      // body damage, scrape, miss, and cover block. A weapon collision must
+      // not intercept a valid body/head trajectory and turn a close CQE shot
+      // into a random gun-scrape result.
+      const weaponHit = null;
+      const closeBodyBonus = this.trainingMode
+        ? Math.max(0, 8 * (1 - clamp(
+            (Phaser.Math.Distance.Between(shot.owner === 'player' ? this.player.body.x : this.rival.body.x, shot.owner === 'player' ? this.player.body.y : this.rival.body.y, target.body.x, target.body.y) - TRAINING_MIN_SEPARATION) /
+              Math.max(1, TRAINING_CQE_RANGE - TRAINING_MIN_SEPARATION),
+            0,
+            1,
+          )))
+        : 0;
       const headHit = this.getSegmentCircleHit(shotLine, targetHeadCenter.x, targetHeadCenter.y, 24);
-      const bodyHit = this.getSegmentCircleHit(shotLine, targetBodyCenter.x, targetBodyCenter.y, ARENA_BODY_CORE_RADIUS);
+      const bodyHit = this.getSegmentCircleHit(shotLine, targetBodyCenter.x, targetBodyCenter.y, ARENA_BODY_CORE_RADIUS + closeBodyBonus);
       const scrapeHit = this.getSegmentCircleHit(shotLine, target.body.x, target.body.y, ARENA_SCRAPE_RADIUS);
 
       const cleanHits = [
@@ -1613,6 +1628,29 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
       // No collision: continue the paintball until TTL/range expires.
     }
+  }
+
+  private getTrainingRivalAim(distance: number) {
+    const dx = this.player.body.x - this.rival.body.x;
+    const dy = this.player.body.y - this.rival.body.y;
+    const direct = new Phaser.Math.Vector2(dx, dy).normalize();
+    if (distance > TRAINING_CQE_RANGE || !this.playerMoving) return direct;
+
+    const movement = new Phaser.Math.Vector2(this.joystickVector.x, this.joystickVector.y);
+    if (movement.lengthSq() < 0.01) return direct;
+    movement.normalize();
+
+    // Paintball flight time is short at CQE range. A bounded lead keeps the
+    // shot on the player's actual movement line without turning the bot into
+    // a hitscan/auto-hit system.
+    const flightTime = clamp(distance / TRAINING_PROJECTILE_SPEED, 0.05, 0.18);
+    const lead = this.player.speed * flightTime * 0.82;
+    const predictedX = this.player.body.x + movement.x * lead;
+    const predictedY = this.player.body.y + movement.y * lead;
+    return new Phaser.Math.Vector2(
+      predictedX - this.rival.body.x,
+      predictedY - this.rival.body.y,
+    ).normalize();
   }
 
   private getSegmentCircleHit(
