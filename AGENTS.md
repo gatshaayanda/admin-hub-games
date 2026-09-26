@@ -4202,3 +4202,13 @@ These are source-level gameplay fixes, not instructions for the player. Preserve
 - The phone is presentation, not a second gameplay model. Changes to phone wording/layout must not change the stored field profile or Arena combat rules.
 - Phaser's Game Registry is appropriate for in-session Scene-to-Scene communication, but the Training profile is intentionally persisted in localStorage because the field result must survive Scene changes and browser/PWA reloads. Phaser documents the Registry as game-wide Scene communication; it is not the persistence boundary.
 - Before changing this handoff, verify: Training completion → canonical profile exists → Phone shows the same four values → Arena consumes the same values → leaving/restarting Arena does not rewrite Training evidence.
+
+
+## Shooters Trigger — Arena mobile playtest hardening — September 26, 2026
+
+- Arena reload is a hard fire gate: a player cannot emit a projectile while `refilling` is true, including the frame that the 2.5-second refill completes. A held FIRE input may resume on the following frame only.
+- Arena muzzle feedback must fade fully to hidden after each shot; a stale translucent muzzle must not make reload periods look like firing.
+- Arena fighter respawn must explicitly reset Container scale to `1`. `flash()` temporarily scales the fighter for impact feedback; that transient scale must never survive a round.
+- Rival tactical movement must persist a decision long enough to read. Do not randomize strafe direction every frame or overwrite PRESSURE/FLANK with multiple competing random decisions in the same decision tick. Tactical choice interval is 1.8–2.6 seconds; pressure strafe direction persists between decisions.
+- Arena paintball presentation is intentionally distinct from the original Training/Shooting baseline: player projectiles/splatter use a teal family; rival projectiles/splatter use an orange family. This is visual feedback only and does not alter Golden Hit geometry, damage, scoring or CQE.
+- Phaser references used for this hardening: Game Object scale is an explicit transform and must be reset after temporary effects; Tweens support `onComplete` for deterministic cleanup; pointer-up events can report releases outside a Game Object; Geometry line intersections remain authoritative for swept paintball collision.

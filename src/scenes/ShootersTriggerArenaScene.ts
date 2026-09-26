@@ -139,6 +139,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private rivalLastFiredAt = 0;
   private rivalRevealedUntil = 0;
   private rivalDecisionAt = 0;
+  private rivalStrafeDirection = 1;
   private rivalMode: 'PRESSURE' | 'FLANK' | 'SEARCH' | 'PATROL' | 'REGROUP' = 'PRESSURE';
   private rivalTargetPoint = new Phaser.Math.Vector2(0, 0);
   private rivalHiddenPatrolCenter = new Phaser.Math.Vector2(0, 0);
@@ -226,6 +227,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
 
     this.movePlayer(delta);
     this.tryPickupWeapon(this.player);
+    const wasPlayerRefilling = this.player.refilling;
     this.updatePlayerRefill(delta);
     this.updateRival(delta);
     this.updateShots(delta);
@@ -241,7 +243,8 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         this.aim.set(dx / distance, dy / distance);
       }
     }
-    if (this.fire) this.playerFire();
+    // A refill is a hard fire gate. Do not allow a shot on the same frame a refill completes.
+    if (this.fire && !wasPlayerRefilling && !this.player.refilling) this.playerFire();
     this.updatePlayerAwareness();
 
     this.updateAnimations(delta);
@@ -463,49 +466,46 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.rivalWasPlayerHidden = playerHidden;
 
     if (!playerHidden && now >= this.rivalDecisionAt) {
-      this.rivalDecisionAt = now + Phaser.Math.Between(900, 1700);
-
-      // Ammo is now a tactical resource, not a trigger to mindlessly empty the
-      // magazine. When the rival gets low, it picks the safer of the two stations
-      // rather than automatically taking whichever one is closest.
-      if (this.trainingEdge.overall === 'BOT' && canSeePlayer && distance < 560) {
-        this.rivalMode = Math.random() < 0.72 ? 'PRESSURE' : 'FLANK';
-      } else if (this.trainingEdge.overall === 'PLAYER' && canSeePlayer) {
-        this.rivalMode = Math.random() < 0.68 ? 'FLANK' : 'PRESSURE';
-      }
+      // Keep one tactical choice active long enough to read. The previous
+      // decision path could overwrite PRESSURE/FLANK more than once per tick.
+      this.rivalDecisionAt = now + Phaser.Math.Between(1800, 2600);
 
       if (this.rival.ammo <= 7) {
         this.rivalSeekingAmmo = true;
         this.rivalAmmoStation = this.chooseSaferAmmoStation();
-      } else if (this.rival.ammo >= 14) {
-        this.rivalSeekingAmmo = false;
-      }
-
-      if (this.rivalSeekingAmmo) {
+        this.rivalMode = 'REGROUP';
         this.rivalTargetPoint.set(this.rivalAmmoStation.centerX, this.rivalAmmoStation.centerY);
-      } else if (this.trainingEdge.overall === 'BOT' && canSeePlayer && distance < 560) {
-        this.rivalMode = Math.random() < 0.72 ? 'PRESSURE' : 'FLANK';
-      } else if (this.trainingEdge.overall === 'PLAYER' && canSeePlayer) {
-        this.rivalMode = Math.random() < 0.68 ? 'FLANK' : 'PRESSURE';
-      } else if (canSeePlayer && distance < 520 && Math.random() < 0.55) {
-        this.rivalMode = Math.random() < 0.62 ? 'FLANK' : 'PRESSURE';
       } else {
-        this.rivalMode = Math.random() < 0.58 ? 'FLANK' : 'PRESSURE';
-      }
+        this.rivalSeekingAmmo = false;
+        if (canSeePlayer) {
+          if (this.trainingEdge.overall === 'BOT' && distance < 560) {
+            this.rivalMode = Math.random() < 0.72 ? 'PRESSURE' : 'FLANK';
+          } else if (this.trainingEdge.overall === 'PLAYER') {
+            this.rivalMode = Math.random() < 0.68 ? 'FLANK' : 'PRESSURE';
+          } else if (distance < 520) {
+            this.rivalMode = Math.random() < 0.62 ? 'FLANK' : 'PRESSURE';
+          } else {
+            this.rivalMode = Math.random() < 0.58 ? 'FLANK' : 'PRESSURE';
+          }
+        } else {
+          this.rivalMode = 'PRESSURE';
+        }
 
-      if (!this.rivalSeekingAmmo && this.rivalMode === 'FLANK') {
-        const angle =
-          Math.atan2(
-            this.player.body.y - this.rival.body.y,
-            this.player.body.x - this.rival.body.x,
-          ) + (Math.random() < 0.5 ? Math.PI / 2 : -Math.PI / 2);
-        const flankDistance = Phaser.Math.Between(320, 560);
-        this.rivalTargetPoint.set(
-          Phaser.Math.Clamp(this.player.body.x + Math.cos(angle) * flankDistance, 90, 2310),
-          Phaser.Math.Clamp(this.player.body.y + Math.sin(angle) * flankDistance, 110, 1290),
-        );
-      } else if (!this.rivalSeekingAmmo) {
-        this.rivalTargetPoint.set(this.player.body.x, this.player.body.y);
+        if (this.rivalMode === 'FLANK') {
+          const angle =
+            Math.atan2(
+              this.player.body.y - this.rival.body.y,
+              this.player.body.x - this.rival.body.x,
+            ) + (Math.random() < 0.5 ? Math.PI / 2 : -Math.PI / 2);
+          const flankDistance = Phaser.Math.Between(320, 560);
+          this.rivalTargetPoint.set(
+            Phaser.Math.Clamp(this.player.body.x + Math.cos(angle) * flankDistance, 90, 2310),
+            Phaser.Math.Clamp(this.player.body.y + Math.sin(angle) * flankDistance, 110, 1290),
+          );
+        } else {
+          this.rivalTargetPoint.set(this.player.body.x, this.player.body.y);
+          this.rivalStrafeDirection = Math.random() < 0.5 ? -1 : 1;
+        }
       }
     }
 
@@ -588,7 +588,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       const dx = this.player.body.x - this.rival.body.x;
       const dy = this.player.body.y - this.rival.body.y;
       const d = Math.hypot(dx, dy) || 1;
-      const side = Math.random() < 0.5 ? 1 : -1;
+      const side = this.rivalStrafeDirection;
       this.moveRival(
         d > 560 ? dx / d : (-dy / d) * side,
         d > 560 ? dy / d : (dx / d) * side,
@@ -969,7 +969,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private flashMuzzle(muzzle: Phaser.GameObjects.Graphics) {
     muzzle.setVisible(true).setAlpha(1).setScale(1.9);
     this.tweens.killTweensOf(muzzle);
-    this.tweens.add({ targets: muzzle, alpha: 0.2, scale: 1, duration: 90, ease: 'Quad.easeOut' });
+    this.tweens.add({ targets: muzzle, alpha: 0, scale: 1, duration: 90, ease: 'Quad.easeOut', onComplete: () => muzzle.setVisible(false) });
   }
 
   private spawnShot(
@@ -979,7 +979,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     owner: 'player' | 'rival',
   ) {
     // Same proven projectile as Shooting Range: a discrete, visible paintball.
-    const ball = this.add.circle(x, y, 4, owner === 'player' ? 0xf0dfb6 : 0xe44f3d).setDepth(50);
+    const ball = this.add.circle(x, y, 4, owner === 'player' ? 0x4fc3b1 : 0xf08a4b).setDepth(50);
     this.shots.push({
       body: ball,
       vx: direction.x * 520,
@@ -1242,7 +1242,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       this.rivalPaintHits += 1;
     }
 
-    this.addSplatter(x, y, headshot ? 1.25 : 1);
+    this.addSplatter(x, y, headshot ? 1.25 : 1, owner);
     this.showCombatHighlight(
       owner === 'player'
         ? (headshot ? 'HEADSHOT!' : 'PAINT HIT')
@@ -1295,16 +1295,16 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private recordScrape(owner: 'player' | 'rival', x: number, y: number) {
     if (owner === 'player') this.playerScrapes += 1;
     else this.rivalScrapes += 1;
-    this.addSplatter(x, y, 0.38);
+    this.addSplatter(x, y, 0.38, owner);
     this.showCombatHighlight(owner === 'player' ? 'SCRAPE' : 'SCRAPE ON YOU', '#9fbda8', x, y, 0.72);
   }
 
-  private addSplatter(x: number, y: number, scale = 1) {
+  private addSplatter(x: number, y: number, scale = 1, owner: 'player' | 'rival' = 'rival') {
     const splat = this.add.graphics();
     splat.setDepth(12);
     splat.x = x;
     splat.y = y;
-    const colors = [0xd66a3d, 0xb94d36, 0xe08a54];
+    const colors = owner === 'player' ? [0x2f9f93, 0x4fc3b1, 0x78d6c7] : [0xe06a3d, 0xf08a4b, 0xf2b36f];
     const base = 7 * scale;
     splat.fillStyle(colors[Math.floor(Math.random() * colors.length)], 0.86);
     splat.fillCircle(0, 0, base);
@@ -1390,6 +1390,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     target.damagePaint.setVisible(false);
     target.body.setData('combatState', 'READY');
     target.body.setRotation(0);
+    target.body.setScale(1);
     target.body.setAlpha(1);
     target.body.setPosition(x, y);
     const name = target.body.getData('nameLabel') as Phaser.GameObjects.Text | undefined;
