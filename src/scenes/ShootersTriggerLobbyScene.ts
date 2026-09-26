@@ -430,10 +430,13 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
 
     const budget = this.getBudget();
     const upgradeLevel = Number(localStorage.getItem('shooters-trigger:upgrade-level') || 0);
-    const evasionPlayer = Number(training?.evasion?.playerScore ?? training?.evasion?.score ?? 50);
-    const evasionBot = Number(training?.evasion?.botShootingScore ?? 50);
-    const shootingPlayer = Number(training?.shooting?.playerShootingScore ?? training?.shooting?.score ?? 50);
-    const shootingBot = Number(training?.shooting?.botEvasionScore ?? 50);
+    // The phone is a like-for-like field profile:
+    // EVASION compares YOUR EVASION vs BOT EVASION.
+    // SHOOTING compares YOUR SHOOTING vs BOT SHOOTING.
+    const evasionPlayer = Number(training?.profile?.playerEvasionScore ?? training?.evasion?.playerScore ?? 50);
+    const evasionBot = Number(training?.profile?.botEvasionScore ?? 50);
+    const shootingPlayer = Number(training?.profile?.playerShootingScore ?? training?.shooting?.playerShootingScore ?? 50);
+    const shootingBot = Number(training?.profile?.botShootingScore ?? training?.evasion?.botShootingScore ?? 50);
 
     const range = (score: number) => score < 40 ? 1 : score < 60 ? 2 : score < 80 ? 3 : 4;
     const rangeLabel = (score: number, kind: 'EVASION'|'SHOOTING') => {
@@ -546,11 +549,13 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
         box.style.cssText='padding:12px;border:1px solid #496556;border-radius:12px;background:linear-gradient(145deg,#102018,#0c1711);margin-bottom:9px;position:relative;overflow:hidden;';
         box.innerHTML='<div style="position:absolute;right:-18px;top:-18px;width:70px;height:70px;border:1px solid #365442;border-radius:50%"></div>'+
           '<div style="display:flex;align-items:center;gap:9px">'+icon(iconKind)+
-          '<div><div style="font-size:13px;font-weight:900;color:#f4f1df">'+title+' · '+playerRange+'/4</div>'+
+          '<div><div style="font-size:13px;font-weight:900;color:#f4f1df">'+title+'</div>'+
           '<div style="font-size:9px;color:#9fbda8;margin-top:2px">'+headline+'</div></div></div>'+
           '<div style="margin-top:9px;padding:9px;border-radius:8px;background:#182b20;font-size:10px;color:#f4f1df;line-height:1.5">'+
-          '<b>'+resultText+'</b><br><span style="color:#b9c8bd">'+playerLabel+' · '+rangeLabel(player,title==='EVASION'?'EVASION':'SHOOTING')+
-          ' &nbsp; | &nbsp; '+opponentLabel+' · '+rangeLabel(opponent,title==='EVASION'?'SHOOTING':'EVASION')+'</span>'+
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:7px">'+
+          '<div style="padding:8px;border:1px solid #315845;border-radius:7px"><b>'+playerLabel+' · '+playerRange+'/4</b><br><span style="font-size:9px;color:#b9c8bd">'+rangeLabel(player,title==='EVASION'?'EVASION':'SHOOTING')+'</span></div>'+
+          '<div style="padding:8px;border:1px solid #315845;border-radius:7px"><b>'+opponentLabel+' · '+opponentRange+'/4</b><br><span style="font-size:9px;color:#b9c8bd">'+rangeLabel(opponent,title==='EVASION'?'EVASION':'SHOOTING')+'</span></div></div>'+
+          '<b>'+resultText+'</b>'+
           '<br><span style="font-size:9px;color:#82978a">Range is simple: 1 = learning · 2 = developing · 3 = field-ready · 4 = sharp.</span></div>';
         return box;
       };
@@ -578,7 +583,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
       details.style.cssText='margin-bottom:10px;border:1px solid #38493d;border-radius:10px;background:#111813;';
       details.innerHTML='<summary style="padding:10px;color:#9fbda8;font-size:9px;font-weight:900;cursor:pointer">📡 SHOW FIELD LOG</summary>'+
         '<div style="padding:0 10px 10px;font-size:9px;color:#aebbb2;line-height:1.8">'+
-        'EVASION · survival '+Math.round(Number(evasion?.survivedMs || 0)/1000)+'s · cover used '+Number(evasion?.coverBlocks || 0)+' · resets '+Number(evasion?.eliminations || 0)+'<br>'+
+        'EVASION · best uninterrupted life '+Math.round(Number(evasion?.survived || training?.evasion?.survived || 0)/1000)+'s · resets '+Number(evasion?.eliminations || 0)+' · cover blocks '+Number(evasion?.coverBlocks || 0)+'<br>'+
         'SHOOTING · shots '+Number(shooting?.shotsFired || 0)+' · hits '+Number(shooting?.targetHits || 0)+' · clean headshots '+Number(shooting?.headshots || 0)+' · misses '+Number(shooting?.misses || 0)+'<br>'+
         'These are the reasons behind the simple 1–4 field read — not a scorecard you need to study.</div>';
       card.appendChild(details);
