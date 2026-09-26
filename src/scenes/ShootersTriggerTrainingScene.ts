@@ -72,7 +72,8 @@ const TRAINING_CAMERA_MIN_ZOOM = 0.62;
 const TRAINING_CAMERA_MAX_ZOOM = 0.88;
 const TRAINING_CQE_RANGE = 240;
 const TRAINING_CQE_HARD_RANGE = 150;
-const TRAINING_CQE_COOLDOWN = 180;
+const TRAINING_CQE_COOLDOWN = 240;
+const TRAINING_PROJECTILE_SPEED = 400;
 const TRAINING_SHOOTING_ENGAGEMENT_RANGE = 620;
 const TRAINING_CLOSE_IMPACT_RANGE = 240;
 // Never allow the two training fighters to occupy the same contact space.
@@ -536,16 +537,17 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
           survivalRatio * 50 +
           (1 - accuracy) * 30 +
           coverRatio * 20 -
-          this.trainingEvasionEliminations * 8,
+          this.trainingEvasionEliminations * 12,
         ),
         0,
         100,
       );
       const botShootingScore = clamp(
         Math.round(
-          accuracy * 70 +
-          (this.rivalHeadshots / Math.max(1, incoming)) * 15 +
-          (this.rivalBodyHits / Math.max(1, incoming)) * 15,
+          accuracy * 55 +
+          clamp(this.trainingEvasionEliminations / 2, 0, 1) * 25 +
+          (this.rivalHeadshots / Math.max(1, incoming)) * 10 +
+          (this.rivalBodyHits / Math.max(1, incoming)) * 10,
         ),
         0,
         100,
@@ -690,8 +692,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       Math.round(
         botEvasionSurvival * 50 +
         (1 - botEvasionAccuracy) * 35 +
-        Math.min(15, this.trainingShootingBotEliminations * 5) -
-        this.trainingShootingBotEliminations * 8,
+        (this.trainingShootingBotEliminations === 0 ? 15 : -Math.min(15, this.trainingShootingBotEliminations * 5)),
       ),
       0,
       100,
@@ -699,13 +700,17 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     const shootingEdge = shootingScore > botEvasionScore + 5 ? 'PLAYER'
       : shootingScore < botEvasionScore - 5 ? 'BOT' : 'TIE';
     const evasion = this.trainingEvasionStats || {
-      score: 50, edge: 'TIE', shots: 0, hits: 0, headshots: 0, coverBlocks: 0, scrapes: 0, survived: TRAINING_STAGE_MS,
+      score: 50, edge: 'TIE', shots: 0, hits: 0, headshots: 0, coverBlocks: 0, scrapes: 0, misses: 0, survived: TRAINING_STAGE_MS,
     };
     evasion.playerScore = evasion.score;
-    evasion.botShootingScore = clamp(Math.round((evasion.hits / Math.max(1, evasion.shots)) * 100), 0, 100);
-    const playerEdges = [evasion.edge, shootingEdge].filter(x => x === 'PLAYER').length;
-    const botEdges = [evasion.edge, shootingEdge].filter(x => x === 'BOT').length;
-    const overall = playerEdges > botEdges ? 'PLAYER' : botEdges > playerEdges ? 'BOT' : 'TIE';
+    evasion.botShootingScore = evasion.botShootingScore ?? 50;
+    // The overall Arena signal compares like-for-like ability profiles:
+    // YOUR EVASION + YOUR SHOOTING versus BOT EVASION + BOT SHOOTING.
+    // We never compare a player's evasion score directly against the bot's shooting score.
+    const playerOverallScore = Math.round((Number(evasion.playerScore) + shootingScore) / 2);
+    const botOverallScore = Math.round((Number(evasion.botShootingScore) + botEvasionScore) / 2);
+    const overall = playerOverallScore > botOverallScore + 5 ? 'PLAYER'
+      : playerOverallScore < botOverallScore - 5 ? 'BOT' : 'TIE';
 
     const report = {
       durationMs: TRAINING_STAGE_MS * 2,
@@ -725,6 +730,14 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         misses: this.playerMisses,
       },
       edge: { evasion: evasion.edge, shooting: shootingEdge, overall },
+      profile: {
+        playerOverallScore,
+        botOverallScore,
+        playerEvasionScore: evasion.playerScore,
+        botEvasionScore,
+        playerShootingScore: shootingScore,
+        botShootingScore: evasion.botShootingScore,
+      },
       completedAt: Date.now(),
     };
 
@@ -740,6 +753,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         score: evasion.score,
         playerScore: evasion.playerScore,
         botShootingScore: evasion.botShootingScore,
+        botEvasionScore: evasion.botEvasionScore ?? null,
         eliminations: evasion.eliminations,
         edge: evasion.edge,
       }));
@@ -753,6 +767,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         misses: this.playerMisses,
         shotsFired: shootingShots,
         score: shootingScore,
+        playerShootingScore: shootingScore,
+        botEvasionScore,
         edge: shootingEdge,
       }));
       localStorage.setItem('shooters-trigger:training-report', JSON.stringify(report));
@@ -782,9 +798,9 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     };
     card.innerHTML =
       '<div style="color:#e8c95c;font-size:19px;font-weight:800">FIELD READOUT</div>' +
-      '<div style="margin:8px 0 14px;font-size:10px;line-height:1.55;color:#b9c8bd">Two drills. One read. The field is measuring how you behave when the gun is on the other side.</div>' +
-      '<div style="padding:11px;border:1px solid #496556;border-radius:10px;background:#102018;text-align:left;margin-bottom:8px"><b>🛡️ EVASION</b><br><span style="font-size:10px;color:#b9c8bd">YOUR EVASION · '+range(report.evasion.playerScore)+'/4 &nbsp; | &nbsp; BOT SHOOTING · '+range(report.evasion.botShootingScore)+'/4</span><br><span style="font-size:10px;color:#f4f1df">'+(report.evasion.edge==='PLAYER'?'🟢 YOU EVADED BETTER':report.evasion.edge==='BOT'?'🔴 BOT SHOT BETTER':'🟡 EVEN')+'</span></div>' +
-      '<div style="padding:11px;border:1px solid #496556;border-radius:10px;background:#102018;text-align:left;margin-bottom:8px"><b>🎯 SHOOTING</b><br><span style="font-size:10px;color:#b9c8bd">YOUR SHOOTING · '+range(report.shooting.playerShootingScore)+'/4 &nbsp; | &nbsp; BOT EVASION · '+range(report.shooting.botEvasionScore)+'/4</span><br><span style="font-size:10px;color:#f4f1df">'+(report.shooting.edge==='PLAYER'?'🟢 YOU SHOT BETTER':report.shooting.edge==='BOT'?'🔴 BOT EVADED BETTER':'🟡 EVEN')+'</span></div>' +
+      '<div style="margin:8px 0 14px;font-size:10px;line-height:1.55;color:#b9c8bd">Two drills. Four field skills. Each side is measured on the job it was doing.</div>' +
+      '<div style="padding:11px;border:1px solid #496556;border-radius:10px;background:#102018;text-align:left;margin-bottom:8px"><b>🛡️ EVASION</b><br><span style="font-size:10px;color:#b9c8bd">YOUR EVASION · '+range(report.profile?.playerEvasionScore ?? report.evasion.playerScore)+'/4 &nbsp; | &nbsp; BOT EVASION · '+range(report.profile?.botEvasionScore ?? 50)+'/4</span><br><span style="font-size:10px;color:#f4f1df">'+(report.edge.evasion==='PLAYER'?'🟢 YOU EVADED BETTER':report.edge.evasion==='BOT'?'🔴 BOT EVADED BETTER':'🟡 EVEN')+'</span></div>' +
+      '<div style="padding:11px;border:1px solid #496556;border-radius:10px;background:#102018;text-align:left;margin-bottom:8px"><b>🎯 SHOOTING</b><br><span style="font-size:10px;color:#b9c8bd">YOUR SHOOTING · '+range(report.profile?.playerShootingScore ?? report.shooting.playerShootingScore)+'/4 &nbsp; | &nbsp; BOT SHOOTING · '+range(report.profile?.botShootingScore ?? report.evasion.botShootingScore)+'/4</span><br><span style="font-size:10px;color:#f4f1df">'+(report.edge.shooting==='PLAYER'?'🟢 YOU SHOT BETTER':report.edge.shooting==='BOT'?'🔴 BOT SHOT BETTER':'🟡 EVEN')+'</span></div>' +
       '<div style="margin-top:10px;padding:12px;border:2px solid #e8c95c;border-radius:10px;background:#182b20"><b>OVERALL · '+report.edge.overall+'</b><br><span style="font-size:9px;color:#b9c8bd">EDGE changes your Arena odds. It does not guarantee the result.</span></div>';
     const button = document.createElement('button');
     button.textContent = 'RETURN TO FIELD';
@@ -1386,7 +1402,9 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
   private playerFire() {
     if (!this.isFireAvailable() || this.player.weaponDropped || this.player.refilling || this.player.cooldown > 0) return;
-    this.player.cooldown = ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(130, 330 - this.playerSkill * 1.15);
+    this.player.cooldown = this.trainingMode
+      ? Math.max(240, 330 - this.playerSkill * 1)
+      : ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(130, 330 - this.playerSkill * 1.15);
     if (!this.trainingMode) this.player.ammo -= 1;
     this.playerShotsFired += 1;
     this.playerLastFiredAt = Date.now();
@@ -1424,7 +1442,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     const aim = direction.clone().normalize();
     const trainingCooldown = engagementDistance <= TRAINING_CQE_RANGE
       ? TRAINING_CQE_COOLDOWN
-      : Math.max(155, 260 - accuracy * 1.5);
+      : Math.max(240, 300 - accuracy * 0.8);
     this.rival.cooldown = this.trainingMode ? trainingCooldown : ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(330, 930 - accuracy * 5.4);
     if (!this.trainingMode) this.rival.ammo -= 1;
     this.rivalShotsFired += 1;
@@ -1464,8 +1482,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     const ball = this.add.circle(x, y, 4, 0xe44f3d).setDepth(50);
     this.shots.push({
       body: ball,
-      vx: direction.x * 520,
-      vy: direction.y * 520,
+      vx: direction.x * (this.trainingMode ? TRAINING_PROJECTILE_SPEED : 520),
+      vy: direction.y * (this.trainingMode ? TRAINING_PROJECTILE_SPEED : 520),
       owner,
       ttl: 1100,
       ageMs: 0,
@@ -1955,18 +1973,19 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   private recordCurrentEvasionLife() {
     if (this.trainingStage !== 'EVASION' || this.trainingEvasionLifeStartedAt <= 0) return;
     const elapsed = Math.max(0, Date.now() - this.trainingEvasionLifeStartedAt);
-    this.trainingEvasionSurvivalMs = clamp(
-      this.trainingEvasionSurvivalMs + elapsed,
-      0,
-      TRAINING_STAGE_MS,
-    );
+    // Use the longest clean life as the survival signal. Summing every life
+    // would always approach the full 30 seconds because respawns keep the drill
+    // running, which would hide repeated deaths instead of measuring them.
+    this.trainingEvasionSurvivalMs = Math.max(this.trainingEvasionSurvivalMs, elapsed);
     this.trainingEvasionLifeStartedAt = Date.now();
   }
 
   private recordCurrentShootingBotLife() {
     if (this.trainingStage !== 'SHOOTING' || this.trainingShootingBotLifeStartedAt <= 0) return;
     const elapsed = Math.max(0, Date.now() - this.trainingShootingBotLifeStartedAt);
-    this.trainingShootingBotSurvivalMs = clamp(this.trainingShootingBotSurvivalMs + elapsed, 0, TRAINING_STAGE_MS);
+    // Same principle for the bot: best uninterrupted life, while eliminations
+    // remain a separate penalty in the bot-evasion score.
+    this.trainingShootingBotSurvivalMs = Math.max(this.trainingShootingBotSurvivalMs, elapsed);
     this.trainingShootingBotLifeStartedAt = Date.now();
   }
 
