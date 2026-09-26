@@ -783,7 +783,6 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     // Arena therefore agree even when two scores fall inside the same +/-5
     // "even" display band. This remains a bounded preparation effect only.
     const shootingGap = (this.playerSkill - this.botShootingSkill) / 40;
-    const evasionGap = (this.playerSkill - this.botShootingSkill) / 40;
     const playerEvasionGap = (this.evasionSkill - this.botEvasionSkill) / 40;
     const overallGap = (
       (this.playerSkill + this.evasionSkill) -
