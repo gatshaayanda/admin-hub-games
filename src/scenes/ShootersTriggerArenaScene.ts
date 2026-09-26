@@ -884,6 +884,20 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       const shot = this.shots[i];
       shot.ageMs += delta;
       shot.ttl -= delta;
+
+      // Impact holds are visual-only. Once a paintball has hit or scraped,
+      // stop collision processing until the tiny readable impact beat expires.
+      // Without this guard, the same stationary paintball can register the
+      // same scrape every frame and spawn unbounded splatter/highlight objects.
+      if (shot.impactHoldMs > 0) {
+        shot.impactHoldMs = Math.max(0, shot.impactHoldMs - delta);
+        if (shot.impactHoldMs <= 0) {
+          shot.body.destroy();
+          this.shots.splice(i, 1);
+        }
+        continue;
+      }
+
       shot.body.x += shot.vx * delta / 1000;
       shot.body.y += shot.vy * delta / 1000;
 
