@@ -283,6 +283,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       const shooting = JSON.parse(localStorage.getItem('shooters-trigger:last-shooting') || 'null');
       const evasion = JSON.parse(localStorage.getItem('shooters-trigger:last-evasion') || 'null');
       const report = JSON.parse(localStorage.getItem('shooters-trigger:training-report') || 'null');
+      const profile = report?.profile;
       this.trainingEdge = {
         overall: report?.edge?.overall === 'PLAYER' || report?.edge?.overall === 'BOT' ? report.edge.overall : 'TIE',
         evasion: report?.edge?.evasion === 'PLAYER' || report?.edge?.evasion === 'BOT' ? report.edge.evasion : 'TIE',
@@ -762,8 +763,6 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     const evasion = this.trainingEdge.evasion;
     const overall = this.trainingEdge.overall;
 
-    const ownerShooting = owner === 'player' ? 1 : -1;
-    const targetEvasion = target === this.player ? 1 : -1;
     const shootingBias = shooting === 'TIE' ? 0 : shooting === (owner === 'player' ? 'PLAYER' : 'BOT') ? 1 : -1;
     const evasionBias = evasion === 'TIE' ? 0 : evasion === (target === this.player ? 'PLAYER' : 'BOT') ? -1 : 1;
     const overallBias = overall === 'TIE' ? 0 : overall === (owner === 'player' ? 'PLAYER' : 'BOT') ? 1 : -1;
