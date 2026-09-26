@@ -1026,15 +1026,20 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
         .filter(Boolean)
         .sort((a, b) => a!.distance - b!.distance)[0] ?? null;
 
-      const cleanHits = [
-        weaponHit ? { kind: 'weapon' as const, hit: weaponHit } : null,
+      const coverDistance = this.getFirstCoverIntersectionDistance(shotLine);
+      const bodyHits = [
         headHit ? { kind: 'head' as const, hit: headHit } : null,
         bodyHit ? { kind: 'body' as const, hit: bodyHit } : null,
-      ].filter(Boolean) as Array<{ kind: 'weapon' | 'head' | 'body'; hit: { x: number; y: number; distance: number } }>;
-      cleanHits.sort((a, b) => a.hit.distance - b.hit.distance);
+      ].filter(Boolean) as Array<{ kind: 'head' | 'body'; hit: { x: number; y: number; distance: number } }>;
+      bodyHits.sort((a, b) => a.hit.distance - b.hit.distance);
 
-      const coverDistance = this.getFirstCoverIntersectionDistance(shotLine);
-      const cleanHit = cleanHits[0];
+      // Preserve the Golden ordering: a weapon hit is evaluated before body
+      // damage when the weapon is exposed. Cover still blocks the entire shot
+      // first, and head/body geometry remains unchanged.
+      const cleanHit =
+        weaponHit && (coverDistance === null || weaponHit.distance <= coverDistance)
+          ? { kind: 'weapon' as const, hit: weaponHit }
+          : bodyHits[0] ?? null;
       if (cleanHit && (coverDistance === null || cleanHit.hit.distance <= coverDistance)) {
         if (cleanHit.kind === 'weapon') {
           this.resolveWeaponHit(shot.owner, target, cleanHit.hit.x, cleanHit.hit.y);
