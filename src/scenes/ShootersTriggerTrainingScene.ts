@@ -1501,10 +1501,6 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       shot.ageMs += delta;
       shot.ttl -= delta;
 
-      // Impact holds are visual-only. Once a paintball has hit or scraped,
-      // stop collision processing until the tiny readable impact beat expires.
-      // Without this guard, the same stationary paintball can register the
-      // same scrape every frame and spawn unbounded splatter/highlight objects.
       if (shot.impactHoldMs > 0) {
         shot.impactHoldMs = Math.max(0, shot.impactHoldMs - delta);
         if (shot.impactHoldMs <= 0) {
@@ -1514,18 +1510,24 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         continue;
       }
 
-      shot.body.x += shot.vx * delta / 1000;
-      shot.body.y += shot.vy * delta / 1000;
+      // Paintballs are fast enough that checking only their new position can
+      // tunnel through a fighter between frames. Sweep the whole movement
+      // segment so close-range hits are reliable instead of depending on the
+      // player walking into the projectile at exactly the right frame.
+      const startX = shot.body.x;
+      const startY = shot.body.y;
+      const nextX = startX + shot.vx * delta / 1000;
+      const nextY = startY + shot.vy * delta / 1000;
+      const shotLine = new Phaser.Geom.Line(startX, startY, nextX, nextY);
+      shot.body.setPosition(nextX, nextY);
 
       if (
         shot.ttl <= 0 ||
-        shot.body.x < 0 ||
-        shot.body.x > 2400 ||
-        shot.body.y < 0 ||
-        shot.body.y > 1400 ||
-        this.inCover(shot.body.x, shot.body.y, 0)
+        nextX < 0 ||
+        nextX > 2400 ||
+        nextY < 0 ||
+        nextY > 1400
       ) {
-        if (this.trainingMode && this.trainingStage === 'EVASION' && shot.owner === 'rival') this.trainingCoverBlocks += 1;
         if (shot.owner === 'player') this.playerMisses += 1;
         else this.rivalMisses += 1;
         shot.body.destroy();
@@ -1540,35 +1542,42 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         continue;
       }
 
-      const shotPoint = new Phaser.Math.Vector2(shot.body.x, shot.body.y);
       const targetHeadCenter = new Phaser.Math.Vector2(target.body.x, target.body.y - 25);
       const targetBodyCenter = new Phaser.Math.Vector2(target.body.x, target.body.y + 1);
       const weaponPoint = this.getWeaponPoint(target);
-      const weaponDistance = Phaser.Math.Distance.BetweenPoints(shotPoint, weaponPoint);
-      const headDistance = Phaser.Math.Distance.BetweenPoints(shotPoint, targetHeadCenter);
-      const bodyDistance = Phaser.Math.Distance.BetweenPoints(shotPoint, targetBodyCenter);
-      const hitsWeapon = !target.weaponDropped && weaponDistance <= 16;
-      const hitsHead = headDistance <= 20;
-      const hitsBody = bodyDistance <= 34;
 
-      if (hitsWeapon || hitsHead || hitsBody) {
-        if (hitsWeapon) {
-          this.resolveWeaponHit(shot.owner, target, shot.body.x, shot.body.y);
+      const weaponHit = !target.weaponDropped
+        ? this.getSegmentCircleHit(shotLine, weaponPoint.x, weaponPoint.y, 20)
+        : null;
+      const headHit = this.getSegmentCircleHit(shotLine, targetHeadCenter.x, targetHeadCenter.y, 24);
+      const bodyHit = this.getSegmentCircleHit(shotLine, targetBodyCenter.x, targetBodyCenter.y, 38);
+      const scrapeHit = this.getSegmentCircleHit(shotLine, target.body.x, target.body.y, ARENA_SCRAPE_RADIUS + 4);
+
+      const cleanHits = [
+        weaponHit ? { kind: 'weapon' as const, hit: weaponHit } : null,
+        headHit ? { kind: 'head' as const, hit: headHit } : null,
+        bodyHit ? { kind: 'body' as const, hit: bodyHit } : null,
+      ].filter(Boolean) as Array<{ kind: 'weapon' | 'head' | 'body'; hit: { x: number; y: number; distance: number } }>;
+      cleanHits.sort((a, b) => a.hit.distance - b.hit.distance);
+
+      const coverDistance = this.getFirstCoverIntersectionDistance(shotLine);
+      const cleanHit = cleanHits[0];
+      if (cleanHit && (coverDistance === null || cleanHit.hit.distance <= coverDistance)) {
+        if (cleanHit.kind === 'weapon') {
+          this.resolveWeaponHit(shot.owner, target, cleanHit.hit.x, cleanHit.hit.y);
         } else {
           this.resolveHit(
             shot.owner,
-            hitsHead && (!hitsBody || headDistance <= bodyDistance),
-            shot.body.x,
-            shot.body.y,
+            cleanHit.kind === 'head',
+            cleanHit.hit.x,
+            cleanHit.hit.y,
           );
         }
 
-        // A hit can resolve a training life immediately. That path clears the
-        // projectile array before returning here, so never touch a stale shot.
         if (!this.shots.includes(shot) || !shot.body.active || this.matchOver || this.roundTransition || this.resolvingRound) {
           continue;
         }
-        this.holdShotAtImpact(shot, shot.body.x, shot.body.y);
+        this.holdShotAtImpact(shot, cleanHit.hit.x, cleanHit.hit.y);
         if (shot.impactHoldMs <= 0) {
           shot.body.destroy();
           this.shots.splice(i, 1);
@@ -1576,16 +1585,57 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         continue;
       }
 
-      const scrapeDistance = Math.min(headDistance, bodyDistance);
-      if (scrapeDistance <= ARENA_SCRAPE_RADIUS) {
-        this.recordScrape(shot.owner, shot.body.x, shot.body.y);
-        this.holdShotAtImpact(shot, shot.body.x, shot.body.y);
+      // A cover intersection before the target is a real blocked shot.
+      if (coverDistance !== null && (!cleanHit || coverDistance < cleanHit.hit.distance)) {
+        if (this.trainingMode && this.trainingStage === 'EVASION' && shot.owner === 'rival') this.trainingCoverBlocks += 1;
+        if (shot.owner === 'player') this.playerMisses += 1;
+        else this.rivalMisses += 1;
+        shot.body.destroy();
+        this.shots.splice(i, 1);
+        continue;
+      }
+
+      if (scrapeHit) {
+        this.recordScrape(shot.owner, scrapeHit.x, scrapeHit.y);
+        this.holdShotAtImpact(shot, scrapeHit.x, scrapeHit.y);
         if (shot.impactHoldMs <= 0) {
           shot.body.destroy();
           this.shots.splice(i, 1);
         }
+        continue;
       }
+
+      // No collision: continue the paintball until TTL/range expires.
     }
+  }
+
+  private getSegmentCircleHit(
+    line: Phaser.Geom.Line,
+    centerX: number,
+    centerY: number,
+    radius: number,
+  ) {
+    const nearest = new Phaser.Math.Vector2();
+    const circle = new Phaser.Geom.Circle(centerX, centerY, radius);
+    if (!Phaser.Geom.Intersects.LineToCircle(line, circle, nearest)) return null;
+    return {
+      x: nearest.x,
+      y: nearest.y,
+      distance: Phaser.Math.Distance.Between(line.x1, line.y1, nearest.x, nearest.y),
+    };
+  }
+
+  private getFirstCoverIntersectionDistance(line: Phaser.Geom.Line) {
+    let nearest = Number.POSITIVE_INFINITY;
+    for (const cover of this.covers) {
+      const intersections = Phaser.Geom.Intersects.GetLineToRectangle(line, cover);
+      for (const point of intersections) {
+        const distance = Phaser.Math.Distance.Between(line.x1, line.y1, point.x, point.y);
+        nearest = Math.min(nearest, distance);
+      }
+      if (cover.contains(line.x1, line.y1)) nearest = 0;
+    }
+    return Number.isFinite(nearest) ? nearest : null;
   }
 
   private holdShotAtImpact(shot: Shot, x: number, y: number) {
