@@ -1,5 +1,5 @@
 // Bump this cache version for each production app release so installed PWAs detect a new worker.
-const CACHE_NAME = 'admin-hub-games-v33';
+const CACHE_NAME = 'admin-hub-games-v34';
 const CORE_ASSETS = ['/', '/manifest.webmanifest', '/favicon.svg', '/icons/icon-192.svg', '/icons/icon-512.svg'];
 
 self.addEventListener('install', (event) => {
