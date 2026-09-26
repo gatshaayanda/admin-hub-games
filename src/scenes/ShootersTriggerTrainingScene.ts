@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { installShootersTriggerMobileControls } from '../shooters-trigger-mobile-controls';
 import { abandonShootersTriggerSession, beginShootersTriggerSession, completeShootersTriggerSession } from '../shooters-trigger-session';
+import { saveShootersTriggerFieldProfile } from '../shooters-trigger-field-profile';
 
 type Fighter = {
   body: Phaser.GameObjects.Container;
@@ -817,6 +818,9 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         edge: shootingEdge,
       }));
       localStorage.setItem('shooters-trigger:training-report', JSON.stringify(report));
+      // Persist one canonical, versioned field profile after the raw evidence is saved.
+      // Arena and the phone consume this normalized record; combat never reads it mid-drill.
+      saveShootersTriggerFieldProfile(report);
     } catch {}
 
     completeShootersTriggerSession('TRAINING CAMP COMPLETE · PHONE REPORT UPDATED · ARENA ODDS READY');
