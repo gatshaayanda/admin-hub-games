@@ -1151,8 +1151,19 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   }
 
   private getWeaponPoint(target: Fighter) {
-    const aim = target === this.player ? this.aim : new Phaser.Math.Vector2(this.player.body.x - target.body.x, this.player.body.y - target.body.y).normalize();
-    return new Phaser.Math.Vector2(target.body.x + aim.x * 27, target.body.y + aim.y * 27 + 4);
+    // Keep the exposed marker near the fighter's forward weapon hand, but off
+    // the exact shooter-to-torso centerline. Previously it sat directly on the
+    // incoming projectile path, so ordinary aimed center-mass shots were
+    // intercepted by the gun circle before reaching the body. That made clean
+    // eliminations disproportionately require point-blank/oblique shots.
+    const towardShooter = target === this.player
+      ? this.aim.clone().negate()
+      : new Phaser.Math.Vector2(this.player.body.x - target.body.x, this.player.body.y - target.body.y).normalize();
+    const lateral = new Phaser.Math.Vector2(-towardShooter.y, towardShooter.x);
+    return new Phaser.Math.Vector2(
+      target.body.x + towardShooter.x * 10 + lateral.x * 24,
+      target.body.y + towardShooter.y * 10 + lateral.y * 24 + 4,
+    );
   }
 
   private resolveWeaponHit(owner: 'player' | 'rival', target: Fighter, hitX: number, hitY: number) {
