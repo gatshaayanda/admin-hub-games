@@ -598,6 +598,55 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
         '<div style="font-size:8px;color:#6f9b7f;margin-top:6px">EVA '+grade(evasionPlayer)+'/4 · SHOOT '+grade(shootingPlayer)+'/4</div>';
       card.appendChild(overallBox);
 
+      // PHONE-ONLY PEAK HIGHLIGHTS
+      // These are presentation-only summaries of the same completed Training
+      // evidence already stored in the canonical field profile/raw report.
+      // They never feed Arena logic or alter combat state.
+      const peakSeconds = Math.max(0, Math.round(Number(evasion?.survived || training?.evasion?.survived || 0) / 1000));
+      const peakHeadshots = Math.max(0, Number(shooting?.headshots || training?.shooting?.headshots || 0));
+      const peakHits = Math.max(0, Number(shooting?.targetHits || training?.shooting?.hits || 0));
+      const peakCover = Math.max(0, Number(evasion?.coverBlocks || training?.evasion?.coverBlocks || 0));
+      const peakHighlights = [
+        {
+          label: 'LONGEST RUN',
+          value: peakSeconds + 's',
+          note: peakSeconds > 0 ? 'best uninterrupted evasion life' : 'no survival peak recorded yet',
+          icon: '⏱',
+        },
+        {
+          label: 'CLEANEST FINISH',
+          value: peakHeadshots + ' HS',
+          note: peakHits > 0 ? peakHits + ' confirmed shooting hits' : 'no confirmed shooting hits yet',
+          icon: '◎',
+        },
+        {
+          label: 'COVER PEAK',
+          value: String(peakCover),
+          note: peakCover > 0 ? 'incoming shots blocked by cover' : 'no cover blocks recorded yet',
+          icon: '▣',
+        },
+      ];
+
+      const peakBox = document.createElement('div');
+      peakBox.style.cssText='padding:11px;border:1px solid #e8c95c;border-radius:11px;background:#101b14;margin-bottom:8px;overflow:hidden;';
+      peakBox.innerHTML =
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">'+
+        '<div><div style="font-size:8px;color:#9fbda8;letter-spacing:1px">PEAK HIGHLIGHTS</div>'+
+        '<div style="font-size:13px;font-weight:900;color:#f4f1df;margin-top:2px">YOUR TRAINING MOMENTS</div></div>'+
+        '<div style="font-size:16px;color:#e8c95c;animation:stPeakPulse 1.8s ease-in-out infinite">✦</div></div>'+
+        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px">'+
+        peakHighlights.map((item) =>
+          '<div style="position:relative;padding:8px 5px;border:1px solid #315845;border-radius:8px;background:#18271d;overflow:hidden">'+
+          '<div style="font-size:14px;color:#e8c95c">'+item.icon+'</div>'+
+          '<div style="font-size:7px;color:#9fbda8;margin-top:4px;letter-spacing:.5px">'+item.label+'</div>'+
+          '<div style="font-size:16px;font-weight:900;color:#f4f1df;margin-top:2px">'+item.value+'</div>'+
+          '<div style="font-size:7px;color:#aebbb2;line-height:1.35;margin-top:3px">'+item.note+'</div>'+
+          '</div>'
+        ).join('')+
+        '</div>'+
+        '<style>@keyframes stPeakPulse{50%{transform:scale(1.18);opacity:.55}}</style>';
+      card.appendChild(peakBox);
+
       const styleBox=document.createElement('div');
       styleBox.style.cssText='padding:10px;border:1px solid #38493d;border-radius:10px;background:#111813;margin-bottom:8px;';
       styleBox.innerHTML =
