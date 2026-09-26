@@ -169,11 +169,11 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     this.rival = this.createFighter(ARENA_RIVAL_SPAWN.x, ARENA_RIVAL_SPAWN.y, 0x9b3f3f, this.rivalProfile.operator, false);
 
     this.player.speed = ARENA_NEUTRAL_BASELINE ? ARENA_BASE_SPEED : 170 + this.evasionSkill * 0.45;
-    const baseCooldown = ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(130, 330 - this.playerSkill * 1.15);
-    this.player.cooldown = Math.max(110, baseCooldown + this.getCqeCooldownShift('player', this.rival));
+    const playerBaseCooldown = ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(130, 330 - this.playerSkill * 1.15);
+    this.player.cooldown = Math.max(110, playerBaseCooldown + this.getCqeCooldownShift('player', this.rival));
     this.rival.speed = ARENA_NEUTRAL_BASELINE ? ARENA_BASE_SPEED : 145 + this.rivalProfile.movement * 0.55;
-    const baseCooldown = ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(330, 930 - this.rivalProfile.shooting * 5.4);
-    this.rival.cooldown = Math.max(300, baseCooldown + this.getCqeCooldownShift('rival', this.player));
+    const rivalBaseCooldown = ARENA_NEUTRAL_BASELINE ? ARENA_BASE_COOLDOWN : Math.max(330, 930 - this.rivalProfile.shooting * 5.4);
+    this.rival.cooldown = Math.max(300, rivalBaseCooldown + this.getCqeCooldownShift('rival', this.player));
 
     this.cameras.main.setBounds(0, 0, 2400, 1400);
     this.cameras.main.startFollow(this.player.body, true, 0.08, 0.08);
