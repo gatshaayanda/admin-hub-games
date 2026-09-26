@@ -1161,7 +1161,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     }
     if (owner === 'player') this.playerWeaponKnockouts += 1;
     else this.rivalWeaponKnockouts += 1;
-    this.addSplatter(hitX, hitY, 0.7);
+    this.addSplatter(hitX, hitY, 0.7, owner);
     this.showCombatHighlight(owner === 'player' ? 'GUN HIT · GUN DOWN' : 'YOUR GUN IS DOWN', '#e8c95c', hitX, hitY, 0.95);
     this.dropWeapon(target);
     this.statusHud?.setText(target === this.player ? 'GUN DOWN  ·  RECOVER OR REPOSITION' : 'RIVAL GUN DOWN  ·  PRESS THE RECOVERY');
@@ -1322,11 +1322,11 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     if (target.wounded || target.downed) return;
     target.wounded = true;
     target.damagePaint.clear();
-    target.damagePaint.fillStyle(0xd66a3d, 0.82);
+    target.damagePaint.fillStyle(target === this.player ? 0x2f9f93 : 0xe06a3d, 0.82);
     target.damagePaint.fillCircle(-9, -2, 5);
     target.damagePaint.fillCircle(4, 4, 4);
     target.damagePaint.fillCircle(8, 10, 3);
-    target.damagePaint.fillStyle(0xf0a05f, 0.68);
+    target.damagePaint.fillStyle(target === this.player ? 0x78d6c7 : 0xf2b36f, 0.68);
     target.damagePaint.fillCircle(-2, 1, 2.5);
     target.damagePaint.fillCircle(12, 0, 2);
     target.damagePaint.setVisible(true);
@@ -1348,7 +1348,7 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     target.downed = true;
     target.wounded = true;
     if (!target.damagePaint.visible) {
-      target.damagePaint.fillStyle(0xd66a3d, 0.9);
+      target.damagePaint.fillStyle(target === this.player ? 0x2f9f93 : 0xe06a3d, 0.9);
       target.damagePaint.fillCircle(-8, -1, 6);
       target.damagePaint.fillCircle(4, 5, 5);
       target.damagePaint.fillCircle(10, 10, 3.5);
