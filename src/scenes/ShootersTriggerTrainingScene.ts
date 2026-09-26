@@ -293,8 +293,13 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     // A player elimination intentionally leaves the fighter downed for a short
     // readable beat; if a lifecycle flag is raised during that beat, putting the
     // respawn check behind the guard can leave the scene looking frozen forever.
-    if (this.trainingRespawnAt > 0 && !this.paused && Date.now() >= this.trainingRespawnAt) {
-      this.finishTrainingRespawn();
+    if (this.trainingMode && !this.paused && !this.trainingDone && this.trainingStage !== 'BREAK') {
+      if ((this.player.downed || this.rival.downed) && this.trainingRespawnAt <= 0) {
+        this.scheduleTrainingRespawn();
+      }
+      if (this.trainingRespawnAt > 0 && Date.now() >= this.trainingRespawnAt) {
+        this.finishTrainingRespawn();
+      }
     }
 
     if (this.trainingDone || this.paused || this.trainingStage === 'BREAK' || this.roundTransition || this.resolvingRound) return;
@@ -865,26 +870,20 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
   private loadPreparation() {
     try {
-      const shooting = JSON.parse(localStorage.getItem('shooters-trigger:last-shooting') || 'null');
-      const evasion = JSON.parse(localStorage.getItem('shooters-trigger:last-evasion') || 'null');
       const report = JSON.parse(localStorage.getItem('shooters-trigger:training-report') || 'null');
+      const profile = report?.profile;
       this.trainingEdge = {
         overall: report?.edge?.overall === 'PLAYER' || report?.edge?.overall === 'BOT' ? report.edge.overall : 'TIE',
         evasion: report?.edge?.evasion === 'PLAYER' || report?.edge?.evasion === 'BOT' ? report.edge.evasion : 'TIE',
         shooting: report?.edge?.shooting === 'PLAYER' || report?.edge?.shooting === 'BOT' ? report.edge.shooting : 'TIE',
       };
-      if (this.trainingEdge.overall === 'TIE') {
-        this.playerSkill = 50;
-        this.evasionSkill = 50;
-        return;
-      }
-      this.playerSkill = clamp(Number(shooting?.accuracy || 0), 0, 100);
-      const survived = clamp(Number(evasion?.survived || 0) / 300, 0, 100);
-      const cover = clamp(Number(evasion?.coverBlocks || 0) * 8, 0, 35);
-      this.evasionSkill = clamp(survived + cover, 0, 100);
-      const playerBoost = this.trainingEdge.overall === 'PLAYER' ? 8 : -8;
-      this.playerSkill = clamp(this.playerSkill + playerBoost, 0, 100);
-      this.evasionSkill = clamp(this.evasionSkill + playerBoost, 0, 100);
+
+      // Arena receives the four like-for-like field skills directly:
+      // YOUR EVASION, BOT EVASION, YOUR SHOOTING, BOT SHOOTING.
+      // Do not reconstruct skill from legacy drill fields or from a win/loss
+      // boost; that makes the phone read one thing while Arena plays another.
+      this.playerSkill = clamp(Number(profile?.playerShootingScore ?? 50), 0, 100);
+      this.evasionSkill = clamp(Number(profile?.playerEvasionScore ?? 50), 0, 100);
     } catch {
       this.trainingEdge = { overall: 'TIE', evasion: 'TIE', shooting: 'TIE' };
       this.playerSkill = 50;
@@ -1741,6 +1740,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     const target = owner === 'player' ? this.rival : this.player;
     if (!target?.body?.active || target.downed) return;
     const shooter = owner === 'player' ? this.player : this.rival;
+    this.resolvingRound = true;
     const x = hitX ?? target.body.x;
     const y = hitY ?? target.body.y;
     const engagementDistance = Phaser.Math.Distance.Between(
@@ -1787,6 +1787,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
       );
       this.eliminateFighter(target, owner);
       this.roundPoint(owner);
+      this.resolvingRound = false;
       return;
     }
 
@@ -1812,6 +1813,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     } else {
       this.markFighterWounded(target);
     }
+    this.resolvingRound = false;
   }
 
   private recordScrape(owner: 'player' | 'rival', x: number, y: number) {
@@ -1971,18 +1973,29 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
   private scheduleTrainingRespawn() {
     this.trainingRespawnAt = Date.now() + 220;
     if (this.trainingRespawnTimer) window.clearTimeout(this.trainingRespawnTimer);
-    this.trainingRespawnTimer = window.setTimeout(() => {
-      this.trainingRespawnTimer = undefined;
-      // Browser timer is the hard recovery path. The update-loop check remains
-      // as a second safety net if the tab throttles timers.
+
+    // Use both Phaser's clock and a browser timer. Either path can recover the
+    // drill; finishTrainingRespawn() is idempotent so the two paths cannot
+    // double-respawn the fighters.
+    this.time.delayedCall(220, () => {
       if (this.trainingRespawnAt > 0 && this.scene.isActive() && !this.paused) {
         this.finishTrainingRespawn();
       }
-    }, 220);
+    });
+
+    this.trainingRespawnTimer = window.setTimeout(() => {
+      this.trainingRespawnTimer = undefined;
+      if (this.trainingRespawnAt > 0 && this.scene.isActive() && !this.paused) {
+        this.finishTrainingRespawn();
+      }
+    }, 260);
   }
 
   private finishTrainingRespawn() {
-    if (this.trainingRespawnAt <= 0) return;
+    if (this.trainingRespawnAt <= 0) {
+      if (!this.trainingMode || this.trainingDone || this.paused || this.trainingStage === 'BREAK') return;
+      if (!this.player.downed && !this.rival.downed) return;
+    }
     if (this.trainingRespawnTimer) window.clearTimeout(this.trainingRespawnTimer);
     this.trainingRespawnTimer = undefined;
     this.trainingRespawnAt = 0;
