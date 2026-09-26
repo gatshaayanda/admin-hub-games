@@ -4073,6 +4073,15 @@ For adaptive tuning, prefer bounded performance-based adjustments rather than ab
 After Training Camp is declared playtest-complete, the **next gameplay task is Arena Close Quarter Engagement**. Do not start unrelated game features before this baseline is implemented and tested. Preserve the current Arena bot movement/evasion/ammo behaviour while adding CQE as a narrow engagement layer.
 
 
+### Shooters Trigger — Arena Golden Playthrough Baseline completed in source
+
+- Arena now uses the same swept projectile model as Training: each paintball sweeps its full frame segment; cover is resolved before fighter hits; head 20px, body 34px, scrape 44px remain unchanged.
+- Arena now consumes the four like-for-like training values directly: player evasion, bot evasion, player shooting and bot shooting. Overall edge remains a combined read and does not replace the specific dimensions.
+- Arena CQE is now a distinct close-range state (220px) only when both sides have fired recently and LOS is clear. CQE changes bounded response/cadence behaviour; it does not enlarge hitboxes, add damage, auto-hit on proximity or redirect player aim.
+- CQE weighting is deliberately split across shooting execution, evasion response and a smaller overall-edge component. It is intended to create a stronger but non-guaranteed close-range edge; empirical 2/3 ordinary and 2.5/3 CQE calibration still requires controlled playtest runs.
+- The player-facing Field Report is intentionally compact: two 1–4 skill rows, one Arena-odds read, one gameplay-style temperament, and an expandable field log. Internal numerical evidence remains stored for Arena.
+- Armory remains untouched in this checkpoint.
+
 ### Shooters Trigger — Training readout and reversed-drill contract
 
 - Training Evasion and Shooting are one paired evaluation. Evasion: player unarmed, bot armed and aggressive. Shooting: player armed, bot unarmed and evasive.
