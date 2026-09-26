@@ -292,6 +292,8 @@ export class WardrobeLabScene extends Phaser.Scene {
   private variantIndex = 0;
   private direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT' = 'DOWN';
   private previewSprite!: Phaser.GameObjects.Image;
+  private walkFrame = 0;
+  private walkFrameClock = 0;
 
   constructor() {
     super('WardrobeLabScene');
@@ -452,6 +454,17 @@ export class WardrobeLabScene extends Phaser.Scene {
     window.dispatchEvent(new Event('admin-hub-games:game-ready'));
   }
 
+  update(_time: number, delta: number) {
+    const action = ACTIONS[this.actionIndex];
+    const walking = action === 'WALK' || action === 'WALK LEFT' || action === 'WALK RIGHT';
+    if (!walking || !this.previewSprite) return;
+    this.walkFrameClock += delta;
+    if (this.walkFrameClock < 180) return;
+    this.walkFrameClock = 0;
+    this.walkFrame = this.walkFrame === 0 ? 1 : 0;
+    this.drawPreview(action);
+  }
+
   private makeButton(x: number, y: number, width: number, label: string) {
     const button = this.add.text(x, y, label, {
       fontFamily: 'monospace',
@@ -501,7 +514,7 @@ export class WardrobeLabScene extends Phaser.Scene {
 
   private drawPreview(action: WardrobeAction) {
     const walking = action === 'WALK' || action === 'WALK LEFT' || action === 'WALK RIGHT';
-    const frame = walking && Math.floor(this.time.now / 180) % 2 === 1 ? 1 : 0;
+    const frame = walking ? this.walkFrame : 0;
     const key = this.getSpriteKey(frame);
     this.previewSprite.setTexture(key).setDisplaySize(48, 64).setOrigin(0.5, 0.5);
     this.preview.clear().setRotation(0);
@@ -539,13 +552,15 @@ export class WardrobeLabScene extends Phaser.Scene {
 
   private getSpriteKey(frame: number) {
     if (this.direction === 'UP') return 'field-operator-up';
-    if (this.direction === 'LEFT') return frame ? 'field-operator-left-walk1' : 'field-operator-left';
-    if (this.direction === 'RIGHT') return frame ? 'field-operator-right-walk1' : 'field-operator-right';
-    return frame ? 'field-operator-down-walk1' : 'field-operator-down';
+    if (this.direction === 'LEFT') return frame ? 'field-operator-left-walk1' : 'field-operator-left-walk0';
+    if (this.direction === 'RIGHT') return frame ? 'field-operator-right-walk1' : 'field-operator-right-walk0';
+    return frame ? 'field-operator-down-walk1' : 'field-operator-down-walk0';
   }
 
   private setDirection(direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT') {
     this.direction = direction;
+    this.walkFrame = 0;
+    this.walkFrameClock = 0;
     this.drawPreview(ACTIONS[this.actionIndex]);
     this.detailText?.setText(this.describe(ACTIONS[this.actionIndex]) + ' · ' + direction + ' · FIELD OPERATOR 01');
   }
