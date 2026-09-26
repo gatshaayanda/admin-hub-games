@@ -422,13 +422,48 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     // armed player. Blend a strong radial retreat with lateral breaks so it
     // does not simply orbit inside the player's easy auto-aim band.
     // No concealment or hit/damage changes: this is movement behaviour only.
+    // dx/dy point FROM the bot TO the player. Retreat must use the
+    // opposite radial vector; the previous positive vector actually charged
+    // the player. Keep lateral movement subordinate to the away vector.
     const side = Math.sin(Date.now() / 520) >= 0 ? 1 : -1;
-    const retreatWeight = d < TRAINING_SHOOTING_ENGAGEMENT_RANGE ? 1 : 0.72;
-    const lateralWeight = d < TRAINING_CQE_RANGE ? 0.62 : 0.38;
-    const desiredX = (dx / d) * retreatWeight + (-dy / d) * side * lateralWeight;
-    const desiredY = (dy / d) * retreatWeight + (dx / d) * side * lateralWeight;
+    const retreatX = -dx / d;
+    const retreatY = -dy / d;
+    const lateralWeight = d < TRAINING_CQE_RANGE ? 0.32 : 0.22;
+    const desiredX = retreatX + (-retreatY) * side * lateralWeight;
+    const desiredY = retreatY + retreatX * side * lateralWeight;
 
-    this.moveRival(desiredX, desiredY, delta, 205, false);
+    this.moveTrainingTargetAway(desiredX, desiredY, retreatX, retreatY, delta);
+  }
+
+  private moveTrainingTargetAway(
+    desiredX: number,
+    desiredY: number,
+    awayX: number,
+    awayY: number,
+    delta: number,
+  ) {
+    // A candidate is accepted only if its movement has a positive component
+    // away from the player. Unlike generic obstacle fallback, this prevents
+    // the evasive target from ever selecting a forward/charging step.
+    const baseAngle = Math.atan2(desiredY, desiredX);
+    const speed = this.rival.wounded ? this.rival.speed * 0.92 : 205;
+    const step = speed * delta / 1000;
+    const offsets = [0, 0.35, -0.35, 0.72, -0.72, 1.05, -1.05];
+    for (const offset of offsets) {
+      const angle = baseAngle + offset;
+      const moveX = Math.cos(angle);
+      const moveY = Math.sin(angle);
+      if (moveX * awayX + moveY * awayY <= 0.18) continue;
+      const nx = Phaser.Math.Clamp(this.rival.body.x + moveX * step, 42, 2358);
+      const ny = Phaser.Math.Clamp(this.rival.body.y + moveY * step, 90, 1350);
+      if (this.inCover(nx, ny, 14)) continue;
+      this.rival.body.setPosition(nx, ny);
+      this.rivalMoving = true;
+      if (Math.abs(moveX) > 0.08) this.rivalFacing = moveX < 0 ? -1 : 1;
+      return;
+    }
+    // At a map edge or blocked retreat, stop rather than walk toward the player.
+    this.rivalMoving = false;
   }
 
   private enforceTrainingSeparation() {
@@ -673,42 +708,44 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
     const shootingShots = this.playerShotsFired;
     const shootingHits = this.playerBodyHits + this.playerHeadshots;
     const accuracy = shootingShots > 0 ? shootingHits / shootingShots : 0;
-    // YOUR SHOOTING is judged on the quality of the shots you actually took.
-    // Close impacts and headshots sharpen the read, but cannot turn a tiny sample
-    // into an automatic 4/4.
-    const closeImpactBonus = Math.min(8, this.playerCloseHits * 2);
-    const shootingScore = clamp(
-      Math.round(
-        accuracy * 70 +
-        (this.playerHeadshots / Math.max(1, shootingShots)) * 15 +
-        (this.playerBodyHits / Math.max(1, shootingShots)) * 10 +
-        (Math.min(1, this.playerCloseHits / Math.max(1, shootingHits || 1))) * 5 +
-        closeImpactBonus,
-      ),
-      0,
-      100,
-    );
-    // BOT EVASION is the mirror: how long the target stayed alive, how often
-    // the player missed it, and how often it forced another life reset.
-    // Eliminations are a penalty to evasion skill, never a bonus.
+    const playerCleanShotRate = shootingShots > 0 ? shootingHits / shootingShots : 0;
+    const playerHitQuality = shootingHits > 0
+      ? (this.playerHeadshots * 1 + this.playerBodyHits * 0.65) / shootingHits
+      : 0;
+    // Grade shot-making from rates, not raw totals. The previous raw per-hit
+    // bonus let a long spray inflate the score and made tiny samples erratic.
+    // Accuracy dominates; confirmed hit quality is a modest secondary signal.
+    const shootingScore = clamp(Math.round(
+      playerCleanShotRate * 80 + playerHitQuality * 20,
+    ), 0, 100);
+    // Bot shooting uses the same normalized clean-hit-rate scale as player
+    // shooting. Compare like-for-like accuracy evidence, not unlike weighted
+    // composites from the two drills.
+    const evasionIncoming = Number(this.trainingEvasionStats?.shots ?? 0);
+    const evasionHits = Number(this.trainingEvasionStats?.hits ?? 0);
+    const botCleanShotRate = evasionIncoming > 0 ? evasionHits / evasionIncoming : 0;
+    const botHeadshots = Number(this.trainingEvasionStats?.headshots ?? 0);
+    const botHitQuality = evasionHits > 0
+      ? (botHeadshots * 1 + Math.max(0, evasionHits - botHeadshots) * 0.65) / evasionHits
+      : 0;
+    const botShootingScore = clamp(Math.round(
+      botCleanShotRate * 80 + botHitQuality * 20,
+    ), 0, 100);
+    // Bot evasion mirrors the player's evasion score: longest uninterrupted
+    // survival, share of incoming player shots avoided, and no-death bonus.
     const botEvasionSurvival = clamp(this.trainingShootingBotSurvivalMs / TRAINING_STAGE_MS, 0, 1);
-    const botEvasionAccuracy = shootingShots > 0 ? shootingHits / shootingShots : 0;
-    const botEvasionScore = clamp(
-      Math.round(
-        botEvasionSurvival * 50 +
-        (1 - botEvasionAccuracy) * 35 +
-        (this.trainingShootingBotEliminations === 0 ? 15 : -Math.min(15, this.trainingShootingBotEliminations * 5)),
-      ),
-      0,
-      100,
-    );
-    const shootingEdge = shootingScore > (this.trainingEvasionStats?.botShootingScore ?? 50) + 5 ? 'PLAYER'
-      : shootingScore < (this.trainingEvasionStats?.botShootingScore ?? 50) - 5 ? 'BOT' : 'TIE';
+    const botEvasionScore = clamp(Math.round(
+      botEvasionSurvival * 50 +
+      (1 - playerCleanShotRate) * 35 +
+      (this.trainingShootingBotEliminations === 0 ? 15 : -Math.min(15, this.trainingShootingBotEliminations * 5)),
+    ), 0, 100);
+    const shootingEdge = shootingScore > botShootingScore + 5 ? 'PLAYER'
+      : shootingScore < botShootingScore - 5 ? 'BOT' : 'TIE';
     const evasion = this.trainingEvasionStats || {
       score: 50, edge: 'TIE', shots: 0, hits: 0, headshots: 0, coverBlocks: 0, scrapes: 0, misses: 0, survived: TRAINING_STAGE_MS,
     };
     evasion.playerScore = Number(evasion.playerScore ?? evasion.score ?? 50);
-    evasion.botShootingScore = Number(evasion.botShootingScore ?? 50);
+    evasion.botShootingScore = botShootingScore;
     // The final profile is like-for-like:
     // EVASION = YOUR EVASION vs BOT EVASION.
     // SHOOTING = YOUR SHOOTING vs BOT SHOOTING.
@@ -744,7 +781,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         playerEvasionScore: evasion.playerScore,
         botEvasionScore,
         playerShootingScore: shootingScore,
-        botShootingScore: evasion.botShootingScore,
+        botShootingScore,
       },
       completedAt: Date.now(),
     };
@@ -760,7 +797,7 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         misses: evasion.misses,
         score: evasion.score,
         playerScore: evasion.playerScore,
-        botShootingScore: evasion.botShootingScore,
+        botShootingScore,
         botEvasionScore,
         eliminations: evasion.eliminations,
         edge: evasion.edge,
