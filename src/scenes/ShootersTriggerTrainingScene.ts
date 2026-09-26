@@ -71,7 +71,7 @@ const TRAINING_RIVAL_SPAWN = new Phaser.Math.Vector2(1740, 700);
 const TRAINING_CAMERA_MIN_ZOOM = 0.62;
 const TRAINING_CAMERA_MAX_ZOOM = 0.88;
 const TRAINING_CQE_RANGE = 240;
-const TRAINING_CQE_HARD_RANGE = 150;
+const TRAINING_CQE_HARD_RANGE = 120;
 const TRAINING_CQE_COOLDOWN = 240;
 const TRAINING_PROJECTILE_SPEED = 400;
 const TRAINING_SHOOTING_ENGAGEMENT_RANGE = 620;
@@ -80,7 +80,7 @@ const TRAINING_CLOSE_IMPACT_RANGE = 240;
 // Point-blank overlap was causing the aggressive bot to physically collapse
 // into the player during CQE and could restart the elimination lifecycle
 // repeatedly on touch.
-const TRAINING_MIN_SEPARATION = 110;
+const TRAINING_MIN_SEPARATION = 72;
 
 type TrainingStage = 'EVASION' | 'BREAK' | 'SHOOTING';
 
@@ -375,8 +375,10 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         // engagements instead of spending the 30 seconds jogging around.
         this.moveRival(dx / d, dy / d, delta, 205, false);
       } else {
-        // Inside CQE, stay engaged rather than orbiting. Very close combat gets
-        // a short response window; this makes close-range pressure measurable.
+        // CQE is the decisive close-fight band. The bot keeps closing until the
+        // minimum physical separation, then holds that contact distance and
+        // fires down the direct line. No damage bonus is added: the Arena hit
+        // rules remain the rules here (head = instant, body = two, scrape = paint).
         const side = d <= TRAINING_CQE_HARD_RANGE
           ? 0
           : (this.player.body.y >= this.rival.body.y ? -1 : 1);
@@ -1549,8 +1551,8 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
         ? this.getSegmentCircleHit(shotLine, weaponPoint.x, weaponPoint.y, 20)
         : null;
       const headHit = this.getSegmentCircleHit(shotLine, targetHeadCenter.x, targetHeadCenter.y, 24);
-      const bodyHit = this.getSegmentCircleHit(shotLine, targetBodyCenter.x, targetBodyCenter.y, 38);
-      const scrapeHit = this.getSegmentCircleHit(shotLine, target.body.x, target.body.y, ARENA_SCRAPE_RADIUS + 4);
+      const bodyHit = this.getSegmentCircleHit(shotLine, targetBodyCenter.x, targetBodyCenter.y, ARENA_BODY_CORE_RADIUS);
+      const scrapeHit = this.getSegmentCircleHit(shotLine, target.body.x, target.body.y, ARENA_SCRAPE_RADIUS);
 
       const cleanHits = [
         weaponHit ? { kind: 'weapon' as const, hit: weaponHit } : null,
