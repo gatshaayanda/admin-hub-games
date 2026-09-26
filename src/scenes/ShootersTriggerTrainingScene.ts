@@ -1550,22 +1550,37 @@ export class ShootersTriggerTrainingScene extends Phaser.Scene {
 
       const targetHeadCenter = new Phaser.Math.Vector2(target.body.x, target.body.y - 25);
       const targetBodyCenter = new Phaser.Math.Vector2(target.body.x, target.body.y + 1);
-      // Training measures only the six field outcomes: headshot, two-hit
-      // body damage, scrape, miss, and cover block. A weapon collision must
-      // not intercept a valid body/head trajectory and turn a close CQE shot
-      // into a random gun-scrape result.
+      // Training uses the same physical hit geometry as Arena. The projectile
+      // segment is authoritative, but close range never enlarges the clean-hit
+      // volume and never converts proximity into a hit.
       const weaponHit = null;
-      const closeBodyBonus = this.trainingMode
-        ? Math.max(0, 8 * (1 - clamp(
-            (Phaser.Math.Distance.Between(shot.owner === 'player' ? this.player.body.x : this.rival.body.x, shot.owner === 'player' ? this.player.body.y : this.rival.body.y, target.body.x, target.body.y) - TRAINING_MIN_SEPARATION) /
-              Math.max(1, TRAINING_CQE_RANGE - TRAINING_MIN_SEPARATION),
-            0,
-            1,
-          )))
-        : 0;
-      const headHit = this.getSegmentCircleHit(shotLine, targetHeadCenter.x, targetHeadCenter.y, 24);
-      const bodyHit = this.getSegmentCircleHit(shotLine, targetBodyCenter.x, targetBodyCenter.y, ARENA_BODY_CORE_RADIUS + closeBodyBonus);
-      const scrapeHit = this.getSegmentCircleHit(shotLine, target.body.x, target.body.y, ARENA_SCRAPE_RADIUS);
+      const headHit = this.getSegmentCircleHit(
+        shotLine,
+        targetHeadCenter.x,
+        targetHeadCenter.y,
+        20,
+      );
+      const bodyHit = this.getSegmentCircleHit(
+        shotLine,
+        targetBodyCenter.x,
+        targetBodyCenter.y,
+        ARENA_BODY_CORE_RADIUS,
+      );
+      const headScrapeHit = this.getSegmentCircleHit(
+        shotLine,
+        targetHeadCenter.x,
+        targetHeadCenter.y,
+        ARENA_SCRAPE_RADIUS,
+      );
+      const bodyScrapeHit = this.getSegmentCircleHit(
+        shotLine,
+        targetBodyCenter.x,
+        targetBodyCenter.y,
+        ARENA_SCRAPE_RADIUS,
+      );
+      const scrapeHit = [headScrapeHit, bodyScrapeHit]
+        .filter(Boolean)
+        .sort((a, b) => a!.distance - b!.distance)[0] ?? null;
 
       const cleanHits = [
         weaponHit ? { kind: 'weapon' as const, hit: weaponHit } : null,

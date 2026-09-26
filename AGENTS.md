@@ -4023,8 +4023,8 @@ The camera approach is based on established combat-framing practice: center the 
 The current main checkpoint is the protected **Golden Baseline v2** for Shooters Trigger. Training Camp is the evaluation layer immediately before Arena. Do not change its combat feel, scoring semantics, camera framing or role rules casually; tune only from observed playtest evidence.
 
 ### Training CQE baseline now implemented
-- Training Evasion now aggressively closes for contact, fires whenever line-of-sight is available, and routes around blocking cover instead of repeatedly shooting an obstacle.
-- Close engagement is a pressure/response window, not an automatic hit or damage cheat.
+- Training Evasion now aggressively closes into the current 72px minimum-separation CQE band, fires whenever line-of-sight is available, and routes around blocking cover instead of repeatedly shooting an obstacle.
+- Close engagement is a pressure/response window, not an automatic hit, damage cheat, or enlarged hitbox.
 - Player deaths remain part of evasion scoring: survival time is primary, bot accuracy is compared against player evasion, and repeated eliminations reduce the player's evasion score.
 - A death resets that combat life while the same 30-second stage continues; the stage timer does not restart.
 
@@ -4085,7 +4085,7 @@ After Training Camp is declared playtest-complete, the **next gameplay task is A
 ### Training contact-overlap hardening — September 25
 
 - The 420px respawn separation fixed one lifecycle case, but the bot could still physically close the gap during normal CQE and touch/overlap the player.
-- Training must maintain a hard 110px minimum separation. The aggressive Evasion bot may pressure into CQE, but it must stop advancing at contact range; a safety pass separates the fighters before the next combat frame.
+- Training must maintain the current 72px minimum separation. The aggressive Evasion bot may pressure into CQE, but it must stop advancing at contact range; a safety pass separates the fighters before the next combat frame.
 - This is a collision/lifecycle safety invariant, not a damage or difficulty boost.
 
 ### Training playtest fixes — September 25
@@ -4111,7 +4111,7 @@ For **Shooters Trigger**, mobile screen usability and readable combat feedback a
 
 ### Close-range impact
 - A clean hit at close engagement distance must **look and feel more consequential** while preserving the core paintball rules: headshot = instant elimination, two clean body hits = elimination, scrape = paint only, miss = no effect.
-- Close-range clean hits are recorded separately in training and contribute a bounded bonus to the shooting score; they must never become an unbounded damage cheat.
+- Close-range clean hits may be recorded separately as evidence, but proximity must not enlarge the clean-hit geometry or award an automatic hit/damage modifier.
 - Combat feedback must remain discrete/readable: visible paintball trajectory, impact/splatter, and a clear hit state rather than laser/tracer treatment.
 - Any change to close-range impact, hit feedback, or scoring must preserve the Training → Report → Arena relationship and be based on observed playtest evidence.
 
