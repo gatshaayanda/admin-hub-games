@@ -273,12 +273,96 @@ export class WardrobeIntroScene extends Phaser.Scene {
   }
 }
 
+type WardrobeCharacterSource = 'gegx' | 'soldier' | 'robot';
+
+type WardrobeCharacterDefinition = {
+  id: string;
+  name: string;
+  source: WardrobeCharacterSource;
+  basePath: string;
+  displaySize: number;
+  frameWidth: number;
+  frameHeight: number;
+  originY: number;
+  embeddedWeapon: boolean;
+  robotColor?: 'Blue' | 'Red';
+};
+
+const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
+  ...[
+    'police_officer', 'firefighter', 'mechanic', 'teacher', 'butcher',
+    'student', 'cook', 'priest', 'punk', 'biker', 'jogger', 'soldier',
+    'nurse', 'child', 'heavyset', 'runner', 'bruiser', 'old_man', 'businessman',
+  ].map((id) => ({
+    id,
+    name: id.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()),
+    source: 'gegx' as const,
+    basePath: '/assets/wardrobe/packs/x/gegx-free-walk-pixel-v1.1/' + id,
+    displaySize: 128,
+    frameWidth: 192,
+    frameHeight: 192,
+    originY: 165 / 192,
+    embeddedWeapon: false,
+  })),
+  {
+    id: 'soldier_01',
+    name: 'Soldier 01 · CC BY',
+    source: 'soldier',
+    basePath: '/assets/wardrobe/free-packs/a/export_folder/soldier_01',
+    displaySize: 128,
+    frameWidth: 16,
+    frameHeight: 16,
+    originY: 1,
+    embeddedWeapon: true,
+  },
+  {
+    id: 'soldier_02',
+    name: 'Soldier 02 · CC BY',
+    source: 'soldier',
+    basePath: '/assets/wardrobe/free-packs/a/export_folder/soldier_02',
+    displaySize: 128,
+    frameWidth: 16,
+    frameHeight: 16,
+    originY: 1,
+    embeddedWeapon: true,
+  },
+  {
+    id: 'robot_blue',
+    name: 'Drone Robot · BLUE · CC0',
+    source: 'robot',
+    basePath: '/assets/wardrobe/free-packs/b/Free8DirRobot',
+    displaySize: 128,
+    frameWidth: 256,
+    frameHeight: 256,
+    originY: 0.90,
+    embeddedWeapon: true,
+    robotColor: 'Blue',
+  },
+  {
+    id: 'robot_red',
+    name: 'Drone Robot · RED · CC0',
+    source: 'robot',
+    basePath: '/assets/wardrobe/free-packs/b/Free8DirRobot',
+    displaySize: 128,
+    frameWidth: 256,
+    frameHeight: 256,
+    originY: 0.90,
+    embeddedWeapon: true,
+    robotColor: 'Red',
+  },
+];
 export class WardrobeLabScene extends Phaser.Scene {
   private character!: Phaser.GameObjects.Container;
   private shadow!: Phaser.GameObjects.Ellipse;
+  private weaponLayer!: Phaser.GameObjects.Graphics;
+  private muzzleFlash!: Phaser.GameObjects.Graphics;
+  private target!: Phaser.GameObjects.Container;
+  private targetSprite!: Phaser.GameObjects.Sprite;
   private spriteLabel!: Phaser.GameObjects.Text;
   private directionLabel!: Phaser.GameObjects.Text;
+  private combatLabel!: Phaser.GameObjects.Text;
   private move = new Phaser.Math.Vector2();
+  private aim = new Phaser.Math.Vector2(1, 0);
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT' = 'DOWN';
   private previewSprite!: Phaser.GameObjects.Sprite;
@@ -286,31 +370,65 @@ export class WardrobeLabScene extends Phaser.Scene {
   private characterNameLabel!: Phaser.GameObjects.Text;
   private animationLabel!: Phaser.GameObjects.Text;
   private selectedCharacterIndex = 0;
-  private readonly characterNames = [
-    'police_officer', 'firefighter', 'mechanic', 'teacher', 'butcher',
-    'student', 'cook', 'priest', 'punk', 'biker',
-    'jogger', 'soldier', 'nurse', 'child', 'heavyset',
-    'runner', 'bruiser', 'old_man', 'businessman',
-  ];
+  private fireHeld = false;
+  private fireCooldown = 0;
+  private muzzleUntil = 0;
+  private targetBodyHits = 0;
+  private targetDown = false;
+  private pointerId = -1;
+  private pointerAimActive = false;
+  private fireButtonKnob!: Phaser.GameObjects.Arc;
+  private shots: Array<{
+    graphics: Phaser.GameObjects.Arc;
+    position: Phaser.Math.Vector2;
+    velocity: Phaser.Math.Vector2;
+    ageMs: number;
+  }> = [];
   private joystickReset?: () => void;
 
   private readonly worldWidth = 2400;
   private readonly worldHeight = 1400;
   private readonly playerSpawn = new Phaser.Math.Vector2(360, 1040);
+  private readonly targetSpawn = new Phaser.Math.Vector2(1820, 1040);
   private readonly playerSpeed = 170;
+  private readonly projectileSpeed = 520;
+  private readonly projectileLifetimeMs = 1100;
+  private readonly fireIntervalMs = 240;
+  private readonly characterDefinitions = WARDROBE_CHARACTER_DEFINITIONS;
 
   constructor() {
     super('WardrobeLabScene');
   }
 
   preload() {
-    for (const character of this.characterNames) {
-      for (const direction of ['south', 'north', 'east', 'west']) {
-        this.load.spritesheet(
-          this.spriteKey(character, direction),
-          `/assets/wardrobe/packs/x/gegx-free-walk-pixel-v1.1/${character}/strips/${direction}.png`,
-          { frameWidth: 192, frameHeight: 192 },
-        );
+    for (const def of this.characterDefinitions) {
+      for (const direction of ['DOWN', 'UP', 'LEFT', 'RIGHT'] as const) {
+        if (def.source === 'gegx') {
+          this.load.spritesheet(
+            this.spriteKey(def, direction),
+            def.basePath + '/strips/' + this.gegxDirection(direction) + '.png',
+            { frameWidth: def.frameWidth, frameHeight: def.frameHeight },
+          );
+        } else if (def.source === 'soldier') {
+          this.load.spritesheet(
+            this.spriteKey(def, direction),
+            def.basePath + '/soldier_' + def.id.slice(-2) + '_spritesheet_walking_' + direction.toLowerCase() + '.png',
+            { frameWidth: def.frameWidth, frameHeight: def.frameHeight },
+          );
+        } else {
+          const robotDir = this.robotDirection(direction);
+          const color = def.robotColor!;
+          this.load.spritesheet(
+            this.spriteKey(def, direction, 'walk'),
+            def.basePath + '/WalkingShoot/LowPolyManny_' + color + '_rig_WalkingShoot_dir' + robotDir + '.png',
+            { frameWidth: def.frameWidth, frameHeight: def.frameHeight },
+          );
+          this.load.spritesheet(
+            this.spriteKey(def, direction, 'shoot'),
+            def.basePath + '/StandingShoot/LowPolyManny_' + color + '_rig_StandingShoot_dir' + robotDir + '.png',
+            { frameWidth: def.frameWidth, frameHeight: def.frameHeight },
+          );
+        }
       }
     }
   }
@@ -318,25 +436,33 @@ export class WardrobeLabScene extends Phaser.Scene {
   create() {
     const { width, height } = this.scale;
 
-    // Wardrobe is now a character-only copy of the live Arena:
-    // same world size, field layout, camera behavior, movement speed and cover
-    // collision. Only the player presentation is replaced by the real sprite.
     this.cameras.main.setBackgroundColor('#6f984b');
     this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
     this.drawArenaField();
 
     this.character = this.add.container(this.playerSpawn.x, this.playerSpawn.y).setDepth(30);
-    this.shadow = this.add.ellipse(0, 0, 46, 13, 0x3d3025, 0.28).setDepth(29);
+    this.shadow = this.add.ellipse(0, 0, 46, 13, 0x3d3025, 0.28);
+    this.weaponLayer = this.add.graphics();
+    this.muzzleFlash = this.add.graphics();
+    this.character.add([this.shadow, this.weaponLayer, this.muzzleFlash]);
 
-    // The free pack uses one shared 192x192 canvas and one shared foot line.
-    // Keep the container on the Arena ground point and let the sprite origin
-    // place every character's feet on that exact point.
-    this.previewSprite = this.add.sprite(0, 0, this.spriteKey(this.currentCharacter(), 'south'), 0)
-      .setDisplaySize(128, 128)
-      .setOrigin(0.5, 165 / 192);
+    const current = this.currentDefinition();
+    this.previewSprite = this.add.sprite(0, 0, this.spriteKey(current, 'DOWN'), 0)
+      .setDisplaySize(current.displaySize, current.displaySize)
+      .setOrigin(0.5, current.originY);
     this.character.add(this.previewSprite);
+
     this.createCharacterAnimations();
-    this.playCharacterAnimation(false);
+
+    this.target = this.add.container(this.targetSpawn.x, this.targetSpawn.y).setDepth(29);
+    const targetDef = this.characterDefinitions.find((def) => def.id === 'soldier_02')!;
+    const targetShadow = this.add.ellipse(0, 0, 46, 13, 0x3d3025, 0.28);
+    this.target.add(targetShadow);
+    this.targetSprite = this.add.sprite(0, 0, this.spriteKey(targetDef, 'DOWN'), 0)
+      .setDisplaySize(targetDef.displaySize, targetDef.displaySize)
+      .setOrigin(0.5, targetDef.originY);
+    this.target.add(this.targetSprite);
+    this.target.setAlpha(0.96);
 
     this.cameras.main.startFollow(this.character, true, 0.08, 0.08);
     this.cameras.main.setDeadzone(
@@ -346,20 +472,20 @@ export class WardrobeLabScene extends Phaser.Scene {
 
     this.add.rectangle(width / 2, 34, width, 68, 0x101512, 0.86)
       .setScrollFactor(0).setDepth(100);
-    this.add.text(18, 18, 'WARDROBE · ARENA CHARACTER LAB', {
+    this.add.text(18, 18, 'WARDROBE · ARENA CHARACTER + SHOOTER LAB', {
       fontFamily: 'monospace',
       fontSize: '13px',
       fontStyle: 'bold',
       color: '#f4f1df',
     }).setScrollFactor(0).setDepth(101);
-    this.add.text(18, 42, 'EXACT ARENA FIELD · SAME MOVEMENT · REAL SPRITE ONLY', {
+    this.add.text(18, 42, 'REAL SPRITES · SAME ARENA MOVEMENT · AIM / FIRE TEST', {
       fontFamily: 'monospace',
       fontSize: '7px',
       fontStyle: 'bold',
       color: '#8fb39b',
     }).setScrollFactor(0).setDepth(101);
 
-    this.spriteLabel = this.add.text(width - 18, 18, 'FREE TOP-DOWN CHARACTER PACK', {
+    this.spriteLabel = this.add.text(width - 18, 18, '', {
       fontFamily: 'monospace',
       fontSize: '8px',
       fontStyle: 'bold',
@@ -375,18 +501,48 @@ export class WardrobeLabScene extends Phaser.Scene {
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(101);
 
     this.createCharacterSelector();
+    this.createFieldJoystick();
+    this.createFireControl();
 
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.input.keyboard?.on('keydown-R', () => this.resetCharacter());
+    this.input.keyboard?.on('keydown-SPACE', () => {
+      this.fireHeld = true;
+      this.pointerAimActive = false;
+    });
+    this.input.keyboard?.on('keyup-SPACE', () => {
+      this.fireHeld = false;
+    });
 
-    this.createFieldJoystick();
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      const bottomControls = pointer.y > this.scale.height - 180;
+      const leftControl = pointer.x < 190;
+      const rightControl = pointer.x > this.scale.width - 190;
+      if (pointer.y < 76 || (bottomControls && (leftControl || rightControl))) return;
+      this.pointerAimActive = true;
+      this.updateAimFromWorldPointer(pointer);
+      this.fireHeld = true;
+    });
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (!this.pointerAimActive || this.pointerId >= 0) return;
+      this.updateAimFromWorldPointer(pointer);
+    });
+    this.input.on('pointerup', () => {
+      if (this.pointerId < 0) {
+        this.pointerAimActive = false;
+        this.fireHeld = false;
+      }
+    });
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.input.keyboard?.removeAllListeners();
       this.joystickReset?.();
+      this.shots.forEach((shot) => shot.graphics.destroy());
+      this.shots = [];
     });
 
     this.updateLabels();
+    this.updateWeaponLayer();
     window.dispatchEvent(new Event('admin-hub-games:game-ready'));
   }
 
@@ -420,14 +576,340 @@ export class WardrobeLabScene extends Phaser.Scene {
         1350,
       );
 
-      // Exact Arena cover collision rule for the player body.
       if (!this.inCover(nx, ny, 14)) {
         this.character.setPosition(nx, ny);
       }
     }
 
-    this.directionLabel.setText('FACING · ' + this.direction + ' · ' + (walking ? 'WALK' : 'IDLE') + ' · ARENA CAMERA');
+    this.fireCooldown = Math.max(0, this.fireCooldown - delta);
+    this.muzzleUntil = Math.max(0, this.muzzleUntil - delta);
+
+    if (this.fireHeld && this.fireCooldown <= 0 && !this.targetDown) {
+      this.fireShot();
+    }
+
+    this.updateShots(delta);
+    this.updateTargetFacing();
     this.playCharacterAnimation(walking);
+    this.updateWeaponLayer();
+    this.updateLabels();
+  }
+
+  private currentDefinition() {
+    return this.characterDefinitions[this.selectedCharacterIndex];
+  }
+
+  private displayCharacterName(def: WardrobeCharacterDefinition) {
+    return def.name;
+  }
+
+  private gegxDirection(direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT') {
+    return {
+      DOWN: 'south',
+      UP: 'north',
+      LEFT: 'west',
+      RIGHT: 'east',
+    }[direction];
+  }
+
+  private robotDirection(direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT') {
+    return {
+      DOWN: 8,
+      LEFT: 2,
+      UP: 4,
+      RIGHT: 6,
+    }[direction];
+  }
+
+  private spriteKey(
+    def: WardrobeCharacterDefinition,
+    direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT',
+    action: 'walk' | 'shoot' = 'walk',
+  ) {
+    return 'wardrobe-' + def.id + '-' + direction + '-' + action;
+  }
+
+  private createCharacterAnimations() {
+    for (const def of this.characterDefinitions) {
+      for (const direction of ['DOWN', 'UP', 'LEFT', 'RIGHT'] as const) {
+        const walkKey = this.spriteKey(def, direction, 'walk');
+        if (!this.anims.exists(walkKey)) {
+          const texture = this.textures.get(walkKey);
+          const frameCount = Math.max(1, texture.frameTotal - 1);
+          this.anims.create({
+            key: walkKey,
+            frames: this.anims.generateFrameNumbers(walkKey, { start: 0, end: frameCount - 1 }),
+            frameRate: def.source === 'robot' ? 12 : 10,
+            repeat: -1,
+          });
+        }
+
+        if (def.source === 'robot') {
+          const shootKey = this.spriteKey(def, direction, 'shoot');
+          if (!this.anims.exists(shootKey)) {
+            const texture = this.textures.get(shootKey);
+            const frameCount = Math.max(1, texture.frameTotal - 1);
+            this.anims.create({
+              key: shootKey,
+              frames: this.anims.generateFrameNumbers(shootKey, { start: 0, end: frameCount - 1 }),
+              frameRate: 12,
+              repeat: 0,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  private playCharacterAnimation(walking: boolean) {
+    const def = this.currentDefinition();
+    const walkKey = this.spriteKey(def, this.direction, 'walk');
+
+    if (this.muzzleUntil > 0 && def.source === 'robot') {
+      const shootKey = this.spriteKey(def, this.direction, 'shoot');
+      if (this.previewSprite.texture.key !== shootKey) {
+        this.previewSprite.setTexture(shootKey, 0);
+        this.previewSprite.setDisplaySize(def.displaySize, def.displaySize);
+        this.previewSprite.setOrigin(0.5, def.originY);
+      }
+      this.previewSprite.play(shootKey, true);
+    } else {
+      if (this.previewSprite.texture.key !== walkKey) {
+        this.previewSprite.setTexture(walkKey, 0);
+        this.previewSprite.setDisplaySize(def.displaySize, def.displaySize);
+        this.previewSprite.setOrigin(0.5, def.originY);
+      }
+      if (walking) {
+        this.previewSprite.play(walkKey, true);
+      } else {
+        this.previewSprite.stop();
+        this.previewSprite.setFrame(0);
+      }
+    }
+
+    const sourceLabel =
+      def.source === 'gegx' ? 'GegX WALK' :
+      def.source === 'soldier' ? 'FREE SOLDIER' :
+      'CC0 SHOOTER ROBOT';
+    this.spriteLabel.setText(sourceLabel);
+    this.animationLabel?.setText(
+      def.source === 'robot' && this.muzzleUntil > 0
+        ? 'ANIMATION · SHOOT'
+        : walking
+          ? 'ANIMATION · WALK'
+          : 'ANIMATION · IDLE / READY',
+    );
+  }
+
+  private updateWeaponLayer() {
+    const def = this.currentDefinition();
+    this.weaponLayer.clear();
+    this.muzzleFlash.clear();
+
+    if (def.embeddedWeapon) {
+      this.weaponLayer.setVisible(false);
+      this.muzzleFlash.setVisible(false);
+      return;
+    }
+
+    this.weaponLayer.setVisible(true);
+    this.muzzleFlash.setVisible(this.muzzleUntil > 0);
+
+    const base = new Phaser.Math.Vector2(this.aim.x * 5, -52 + this.aim.y * 5);
+    const barrel = base.clone().add(this.aim.clone().scale(34));
+    this.weaponLayer.lineStyle(5, 0x202522, 1);
+    this.weaponLayer.lineBetween(base.x, base.y, barrel.x, barrel.y);
+    this.weaponLayer.fillStyle(0x566052, 1);
+    this.weaponLayer.fillCircle(base.x, base.y, 4);
+    this.weaponLayer.fillCircle(barrel.x, barrel.y, 3);
+
+    if (this.muzzleUntil > 0) {
+      const flash = barrel.clone().add(this.aim.clone().scale(8));
+      this.muzzleFlash.fillStyle(0xf0dfb6, 0.95);
+      this.muzzleFlash.fillTriangle(
+        flash.x + this.aim.x * 12,
+        flash.y + this.aim.y * 12,
+        flash.x - this.aim.y * 8,
+        flash.y + this.aim.x * 8,
+        flash.x + this.aim.y * 8,
+        flash.y - this.aim.x * 8,
+      );
+    }
+  }
+
+  private fireShot() {
+    const origin = new Phaser.Math.Vector2(
+      this.character.x + this.aim.x * 42,
+      this.character.y - 52 + this.aim.y * 10,
+    );
+    const velocity = this.aim.clone().normalize().scale(this.projectileSpeed);
+    const graphics = this.add.circle(origin.x, origin.y, 4, 0xf0dfb6, 1).setDepth(60);
+    this.shots.push({
+      graphics,
+      position: origin.clone(),
+      velocity,
+      ageMs: 0,
+    });
+    this.fireCooldown = this.fireIntervalMs;
+    this.muzzleUntil = 95;
+    this.updateWeaponLayer();
+
+    if (this.currentDefinition().source === 'robot') {
+      const shootKey = this.spriteKey(this.currentDefinition(), this.direction, 'shoot');
+      this.previewSprite.setTexture(shootKey, 0);
+      this.previewSprite.setDisplaySize(this.currentDefinition().displaySize, this.currentDefinition().displaySize);
+      this.previewSprite.setOrigin(0.5, this.currentDefinition().originY);
+      this.previewSprite.play(shootKey, true);
+    }
+  }
+
+  private updateShots(delta: number) {
+    for (let index = this.shots.length - 1; index >= 0; index -= 1) {
+      const shot = this.shots[index];
+      const previous = shot.position.clone();
+      shot.position.add(shot.velocity.clone().scale(delta / 1000));
+      shot.graphics.setPosition(shot.position.x, shot.position.y);
+      shot.ageMs += delta;
+
+      const segment = new Phaser.Geom.Line(previous.x, previous.y, shot.position.x, shot.position.y);
+
+      if (this.covers.some((cover) => Phaser.Geom.Intersects.LineToRectangle(segment, cover))) {
+        this.showCombatMessage('COVER BLOCKED', '#e8c95c');
+        this.removeShot(index);
+        continue;
+      }
+
+      const head = new Phaser.Geom.Circle(this.target.x, this.target.y - 82, 12);
+      const body = new Phaser.Geom.Circle(this.target.x, this.target.y - 45, 18);
+
+      if (Phaser.Geom.Intersects.LineToCircle(segment, head)) {
+        this.showCombatMessage('HEADSHOT · INSTANT', '#f0dfb6');
+        this.targetBodyHits = 0;
+        this.resetTargetSoon(520);
+        this.removeShot(index);
+        continue;
+      }
+
+      if (Phaser.Geom.Intersects.LineToCircle(segment, body)) {
+        this.targetBodyHits += 1;
+        const hits = this.targetBodyHits;
+        this.showCombatMessage(hits >= 2 ? 'BODY HIT · ELIMINATED' : 'BODY HIT · ONE MORE', '#e06a3d');
+        if (hits >= 2) this.resetTargetSoon(520);
+        this.removeShot(index);
+        continue;
+      }
+
+      if (shot.ageMs >= this.projectileLifetimeMs) {
+        this.removeShot(index);
+      }
+    }
+  }
+
+  private resetTargetSoon(delay: number) {
+    if (this.targetDown) return;
+    this.targetDown = true;
+    this.target.setAlpha(0.38);
+    this.time.delayedCall(delay, () => {
+      this.targetDown = false;
+      this.targetBodyHits = 0;
+      this.target.setAlpha(0.96);
+    });
+  }
+
+  private updateTargetFacing() {
+    if (!this.target || this.targetDown) return;
+    const def = this.characterDefinitions.find((entry) => entry.id === 'soldier_02')!;
+    const dx = this.character.x - this.target.x;
+    const dy = this.character.y - this.target.y;
+    let direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT' = 'DOWN';
+    if (Math.abs(dx) > Math.abs(dy)) direction = dx < 0 ? 'LEFT' : 'RIGHT';
+    else direction = dy < 0 ? 'UP' : 'DOWN';
+    const key = this.spriteKey(def, direction);
+    if (this.targetSprite.texture.key !== key) {
+      this.targetSprite.setTexture(key, 0);
+      this.targetSprite.setDisplaySize(def.displaySize, def.displaySize);
+      this.targetSprite.setOrigin(0.5, def.originY);
+      this.targetSprite.stop();
+      this.targetSprite.setFrame(0);
+    }
+  }
+
+  private updateAimFromWorldPointer(pointer: Phaser.Input.Pointer) {
+    const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+    const dx = point.x - this.character.x;
+    const dy = point.y - (this.character.y - 52);
+    const length = Math.hypot(dx, dy);
+    if (length > 2) this.aim.set(dx / length, dy / length);
+  }
+
+  private createCharacterSelector() {
+    const width = this.scale.width;
+    const y = 100;
+
+    this.add.rectangle(width / 2, y, Math.min(width - 28, 520), 68, 0x101512, 0.90)
+      .setScrollFactor(0).setDepth(100);
+
+    this.characterNameLabel = this.add.text(width / 2, y - 20, '', {
+      fontFamily: 'monospace',
+      fontSize: '12px',
+      fontStyle: 'bold',
+      color: '#e8c95c',
+      align: 'center',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(104);
+
+    this.animationLabel = this.add.text(width / 2, y - 4, 'ANIMATION · IDLE', {
+      fontFamily: 'monospace',
+      fontSize: '7px',
+      color: '#8fb39b',
+      align: 'center',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(104);
+
+    const makeButton = (x: number, label: string, deltaIndex: number) => {
+      return this.add.text(x, y + 19, label, {
+        fontFamily: 'monospace',
+        fontSize: '10px',
+        fontStyle: 'bold',
+        color: '#f4f1df',
+        backgroundColor: '#315845',
+        padding: { left: 12, right: 12, top: 6, bottom: 6 },
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(104)
+        .setInteractive({ useHandCursor: false })
+        .on('pointerdown', () => {
+          this.fireHeld = false;
+          this.pointerAimActive = false;
+          this.targetDown = false;
+          this.targetBodyHits = 0;
+          this.clearShots();
+          this.selectCharacter(this.selectedCharacterIndex + deltaIndex);
+        });
+    };
+
+    makeButton(width / 2 - 108, '‹ PREV', -1);
+    makeButton(width / 2 + 108, 'NEXT ›', 1);
+    this.updateLabels();
+  }
+
+  private selectCharacter(index: number) {
+    const count = this.characterDefinitions.length;
+    this.selectedCharacterIndex = (index + count) % count;
+    this.playCharacterAnimation(false);
+    this.updateWeaponLayer();
+    this.updateLabels();
+  }
+
+  private updateLabels() {
+    const def = this.currentDefinition();
+    this.characterNameLabel?.setText(this.displayCharacterName(def));
+    const action = this.fireHeld ? 'FIRE' : this.pointerAimActive ? 'AIM' : 'READY';
+    this.directionLabel?.setText(
+      'FACING · ' + this.direction +
+      ' · ' + action +
+      ' · AIM VECTOR ' + Math.round(Phaser.Math.RadToDeg(Math.atan2(this.aim.y, this.aim.x))) + '°',
+    );
+    this.combatLabel?.setText(
+      'TARGET · ' + (this.targetDown ? 'DOWN' : 'LIVE') +
+      ' · BODY HITS ' + this.targetBodyHits + '/2 · HEADSHOT = INSTANT',
+    );
   }
 
   private createFieldJoystick() {
@@ -447,7 +929,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.joystickReset = reset;
 
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (pointer.y < 75 || pointer.x > this.scale.width - 180) return;
+      if (pointer.y < 75 || pointer.x > 190) return;
       if (Phaser.Math.Distance.Between(pointer.x, pointer.y, x, y) <= 90) {
         pointerId = pointer.id;
       }
@@ -487,120 +969,105 @@ export class WardrobeLabScene extends Phaser.Scene {
       .on('pointerdown', () => this.resetCharacter());
   }
 
-  private updateLabels() {
-    const current = this.currentCharacter();
-    this.spriteLabel.setText('FREE PACK · 4 DIRECTIONS · WALK CYCLE');
-    this.characterNameLabel?.setText(this.displayCharacterName(current));
+  private createFireControl() {
+    const x = this.scale.width - 72;
+    const y = this.scale.height - 112;
+    this.add.circle(x, y, 48, 0x101512, 0.50)
+      .setScrollFactor(0).setDepth(102)
+      .setStrokeStyle(2, 0xe8c95c, 0.70);
+    this.fireButtonKnob = this.add.circle(x, y, 20, 0x315845, 0.94)
+      .setScrollFactor(0).setDepth(103);
+    this.add.text(x, y + 56, 'AIM · FIRE', {
+      fontFamily: 'monospace',
+      fontSize: '7px',
+      fontStyle: 'bold',
+      color: '#f4f1df',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+
+    const base = this.add.circle(x, y, 48, 0x000000, 0)
+      .setScrollFactor(0).setDepth(104)
+      .setInteractive(new Phaser.Geom.Circle(0, 0, 60), Phaser.Geom.Circle.Contains);
+
+    const reset = () => {
+      this.pointerId = -1;
+      this.fireHeld = false;
+      this.pointerAimActive = false;
+      this.fireButtonKnob.setPosition(x, y);
+    };
+
+    base.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      this.pointerId = pointer.id;
+      this.fireHeld = true;
+      this.pointerAimActive = true;
+      this.updateAimFromFirePointer(pointer, x, y);
+    });
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (pointer.id !== this.pointerId) return;
+      this.updateAimFromFirePointer(pointer, x, y);
+    });
+    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      if (pointer.id === this.pointerId) reset();
+    });
   }
 
-  private currentCharacter() {
-    return this.characterNames[this.selectedCharacterIndex];
-  }
-
-  private displayCharacterName(name: string) {
-    return name.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
-  }
-
-  private spriteKey(character: string, direction: string) {
-    return `wardrobe-pack-${character}-${direction}`;
-  }
-
-  private directionKey() {
-    return {
-      DOWN: 'south',
-      UP: 'north',
-      LEFT: 'west',
-      RIGHT: 'east',
-    }[this.direction];
-  }
-
-  private createCharacterAnimations() {
-    for (const character of this.characterNames) {
-      for (const direction of ['south', 'north', 'east', 'west']) {
-        const key = this.spriteKey(character, direction);
-        if (this.anims.exists(key)) continue;
-        const texture = this.textures.get(key);
-        const frameCount = Math.max(1, texture.frameTotal - 1);
-        this.anims.create({
-          key,
-          frames: this.anims.generateFrameNumbers(key, { start: 0, end: frameCount - 1 }),
-          frameRate: 10,
-          repeat: -1,
-        });
-      }
+  private updateAimFromFirePointer(pointer: Phaser.Input.Pointer, centerX: number, centerY: number) {
+    const dx = pointer.x - centerX;
+    const dy = pointer.y - centerY;
+    const distance = Math.min(48, Math.hypot(dx, dy));
+    if (distance > 4) {
+      const angle = Math.atan2(dy, dx);
+      this.fireButtonKnob.setPosition(
+        centerX + Math.cos(angle) * distance,
+        centerY + Math.sin(angle) * distance,
+      );
+      this.aim.set(Math.cos(angle), Math.sin(angle));
     }
   }
 
-  private playCharacterAnimation(walking: boolean) {
-    const key = this.spriteKey(this.currentCharacter(), this.directionKey());
-    if (this.previewSprite.texture.key !== key) {
-      this.previewSprite.setTexture(key, 0);
-      this.previewSprite.setOrigin(0.5, 165 / 192);
-    }
-
-    if (walking) {
-      this.previewSprite.play(key, true);
-    } else {
-      this.previewSprite.stop();
-      this.previewSprite.setFrame(0);
-    }
-
-    this.animationLabel?.setText(walking ? 'ANIMATION · WALK' : 'ANIMATION · IDLE / FIRST WALK FRAME');
+  private clearShots() {
+    this.shots.forEach((shot) => shot.graphics.destroy());
+    this.shots = [];
   }
 
-  private selectCharacter(index: number) {
-    const count = this.characterNames.length;
-    this.selectedCharacterIndex = (index + count) % count;
-    this.playCharacterAnimation(false);
-    this.updateLabels();
+  private removeShot(index: number) {
+    this.shots[index].graphics.destroy();
+    this.shots.splice(index, 1);
   }
 
-  private createCharacterSelector() {
-    const width = this.scale.width;
-    const y = 100;
-
-    this.add.rectangle(width / 2, y, Math.min(width - 28, 520), 68, 0x101512, 0.90)
-      .setScrollFactor(0).setDepth(100);
-
-    this.characterNameLabel = this.add.text(width / 2, y - 20, '', {
+  private showCombatMessage(text: string, color: string) {
+    const label = this.add.text(this.target.x, this.target.y - 116, text, {
       fontFamily: 'monospace',
       fontSize: '13px',
       fontStyle: 'bold',
-      color: '#e8c95c',
-      align: 'center',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(104);
+      color,
+      stroke: '#151a16',
+      strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(150);
 
-    this.animationLabel = this.add.text(width / 2, y - 4, 'ANIMATION · IDLE', {
-      fontFamily: 'monospace',
-      fontSize: '7px',
-      color: '#8fb39b',
-      align: 'center',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(104);
-
-    const makeButton = (x: number, label: string, deltaIndex: number) => {
-      return this.add.text(x, y + 19, label, {
-        fontFamily: 'monospace',
-        fontSize: '10px',
-        fontStyle: 'bold',
-        color: '#f4f1df',
-        backgroundColor: '#315845',
-        padding: { left: 12, right: 12, top: 6, bottom: 6 },
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(104)
-        .setInteractive({ useHandCursor: false })
-        .on('pointerdown', () => this.selectCharacter(this.selectedCharacterIndex + deltaIndex));
-    };
-
-    makeButton(width / 2 - 108, '‹ PREV', -1);
-    makeButton(width / 2 + 108, 'NEXT ›', 1);
-    this.updateLabels();
+    this.tweens.add({
+      targets: label,
+      y: label.y - 38,
+      alpha: 0,
+      duration: 500,
+      ease: 'Quad.easeOut',
+      onComplete: () => label.destroy(),
+    });
   }
 
   private resetCharacter() {
     this.character.setPosition(this.playerSpawn.x, this.playerSpawn.y);
-    this.shadow.setPosition(this.playerSpawn.x, this.playerSpawn.y);
     this.move.set(0, 0);
     this.direction = 'DOWN';
+    this.aim.set(1, 0);
+    this.fireHeld = false;
+    this.fireCooldown = 0;
+    this.muzzleUntil = 0;
+    this.pointerAimActive = false;
+    this.pointerId = -1;
+    this.fireButtonKnob?.setPosition(this.scale.width - 72, this.scale.height - 112);
+    this.clearShots();
     this.playCharacterAnimation(false);
+    this.updateWeaponLayer();
   }
 
   private inCover(x: number, y: number, padding = 12) {
@@ -642,6 +1109,14 @@ export class WardrobeLabScene extends Phaser.Scene {
 
     this.drawFlag(1180, 860);
     this.drawFieldDetails();
+
+    this.combatLabel = this.add.text(this.scale.width / 2, this.scale.height - 18, '', {
+      fontFamily: 'monospace',
+      fontSize: '7px',
+      fontStyle: 'bold',
+      color: '#f4f1df',
+      align: 'center',
+    }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(104);
   }
 
   private drawTree(x: number, y: number, scale: number) {
@@ -709,7 +1184,6 @@ export class WardrobeLabScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(6).setAlpha(0.55);
   }
 }
-
 function benchCenterY(height: number) {
   return height * 0.47 + 82;
 }

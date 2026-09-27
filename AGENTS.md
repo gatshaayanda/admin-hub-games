@@ -4572,3 +4572,28 @@ Wardrobe is successful when it makes trying a new character cheap and safe: **sw
 ### Future-game reuse
 
 When a future game needs characters, prefer reusing the proven Wardrobe character pipeline rather than copying character code into each game. The reusable layer should be extracted deliberately only after the Wardrobe experiment has demonstrated the pattern in a real game.
+
+## Wardrobe — Shooter-Ready Character Lab Checkpoint
+
+Wardrobe now has a **shooter-ready presentation test** while remaining isolated from Shooters Trigger combat.
+
+### Character sources currently wired into the lab
+- Existing GegX WALK PACK PIXEL: 19 four-direction characters with shared 192x192 framing and the established 165/192 ground pivot.
+- Pack A: Soldier 01 and Soldier 02, four-direction 16x16 walking/idle artwork with an embedded weapon, licensed CC BY 4.0 and requiring attribution.
+- Pack B: Blue and Red Drone Robot, four-direction views mapped from the free eight-direction pack and its actual WalkingShoot / StandingShoot animation sheets. The source is CC0.
+- Packs C, D and E remain imported as action-reference libraries. They provide useful Idle/Walk/Hurt/Death/Attack/Hit coverage but are not silently mixed into a different character's animation set.
+
+### Shooter test contract
+- Wardrobe keeps the Arena field, camera, movement speed and cover relationship.
+- Left control = movement only.
+- Right **AIM · FIRE** control = aim by dragging and shoot while held; there is no separate aim zone.
+- Desktop field pointer aiming and Space fire are supported for inspection.
+- The weapon layer is independent of the character art. Characters with an embedded weapon keep their artwork; walk-only characters receive a Wardrobe-only weapon presentation layer.
+- The projectile is a real moving paintball with swept line-segment collision and cover blocking for this presentation test.
+- Headshot = instant target reset; body hits require two hits. These are Wardrobe test feedback only and do not replace or modify the authoritative Shooters Trigger combat rules.
+- The Wardrobe target is a real imported Soldier 02 sprite used only as a test target. It is not the final Shooters Trigger bot.
+- Character switching clears shots and resets the test state.
+- The CC0 robot's actual StandingShoot animation is used to prove that the character pipeline can accept a real shooting animation; human characters without a firearm animation use the independent weapon/muzzle layer until a final player-specific shoot/recoil set is created.
+
+### Reuse boundary
+Do not copy Wardrobe's test collision or target state into Shooters Trigger. When the final player and bot are built, connect their approved presentation assets to the existing Shooters Trigger authoritative movement, aim, projectile, cover, head/body, scrape, weapon-drop, damage and recovery systems without changing those Golden Playthrough rules.
