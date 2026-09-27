@@ -4697,3 +4697,60 @@ Shooter integration only after verification
 ```
 
 **Never skip the actual-file inspection step. Never invent the Downloads path. Never code against Downloads.**
+
+## Wardrobe — Asset Provenance & Inspection Gate — September 27, 2026
+
+Wardrobe work has a stricter inspection gate because visual asset mistakes can look like successful code changes while the player is still seeing the wrong artwork.
+
+### Non-negotiable START inspection
+Before changing Wardrobe, inspect the **current remote main**, not memory:
+1. Read this AGENTS.md.
+2. Inspect branch/ref state, latest commit, and the exact Wardrobe files/assets involved.
+3. Trace the relevant asset through Git history when provenance or identity matters.
+4. Inspect the **actual binary asset** and the code path that loads, transforms, selects, and renders it.
+5. Inspect the current deployed result when the user reports a visual mismatch.
+6. Use current online documentation/research when it can resolve an implementation or asset-handling question; do not substitute generic advice for inspection of this repository.
+7. If reality contradicts the expected result, **STOP**. Do not guess, rename things, rewrite the pipeline, or stack another fix on top.
+
+### Generated-artwork identity gate
+For the current generated Wardrobe operator:
+- The intended source is the generated/fixed operator artwork committed as `public/assets/wardrobe/incoming/og.jpg`.
+- Git history establishes the provenance: commit `39196abd` added `og.jpg`; commit `68428cb` integrated it as `gemini_operator`.
+- Do **not** infer that an asset is the generated operator merely because its filename, label, or code variable says so.
+- Do **not** substitute the existing procedural Shooters Trigger character, Soldier, Robot, or GegX artwork for the generated operator.
+- The generated operator must remain the **first Wardrobe character** in the selector until the owner explicitly changes that requirement.
+- If the user says the wrong character is appearing, verify all of these before making another code change:
+  - the binary at the expected asset path;
+  - the rendered image actually coming from that path;
+  - the generated character definition and selector index;
+  - the runtime texture key and source texture;
+  - the extracted frame coordinates/sequence;
+  - the production deployment commit and browser/service-worker cache state.
+- A source file containing the right path is **not** proof that the right artwork is being rendered.
+- A successful TypeScript/build is **not** proof that the correct character is visible.
+- Do not claim the generated asset is working until the affected Wardrobe screen has been visually checked.
+
+### Asset extraction rule
+When turning a reference grid into Phaser frames:
+- inspect the actual image dimensions and visible cell layout first;
+- document/verify the cell coordinates against the image rather than relying on remembered coordinates;
+- preserve the source frame order exactly;
+- remove only the known baked background/transparency artifact;
+- keep animation frame dimensions/pivots stable unless the artwork itself requires otherwise;
+- never independently resize animation frames in a way that changes apparent character size between frames;
+- if a visual result is wrong, inspect the source image and extraction output before changing animation timing or unrelated gameplay code.
+
+### Communication / execution discipline
+The owner wants action, not workflow theatre.
+- Do not narrate steps that have not been performed.
+- Do not say “I will inspect” and then provide a plan instead of inspecting.
+- Do not ask the owner to repeat information already established in the repository/history.
+- Report only what was actually inspected, changed, verified, and checkpointed.
+- Keep explanations short unless the owner asks for detail.
+- One controlled Wardrobe change at a time.
+- Review the exact diff.
+- Run the strongest available verification; if browser/device verification was not possible, say so plainly.
+- Never turn an unexpected visual result into a second speculative fix. STOP → inspect reality → then act.
+
+### Wardrobe isolation
+Wardrobe experimentation must remain isolated from Shooters Trigger runtime behavior. Do not alter Shooters Trigger combat, AI, projectile, collision, or player systems merely to make Wardrobe artwork work. If the generated artwork cannot be made to render correctly, fix the Wardrobe asset/loading/extraction path first.
