@@ -166,7 +166,7 @@ export class WardrobeIntroScene extends Phaser.Scene {
       height: number;
     };
     const columns = 8;
-    const rows = 3;
+    const rows = 4;
     const cellWidth = source.width / columns;
     const cellHeight = source.height / rows;
     const cropX = Math.round(cellWidth * (6 / 176));
@@ -426,6 +426,9 @@ export class WardrobeLabScene extends Phaser.Scene {
   private fireHeld = false;
   private fireCooldown = 0;
   private muzzleUntil = 0;
+  private generatedAction: 'ready' | 'aim' | 'shoot' | 'muzzle' | 'recoil' | 'hit' | 'headshot' | 'death' | 'dodge' | 'respawn' = 'ready';
+  private generatedActionUntil = 0;
+  private visualMove = new Phaser.Math.Vector2(0, 1);
   private targetBodyHits = 0;
   private targetDown = false;
   private pointerId = -1;
@@ -566,6 +569,11 @@ export class WardrobeLabScene extends Phaser.Scene {
 
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.input.keyboard?.on('keydown-R', () => this.resetCharacter());
+    this.input.keyboard?.on('keydown-H', () => this.triggerGeneratedAction('hit', 420));
+    this.input.keyboard?.on('keydown-J', () => this.triggerGeneratedAction('headshot', 520));
+    this.input.keyboard?.on('keydown-K', () => this.triggerGeneratedAction('death', 1200));
+    this.input.keyboard?.on('keydown-L', () => this.triggerGeneratedAction('respawn', 700));
+    this.input.keyboard?.on('keydown-D', () => this.triggerGeneratedAction('dodge', 520));
     this.input.keyboard?.on('keydown-SPACE', () => {
       this.fireHeld = true;
       this.pointerAimActive = false;
@@ -618,6 +626,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     let walking = false;
     if (dx || dy) {
       walking = true;
+      this.visualMove.set(dx, dy).normalize();
       if (Math.abs(dx) > 0.08) {
         this.direction = dx < 0 ? 'LEFT' : 'RIGHT';
       } else if (Math.abs(dy) > 0.08) {
@@ -643,6 +652,10 @@ export class WardrobeLabScene extends Phaser.Scene {
 
     this.fireCooldown = Math.max(0, this.fireCooldown - delta);
     this.muzzleUntil = Math.max(0, this.muzzleUntil - delta);
+    this.generatedActionUntil = Math.max(0, this.generatedActionUntil - delta);
+    if (this.generatedActionUntil === 0 && this.generatedAction !== 'ready') {
+      this.generatedAction = 'ready';
+    }
 
     if (this.fireHeld && this.fireCooldown <= 0 && !this.targetDown) {
       this.fireShot();
@@ -670,14 +683,37 @@ export class WardrobeLabScene extends Phaser.Scene {
     const frameWidth = Math.round(cellWidth * (164 / 176));
     const frameHeight = Math.round(cellHeight * (216 / 256));
 
-    const sequences: Record<'DOWN' | 'UP' | 'LEFT' | 'RIGHT', { idle: number[]; walk: number[] }> = {
-      DOWN: { idle: [0], walk: [0, 1, 2, 3, 4, 5, 6, 7] },
-      LEFT: { idle: [8], walk: [8, 9, 10, 11, 12, 13, 14, 15] },
-      UP: { idle: [16], walk: [16, 17, 18, 19, 20, 21, 22, 23] },
-      RIGHT: { idle: [8], walk: [8, 9, 10, 11, 12, 13, 14, 15] },
+    const sequences: Record<string, number[]> = {
+      idle_down: [0],
+      idle_down_right: [1],
+      idle_right: [2],
+      idle_up_right: [3],
+      run: [4, 5, 6, 7],
+      idle_left: [8],
+      idle_down_alt: [9],
+      idle_left_alt: [10],
+      aim: [11],
+      shoot: [12],
+      ready: [13],
+      muzzle: [14],
+      recoil: [15],
+      hit: [16],
+      headshot: [17],
+      death: [20, 21, 22, 23],
+      dodge: [24, 25, 26, 27],
+      respawn: [28, 29, 30, 31],
     };
 
+    const extractedByFrame = new Map<number, {
+      canvas: HTMLCanvasElement;
+      minX: number;
+      minY: number;
+      maxX: number;
+      maxY: number;
+    }>();
+
     const extractFrame = (sourceFrame: number) => {
+      if (extractedByFrame.has(sourceFrame)) return extractedByFrame.get(sourceFrame)!;
       const frameCanvas = document.createElement('canvas');
       frameCanvas.width = frameWidth;
       frameCanvas.height = frameHeight;
@@ -716,63 +752,69 @@ export class WardrobeLabScene extends Phaser.Scene {
         }
       }
 
-      return { canvas: frameCanvas, minX, minY, maxX, maxY };
+      const result = { canvas: frameCanvas, minX, minY, maxX, maxY };
+      extractedByFrame.set(sourceFrame, result);
+      return result;
     };
 
-    for (const direction of Object.keys(sequences) as Array<'DOWN' | 'UP' | 'LEFT' | 'RIGHT'>) {
-      for (const action of ['idle', 'walk'] as const) {
-        const frames = sequences[direction][action];
-        const extracted = frames
-          .map(extractFrame)
-          .filter((frame): frame is NonNullable<typeof frame> => frame !== null && frame.maxX >= 0);
+    const allFrames = [...new Set(Object.values(sequences).flat())]
+      .map(extractFrame)
+      .filter((frame): frame is NonNullable<typeof frame> => frame !== null && frame.maxX >= 0);
 
-        const key = this.spriteKey(generatedDef, direction, action);
-        if (this.textures.exists(key) || extracted.length === 0) continue;
+    const union = allFrames.reduce(
+      (bounds, frame) => ({
+        minX: Math.min(bounds.minX, frame.minX),
+        minY: Math.min(bounds.minY, frame.minY),
+        maxX: Math.max(bounds.maxX, frame.maxX),
+        maxY: Math.max(bounds.maxY, frame.maxY),
+      }),
+      { minX: frameWidth, minY: frameHeight, maxX: -1, maxY: -1 },
+    );
 
-        const union = extracted.reduce(
-          (bounds, frame) => ({
-            minX: Math.min(bounds.minX, frame.minX),
-            minY: Math.min(bounds.minY, frame.minY),
-            maxX: Math.max(bounds.maxX, frame.maxX),
-            maxY: Math.max(bounds.maxY, frame.maxY),
-          }),
-          { minX: frameWidth, minY: frameHeight, maxX: -1, maxY: -1 },
+    const visibleWidth = union.maxX - union.minX + 1;
+    const visibleHeight = union.maxY - union.minY + 1;
+
+    for (const [action, frames] of Object.entries(sequences)) {
+      const extracted = frames
+        .map(extractFrame)
+        .filter((frame): frame is NonNullable<typeof frame> => frame !== null && frame.maxX >= 0);
+      if (!extracted.length) continue;
+
+      const normalized = document.createElement('canvas');
+      normalized.width = frameWidth * extracted.length;
+      normalized.height = frameHeight;
+      const normalizedContext = normalized.getContext('2d');
+      if (!normalizedContext) continue;
+
+      extracted.forEach((frame, index) => {
+        normalizedContext.drawImage(
+          frame.canvas,
+          union.minX,
+          union.minY,
+          visibleWidth,
+          visibleHeight,
+          index * frameWidth + (frameWidth - visibleWidth) / 2,
+          frameHeight - visibleHeight - 2,
+          visibleWidth,
+          visibleHeight,
         );
+      });
 
-        const visibleWidth = union.maxX - union.minX + 1;
-        const visibleHeight = union.maxY - union.minY + 1;
-        const normalized = document.createElement('canvas');
-        normalized.width = frameWidth * extracted.length;
-        normalized.height = frameHeight;
-        const normalizedContext = normalized.getContext('2d');
-        if (!normalizedContext) continue;
-
-        extracted.forEach((frame, index) => {
-          normalizedContext.drawImage(
-            frame.canvas,
-            union.minX,
-            union.minY,
-            visibleWidth,
-            visibleHeight,
-            index * frameWidth + (frameWidth - visibleWidth) / 2,
-            frameHeight - visibleHeight - 2,
-            visibleWidth,
-            visibleHeight,
-          );
-        });
-
-        const texture = this.textures.createCanvas(key, normalized.width, normalized.height);
-        if (!texture) continue;
-        const context = texture.getContext();
-        context.clearRect(0, 0, normalized.width, normalized.height);
-        context.drawImage(normalized, 0, 0);
-
-        for (let index = 0; index < extracted.length; index += 1) {
-          texture.add(index, 0, index * frameWidth, 0, frameWidth, frameHeight);
-        }
-        texture.refresh();
+      const key = 'wardrobe-gemini_operator-' + action;
+      if (this.textures.exists(key)) continue;
+      const texture = this.textures.createCanvas(key, normalized.width, normalized.height);
+      if (!texture) continue;
+      const context = texture.getContext();
+      context.clearRect(0, 0, normalized.width, normalized.height);
+      context.drawImage(normalized, 0, 0);
+      for (let index = 0; index < extracted.length; index += 1) {
+        texture.add(index, 0, index * frameWidth, 0, frameWidth, frameHeight);
       }
+      texture.refresh();
     }
+
+    const generatedDefIndex = this.characterDefinitions.findIndex((def) => def.id === generatedDef.id);
+    if (generatedDefIndex < 0) return;
   }
 
   private currentDefinition() {
@@ -843,47 +885,25 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   private createCharacterAnimations() {
-    for (const def of this.characterDefinitions) {
-      for (const direction of ['DOWN', 'UP', 'LEFT', 'RIGHT'] as const) {
-        if (def.source === 'generated') {
-          const idleKey = this.spriteKey(def, direction, 'idle');
-          if (!this.anims.exists(idleKey)) {
-            const texture = this.textures.get(idleKey);
-            const frameCount = Math.max(1, texture.frameTotal - 1);
-            this.anims.create({
-              key: idleKey,
-              frames: this.anims.generateFrameNumbers(idleKey, { start: 0, end: frameCount - 1 }),
-              frameRate: 1,
-              repeat: -1,
-            });
-          }
-        }
+    const def = this.characterDefinitions.find((entry) => entry.id === 'gemini_operator');
+    if (!def) return;
 
-        const walkKey = this.spriteKey(def, direction, 'walk');
-        if (!this.anims.exists(walkKey)) {
-          const texture = this.textures.get(walkKey);
-          const frameCount = Math.max(1, texture.frameTotal - 1);
-          this.anims.create({
-            key: walkKey,
-            frames: this.anims.generateFrameNumbers(walkKey, { start: 0, end: frameCount - 1 }),
-            frameRate: def.source === 'generated' ? 8 : def.source === 'robot' ? 12 : 10,
-            repeat: -1,
-          });
-        }
+    const animations: Array<[string, number, number]> = [
+      ['run', 8, 11],
+      ['death', 7, 10],
+      ['dodge', 8, 11],
+      ['respawn', 7, 10],
+    ];
 
-        if (def.source === 'robot') {
-          const shootKey = this.spriteKey(def, direction, 'shoot');
-          if (!this.anims.exists(shootKey)) {
-            const texture = this.textures.get(shootKey);
-            const frameCount = Math.max(1, texture.frameTotal - 1);
-            this.anims.create({
-              key: shootKey,
-              frames: this.anims.generateFrameNumbers(shootKey, { start: 0, end: frameCount - 1 }),
-              frameRate: 12,
-              repeat: 0,
-            });
-          }
-        }
+    for (const [action, frameRate, end] of animations) {
+      const key = 'wardrobe-gemini_operator-' + action;
+      if (!this.anims.exists(key)) {
+        this.anims.create({
+          key,
+          frames: this.anims.generateFrameNumbers(key, { start: 0, end: end - (action === 'run' ? 8 : 7) }),
+          frameRate,
+          repeat: -1,
+        });
       }
     }
   }
@@ -894,48 +914,84 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.fieldOperator.setVisible(false);
     this.previewSprite.setVisible(true);
 
-    if (this.muzzleUntil > 0 && def.source === 'robot') {
-      const shootKey = this.spriteKey(def, this.direction, 'shoot');
-      if (this.previewSprite.texture.key !== shootKey) {
-        this.previewSprite.setTexture(shootKey, 0);
-        this.fitCharacterSprite(this.previewSprite, def);
-      }
-      this.previewSprite.play(shootKey, true);
-    } else if (def.source === 'generated') {
-      const animationKey = this.spriteKey(def, this.direction, walking ? 'walk' : 'idle');
-      if (this.previewSprite.texture.key !== animationKey) {
-        this.previewSprite.setTexture(animationKey, 0);
-        this.fitCharacterSprite(this.previewSprite, def);
-      }
-      this.previewSprite.setFlipX(this.direction === 'RIGHT');
-      this.previewSprite.play(animationKey, true);
-    } else {
+    if (def.source !== 'generated') {
       const walkKey = this.spriteKey(def, this.direction, 'walk');
       if (this.previewSprite.texture.key !== walkKey) {
         this.previewSprite.setTexture(walkKey, 0);
         this.fitCharacterSprite(this.previewSprite, def);
       }
-      if (walking) {
-        this.previewSprite.play(walkKey, true);
-      } else {
+      if (walking) this.previewSprite.play(walkKey, true);
+      else {
         this.previewSprite.stop();
         this.previewSprite.setFrame(0);
       }
+      this.previewSprite.setRotation(0);
+      return;
     }
 
-    const sourceLabel =
-      def.source === 'generated' ? 'GENERATED OPERATOR · EMBEDDED MARKER' :
-      def.source === 'soldier' ? 'FREE SOLDIER · EMBEDDED GUN' :
-      def.source === 'robot' ? 'CC0 SHOOTER ROBOT · EMBEDDED GUN' :
-      'GegX WALK · WEAPON LAYER';
-    this.spriteLabel.setText(sourceLabel);
-    this.animationLabel?.setText(
-      def.source === 'robot' && this.muzzleUntil > 0
-        ? 'ANIMATION · SHOOT'
-        : walking
-          ? 'ANIMATION · WALK'
-          : 'ANIMATION · IDLE / READY',
-    );
+    const vx = this.visualMove.x;
+    const vy = this.visualMove.y;
+    let key = 'wardrobe-gemini_operator-idle_down';
+    let flipX = false;
+
+    if (this.generatedAction !== 'ready' && this.generatedActionUntil > 0) {
+      key = 'wardrobe-gemini_operator-' + this.generatedAction;
+      this.previewSprite.setRotation(this.aim.x < 0 ? Math.atan2(this.aim.y, this.aim.x) + Math.PI : Math.atan2(this.aim.y, this.aim.x));
+      flipX = false;
+    } else if (this.pointerAimActive || this.fireHeld) {
+      key = 'wardrobe-gemini_operator-aim';
+      this.previewSprite.setRotation(Math.atan2(this.aim.y, this.aim.x));
+      flipX = false;
+      this.generatedAction = 'aim';
+      this.generatedActionUntil = Math.max(this.generatedActionUntil, 80);
+    } else if (walking) {
+      this.previewSprite.setRotation(0);
+      if (Math.abs(vx) > 0.65 && Math.abs(vy) < 0.45) {
+        key = 'wardrobe-gemini_operator-run';
+        flipX = vx < 0;
+      } else if (vy > 0.35 && vx > 0.35) {
+        key = 'wardrobe-gemini_operator-idle_down_right';
+      } else if (vy > 0.35 && vx < -0.35) {
+        key = 'wardrobe-gemini_operator-idle_down_right';
+        flipX = true;
+      } else if (vy < -0.35 && vx > 0.35) {
+        key = 'wardrobe-gemini_operator-idle_up_right';
+      } else if (vy < -0.35 && vx < -0.35) {
+        key = 'wardrobe-gemini_operator-idle_up_right';
+        flipX = true;
+      } else if (vy > 0) {
+        key = 'wardrobe-gemini_operator-idle_down';
+      } else {
+        key = 'wardrobe-gemini_operator-idle_up_right';
+      }
+    } else {
+      this.previewSprite.setRotation(0);
+      if (this.direction === 'RIGHT') key = 'wardrobe-gemini_operator-idle_right';
+      else if (this.direction === 'LEFT') {
+        key = 'wardrobe-gemini_operator-idle_left';
+      } else if (this.direction === 'UP') key = 'wardrobe-gemini_operator-idle_up_right';
+      else key = 'wardrobe-gemini_operator-idle_down';
+    }
+
+    if (this.previewSprite.texture.key !== key) {
+      this.previewSprite.setTexture(key, 0);
+      this.fitCharacterSprite(this.previewSprite, def);
+    }
+
+    this.previewSprite.setFlipX(flipX);
+
+    if (key.endsWith('-run')) this.previewSprite.play(key, true);
+    else if (key.includes('-death') || key.includes('-dodge') || key.includes('-respawn')) this.previewSprite.play(key, true);
+    else {
+      this.previewSprite.stop();
+      this.previewSprite.setFrame(0);
+    }
+  }
+
+  private triggerGeneratedAction(action: 'aim' | 'shoot' | 'muzzle' | 'recoil' | 'hit' | 'headshot' | 'death' | 'dodge' | 'respawn', duration: number) {
+    if (this.currentDefinition().source !== 'generated') return;
+    this.generatedAction = action;
+    this.generatedActionUntil = duration;
   }
 
   private updateWeaponLayer() {
@@ -995,6 +1051,11 @@ export class WardrobeLabScene extends Phaser.Scene {
     });
     this.fireCooldown = this.fireIntervalMs;
     this.muzzleUntil = 95;
+    if (this.currentDefinition().source === 'generated') {
+      this.triggerGeneratedAction('shoot', 55);
+      this.time.delayedCall(55, () => this.triggerGeneratedAction('muzzle', 45));
+      this.time.delayedCall(100, () => this.triggerGeneratedAction('recoil', 90));
+    }
     this.updateWeaponLayer();
 
     if (this.currentDefinition().source === 'robot') {
@@ -1217,7 +1278,10 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.character.setPosition(this.playerSpawn.x, this.playerSpawn.y);
     this.move.set(0, 0);
     this.direction = 'DOWN';
+    this.visualMove.set(0, 1);
     this.aim.set(1, 0);
+    this.generatedAction = 'ready';
+    this.generatedActionUntil = 0;
     this.fireHeld = false;
     this.fireCooldown = 0;
     this.muzzleUntil = 0;
