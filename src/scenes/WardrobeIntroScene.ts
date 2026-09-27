@@ -885,22 +885,51 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   private createCharacterAnimations() {
-    const def = this.characterDefinitions.find((entry) => entry.id === 'gemini_operator');
-    if (!def) return;
+    for (const def of this.characterDefinitions) {
+      for (const direction of ['DOWN', 'UP', 'LEFT', 'RIGHT'] as const) {
+        if (def.source === 'generated') continue;
 
-    const animations: Array<[string, number, number]> = [
-      ['run', 8, 11],
-      ['death', 7, 10],
-      ['dodge', 8, 11],
-      ['respawn', 7, 10],
+        const walkKey = this.spriteKey(def, direction, 'walk');
+        if (!this.anims.exists(walkKey)) {
+          const texture = this.textures.get(walkKey);
+          const frameCount = Math.max(1, texture.frameTotal - 1);
+          this.anims.create({
+            key: walkKey,
+            frames: this.anims.generateFrameNumbers(walkKey, { start: 0, end: frameCount - 1 }),
+            frameRate: def.source === 'robot' ? 12 : 10,
+            repeat: -1,
+          });
+        }
+
+        if (def.source === 'robot') {
+          const shootKey = this.spriteKey(def, direction, 'shoot');
+          if (!this.anims.exists(shootKey)) {
+            const texture = this.textures.get(shootKey);
+            const frameCount = Math.max(1, texture.frameTotal - 1);
+            this.anims.create({
+              key: shootKey,
+              frames: this.anims.generateFrameNumbers(shootKey, { start: 0, end: frameCount - 1 }),
+              frameRate: 12,
+              repeat: 0,
+            });
+          }
+        }
+      }
+    }
+
+    const generatedAnimations: Array<[string, number, number]> = [
+      ['run', 8, 3],
+      ['death', 7, 3],
+      ['dodge', 8, 3],
+      ['respawn', 7, 3],
     ];
 
-    for (const [action, frameRate, end] of animations) {
+    for (const [action, frameRate, end] of generatedAnimations) {
       const key = 'wardrobe-gemini_operator-' + action;
       if (!this.anims.exists(key)) {
         this.anims.create({
           key,
-          frames: this.anims.generateFrameNumbers(key, { start: 0, end: end - (action === 'run' ? 8 : 7) }),
+          frames: this.anims.generateFrameNumbers(key, { start: 0, end }),
           frameRate,
           repeat: -1,
         });
@@ -915,15 +944,25 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.previewSprite.setVisible(true);
 
     if (def.source !== 'generated') {
-      const walkKey = this.spriteKey(def, this.direction, 'walk');
-      if (this.previewSprite.texture.key !== walkKey) {
-        this.previewSprite.setTexture(walkKey, 0);
-        this.fitCharacterSprite(this.previewSprite, def);
-      }
-      if (walking) this.previewSprite.play(walkKey, true);
-      else {
-        this.previewSprite.stop();
-        this.previewSprite.setFrame(0);
+      if (this.muzzleUntil > 0 && def.source === 'robot') {
+        const shootKey = this.spriteKey(def, this.direction, 'shoot');
+        if (this.previewSprite.texture.key !== shootKey) {
+          this.previewSprite.setTexture(shootKey, 0);
+          this.fitCharacterSprite(this.previewSprite, def);
+        }
+        this.previewSprite.play(shootKey, true);
+      } else {
+        const walkKey = this.spriteKey(def, this.direction, 'walk');
+        if (this.previewSprite.texture.key !== walkKey) {
+          this.previewSprite.setTexture(walkKey, 0);
+          this.fitCharacterSprite(this.previewSprite, def);
+        }
+        if (walking) {
+          this.previewSprite.play(walkKey, true);
+        } else {
+          this.previewSprite.stop();
+          this.previewSprite.setFrame(0);
+        }
       }
       this.previewSprite.setRotation(0);
       return;
@@ -936,12 +975,10 @@ export class WardrobeLabScene extends Phaser.Scene {
 
     if (this.generatedAction !== 'ready' && this.generatedActionUntil > 0) {
       key = 'wardrobe-gemini_operator-' + this.generatedAction;
-      this.previewSprite.setRotation(this.aim.x < 0 ? Math.atan2(this.aim.y, this.aim.x) + Math.PI : Math.atan2(this.aim.y, this.aim.x));
-      flipX = false;
+      this.previewSprite.setRotation(Math.atan2(this.aim.y, this.aim.x));
     } else if (this.pointerAimActive || this.fireHeld) {
       key = 'wardrobe-gemini_operator-aim';
       this.previewSprite.setRotation(Math.atan2(this.aim.y, this.aim.x));
-      flipX = false;
       this.generatedAction = 'aim';
       this.generatedActionUntil = Math.max(this.generatedActionUntil, 80);
     } else if (walking) {
@@ -967,9 +1004,8 @@ export class WardrobeLabScene extends Phaser.Scene {
     } else {
       this.previewSprite.setRotation(0);
       if (this.direction === 'RIGHT') key = 'wardrobe-gemini_operator-idle_right';
-      else if (this.direction === 'LEFT') {
-        key = 'wardrobe-gemini_operator-idle_left';
-      } else if (this.direction === 'UP') key = 'wardrobe-gemini_operator-idle_up_right';
+      else if (this.direction === 'LEFT') key = 'wardrobe-gemini_operator-idle_left';
+      else if (this.direction === 'UP') key = 'wardrobe-gemini_operator-idle_up_right';
       else key = 'wardrobe-gemini_operator-idle_down';
     }
 
@@ -980,9 +1016,9 @@ export class WardrobeLabScene extends Phaser.Scene {
 
     this.previewSprite.setFlipX(flipX);
 
-    if (key.endsWith('-run')) this.previewSprite.play(key, true);
-    else if (key.includes('-death') || key.includes('-dodge') || key.includes('-respawn')) this.previewSprite.play(key, true);
-    else {
+    if (key.endsWith('-run') || key.includes('-death') || key.includes('-dodge') || key.includes('-respawn')) {
+      this.previewSprite.play(key, true);
+    } else {
       this.previewSprite.stop();
       this.previewSprite.setFrame(0);
     }
