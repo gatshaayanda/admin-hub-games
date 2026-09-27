@@ -294,18 +294,6 @@ type WardrobeCharacterDefinition = {
 const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
 
   {
-    id: 'soldier_01',
-    name: 'Soldier 01 · CC BY · ARMED',
-    source: 'soldier',
-    basePath: '/assets/wardrobe/free-packs/a/export_folder/soldier_01',
-    displaySize: 80,
-    targetVisibleHeight: 60,
-    frameWidth: 16,
-    frameHeight: 16,
-    originY: 1,
-    embeddedWeapon: true,
-  },
-  {
     id: 'gemini_operator',
     name: 'GEMINI OPERATOR · GENERATED REFERENCE',
     source: 'generated',
@@ -314,6 +302,18 @@ const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
     targetVisibleHeight: 60,
     frameWidth: 164,
     frameHeight: 216,
+    originY: 1,
+    embeddedWeapon: true,
+  },
+  {
+    id: 'soldier_01',
+    name: 'Soldier 01 · CC BY · ARMED',
+    source: 'soldier',
+    basePath: '/assets/wardrobe/free-packs/a/export_folder/soldier_01',
+    displaySize: 80,
+    targetVisibleHeight: 60,
+    frameWidth: 16,
+    frameHeight: 16,
     originY: 1,
     embeddedWeapon: true,
   },
@@ -625,20 +625,84 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   private prepareGeneratedCharacterTextures() {
-    const source = this.textures.get('wardrobe-generated-reference').getSourceImage() as CanvasImageSource;
+    const source = this.textures.get('wardrobe-generated-reference').getSourceImage() as CanvasImageSource & {
+      width: number;
+      height: number;
+    };
     const generatedDef = this.characterDefinitions.find((def) => def.id === 'gemini_operator')!;
-    const cellWidth = 176;
-    const cellHeight = 256;
-    const cropX = 6;
-    const cropY = 34;
-    const frameWidth = 164;
-    const frameHeight = 216;
+    const columns = 8;
+    const rows = 4;
+    const cellWidth = source.width / columns;
+    const cellHeight = source.height / rows;
+    const cropX = Math.round(cellWidth * (6 / 176));
+    const cropY = Math.round(cellHeight * (34 / 256));
+    const frameWidth = Math.round(cellWidth * (164 / 176));
+    const frameHeight = Math.round(cellHeight * (216 / 256));
 
     const sequences: Record<'DOWN' | 'UP' | 'LEFT' | 'RIGHT', { idle: number[]; walk: number[] }> = {
       DOWN: { idle: [0], walk: [3, 4, 5, 6, 7] },
       UP: { idle: [11], walk: [11, 12, 13, 14, 15] },
       LEFT: { idle: [16], walk: [19, 20, 21, 22, 23] },
       RIGHT: { idle: [24], walk: [26, 27, 28, 29, 30, 31] },
+    };
+
+    const normalizeFrame = (frameCanvas: HTMLCanvasElement) => {
+      const frameContext = frameCanvas.getContext('2d', { willReadFrequently: true });
+      if (!frameContext) return;
+      const pixels = frameContext.getImageData(0, 0, frameCanvas.width, frameCanvas.height);
+      for (let i = 0; i < pixels.data.length; i += 4) {
+        const r = pixels.data[i];
+        const g = pixels.data[i + 1];
+        const b = pixels.data[i + 2];
+        const neutral = Math.max(r, g, b) - Math.min(r, g, b) < 12;
+        const checkerboard = neutral && r >= 170 && r <= 252;
+        if (checkerboard) pixels.data[i + 3] = 0;
+      }
+      frameContext.putImageData(pixels, 0, 0);
+
+      const cleaned = frameContext.getImageData(0, 0, frameCanvas.width, frameCanvas.height).data;
+      let minX = frameCanvas.width;
+      let minY = frameCanvas.height;
+      let maxX = -1;
+      let maxY = -1;
+      for (let y = 0; y < frameCanvas.height; y += 1) {
+        for (let x = 0; x < frameCanvas.width; x += 1) {
+          if (cleaned[(y * frameCanvas.width + x) * 4 + 3] > 12) {
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x);
+            maxY = Math.max(maxY, y);
+          }
+        }
+      }
+      if (maxX < 0) return;
+
+      const normalized = document.createElement('canvas');
+      normalized.width = frameCanvas.width;
+      normalized.height = frameCanvas.height;
+      const normalizedContext = normalized.getContext('2d');
+      if (!normalizedContext) return;
+
+      const visibleWidth = maxX - minX + 1;
+      const visibleHeight = maxY - minY + 1;
+      const targetHeight = Math.min(frameCanvas.height - 8, visibleHeight);
+      const scale = targetHeight / visibleHeight;
+      const targetWidth = visibleWidth * scale;
+      const drawX = (frameCanvas.width - targetWidth) / 2;
+      const drawY = frameCanvas.height - targetHeight - 2;
+      normalizedContext.drawImage(
+        frameCanvas,
+        minX,
+        minY,
+        visibleWidth,
+        visibleHeight,
+        drawX,
+        drawY,
+        targetWidth,
+        targetHeight,
+      );
+      frameContext.clearRect(0, 0, frameCanvas.width, frameCanvas.height);
+      frameContext.drawImage(normalized, 0, 0);
     };
 
     for (const direction of Object.keys(sequences) as Array<'DOWN' | 'UP' | 'LEFT' | 'RIGHT'>) {
@@ -655,22 +719,20 @@ export class WardrobeLabScene extends Phaser.Scene {
         context.clearRect(0, 0, canvas.width, canvas.height);
 
         frames.forEach((sourceFrame, index) => {
-          const sx = (sourceFrame % 8) * cellWidth + cropX;
-          const sy = Math.floor(sourceFrame / 8) * cellHeight + cropY;
-          context.drawImage(source, sx, sy, frameWidth, frameHeight, index * frameWidth, 0, frameWidth, frameHeight);
+          const frameCanvas = document.createElement('canvas');
+          frameCanvas.width = frameWidth;
+          frameCanvas.height = frameHeight;
+          const frameContext = frameCanvas.getContext('2d');
+          if (!frameContext) return;
+
+          const sx = (sourceFrame % columns) * cellWidth + cropX;
+          const sy = Math.floor(sourceFrame / columns) * cellHeight + cropY;
+          frameContext.drawImage(source, sx, sy, frameWidth, frameHeight, 0, 0, frameWidth, frameHeight);
+          normalizeFrame(frameCanvas);
+          context.drawImage(frameCanvas, index * frameWidth, 0);
           texture.add(index, 0, index * frameWidth, 0, frameWidth, frameHeight);
         });
 
-        const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
-        for (let i = 0; i < pixels.data.length; i += 4) {
-          const r = pixels.data[i];
-          const g = pixels.data[i + 1];
-          const b = pixels.data[i + 2];
-          const neutral = Math.max(r, g, b) - Math.min(r, g, b) < 10;
-          const checkerboard = neutral && r >= 175 && r <= 250;
-          if (checkerboard) pixels.data[i + 3] = 0;
-        }
-        context.putImageData(pixels, 0, 0);
         texture.refresh();
       }
     }
