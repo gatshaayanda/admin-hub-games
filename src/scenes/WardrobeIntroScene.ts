@@ -275,7 +275,7 @@ export class WardrobeIntroScene extends Phaser.Scene {
   }
 }
 
-type WardrobeCharacterSource = 'gegx' | 'soldier' | 'robot';
+type WardrobeCharacterSource = 'gegx' | 'soldier' | 'robot' | 'generated';
 
 type WardrobeCharacterDefinition = {
   id: string;
@@ -292,6 +292,18 @@ type WardrobeCharacterDefinition = {
 };
 
 const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
+  {
+    id: 'gemini_operator',
+    name: 'GEMINI OPERATOR · GENERATED REFERENCE',
+    source: 'generated',
+    basePath: '/assets/wardrobe/incoming/og.jpg',
+    displaySize: 80,
+    targetVisibleHeight: 60,
+    frameWidth: 164,
+    frameHeight: 216,
+    originY: 1,
+    embeddedWeapon: true,
+  },
   {
     id: 'soldier_01',
     name: 'Soldier 01 · CC BY · ARMED',
@@ -410,8 +422,10 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   preload() {
+    this.load.image('wardrobe-generated-reference', '/assets/wardrobe/incoming/og.jpg');
     for (const def of this.characterDefinitions) {
       for (const direction of ['DOWN', 'UP', 'LEFT', 'RIGHT'] as const) {
+        if (def.source === 'generated') continue;
         if (def.source === 'gegx') {
           this.load.spritesheet(
             this.spriteKey(def, direction),
@@ -444,6 +458,8 @@ export class WardrobeLabScene extends Phaser.Scene {
 
   create() {
     const { width, height } = this.scale;
+
+    this.prepareGeneratedCharacterTextures();
 
     this.cameras.main.setBackgroundColor('#6f984b');
     this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
@@ -607,6 +623,56 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.updateLabels();
   }
 
+  private prepareGeneratedCharacterTextures() {
+    const source = this.textures.get('wardrobe-generated-reference').getSourceImage() as CanvasImageSource;
+    const cellWidth = 176;
+    const cellHeight = 256;
+    const cropX = 6;
+    const cropY = 34;
+    const frameWidth = 164;
+    const frameHeight = 216;
+
+    const sequences: Record<'DOWN' | 'UP' | 'LEFT' | 'RIGHT', { idle: number[]; walk: number[] }> = {
+      DOWN: { idle: [0], walk: [3, 4, 5, 6, 7] },
+      UP: { idle: [11], walk: [11, 12, 13, 14, 15] },
+      LEFT: { idle: [16], walk: [19, 20, 21, 22, 23] },
+      RIGHT: { idle: [24], walk: [26, 27, 28, 29, 30, 31] },
+    };
+
+    for (const direction of Object.keys(sequences) as Array<'DOWN' | 'UP' | 'LEFT' | 'RIGHT'>) {
+      for (const action of ['idle', 'walk'] as const) {
+        const frames = sequences[direction][action];
+        const key = this.spriteKey(this.characterDefinitions[0], direction, action);
+        if (this.textures.exists(key)) continue;
+
+        const texture = this.textures.createCanvas(key, frameWidth * frames.length, frameHeight);
+        if (!texture) continue;
+
+        const canvas = texture.getCanvas();
+        const context = texture.getContext();
+        context.clearRect(0, 0, canvas.width, canvas.height);
+
+        frames.forEach((sourceFrame, index) => {
+          const sx = (sourceFrame % 8) * cellWidth + cropX;
+          const sy = Math.floor(sourceFrame / 8) * cellHeight + cropY;
+          context.drawImage(source, sx, sy, frameWidth, frameHeight, index * frameWidth, 0, frameWidth, frameHeight);
+        });
+
+        const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < pixels.data.length; i += 4) {
+          const r = pixels.data[i];
+          const g = pixels.data[i + 1];
+          const b = pixels.data[i + 2];
+          const neutral = Math.max(r, g, b) - Math.min(r, g, b) < 10;
+          const checkerboard = neutral && r >= 175 && r <= 250;
+          if (checkerboard) pixels.data[i + 3] = 0;
+        }
+        context.putImageData(pixels, 0, 0);
+        texture.refresh();
+      }
+    }
+  }
+
   private currentDefinition() {
     return this.characterDefinitions[this.selectedCharacterIndex];
   }
@@ -684,7 +750,7 @@ export class WardrobeLabScene extends Phaser.Scene {
           this.anims.create({
             key: walkKey,
             frames: this.anims.generateFrameNumbers(walkKey, { start: 0, end: frameCount - 1 }),
-            frameRate: def.source === 'robot' ? 12 : 10,
+            frameRate: def.source === 'generated' ? 8 : def.source === 'robot' ? 12 : 10,
             repeat: -1,
           });
         }
@@ -755,8 +821,10 @@ export class WardrobeLabScene extends Phaser.Scene {
     }
 
     const sourceLabel =
+      def.source === 'generated' ? 'GENERATED OPERATOR · EMBEDDED MARKER' :
       def.source === 'soldier' ? 'FREE SOLDIER · EMBEDDED GUN' :
       def.source === 'robot' ? 'CC0 SHOOTER ROBOT · EMBEDDED GUN' :
+      def.source === 'generated' ? 'GENERATED OPERATOR · EMBEDDED MARKER' :
       'GegX WALK · WEAPON LAYER';
     this.spriteLabel.setText(sourceLabel);
     this.animationLabel?.setText(
