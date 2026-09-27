@@ -4782,3 +4782,35 @@ The mobile control contract remains the shared Shooter control:
 Desktop Wardrobe inspection uses field pointer movement for aim and Space for fire; clicking the field no longer silently fires.
 
 This checkpoint is Wardrobe-only. Shooters Trigger combat, AI, projectile, collision, damage and recovery were not changed.
+
+## Wardrobe — Generated Operator Alignment Checkpoint — September 27, 2026
+
+The Wardrobe generated operator is the controlled visual laboratory for the future Shooters Trigger player. The current source artwork is `public/assets/wardrobe/incoming/1.jpg`; `og.jpg` remains the original generated reference surface. The live lab must not change Shooters Trigger combat, hitboxes, projectile rules, AI or Golden Playthrough.
+
+The generated sheet is a large 8×4 JPEG contact sheet rather than a small native Phaser sheet. Wardrobe now detects the foreground in each actual cell, removes connected background from the JPEG, trims to the real character bounds, preserves source-cell horizontal alignment, and normalizes every extracted action to one shared foot baseline and animation-wide visible height. Do not reintroduce fixed 176×256 crop assumptions.
+
+The Wardrobe operator uses the same presentation contract as the current Shooters Trigger fighter:
+- body/facing remains independent from aim;
+- no whole-body rotation toward the weapon;
+- movement selects the appropriate generated directional body pose;
+- left/right horizontal mirroring is used only where the source direction can be safely mirrored;
+- the weapon, forearms, muzzle and firing direction use the Shooter-style independent aim layer;
+- the character's ground/foot line remains stable while frames change;
+- mobile uses the shared left analogue + right drag-to-aim/hold-fire control layer;
+- desktop uses keyboard movement, pointer aim and Space fire.
+
+Phaser's fixed frame indexing is authoritative for the 8×4 source grid: frames are read left-to-right, then top-to-bottom. The generated lab's action map remains explicit rather than inferred at runtime.
+
+### Verification boundary
+
+For this checkpoint, verify:
+1. TypeScript/Vite production build;
+2. Wardrobe scene loads the generated source without console/runtime extraction failure;
+3. generated operator remains grounded while idle and walking;
+4. down/right/up/left and diagonal movement select stable visual directions;
+5. explicit aim does not rotate the body;
+6. weapon/arms/muzzle share the same aim vector;
+7. mobile controls still drive Wardrobe through the shared Shooter control contract;
+8. Shooter Trigger combat files remain untouched by this Wardrobe visual pass.
+
+This is a Wardrobe visual checkpoint, not a claim of device/offline acceptance.
