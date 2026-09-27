@@ -290,6 +290,11 @@ export class WardrobeLabScene extends Phaser.Scene {
   private actionButtons: Phaser.GameObjects.Rectangle[] = [];
   private variantButtons: Phaser.GameObjects.Rectangle[] = [];
   private variantIndex = 0;
+  private move = new Phaser.Math.Vector2();
+  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+  private walkClock = 0;
+  private spriteLabel!: Phaser.GameObjects.Text;
+  private directionLabel!: Phaser.GameObjects.Text;
   private direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT' = 'DOWN';
   private previewSprite!: Phaser.GameObjects.Image;
   private walkFrame = 0;
