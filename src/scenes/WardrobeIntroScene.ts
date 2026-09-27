@@ -892,9 +892,10 @@ export class WardrobeLabScene extends Phaser.Scene {
     const visibleHeight = Math.max(...allFrames.map((frame) => frame.maxY - frame.minY + 1));
     const horizontalMin = Math.min(...allFrames.map((frame) => frame.sourceAnchorX - (frame.maxX - frame.minX + 1) / 2));
     const horizontalMax = Math.max(...allFrames.map((frame) => frame.sourceAnchorX + (frame.maxX - frame.minX + 1) / 2));
-    const stageWidth = Math.ceil(Math.max(visibleWidth, horizontalMax - horizontalMin) * 1.16);
-    const stageHeight = Math.ceil(visibleHeight * 1.12);
-    this.generatedVisibleHeight = visibleHeight;
+    const sourceToTexture = Math.min(1, 128 / visibleHeight);
+    const stageWidth = Math.max(96, Math.ceil(Math.max(visibleWidth, horizontalMax - horizontalMin) * sourceToTexture * 1.16));
+    const stageHeight = 128;
+    this.generatedVisibleHeight = visibleHeight * sourceToTexture;
 
     for (const [action, frames] of Object.entries(sequences)) {
       const extracted = frames
@@ -911,9 +912,12 @@ export class WardrobeLabScene extends Phaser.Scene {
       extracted.forEach((frame, index) => {
         const visibleW = frame.maxX - frame.minX + 1;
         const visibleH = frame.maxY - frame.minY + 1;
-        const stageX = stageWidth / 2 + (frame.sourceAnchorX - (horizontalMin + horizontalMax) / 2);
-        const drawX = Math.round(index * stageWidth + stageX - visibleW / 2);
-        const drawY = Math.round(stageHeight - visibleH);
+        const drawW = Math.max(1, Math.round(visibleW * sourceToTexture));
+        const drawH = Math.max(1, Math.round(visibleH * sourceToTexture));
+        const anchorX = (frame.sourceAnchorX - (horizontalMin + horizontalMax) / 2) * sourceToTexture;
+        const stageX = stageWidth / 2 + anchorX;
+        const drawX = Math.round(index * stageWidth + stageX - drawW / 2);
+        const drawY = Math.round(stageHeight - drawH);
         normalizedContext.drawImage(
           frame.canvas,
           frame.minX,
