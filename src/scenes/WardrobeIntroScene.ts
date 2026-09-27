@@ -169,7 +169,6 @@ export class WardrobeIntroScene extends Phaser.Scene {
       height: number;
     };
     const columns = 8;
-    const rows = 4;
     const cellWidth = source.width / columns;
     const cellHeight = source.height / rows;
     const frameCanvas = document.createElement('canvas');
@@ -238,7 +237,7 @@ export class WardrobeIntroScene extends Phaser.Scene {
   private createCharacter(x: number, y: number) {
     const container = this.add.container(x, y);
     const shadow = this.add.ellipse(0, 0, 46, 13, 0x3d3025, 0.28);
-    const sprite = this.add.sprite(0, 0, 'wardrobe-gemini_operator-idle_down', 0)
+    const sprite = this.add.sprite(0, 0, 'wardrobe-generated-intro', 0)
       .setOrigin(0.5, 1);
     const scale = this.introVisibleHeight > 0 ? 60 / this.introVisibleHeight : 1;
     sprite.setScale(scale);
