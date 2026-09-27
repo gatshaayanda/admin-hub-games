@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { installShootersTriggerMobileControls } from '../shooters-trigger-mobile-controls';
+import { FieldOperatorCharacter } from './FieldOperatorCharacter';
 
 type WardrobeAction =
   | 'IDLE'
@@ -452,6 +453,9 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.weaponLayer = this.add.graphics();
     this.muzzleFlash = this.add.graphics();
     this.character.add([this.shadow, this.weaponLayer, this.muzzleFlash]);
+    this.fieldOperator = new FieldOperatorCharacter(this, 0, 0);
+    this.character.add(this.fieldOperator.gameObject);
+    this.fieldOperator.setVisible(this.selectedCharacterIndex === 0);
 
     const current = this.currentDefinition();
     this.previewSprite = this.add.sprite(0, 0, this.spriteKey(current, 'DOWN'), 0)
@@ -702,6 +706,30 @@ export class WardrobeLabScene extends Phaser.Scene {
 
   private playCharacterAnimation(walking: boolean) {
     const def = this.currentDefinition();
+
+    if (this.selectedCharacterIndex === 0) {
+      this.previewSprite.setVisible(false);
+      this.fieldOperator.setVisible(true);
+      this.fieldOperator.update(
+        this.direction,
+        this.aim,
+        walking,
+        this.muzzleUntil > 0,
+        this.game.loop.delta,
+      );
+      this.spriteLabel.setText('FIELD OPERATOR 01 · COHERENT WEAPON MOUNT');
+      this.animationLabel?.setText(
+        this.muzzleUntil > 0
+          ? 'ANIMATION · SHOOT / RECOIL'
+          : walking
+            ? 'ANIMATION · WALK'
+            : 'ANIMATION · IDLE / READY',
+      );
+      return;
+    }
+
+    this.fieldOperator.setVisible(false);
+    this.previewSprite.setVisible(true);
     const walkKey = this.spriteKey(def, this.direction, 'walk');
 
     if (this.muzzleUntil > 0 && def.source === 'robot') {
@@ -743,6 +771,12 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.weaponLayer.clear();
     this.muzzleFlash.clear();
 
+    if (this.selectedCharacterIndex === 0) {
+      this.weaponLayer.setVisible(false);
+      this.muzzleFlash.setVisible(false);
+      return;
+    }
+
     if (def.embeddedWeapon) {
       this.weaponLayer.setVisible(false);
       this.muzzleFlash.setVisible(false);
@@ -775,10 +809,12 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   private fireShot() {
-    const origin = new Phaser.Math.Vector2(
-      this.character.x + this.aim.x * 42,
-      this.character.y - 52 + this.aim.y * 10,
-    );
+    const origin = this.selectedCharacterIndex === 0
+      ? this.fieldOperator.getMuzzlePosition(this.aim)
+      : new Phaser.Math.Vector2(
+          this.character.x + this.aim.x * 42,
+          this.character.y - 52 + this.aim.y * 10,
+        );
     const velocity = this.aim.clone().normalize().scale(this.projectileSpeed);
     const graphics = this.add.circle(origin.x, origin.y, 4, 0xf0dfb6, 1).setDepth(60);
     this.shots.push({
@@ -789,6 +825,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     });
     this.fireCooldown = this.fireIntervalMs;
     this.muzzleUntil = 95;
+    if (this.selectedCharacterIndex === 0) this.fieldOperator.triggerRecoil();
     this.updateWeaponLayer();
 
     if (this.currentDefinition().source === 'robot') {
@@ -928,6 +965,8 @@ export class WardrobeLabScene extends Phaser.Scene {
   private selectCharacter(index: number) {
     const count = this.characterDefinitions.length;
     this.selectedCharacterIndex = (index + count) % count;
+    this.fieldOperator.setVisible(this.selectedCharacterIndex === 0);
+    this.previewSprite.setVisible(this.selectedCharacterIndex !== 0);
     this.playCharacterAnimation(false);
     this.updateWeaponLayer();
     this.updateLabels();
