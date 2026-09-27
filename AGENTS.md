@@ -4830,3 +4830,9 @@ The Wardrobe lab now treats the two generated references as the two Arena charac
 Both use the same explicit 8×4 action-grid contract and the same movement/aim/fire controls. Generated extraction is now based on the actual foreground bounds inside each real source cell rather than fixed 176×256 crop assumptions. Each action keeps source-relative horizontal placement and a shared animation-wide foot baseline/visible height.
 
 Wardrobe remains isolated from Shooters Trigger combat/AI/projectile/collision logic. The goal is to make Wardrobe the visual acceptance lab first, then later reuse the accepted character artwork in Arena.
+
+
+### Wardrobe two-source loader correction — September 28, 2026
+- Wardrobe Intro loads and reads `wardrobe-generated-reference-player` (1.jpg), not the removed legacy single-source key.
+- Wardrobe Lab preloads both `wardrobe-generated-reference-player` (1.jpg) and `wardrobe-generated-reference-bot` (og.jpg), matching the generated character definitions.
+- This fixes texture-key mismatches introduced while separating the player and bot source sheets. It does not establish visual correctness of the extracted actions; image-by-image visual inspection and a production build/browser check remain required before promotion claims.
