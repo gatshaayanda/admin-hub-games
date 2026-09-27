@@ -59,7 +59,8 @@ export class WardrobeIntroScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.image('wardrobe-generated-reference-intro', '/assets/wardrobe/incoming/1.jpg');
+    // og.jpg remains the original generated reference; 1.jpg is the newer normalized action sheet used by the lab.
+    this.load.image('wardrobe-generated-reference-intro', '/assets/wardrobe/incoming/og.jpg');
   }
 
   create() {
@@ -334,7 +335,8 @@ const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
     frameWidth: 164,
     frameHeight: 216,
     originY: 1,
-    embeddedWeapon: true,
+    // The current generated sheet is used for the body/action source. Weapon aim/fire is rendered by the same independent weapon layer used by the Shooter prototype.
+    embeddedWeapon: false,
   },
   {
     id: 'soldier_01',
@@ -428,6 +430,7 @@ export class WardrobeLabScene extends Phaser.Scene {
   private muzzleUntil = 0;
   private generatedAction: 'ready' | 'aim' | 'shoot' | 'muzzle' | 'recoil' | 'hit' | 'headshot' | 'death' | 'dodge' | 'respawn' = 'ready';
   private generatedActionUntil = 0;
+  private generatedVisibleHeight = 0;
   private visualMove = new Phaser.Math.Vector2(0, 1);
   private targetBodyHits = 0;
   private targetDown = false;
@@ -589,7 +592,6 @@ export class WardrobeLabScene extends Phaser.Scene {
       if (pointer.y < 76 || (bottomControls && (leftControl || rightControl))) return;
       this.pointerAimActive = true;
       this.updateAimFromWorldPointer(pointer);
-      this.fireHeld = true;
     });
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       if (!this.pointerAimActive || this.pointerId >= 0) return;
@@ -598,7 +600,6 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.input.on('pointerup', () => {
       if (this.pointerId < 0) {
         this.pointerAimActive = false;
-        this.fireHeld = false;
       }
     });
 
@@ -714,6 +715,7 @@ export class WardrobeLabScene extends Phaser.Scene {
 
     const extractFrame = (sourceFrame: number) => {
       if (extractedByFrame.has(sourceFrame)) return extractedByFrame.get(sourceFrame)!;
+
       const frameCanvas = document.createElement('canvas');
       frameCanvas.width = frameWidth;
       frameCanvas.height = frameHeight;
@@ -771,8 +773,13 @@ export class WardrobeLabScene extends Phaser.Scene {
       { minX: frameWidth, minY: frameHeight, maxX: -1, maxY: -1 },
     );
 
-    const visibleWidth = union.maxX - union.minX + 1;
+    if (union.maxY < 0) return;
+
+    // One animation-wide visible height keeps the head/body/feet at a constant scale.
+    // Horizontal placement stays tied to the original source cell center instead of
+    // being re-centered around the weapon/arms in each frame.
     const visibleHeight = union.maxY - union.minY + 1;
+    this.generatedVisibleHeight = visibleHeight;
 
     for (const [action, frames] of Object.entries(sequences)) {
       const extracted = frames
@@ -787,23 +794,17 @@ export class WardrobeLabScene extends Phaser.Scene {
       if (!normalizedContext) continue;
 
       extracted.forEach((frame, index) => {
-        normalizedContext.drawImage(
-          frame.canvas,
-          union.minX,
-          union.minY,
-          visibleWidth,
-          visibleHeight,
-          index * frameWidth + (frameWidth - visibleWidth) / 2,
-          frameHeight - visibleHeight - 2,
-          visibleWidth,
-          visibleHeight,
-        );
+        // Preserve the source cell's X alignment and move only the vertical foot line
+        // to the shared baseline. This prevents weapons/hands from shifting the body.
+        const y = frameHeight - (frame.maxY + 1);
+        normalizedContext.drawImage(frame.canvas, 0, 0, frameWidth, frameHeight, index * frameWidth, y, frameWidth, frameHeight);
       });
 
       const key = 'wardrobe-gemini_operator-' + action;
       if (this.textures.exists(key)) continue;
       const texture = this.textures.createCanvas(key, normalized.width, normalized.height);
       if (!texture) continue;
+      texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
       const context = texture.getContext();
       context.clearRect(0, 0, normalized.width, normalized.height);
       context.drawImage(normalized, 0, 0);
@@ -844,6 +845,13 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   private fitCharacterSprite(sprite: Phaser.GameObjects.Sprite, def: WardrobeCharacterDefinition) {
+    if (def.source === 'generated' && this.generatedVisibleHeight > 0) {
+      const scale = this.targetVisibleCharacterHeight / this.generatedVisibleHeight;
+      sprite.setScale(scale);
+      sprite.setOrigin(0.5, 1);
+      return;
+    }
+
     const source = sprite.texture.getSourceImage() as CanvasImageSource;
     const frame = sprite.frame;
     const canvas = document.createElement('canvas');
@@ -970,43 +978,46 @@ export class WardrobeLabScene extends Phaser.Scene {
 
     const vx = this.visualMove.x;
     const vy = this.visualMove.y;
+    const action = this.generatedAction;
+    const isReactionAction = action === 'hit' || action === 'headshot' || action === 'death' || action === 'dodge' || action === 'respawn';
+
+    if (isReactionAction && this.generatedActionUntil > 0) {
+      const key = 'wardrobe-gemini_operator-' + action;
+      if (this.previewSprite.texture.key !== key) {
+        this.previewSprite.setTexture(key, 0);
+        this.fitCharacterSprite(this.previewSprite, def);
+      }
+      this.previewSprite.setFlipX(vx < -0.08 || this.direction === 'LEFT');
+      this.previewSprite.setRotation(0);
+      if (action === 'death' || action === 'dodge' || action === 'respawn') {
+        this.previewSprite.play(key, true);
+      } else {
+        this.previewSprite.stop();
+        this.previewSprite.setFrame(0);
+      }
+      return;
+    }
+
     let key = 'wardrobe-gemini_operator-idle_down';
     let flipX = false;
 
-    if (this.generatedAction !== 'ready' && this.generatedActionUntil > 0) {
-      key = 'wardrobe-gemini_operator-' + this.generatedAction;
-      this.previewSprite.setRotation(Math.atan2(this.aim.y, this.aim.x));
-    } else if (this.pointerAimActive || this.fireHeld) {
-      key = 'wardrobe-gemini_operator-aim';
-      this.previewSprite.setRotation(Math.atan2(this.aim.y, this.aim.x));
-      this.generatedAction = 'aim';
-      this.generatedActionUntil = Math.max(this.generatedActionUntil, 80);
-    } else if (walking) {
-      this.previewSprite.setRotation(0);
-      if (Math.abs(vx) > 0.65 && Math.abs(vy) < 0.45) {
-        key = 'wardrobe-gemini_operator-run';
-        flipX = vx < 0;
-      } else if (vy > 0.35 && vx > 0.35) {
-        key = 'wardrobe-gemini_operator-idle_down_right';
-      } else if (vy > 0.35 && vx < -0.35) {
-        key = 'wardrobe-gemini_operator-idle_down_right';
-        flipX = true;
-      } else if (vy < -0.35 && vx > 0.35) {
-        key = 'wardrobe-gemini_operator-idle_up_right';
-      } else if (vy < -0.35 && vx < -0.35) {
-        key = 'wardrobe-gemini_operator-idle_up_right';
-        flipX = true;
-      } else if (vy > 0) {
-        key = 'wardrobe-gemini_operator-idle_down';
-      } else {
-        key = 'wardrobe-gemini_operator-idle_up_right';
-      }
-    } else {
-      this.previewSprite.setRotation(0);
-      if (this.direction === 'RIGHT') key = 'wardrobe-gemini_operator-idle_right';
-      else if (this.direction === 'LEFT') key = 'wardrobe-gemini_operator-idle_left';
-      else if (this.direction === 'UP') key = 'wardrobe-gemini_operator-idle_up_right';
-      else key = 'wardrobe-gemini_operator-idle_down';
+    if (walking && Math.abs(vx) > 0.65 && Math.abs(vy) < 0.45) {
+      key = 'wardrobe-gemini_operator-run';
+      flipX = vx < 0;
+    } else if (Math.abs(vx) > 0.35 && vy > 0.35) {
+      key = 'wardrobe-gemini_operator-idle_down_right';
+      flipX = vx < 0;
+    } else if (Math.abs(vx) > 0.35 && vy < -0.35) {
+      key = 'wardrobe-gemini_operator-idle_up_right';
+      flipX = vx < 0;
+    } else if (vy > 0.35) {
+      key = 'wardrobe-gemini_operator-idle_down';
+    } else if (vy < -0.35) {
+      key = 'wardrobe-gemini_operator-idle_up_right';
+    } else if (vx < -0.35) {
+      key = 'wardrobe-gemini_operator-idle_left';
+    } else if (vx > 0.35) {
+      key = 'wardrobe-gemini_operator-idle_right';
     }
 
     if (this.previewSprite.texture.key !== key) {
@@ -1015,8 +1026,9 @@ export class WardrobeLabScene extends Phaser.Scene {
     }
 
     this.previewSprite.setFlipX(flipX);
+    this.previewSprite.setRotation(0);
 
-    if (key.endsWith('-run') || key.includes('-death') || key.includes('-dodge') || key.includes('-respawn')) {
+    if (key.endsWith('-run')) {
       this.previewSprite.play(key, true);
     } else {
       this.previewSprite.stop();
@@ -1034,12 +1046,6 @@ export class WardrobeLabScene extends Phaser.Scene {
     const def = this.currentDefinition();
     this.weaponLayer.clear();
     this.muzzleFlash.clear();
-
-    if (def.source === 'generated' || def.embeddedWeapon) {
-      this.weaponLayer.setVisible(false);
-      this.muzzleFlash.setVisible(false);
-      return;
-    }
 
     if (def.embeddedWeapon) {
       this.weaponLayer.setVisible(false);
@@ -1087,11 +1093,6 @@ export class WardrobeLabScene extends Phaser.Scene {
     });
     this.fireCooldown = this.fireIntervalMs;
     this.muzzleUntil = 95;
-    if (this.currentDefinition().source === 'generated') {
-      this.triggerGeneratedAction('shoot', 55);
-      this.time.delayedCall(55, () => this.triggerGeneratedAction('muzzle', 45));
-      this.time.delayedCall(100, () => this.triggerGeneratedAction('recoil', 90));
-    }
     this.updateWeaponLayer();
 
     if (this.currentDefinition().source === 'robot') {
