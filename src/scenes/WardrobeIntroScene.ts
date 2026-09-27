@@ -890,6 +890,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     if (!allFrames.length) return;
 
     const visibleHeight = Math.max(...allFrames.map((frame) => frame.maxY - frame.minY + 1));
+    const visibleWidth = Math.max(...allFrames.map((frame) => frame.maxX - frame.minX + 1));
     const horizontalMin = Math.min(...allFrames.map((frame) => frame.sourceAnchorX - (frame.maxX - frame.minX + 1) / 2));
     const horizontalMax = Math.max(...allFrames.map((frame) => frame.sourceAnchorX + (frame.maxX - frame.minX + 1) / 2));
     const sourceToTexture = Math.min(1, 128 / visibleHeight);
