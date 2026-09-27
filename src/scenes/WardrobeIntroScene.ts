@@ -646,10 +646,19 @@ export class WardrobeLabScene extends Phaser.Scene {
       RIGHT: { idle: [24], walk: [26, 27, 28, 29, 30, 31] },
     };
 
-    const normalizeFrame = (frameCanvas: HTMLCanvasElement) => {
+    const extractFrame = (sourceFrame: number) => {
+      const frameCanvas = document.createElement('canvas');
+      frameCanvas.width = frameWidth;
+      frameCanvas.height = frameHeight;
       const frameContext = frameCanvas.getContext('2d', { willReadFrequently: true });
-      if (!frameContext) return;
-      const pixels = frameContext.getImageData(0, 0, frameCanvas.width, frameCanvas.height);
+      if (!frameContext) return null;
+
+      const sx = (sourceFrame % columns) * cellWidth + cropX;
+      const sy = Math.floor(sourceFrame / columns) * cellHeight + cropY;
+      frameContext.clearRect(0, 0, frameWidth, frameHeight);
+      frameContext.drawImage(source, sx, sy, frameWidth, frameHeight, 0, 0, frameWidth, frameHeight);
+
+      const pixels = frameContext.getImageData(0, 0, frameWidth, frameHeight);
       for (let i = 0; i < pixels.data.length; i += 4) {
         const r = pixels.data[i];
         const g = pixels.data[i + 1];
@@ -660,14 +669,14 @@ export class WardrobeLabScene extends Phaser.Scene {
       }
       frameContext.putImageData(pixels, 0, 0);
 
-      const cleaned = frameContext.getImageData(0, 0, frameCanvas.width, frameCanvas.height).data;
-      let minX = frameCanvas.width;
-      let minY = frameCanvas.height;
+      const cleaned = frameContext.getImageData(0, 0, frameWidth, frameHeight).data;
+      let minX = frameWidth;
+      let minY = frameHeight;
       let maxX = -1;
       let maxY = -1;
-      for (let y = 0; y < frameCanvas.height; y += 1) {
-        for (let x = 0; x < frameCanvas.width; x += 1) {
-          if (cleaned[(y * frameCanvas.width + x) * 4 + 3] > 12) {
+      for (let y = 0; y < frameHeight; y += 1) {
+        for (let x = 0; x < frameWidth; x += 1) {
+          if (cleaned[(y * frameWidth + x) * 4 + 3] > 12) {
             minX = Math.min(minX, x);
             minY = Math.min(minY, y);
             maxX = Math.max(maxX, x);
@@ -675,64 +684,61 @@ export class WardrobeLabScene extends Phaser.Scene {
           }
         }
       }
-      if (maxX < 0) return;
 
-      const normalized = document.createElement('canvas');
-      normalized.width = frameCanvas.width;
-      normalized.height = frameCanvas.height;
-      const normalizedContext = normalized.getContext('2d');
-      if (!normalizedContext) return;
-
-      const visibleWidth = maxX - minX + 1;
-      const visibleHeight = maxY - minY + 1;
-      const targetHeight = Math.min(frameCanvas.height - 8, visibleHeight);
-      const scale = targetHeight / visibleHeight;
-      const targetWidth = visibleWidth * scale;
-      const drawX = (frameCanvas.width - targetWidth) / 2;
-      const drawY = frameCanvas.height - targetHeight - 2;
-      normalizedContext.drawImage(
-        frameCanvas,
-        minX,
-        minY,
-        visibleWidth,
-        visibleHeight,
-        drawX,
-        drawY,
-        targetWidth,
-        targetHeight,
-      );
-      frameContext.clearRect(0, 0, frameCanvas.width, frameCanvas.height);
-      frameContext.drawImage(normalized, 0, 0);
+      return { canvas: frameCanvas, minX, minY, maxX, maxY };
     };
 
     for (const direction of Object.keys(sequences) as Array<'DOWN' | 'UP' | 'LEFT' | 'RIGHT'>) {
       for (const action of ['idle', 'walk'] as const) {
         const frames = sequences[direction][action];
+        const extracted = frames
+          .map(extractFrame)
+          .filter((frame): frame is NonNullable<typeof frame> => frame !== null && frame.maxX >= 0);
+
         const key = this.spriteKey(generatedDef, direction, action);
-        if (this.textures.exists(key)) continue;
+        if (this.textures.exists(key) || extracted.length === 0) continue;
 
-        const texture = this.textures.createCanvas(key, frameWidth * frames.length, frameHeight);
-        if (!texture) continue;
+        const union = extracted.reduce(
+          (bounds, frame) => ({
+            minX: Math.min(bounds.minX, frame.minX),
+            minY: Math.min(bounds.minY, frame.minY),
+            maxX: Math.max(bounds.maxX, frame.maxX),
+            maxY: Math.max(bounds.maxY, frame.maxY),
+          }),
+          { minX: frameWidth, minY: frameHeight, maxX: -1, maxY: -1 },
+        );
 
-        const canvas = texture.getCanvas();
-        const context = texture.getContext();
-        context.clearRect(0, 0, canvas.width, canvas.height);
+        const visibleWidth = union.maxX - union.minX + 1;
+        const visibleHeight = union.maxY - union.minY + 1;
+        const normalized = document.createElement('canvas');
+        normalized.width = frameWidth * extracted.length;
+        normalized.height = frameHeight;
+        const normalizedContext = normalized.getContext('2d');
+        if (!normalizedContext) continue;
 
-        frames.forEach((sourceFrame, index) => {
-          const frameCanvas = document.createElement('canvas');
-          frameCanvas.width = frameWidth;
-          frameCanvas.height = frameHeight;
-          const frameContext = frameCanvas.getContext('2d');
-          if (!frameContext) return;
-
-          const sx = (sourceFrame % columns) * cellWidth + cropX;
-          const sy = Math.floor(sourceFrame / columns) * cellHeight + cropY;
-          frameContext.drawImage(source, sx, sy, frameWidth, frameHeight, 0, 0, frameWidth, frameHeight);
-          normalizeFrame(frameCanvas);
-          context.drawImage(frameCanvas, index * frameWidth, 0);
-          texture.add(index, 0, index * frameWidth, 0, frameWidth, frameHeight);
+        extracted.forEach((frame, index) => {
+          normalizedContext.drawImage(
+            frame.canvas,
+            union.minX,
+            union.minY,
+            visibleWidth,
+            visibleHeight,
+            index * frameWidth + (frameWidth - visibleWidth) / 2,
+            frameHeight - visibleHeight - 2,
+            visibleWidth,
+            visibleHeight,
+          );
         });
 
+        const texture = this.textures.createCanvas(key, normalized.width, normalized.height);
+        if (!texture) continue;
+        const context = texture.getContext();
+        context.clearRect(0, 0, normalized.width, normalized.height);
+        context.drawImage(normalized, 0, 0);
+
+        for (let index = 0; index < extracted.length; index += 1) {
+          texture.add(index, 0, index * frameWidth, 0, frameWidth, frameHeight);
+        }
         texture.refresh();
       }
     }
