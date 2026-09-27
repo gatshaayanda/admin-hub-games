@@ -4597,3 +4597,24 @@ Wardrobe now has a **shooter-ready presentation test** while remaining isolated 
 
 ### Reuse boundary
 Do not copy Wardrobe's test collision or target state into Shooters Trigger. When the final player and bot are built, connect their approved presentation assets to the existing Shooters Trigger authoritative movement, aim, projectile, cover, head/body, scrape, weapon-drop, damage and recovery systems without changing those Golden Playthrough rules.
+
+
+## Wardrobe — Armed Character-First Review Order
+
+The Wardrobe shooter lab now deliberately starts its character selector with artwork that already contains a firearm:
+
+1. Soldier 01 — embedded gun, CC BY 4.0
+2. Soldier 02 — embedded gun, CC BY 4.0
+3. Blue Drone Robot — embedded weapon, CC0
+4. Red Drone Robot — embedded weapon, CC0
+5. remaining character library — tested afterward, using a Wardrobe-only weapon layer where required
+
+This ordering is a review rule, not a gameplay rule. The purpose is to inspect how real armed character artwork looks and reads inside the shooter presentation before evaluating characters that need a separate weapon layer.
+
+Wardrobe must use the same shared Shooter mobile-control implementation as Shooters Trigger:
+- left analogue control = movement;
+- right analogue control = drag to aim + hold to fire;
+- the shared control layer must route to Wardrobe through the same setMoveVector / setAimVector / setFireHeld interface;
+- do not maintain a separate Wardrobe-specific mobile shooting control when the shared Shooter control can be reused.
+
+The Wardrobe projectile/test combat remains a presentation laboratory and must not replace or modify the authoritative Shooters Trigger combat implementation.
