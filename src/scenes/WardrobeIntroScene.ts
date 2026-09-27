@@ -57,15 +57,10 @@ export class WardrobeIntroScene extends Phaser.Scene {
   }
 
   preload() {
-    for (const character of this.characterNames) {
-      for (const direction of ['south', 'north', 'east', 'west']) {
-        this.load.spritesheet(
-          this.spriteKey(character, direction),
-          `/assets/wardrobe/packs/x/gegx-free-walk-pixel-v1.1/${character}/strips/${direction}.png`,
-          { frameWidth: 192, frameHeight: 192 },
-        );
-      }
-    }
+    this.load.spritesheet('wardrobe-enemy', '/assets/wardrobe/enemy/enemy.png', {
+      frameWidth: 34,
+      frameHeight: 54,
+    });
   }
 
   create() {
