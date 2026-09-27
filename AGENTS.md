@@ -4819,3 +4819,14 @@ This is a Wardrobe visual checkpoint, not a claim of device/offline acceptance.
 - The live generated operator's extracted textures are compacted to a 128px animation stage so the 20k-wide source JPEG does not become a huge runtime texture set.
 - Wardrobe weapon/forearm/muzzle presentation is rendered above the generated body and follows the Shooters Trigger weapon geometry/aim vector.
 - No Shooters Trigger gameplay/combat source was changed by this pass.
+
+
+### Wardrobe — Arena Player/Bot Source Checkpoint — September 27, 2026
+
+The Wardrobe lab now treats the two generated references as the two Arena character candidates:
+- `public/assets/wardrobe/incoming/1.jpg` → ARENA PLAYER source.
+- `public/assets/wardrobe/incoming/og.jpg` → ARENA BOT source.
+
+Both use the same explicit 8×4 action-grid contract and the same movement/aim/fire controls. Generated extraction is now based on the actual foreground bounds inside each real source cell rather than fixed 176×256 crop assumptions. Each action keeps source-relative horizontal placement and a shared animation-wide foot baseline/visible height.
+
+Wardrobe remains isolated from Shooters Trigger combat/AI/projectile/collision logic. The goal is to make Wardrobe the visual acceptance lab first, then later reuse the accepted character artwork in Arena.
