@@ -57,17 +57,10 @@ export class WardrobeIntroScene extends Phaser.Scene {
   }
 
   preload() {
-    const base = '/assets/wardrobe/field-operator-01/';
-    this.load.svg('field-operator-down', base + 'front-idle.svg');
-    this.load.svg('field-operator-up', base + 'back-idle.svg');
-    this.load.svg('field-operator-left', base + 'left-idle.svg');
-    this.load.svg('field-operator-right', base + 'right-idle.svg');
-    this.load.svg('field-operator-down-walk0', base + 'front-walk0.svg');
-    this.load.svg('field-operator-down-walk1', base + 'front-walk1.svg');
-    this.load.svg('field-operator-left-walk0', base + 'left-walk0.svg');
-    this.load.svg('field-operator-left-walk1', base + 'left-walk1.svg');
-    this.load.svg('field-operator-right-walk0', base + 'right-walk0.svg');
-    this.load.svg('field-operator-right-walk1', base + 'right-walk1.svg');
+    this.load.spritesheet('wardrobe-enemy', '/assets/wardrobe/enemy/enemy.png', {
+      frameWidth: 34,
+      frameHeight: 54,
+    });
   }
 
   create() {
@@ -118,7 +111,6 @@ export class WardrobeIntroScene extends Phaser.Scene {
       }).setOrigin(0.5);
 
     this.player = this.createCharacter(panel.x, panel.y + panel.height * 0.12);
-    this.player.setScale(Math.min(2.8, Math.max(1.8, Math.min(width, height) / 220)));
 
     const toolLine = this.add.text(panel.x, panel.y + panel.height * 0.36,
       'REFERENCE COPY · OPEN THE LAB TO PLAY ACTIONS',
@@ -170,9 +162,11 @@ export class WardrobeIntroScene extends Phaser.Scene {
 
   private createCharacter(x: number, y: number) {
     const container = this.add.container(x, y);
-    const shadow = this.add.ellipse(0, 40, 34, 12, 0x000000, 0.28);
-    const body = this.drawCharacter('IDLE');
-    container.add([shadow, body]);
+    const shadow = this.add.ellipse(0, 58, 58, 16, 0x000000, 0.28);
+    const sprite = this.add.image(0, 0, 'wardrobe-enemy', 0)
+      .setDisplaySize(85, 135)
+      .setOrigin(0.5, 0.5);
+    container.add([shadow, sprite]);
     return container;
   }
 
@@ -298,12 +292,20 @@ export class WardrobeLabScene extends Phaser.Scene {
   private spriteLabel!: Phaser.GameObjects.Text;
   private directionLabel!: Phaser.GameObjects.Text;
   private direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT' = 'DOWN';
-  private previewSprite!: Phaser.GameObjects.Image;
+  private previewSprite!: Phaser.GameObjects.Sprite;
   private walkFrame = 0;
+  private enemyFrame = 0;
   private walkFrameClock = 0;
 
   constructor() {
     super('WardrobeLabScene');
+  }
+
+  preload() {
+    this.load.spritesheet('wardrobe-enemy', '/assets/wardrobe/enemy/enemy.png', {
+      frameWidth: 34,
+      frameHeight: 54,
+    });
   }
 
   create() {
@@ -318,8 +320,11 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.directionLabel=this.add.text(width-18,42,'',{fontFamily:'monospace',fontSize:'7px',color:'#f4f1df',align:'right'}).setOrigin(1,0).setScrollFactor(0).setDepth(101);
     this.shadow=this.add.ellipse(1180,891,42,14,0x000000,0.25).setDepth(20);
     this.character=this.add.container(1180,860).setDepth(21);
-    this.previewSprite=this.add.image(0,-2,'field-operator-down').setDisplaySize(58,76);
-    this.character.add(this.previewSprite); this.setSprite();
+    this.previewSprite = this.add.sprite(0, -4, 'wardrobe-enemy', 0)
+      .setDisplaySize(68, 108)
+      .setOrigin(0.5, 0.5);
+    this.character.add(this.previewSprite);
+    this.setSprite();
     this.cameras.main.startFollow(this.character,true,0.12,0.12);
     this.cameras.main.setDeadzone(Math.min(width*0.28,300),Math.min(height*0.22,150));
     this.createFieldJoystick(); this.createSpriteStrip();
@@ -339,18 +344,33 @@ export class WardrobeLabScene extends Phaser.Scene {
       this.character.y=Phaser.Math.Clamp(this.character.y+ny*180*delta/1000,80,1320);
       this.shadow.setPosition(this.character.x,this.character.y+31);
       this.direction=Math.abs(nx)>Math.abs(ny)*.65?(nx<0?'LEFT':'RIGHT'):(ny<0?'UP':'DOWN');
-      this.walkClock+=delta;if(this.walkClock>=150){this.walkClock=0;this.walkFrame=this.walkFrame?0:1;this.setSprite();}
-    }else{this.walkFrame=0;this.setSprite();}
+      this.walkClock+=delta;
+      if(this.walkClock>=90){
+        this.walkClock=0;
+        this.walkFrame=(this.walkFrame+1)%28;
+        this.enemyFrame=this.walkFrame;
+        this.setSprite();
+      }
+    }else{
+      this.walkFrame=0;
+      this.enemyFrame=0;
+      this.setSprite();
+    }
     this.directionLabel.setText('FACING · '+this.direction+' · CAMERA FOLLOWS');
   }
 
 
-  private setSprite(){const k=this.direction==='DOWN'?(this.walkFrame?'field-operator-down-walk'+this.walkFrame:'field-operator-down'):this.direction==='UP'?'field-operator-up':this.direction==='LEFT'?(this.walkFrame?'field-operator-left-walk'+this.walkFrame:'field-operator-left'):(this.walkFrame?'field-operator-right-walk'+this.walkFrame:'field-operator-right');this.previewSprite.setTexture(k).setDisplaySize(58,76);}
+  private setSprite(){
+    this.previewSprite
+      .setTexture('wardrobe-enemy')
+      .setFrame(this.enemyFrame)
+      .setDisplaySize(68, 108);
+  }
   private createSpriteStrip(){const y=this.scale.height-58;['01 · SWAP','02 · SWAP','03 · SWAP','04 · SWAP'].forEach((label,i)=>{const b=this.add.text(16+i*82,y,label,{fontFamily:'monospace',fontSize:'8px',fontStyle:'bold',color:'#f4f1df',backgroundColor:i===this.variantIndex?'#315845':'#202a24',padding:{left:8,right:8,top:7,bottom:7}}).setScrollFactor(0).setDepth(102).setInteractive();b.on('pointerdown',()=>this.selectVariant(i));});this.add.text(this.scale.width-16,y,'RESET POSITION',{fontFamily:'monospace',fontSize:'8px',fontStyle:'bold',color:'#f4f1df',backgroundColor:'#315845',padding:{left:10,right:10,top:7,bottom:7}}).setOrigin(1,0).setScrollFactor(0).setDepth(102).setInteractive().on('pointerdown',()=>this.resetCharacter());}
   private createFieldJoystick(){const x=72,y=this.scale.height-112,base=this.add.circle(x,y,48,0x101512,.48).setScrollFactor(0).setDepth(102).setStrokeStyle(2,0xe8c95c,.55),knob=this.add.circle(x,y,20,0x315845,.92).setScrollFactor(0).setDepth(103);let pid=-1;const reset=()=>{pid=-1;this.move.set(0,0);knob.setPosition(x,y);};this.input.on('pointerdown',(p:Phaser.Input.Pointer)=>{if(p.y<75||p.x>this.scale.width-180)return;if(Phaser.Math.Distance.Between(p.x,p.y,x,y)<=90)pid=p.id;});this.input.on('pointermove',(p:Phaser.Input.Pointer)=>{if(p.id!==pid)return;const dx=p.x-x,dy=p.y-y,d=Math.min(48,Math.hypot(dx,dy)),a=Math.atan2(dy,dx);knob.setPosition(x+Math.cos(a)*d,y+Math.sin(a)*d);this.move.set(Math.cos(a)*d/48,Math.sin(a)*d/48);});this.input.on('pointerup',(p:Phaser.Input.Pointer)=>{if(p.id===pid)reset();});this.add.text(x,y+56,'MOVE',{fontFamily:'monospace',fontSize:'7px',fontStyle:'bold',color:'#f4f1df'}).setOrigin(.5).setScrollFactor(0).setDepth(102);}
   private selectVariant(index:number){this.variantIndex=index;this.updateLabels();this.setSprite();}
-  private updateLabels(){this.spriteLabel?.setText('SPRITE SLOT '+String(this.variantIndex+1).padStart(2,'0')+' · FIELD OPERATOR 01');}
-  private resetCharacter(){this.character.setPosition(1180,860);this.shadow.setPosition(1180,891);this.move.set(0,0);this.direction='DOWN';this.walkFrame=0;this.setSprite();}
+  private updateLabels(){this.spriteLabel?.setText('REAL SPRITE · ENEMY · 28 FRAMES');}
+  private resetCharacter(){this.character.setPosition(1180,860);this.shadow.setPosition(1180,891);this.move.set(0,0);this.direction='DOWN';this.walkFrame=0;this.enemyFrame=0;this.setSprite();}
   private drawWardrobeField(){const g=this.add.graphics().setDepth(0);g.fillStyle(0x78a653,1).fillRect(0,0,2400,1400);g.fillStyle(0x86ad5e,.42).fillRect(0,0,1200,1400);g.fillStyle(0x679346,.32).fillRect(1200,0,1200,1400);g.fillStyle(0xd1b46c,.30).fillRect(0,510,2400,92);g.fillStyle(0xd1b46c,.22).fillRect(870,0,100,1400);g.lineStyle(5,0xf4f1df,.48).strokeRect(55,70,2290,1280);[[300,280,1.15],[2050,300,.95],[350,1110,.9],[2070,1090,1.1]].forEach(v=>this.drawWardrobeTree(v[0],v[1],v[2]));[[690,360,190,72],[1470,350,230,76],[520,760,250,70],[1570,760,220,68],[850,1030,260,74],[1420,1080,240,72]].forEach(v=>this.drawWardrobeBunker(v[0],v[1],v[2],v[3]));[[1080,300],[1900,650],[730,1170]].forEach(v=>this.drawWardrobeTires(v[0],v[1]));const f=this.add.graphics().setDepth(4);f.fillStyle(0x594838,1).fillRect(1180,860,4,78);f.fillStyle(0x2f7775,1).fillTriangle(1184,864,1244,878,1184,892);this.add.text(1212,910,'WARDROBE',{fontFamily:'monospace',fontSize:'9px',color:'#fff4d4',stroke:'#493526',strokeThickness:4}).setOrigin(.5).setDepth(5);}
   private drawWardrobeTree(x:number,y:number,s:number){const g=this.add.graphics().setDepth(2);g.fillStyle(0x65472f,1).fillRect(x-6*s,y+18*s,12*s,60*s);g.fillStyle(0x405638,1).fillCircle(x,y,34*s).fillCircle(x-28*s,y+9*s,28*s).fillCircle(x+28*s,y+9*s,29*s);g.fillStyle(0x526d3c,.75).fillCircle(x+5*s,y-16*s,23*s);}
   private drawWardrobeBunker(x:number,y:number,w:number,h:number){const g=this.add.graphics().setDepth(3);g.fillStyle(0x493526,.24).fillRect(x+8,y+9,w,h);g.fillStyle(0x76563b,1).fillRoundedRect(x,y,w,h,10);g.fillStyle(0xffffff,.12).fillRect(x+12,y+10,w-24,5);g.lineStyle(2,0xf4f1df,.28).strokeRoundedRect(x,y,w,h,10);}
@@ -407,7 +427,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     const walking = action === 'WALK' || action === 'WALK LEFT' || action === 'WALK RIGHT';
     const frame = walking ? this.walkFrame : 0;
     const key = this.getSpriteKey(frame);
-    this.previewSprite.setTexture(key).setDisplaySize(48, 64).setOrigin(0.5, 0.5);
+    this.previewSprite.setTexture('wardrobe-enemy').setFrame(this.enemyFrame).setDisplaySize(68, 108).setOrigin(0.5, 0.5);
     this.preview.clear().setRotation(0);
 
     if (action === 'AIM LEFT' || action === 'AIM RIGHT' || action === 'FIRE') {
@@ -441,16 +461,14 @@ export class WardrobeLabScene extends Phaser.Scene {
     }
   }
 
-  private getSpriteKey(frame: number) {
-    if (this.direction === 'UP') return 'field-operator-up';
-    if (this.direction === 'LEFT') return frame ? 'field-operator-left-walk1' : 'field-operator-left-walk0';
-    if (this.direction === 'RIGHT') return frame ? 'field-operator-right-walk1' : 'field-operator-right-walk0';
-    return frame ? 'field-operator-down-walk1' : 'field-operator-down-walk0';
+  private getSpriteKey(_frame: number) {
+    return 'wardrobe-enemy';
   }
 
   private setDirection(direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT') {
     this.direction = direction;
     this.walkFrame = 0;
+    this.enemyFrame = 0;
     this.walkFrameClock = 0;
     this.drawPreview(ACTIONS[this.actionIndex]);
     this.detailText?.setText(this.describe(ACTIONS[this.actionIndex]) + ' · ' + direction + ' · FIELD OPERATOR 01');
