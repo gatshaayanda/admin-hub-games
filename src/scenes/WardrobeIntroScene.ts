@@ -707,6 +707,7 @@ export class WardrobeLabScene extends Phaser.Scene {
 
     type ExtractedFrame = {
       canvas: HTMLCanvasElement;
+      sourceAnchorX: number;
       minX: number;
       minY: number;
       maxX: number;
@@ -876,7 +877,8 @@ export class WardrobeLabScene extends Phaser.Scene {
       }
 
       if (maxX < 0 || maxY < 0) return null;
-      const result = { canvas: frameCanvas, minX, minY, maxX, maxY };
+      const sourceAnchorX = (cropLeft - sx) + (minX + maxX + 1) / 2;
+      const result = { canvas: frameCanvas, sourceAnchorX, minX, minY, maxX, maxY };
       extractedByFrame.set(sourceFrame, result);
       return result;
     };
@@ -888,8 +890,9 @@ export class WardrobeLabScene extends Phaser.Scene {
     if (!allFrames.length) return;
 
     const visibleHeight = Math.max(...allFrames.map((frame) => frame.maxY - frame.minY + 1));
-    const visibleWidth = Math.max(...allFrames.map((frame) => frame.maxX - frame.minX + 1));
-    const stageWidth = Math.ceil(visibleWidth * 1.16);
+    const horizontalMin = Math.min(...allFrames.map((frame) => frame.sourceAnchorX - (frame.maxX - frame.minX + 1) / 2));
+    const horizontalMax = Math.max(...allFrames.map((frame) => frame.sourceAnchorX + (frame.maxX - frame.minX + 1) / 2));
+    const stageWidth = Math.ceil(Math.max(visibleWidth, horizontalMax - horizontalMin) * 1.16);
     const stageHeight = Math.ceil(visibleHeight * 1.12);
     this.generatedVisibleHeight = visibleHeight;
 
@@ -908,8 +911,7 @@ export class WardrobeLabScene extends Phaser.Scene {
       extracted.forEach((frame, index) => {
         const visibleW = frame.maxX - frame.minX + 1;
         const visibleH = frame.maxY - frame.minY + 1;
-        const sourceCenterX = (frame.minX + frame.maxX + 1) / 2;
-        const stageX = stageWidth / 2 + (sourceCenterX - frame.canvas.width / 2);
+        const stageX = stageWidth / 2 + (frame.sourceAnchorX - (horizontalMin + horizontalMax) / 2);
         const drawX = Math.round(index * stageWidth + stageX - visibleW / 2);
         const drawY = Math.round(stageHeight - visibleH);
         normalizedContext.drawImage(
