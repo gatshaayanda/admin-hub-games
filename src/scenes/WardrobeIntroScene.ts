@@ -53,6 +53,7 @@ export class WardrobeIntroScene extends Phaser.Scene {
   private player!: Phaser.GameObjects.Container;
   private poseClock = 0;
   private leaving = false;
+  private introVisibleHeight = 0;
 
   constructor() {
     super('WardrobeIntroScene');
@@ -65,7 +66,7 @@ export class WardrobeIntroScene extends Phaser.Scene {
   }
 
   create() {
-    this.prepareGeneratedCharacterTextures();
+    this.prepareGeneratedIntroTexture();
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor('#171b19');
 
@@ -162,14 +163,84 @@ export class WardrobeIntroScene extends Phaser.Scene {
     this.scene.start('WardrobeLabScene');
   }
 
+  private prepareGeneratedIntroTexture() {
+    const source = this.textures.get('wardrobe-generated-reference').getSourceImage() as CanvasImageSource & {
+      width: number;
+      height: number;
+    };
+    const columns = 8;
+    const rows = 4;
+    const cellWidth = source.width / columns;
+    const cellHeight = source.height / rows;
+    const frameCanvas = document.createElement('canvas');
+    frameCanvas.width = Math.round(cellWidth);
+    frameCanvas.height = Math.round(cellHeight);
+    const context = frameCanvas.getContext('2d', { willReadFrequently: true });
+    if (!context) return;
+    context.drawImage(source, 0, 0, cellWidth, cellHeight, 0, 0, frameCanvas.width, frameCanvas.height);
+
+    const pixels = context.getImageData(0, 0, frameCanvas.width, frameCanvas.height);
+    const data = pixels.data;
+    const sample = (x: number, y: number) => {
+      const i = (y * frameCanvas.width + x) * 4;
+      return [data[i], data[i + 1], data[i + 2]];
+    };
+    const corners = [
+      sample(0, 0),
+      sample(frameCanvas.width - 1, 0),
+      sample(0, frameCanvas.height - 1),
+      sample(frameCanvas.width - 1, frameCanvas.height - 1),
+    ];
+    const isBackground = (i: number) => {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      return corners.some(([cr, cg, cb]) => {
+        const dr = r - cr;
+        const dg = g - cg;
+        const db = b - cb;
+        return dr * dr + dg * dg + db * db < 42 * 42;
+      });
+    };
+    for (let i = 0; i < data.length; i += 4) {
+      if (isBackground(i)) data[i + 3] = 0;
+    }
+    context.putImageData(pixels, 0, 0);
+
+    let minX = frameCanvas.width;
+    let minY = frameCanvas.height;
+    let maxX = -1;
+    let maxY = -1;
+    for (let y = 0; y < frameCanvas.height; y += 1) {
+      for (let x = 0; x < frameCanvas.width; x += 1) {
+        if (data[(y * frameCanvas.width + x) * 4 + 3] > 12) {
+          minX = Math.min(minX, x);
+          minY = Math.min(minY, y);
+          maxX = Math.max(maxX, x);
+          maxY = Math.max(maxY, y);
+        }
+      }
+    }
+    if (maxX < 0 || maxY < 0) return;
+
+    const width = maxX - minX + 1;
+    const height = maxY - minY + 1;
+    const texture = this.textures.createCanvas('wardrobe-generated-intro', width, height);
+    if (!texture) return;
+    texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    const output = texture.getContext();
+    output.clearRect(0, 0, width, height);
+    output.drawImage(frameCanvas, minX, minY, width, height, 0, 0, width, height);
+    texture.refresh();
+    this.introVisibleHeight = height;
+  }
+
   private createCharacter(x: number, y: number) {
     const container = this.add.container(x, y);
     const shadow = this.add.ellipse(0, 0, 46, 13, 0x3d3025, 0.28);
     const sprite = this.add.sprite(0, 0, 'wardrobe-gemini_operator-idle_down', 0)
       .setOrigin(0.5, 1);
-    const scale = this.generatedVisibleHeight > 0
-      ? this.targetVisibleCharacterHeight / this.generatedVisibleHeight
-      : 1;
+    const scale = this.introVisibleHeight > 0 ? 60 / this.introVisibleHeight : 1;
     sprite.setScale(scale);
     container.add([shadow, sprite]);
     return container;
