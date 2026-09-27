@@ -658,6 +658,7 @@ export class WardrobeLabScene extends Phaser.Scene {
           const sx = (sourceFrame % 8) * cellWidth + cropX;
           const sy = Math.floor(sourceFrame / 8) * cellHeight + cropY;
           context.drawImage(source, sx, sy, frameWidth, frameHeight, index * frameWidth, 0, frameWidth, frameHeight);
+          texture.add(index, 0, index * frameWidth, 0, frameWidth, frameHeight);
         });
 
         const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
