@@ -87,14 +87,14 @@ export class FieldOperatorCharacter {
     if (walking) this.walkClock += delta;
     this.recoil = Math.max(0, this.recoil - delta);
 
-    const bob = walking ? Math.sin(this.walkClock / 85) * 1 : 0;
-    this.poseA.setVisible(!walking || Math.floor(this.walkClock / 85) % 2 === 0);
-    this.poseB.setVisible(walking && !this.poseA.visible);
+    const step = walking ? 120 : 650;
+    const poseB = Math.floor(this.walkClock / step) % 2 === 1;
+    const facing = _direction === 'LEFT' ? -1 : 1;
+    this.poseA.setVisible(!poseB).setScale(facing, 1);
+    this.poseB.setVisible(poseB).setScale(facing, 1);
 
     const normalizedAim = aim.clone().normalize();
     this.updateWeaponPose(normalizedAim, firing);
-    this.poseA.setY(bob);
-    this.poseB.setY(bob);
   }
 
   triggerRecoil() {
