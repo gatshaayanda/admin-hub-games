@@ -708,15 +708,13 @@ export class WardrobeLabScene extends Phaser.Scene {
       const shootKey = this.spriteKey(def, this.direction, 'shoot');
       if (this.previewSprite.texture.key !== shootKey) {
         this.previewSprite.setTexture(shootKey, 0);
-        this.previewSprite.setDisplaySize(def.displaySize, def.displaySize);
-        this.previewSprite.setOrigin(0.5, def.originY);
+        this.fitCharacterSprite(this.previewSprite, def);
       }
       this.previewSprite.play(shootKey, true);
     } else {
       if (this.previewSprite.texture.key !== walkKey) {
         this.previewSprite.setTexture(walkKey, 0);
-        this.previewSprite.setDisplaySize(def.displaySize, def.displaySize);
-        this.previewSprite.setOrigin(0.5, def.originY);
+        this.fitCharacterSprite(this.previewSprite, def);
       }
       if (walking) {
         this.previewSprite.play(walkKey, true);
@@ -866,8 +864,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     const key = this.spriteKey(def, direction);
     if (this.targetSprite.texture.key !== key) {
       this.targetSprite.setTexture(key, 0);
-      this.targetSprite.setDisplaySize(def.displaySize, def.displaySize);
-      this.targetSprite.setOrigin(0.5, def.originY);
+      this.fitCharacterSprite(this.targetSprite, def);
       this.targetSprite.stop();
       this.targetSprite.setFrame(0);
     }
