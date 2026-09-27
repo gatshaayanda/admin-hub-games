@@ -719,7 +719,7 @@ export class WardrobeLabScene extends Phaser.Scene {
         this.muzzleUntil > 0,
         this.game.loop.delta,
       );
-      this.spriteLabel.setText('FIELD OPERATOR 01 · COHERENT WEAPON MOUNT');
+      this.spriteLabel.setText('SHOOTERS TRIGGER · GEOMETRIC BASELINE');
       this.animationLabel?.setText(
         this.muzzleUntil > 0
           ? 'ANIMATION · SHOOT / RECOIL'
