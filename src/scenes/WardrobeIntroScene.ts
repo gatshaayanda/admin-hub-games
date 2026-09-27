@@ -858,56 +858,31 @@ export class WardrobeLabScene extends Phaser.Scene {
           .filter((frame): frame is NonNullable<typeof frame> => frame !== null && frame.maxX >= 0);
         if (!extracted.length) continue;
 
-        const normalized = document.createElement('canvas');
-        normalized.width = stageWidth;
-        normalized.height = visibleHeight;
-        const normalizedContext = normalized.getContext('2d');
-        if (!normalizedContext) continue;
-        normalizedContext.imageSmoothingEnabled = false;
-
-        extracted.forEach((frame, index) => {
-          const drawX = frame.minX - union.minX;
-          const drawY = union.maxY - (frame.maxY + 1);
-          normalizedContext.drawImage(
-            frame.canvas,
-            frame.minX, frame.minY,
-            frame.maxX - frame.minX + 1,
-            frame.maxY - frame.minY + 1,
-            drawX, drawY,
-            frame.maxX - frame.minX + 1,
-            frame.maxY - frame.minY + 1,
-          );
-          void index;
-        });
-
         const key = this.generatedKey(generatedDef, action);
         if (this.textures.exists(key)) continue;
-        const texture = this.textures.createCanvas(key, normalized.width * extracted.length, normalized.height);
+        const texture = this.textures.createCanvas(
+          key,
+          stageWidth * extracted.length,
+          visibleHeight,
+        );
         if (!texture) continue;
         texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
         const context = texture.getContext();
         context.clearRect(0, 0, texture.width, texture.height);
-        for (let index = 0; index < extracted.length; index += 1) {
-          const frame = extracted[index];
-          const frameCanvas = document.createElement('canvas');
-          frameCanvas.width = stageWidth;
-          frameCanvas.height = visibleHeight;
-          const frameContext = frameCanvas.getContext('2d');
-          if (!frameContext) continue;
-          frameContext.imageSmoothingEnabled = false;
-          frameContext.drawImage(
+        context.imageSmoothingEnabled = false;
+
+        extracted.forEach((frame, index) => {
+          const sourceWidth = frame.maxX - frame.minX + 1;
+          const sourceHeight = frame.maxY - frame.minY + 1;
+          const drawX = index * stageWidth + frame.minX - union.minX;
+          const drawY = union.maxY - (frame.maxY + 1);
+          context.drawImage(
             frame.canvas,
-            frame.minX, frame.minY,
-            frame.maxX - frame.minX + 1,
-            frame.maxY - frame.minY + 1,
-            frame.minX - union.minX,
-            union.maxY - (frame.maxY + 1),
-            frame.maxX - frame.minX + 1,
-            frame.maxY - frame.minY + 1,
+            frame.minX, frame.minY, sourceWidth, sourceHeight,
+            drawX, drawY, sourceWidth, sourceHeight,
           );
-          context.drawImage(frameCanvas, index * stageWidth, 0);
           texture.add(index, 0, index * stageWidth, 0, stageWidth, visibleHeight);
-        }
+        });
         texture.refresh();
       }
     }
