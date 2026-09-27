@@ -4754,3 +4754,31 @@ The owner wants action, not workflow theatre.
 
 ### Wardrobe isolation
 Wardrobe experimentation must remain isolated from Shooters Trigger runtime behavior. Do not alter Shooters Trigger combat, AI, projectile, collision, or player systems merely to make Wardrobe artwork work. If the generated artwork cannot be made to render correctly, fix the Wardrobe asset/loading/extraction path first.
+
+
+### Wardrobe — Generated Operator Presentation Checkpoint — September 27, 2026
+
+The generated operator now has an explicit two-source provenance:
+- `public/assets/wardrobe/incoming/og.jpg` remains the original generated reference used by the Wardrobe intro/reference surface.
+- `public/assets/wardrobe/incoming/1.jpg` is the newer 8×4 action sheet used by the live generated-operator lab.
+
+The lab extraction contract is:
+- preserve the source cell's horizontal alignment;
+- remove the baked opaque background only;
+- align every extracted frame to one shared foot baseline;
+- use one animation-wide visible height so pose changes do not change apparent character scale;
+- use nearest-neighbour texture filtering for the generated sprite textures;
+- never rotate a directional body sprite to fake a new facing direction.
+
+The generated operator uses the same independent Wardrobe weapon presentation layer as the Shooter presentation test. This deliberately separates:
+- character artwork / body facing;
+- movement direction;
+- aim direction;
+- weapon / muzzle presentation.
+
+The mobile control contract remains the shared Shooter control:
+- left analogue = movement;
+- right AIM · FIRE control = drag to aim + hold to fire.
+Desktop Wardrobe inspection uses field pointer movement for aim and Space for fire; clicking the field no longer silently fires.
+
+This checkpoint is Wardrobe-only. Shooters Trigger combat, AI, projectile, collision, damage and recovery were not changed.
