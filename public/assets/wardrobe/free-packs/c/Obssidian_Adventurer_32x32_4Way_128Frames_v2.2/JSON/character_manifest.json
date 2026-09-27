@@ -1,0 +1,61 @@
+{
+  "name": "Obssidian Adventurer",
+  "version": "2.2",
+  "cell": [
+    32,
+    32
+  ],
+  "pivot": [
+    16,
+    29
+  ],
+  "directions": [
+    "south",
+    "north",
+    "east",
+    "west"
+  ],
+  "actions": {
+    "idle": {
+      "frames_per_direction": 4,
+      "fps": 4,
+      "loop": true
+    },
+    "walk": {
+      "frames_per_direction": 4,
+      "fps": 8,
+      "loop": true
+    },
+    "blink": {
+      "frames_per_direction": 4,
+      "fps": 8,
+      "loop": false
+    },
+    "hurt": {
+      "frames_per_direction": 4,
+      "fps": 10,
+      "loop": false
+    },
+    "crouch": {
+      "frames_per_direction": 4,
+      "fps": 8,
+      "loop": false
+    },
+    "jump": {
+      "frames_per_direction": 6,
+      "fps": 10,
+      "loop": false
+    },
+    "death": {
+      "frames_per_direction": 6,
+      "fps": 8,
+      "loop": false
+    }
+  },
+  "total_frames": 128,
+  "palette_colors": 22,
+  "west_policy": "exact horizontal mirror of east",
+  "format": "RGBA PNG",
+  "alpha": "binary 0/255",
+  "movement_policy": "Walk is the only locomotion animation. Jump vertical displacement is driven by game code; sprite frames encode pose only."
+}

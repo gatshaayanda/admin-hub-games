@@ -1,0 +1,22 @@
+32x32 Top-Down Character Animation Pack — Standard Asset License
+Copyright (c) 2026 freddyka. All rights reserved.
+
+By purchasing or lawfully downloading this asset pack, you receive a non-exclusive, worldwide, perpetual license to:
+
+1. Use the assets in personal and commercial games, applications, videos, streams, and other completed end products.
+2. Modify the assets for those end products.
+3. Use the assets in any number of completed end products owned by you or your legal entity.
+4. Distribute the assets only as an embedded part of a completed end product, where they are not offered as reusable source assets.
+
+You may not:
+
+1. Resell, redistribute, sublicense, share, or give away the original assets or modified versions as standalone files, stock content, templates, source repositories, or another asset pack.
+2. Make the assets available in a form that lets other people extract and reuse them as assets.
+3. Claim authorship or ownership of the original asset pack.
+4. Use the assets in unlawful content.
+
+Credit is appreciated but not required. Suggested credit: “Character sprites by freddyka.”
+
+This license does not transfer copyright or trademark ownership. The assets are provided as-is, without warranties. Liability is limited to the amount paid for this asset pack to the extent permitted by law.
+
+If you are unsure whether a planned use is permitted, contact the seller through the itch.io product page before distribution.

@@ -1,0 +1,392 @@
+{
+  "meta": {
+    "name": "Obssidian Adventurer",
+    "version": "2.2",
+    "image": "adventurer_jump_4way.png",
+    "size": {
+      "w": 192,
+      "h": 128
+    },
+    "cell": {
+      "w": 32,
+      "h": 32
+    },
+    "pivot": {
+      "x": 16,
+      "y": 29
+    },
+    "ground_y": 29,
+    "directions": [
+      "south",
+      "north",
+      "east",
+      "west"
+    ],
+    "format": "RGBA PNG",
+    "filtering": "nearest-neighbor"
+  },
+  "animations": {
+    "jump_south": {
+      "frames": [
+        "jump_south_00",
+        "jump_south_01",
+        "jump_south_02",
+        "jump_south_03",
+        "jump_south_04",
+        "jump_south_05"
+      ],
+      "fps": 10,
+      "loop": false
+    },
+    "jump_north": {
+      "frames": [
+        "jump_north_00",
+        "jump_north_01",
+        "jump_north_02",
+        "jump_north_03",
+        "jump_north_04",
+        "jump_north_05"
+      ],
+      "fps": 10,
+      "loop": false
+    },
+    "jump_east": {
+      "frames": [
+        "jump_east_00",
+        "jump_east_01",
+        "jump_east_02",
+        "jump_east_03",
+        "jump_east_04",
+        "jump_east_05"
+      ],
+      "fps": 10,
+      "loop": false
+    },
+    "jump_west": {
+      "frames": [
+        "jump_west_00",
+        "jump_west_01",
+        "jump_west_02",
+        "jump_west_03",
+        "jump_west_04",
+        "jump_west_05"
+      ],
+      "fps": 10,
+      "loop": false
+    }
+  },
+  "frames": {
+    "jump_south_00": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "pivot": {
+        "x": 16,
+        "y": 29
+      },
+      "duration_ms": 100
+    },
+    "jump_south_01": {
+      "frame": {
+        "x": 32,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "pivot": {
+        "x": 16,
+        "y": 29
+      },
+      "duration_ms": 100
+    },
+    "jump_south_02": {
+      "frame": {
+        "x": 64,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "pivot": {
+        "x": 16,
+        "y": 29
+      },
+      "duration_ms": 100
+    },
+    "jump_south_03": {
+      "frame": {
+        "x": 96,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "pivot": {
+        "x": 16,
+        "y": 29
+      },
+      "duration_ms": 100
+    },
+    "jump_south_04": {
+      "frame": {
+        "x": 128,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "pivot": {
+        "x": 16,
+        "y": 29
+      },
+      "duration_ms": 100
+    },
+    "jump_south_05": {
+      "frame": {
+        "x": 160,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "pivot": {
+        "x": 16,
+        "y": 29
+      },
+      "duration_ms": 100
+    },
+    "jump_north_00": {
+      "frame": {
+        "x": 0,
+        "y": 32,
+        "w": 32,
+        "h": 32
+      },
+      "pivot": {
+        "x": 16,
+        "y": 29
+      },
+      "duration_ms": 100
+    },
+    "jump_north_01": {
+      "frame": {
+        "x": 32,
+        "y": 32,
+        "w": 32,
+        "h": 32
+      },
+      "pivot": {
+        "x": 16,
+        "y": 29
+      },
+      "duration_ms": 100
+    },
+    "jump_north_02": {
+      "frame": {
+        "x": 64,
+        "y": 32,
+        "w": 32,
+        "h": 32
+      },
+      "pivot": {
+        "x": 16,
+        "y": 29
+      },
+      "duration_ms": 100
+    },
+    "jump_north_03": {
+      "frame": {
+        "x": 96,
+        "y": 32,
+        "w": 32,
+        "h": 32
+      },
+      "pivot": {
+        "x": 16,
+        "y": 29
+      },
+      "duration_ms": 100
+    },
+    "jump_north_04": {
+      "frame": {
+        "x": 128,
+        "y": 32,
+        "w": 32,
+        "h": 32
+      },
+      "pivot": {
+        "x": 16,
+        "y": 29
+      },
+      "duration_ms": 100
+    },
+    "jump_north_05": {
+      "frame": {
+        "x": 160,
+        "y": 32,
+        "w": 32,
+        "h": 32
+      },
+      "pivot": {
+        "x": 16,
+        "y": 29
+      },
+      "duration_ms": 100
+    },
+    "jump_east_00": {
+      "frame": {
+        "x": 0,
+        "y": 64,
+        "w": 32,
+        "h": 32
+      },
+      "pivot": {
+        "x": 16,
+        "y": 29
+      },
+      "duration_ms": 100
+    },
+    "jump_east_01": {
+      "frame": {
+        "x": 32,
+        "y": 64,
+        "w": 32,
+        "h": 32
+      },
+      "pivot": {
+        "x": 16,
+        "y": 29
+      },
+      "duration_ms": 100
+    },
+    "jump_east_02": {
+      "frame": {
+        "x": 64,
+        "y": 64,
+        "w": 32,
+        "h": 32
+      },
+      "pivot": {
+        "x": 16,
+        "y": 29
+      },
+      "duration_ms": 100
+    },
+    "jump_east_03": {
+      "frame": {
+        "x": 96,
+        "y": 64,
+        "w": 32,
+        "h": 32
+      },
+      "pivot": {
+        "x": 16,
+        "y": 29
+      },
+      "duration_ms": 100
+    },
+    "jump_east_04": {
+      "frame": {
+        "x": 128,
+        "y": 64,
+        "w": 32,
+        "h": 32
+      },
+      "pivot": {
+        "x": 16,
+        "y": 29
+      },
+      "duration_ms": 100
+    },
+    "jump_east_05": {
+      "frame": {
+        "x": 160,
+        "y": 64,
+        "w": 32,
+        "h": 32
+      },
+      "pivot": {
+        "x": 16,
+        "y": 29
+      },
+      "duration_ms": 100
+    },
+    "jump_west_00": {
+      "frame": {
+        "x": 0,
+        "y": 96,
+        "w": 32,
+        "h": 32
+      },
+      "pivot": {
+        "x": 16,
+        "y": 29
+      },
+      "duration_ms": 100
+    },
+    "jump_west_01": {
+      "frame": {
+        "x": 32,
+        "y": 96,
+        "w": 32,
+        "h": 32
+      },
+      "pivot": {
+        "x": 16,
+        "y": 29
+      },
+      "duration_ms": 100
+    },
+    "jump_west_02": {
+      "frame": {
+        "x": 64,
+        "y": 96,
+        "w": 32,
+        "h": 32
+      },
+      "pivot": {
+        "x": 16,
+        "y": 29
+      },
+      "duration_ms": 100
+    },
+    "jump_west_03": {
+      "frame": {
+        "x": 96,
+        "y": 96,
+        "w": 32,
+        "h": 32
+      },
+      "pivot": {
+        "x": 16,
+        "y": 29
+      },
+      "duration_ms": 100
+    },
+    "jump_west_04": {
+      "frame": {
+        "x": 128,
+        "y": 96,
+        "w": 32,
+        "h": 32
+      },
+      "pivot": {
+        "x": 16,
+        "y": 29
+      },
+      "duration_ms": 100
+    },
+    "jump_west_05": {
+      "frame": {
+        "x": 160,
+        "y": 96,
+        "w": 32,
+        "h": 32
+      },
+      "pivot": {
+        "x": 16,
+        "y": 29
+      },
+      "duration_ms": 100
+    }
+  }
+}
