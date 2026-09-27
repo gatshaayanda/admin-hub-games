@@ -362,6 +362,7 @@ const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
 export class WardrobeLabScene extends Phaser.Scene {
   private character!: Phaser.GameObjects.Container;
   private shadow!: Phaser.GameObjects.Ellipse;
+  private fieldOperator!: FieldOperatorCharacter;
   private weaponLayer!: Phaser.GameObjects.Graphics;
   private muzzleFlash!: Phaser.GameObjects.Graphics;
   private target!: Phaser.GameObjects.Container;
