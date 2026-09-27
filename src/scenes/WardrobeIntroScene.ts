@@ -461,6 +461,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.previewSprite = this.add.sprite(0, 0, this.spriteKey(current, 'DOWN'), 0)
       .setOrigin(0.5, current.originY);
     this.fitCharacterSprite(this.previewSprite, current);
+    this.previewSprite.setVisible(this.selectedCharacterIndex !== 0);
     this.character.add(this.previewSprite);
 
     this.createCharacterAnimations();
