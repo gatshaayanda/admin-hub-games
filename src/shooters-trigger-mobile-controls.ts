@@ -23,6 +23,7 @@ const SCENES = [
   'ShootersTriggerTrainingScene',
   'ShootersTriggerEvasionScene',
   'ShootersTriggerArenaScene',
+  'WardrobeLabScene',
 ];
 
 function getManager(): ShooterManager | undefined {
@@ -313,6 +314,7 @@ export function installShootersTriggerMobileControls() {
 
     if (active?.key === 'ShootersTriggerEvasionScene') hint.textContent = 'MOVE · COVER · SURVIVE';
     else if (active?.key === 'ShootersTriggerArenaScene') hint.textContent = 'MOVE · AIM · FIRE';
+    else if (active?.key === 'WardrobeLabScene') hint.textContent = 'MOVE · AIM · FIRE';
     else hint.textContent = 'MOVE · AIM · SHOOT';
 
     if (!active) {
