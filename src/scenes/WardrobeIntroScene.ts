@@ -548,7 +548,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.shadow = this.add.ellipse(0, 0, 46, 13, 0x3d3025, 0.28);
     this.weaponLayer = this.add.graphics();
     this.muzzleFlash = this.add.graphics();
-    this.character.add([this.shadow, this.weaponLayer, this.muzzleFlash]);
+    this.character.add([this.shadow]);
     this.fieldOperator = new FieldOperatorCharacter(this, 0, 0);
     this.character.add(this.fieldOperator.gameObject);
     this.fieldOperator.setVisible(false);
@@ -559,6 +559,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.fitCharacterSprite(this.previewSprite, current);
     this.previewSprite.setVisible(true);
     this.character.add(this.previewSprite);
+    this.character.add([this.weaponLayer, this.muzzleFlash]);
 
     this.createCharacterAnimations();
 
