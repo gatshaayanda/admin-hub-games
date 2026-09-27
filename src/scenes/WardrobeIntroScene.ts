@@ -301,169 +301,53 @@ export class WardrobeLabScene extends Phaser.Scene {
 
   create() {
     const { width, height } = this.scale;
-    const portrait = height > width;
-    const compact = portrait || width < 700;
-    this.cameras.main.setBackgroundColor('#101512');
-
-    const headerSize = compact ? 12 : 15;
-    this.add.text(18, 18, 'WARDROBE · ACTION LAB', {
-      fontFamily: 'monospace', fontSize: headerSize + 'px', fontStyle: 'bold', color: '#f4f1df'
-    });
-
-    this.add.text(18, compact ? 40 : 48,
-      compact ? 'FIELD OPERATOR 01 · CARTOON SPRITE PROTOTYPE' : 'FIELD OPERATOR 01 · CARTOON SPRITE PROTOTYPE · SAFE EXPERIMENT AREA',
-      {
-        fontFamily: 'monospace', fontSize: compact ? '8px' : '9px', fontStyle: 'bold', color: '#8fb39b'
-      });
-
-    this.actionText = this.add.text(width / 2, compact ? 72 : 86, '', {
-      fontFamily: 'monospace', fontSize: compact ? '17px' : '18px', fontStyle: 'bold', color: '#e8c95c'
-    }).setOrigin(0.5);
-
-    this.stepText = this.add.text(width / 2, compact ? 94 : 110, '', {
-      fontFamily: 'monospace', fontSize: '8px', color: '#8fb39b'
-    }).setOrigin(0.5);
-
-    const variantTop = compact ? 118 : 138;
-    this.add.text(width / 2, variantTop, 'STYLE VARIATIONS · TAP TO TRY', {
-      fontFamily: 'monospace', fontSize: '8px', fontStyle: 'bold', color: '#e8c95c'
-    }).setOrigin(0.5);
-
-    const variantW = compact ? Math.min(112, (width - 36) / 4) : 128;
-    const variantGap = compact ? 4 : 8;
-    const variantTotal = VARIANTS.length * variantW + (VARIANTS.length - 1) * variantGap;
-    const variantStart = width / 2 - variantTotal / 2 + variantW / 2;
-    VARIANTS.forEach((variant, index) => {
-      const button = this.add.rectangle(
-        variantStart + index * (variantW + variantGap),
-        variantTop + 22,
-        variantW,
-        30,
-        0x202a24,
-        1
-      ).setStrokeStyle(1, 0x526d5d, 1).setInteractive({ useHandCursor: false });
-      this.add.text(button.x, button.y, String(index + 1).padStart(2, '0') + ' · ' + variant.name, {
-        fontFamily: 'monospace', fontSize: compact ? '6px' : '7px', fontStyle: 'bold',
-        color: '#f4f1df', align: 'center', wordWrap: { width: variantW - 8 }
-      }).setOrigin(0.5);
-      button.on('pointerdown', () => this.showVariant(index));
-      this.variantButtons.push(button);
-    });
-
-    const directionTop = compact ? 166 : 186;
-    this.add.text(width / 2, directionTop, 'FACING · TAP A DIRECTION', {
-      fontFamily: 'monospace', fontSize: '8px', fontStyle: 'bold', color: '#e8c95c'
-    }).setOrigin(0.5);
-    const directions: Array<'DOWN' | 'UP' | 'LEFT' | 'RIGHT'> = ['DOWN', 'UP', 'LEFT', 'RIGHT'];
-    directions.forEach((direction, index) => {
-      const button = this.add.rectangle(width / 2 - 108 + index * 72, directionTop + 20, 66, 28, 0x202a24, 1)
-        .setStrokeStyle(1, 0x526d5d, 1).setInteractive({ useHandCursor: false });
-      this.add.text(button.x, button.y, direction, {
-        fontFamily: 'monospace', fontSize: '7px', fontStyle: 'bold', color: '#f4f1df'
-      }).setOrigin(0.5);
-      button.on('pointerdown', () => this.setDirection(direction));
-      (button as Phaser.GameObjects.Rectangle & { direction?: string }).direction = direction;
-    });
-
-    const benchW = compact ? Math.min(width * 0.90, 520) : Math.min(width * 0.72, 560);
-    const benchH = compact ? Math.min(height * 0.30, 220) : Math.min(height * 0.54, 380);
-    const benchX = compact ? width / 2 : width * 0.43;
-    const benchY = compact ? height * 0.36 : height * 0.47;
-
-    this.add.rectangle(benchX, benchY, benchW, benchH, 0x202a24, 1)
-      .setStrokeStyle(2, 0x526d5d, 1);
-
-    this.add.text(benchX, benchY - benchH / 2 + 16, compact ? 'LIVE SPRITE PREVIEW' : 'LIVE SPRITE PREVIEW · KENNEY TOON BASE + ORIGINAL PAINTBALL GEAR', {
-      fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold', color: '#8fb39b'
-    }).setOrigin(0.5);
-
-    this.shadow = this.add.ellipse(benchX, benchY + (compact ? benchH * 0.30 : 125), compact ? 68 : 92, compact ? 20 : 28, 0x000000, 0.28);
-    this.character = this.add.container(benchX, benchY + (compact ? 42 : 82));
-    this.previewSprite = this.add.image(0, -4, 'field-operator-down').setDisplaySize(48, 64);
-    this.preview = this.add.graphics();
-    this.character.add([this.previewSprite, this.preview]);
-    this.character.setScale(compact
-      ? Math.min(4.0, Math.max(2.8, Math.min(width, height) / 155))
-      : Math.min(5.2, Math.max(3.2, Math.min(width, height) / 145)));
-
-    this.detailText = this.add.text(benchX, benchY + benchH / 2 - 18, '', {
-      fontFamily: 'monospace', fontSize: compact ? '8px' : '9px', color: '#d8dfd8', align: 'center',
-      wordWrap: { width: benchW - 24 }
-    }).setOrigin(0.5);
-
-    const controlsTop = compact ? benchY + benchH / 2 + 20 : 146;
-    const columns = compact ? 3 : 1;
-    const gapX = compact ? 5 : 0;
-    const gapY = compact ? 5 : 7;
-    const buttonW = compact
-      ? Math.min(112, (width - 36 - gapX * (columns - 1)) / columns)
-      : 235;
-    const buttonH = compact ? 34 : 32;
-    const totalW = columns * buttonW + (columns - 1) * gapX;
-    const controlsX = compact ? (width - totalW) / 2 + buttonW / 2 : Math.min(width - 155, benchX + benchW / 2 + 135);
-
-    this.add.text(compact ? width / 2 : controlsX, controlsTop - 16, 'ACTION STRIP', {
-      fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold', color: '#e8c95c'
-    }).setOrigin(0.5);
-
-    ACTIONS.forEach((action, index) => {
-      const row = compact ? Math.floor(index / columns) : index;
-      const col = compact ? index % columns : 0;
-      const x = compact ? controlsX + col * (buttonW + gapX) : controlsX;
-      const y = compact ? controlsTop + row * (buttonH + gapY) : controlsTop + index * 39;
-      const button = this.add.rectangle(x, y, buttonW, buttonH, 0x202a24, 1)
-        .setStrokeStyle(1, 0x526d5d, 1)
-        .setInteractive({ useHandCursor: false });
-      this.add.text(x, y, String(index + 1).padStart(2, '0') + ' · ' + action, {
-        fontFamily: 'monospace', fontSize: compact ? '7px' : '9px', fontStyle: 'bold', color: '#f4f1df',
-        align: 'center', wordWrap: { width: buttonW - 8 }
-      }).setOrigin(0.5);
-      button.on('pointerdown', () => this.showAction(index));
-      this.actionButtons.push(button);
-    });
-
-    const bottomY = height - (compact ? 30 : 55);
-    const next = this.makeButton(compact ? width * 0.29 : width / 2 - 100, bottomY, compact ? Math.min(150, width * 0.42) : 190, 'NEXT ACTION →');
-    next.setScale(compact ? 0.86 : 1);
-    next.on('pointerdown', () => this.showAction((this.actionIndex + 1) % ACTIONS.length));
-
-    const play = this.makeButton(compact ? width * 0.71 : width / 2 + 105, bottomY, compact ? Math.min(150, width * 0.42) : 190, '▶ FLOW THROUGH ALL');
-    play.setScale(compact ? 0.86 : 1);
-    play.on('pointerdown', () => this.toggleFlow(play));
-
-    const reset = this.add.text(16, height - (compact ? 8 : 28), compact ? 'RESET' : 'RESET · BASE COPY', {
-      fontFamily: 'monospace', fontSize: '8px', fontStyle: 'bold', color: '#f4f1df'
-    }).setOrigin(0, 1).setInteractive({ useHandCursor: false });
-    reset.on('pointerdown', () => this.showAction(0));
-
-    const back = this.add.text(width - 16, height - (compact ? 8 : 28), compact ? 'BACK' : 'BACK TO GAME LIBRARY', {
-      fontFamily: 'monospace', fontSize: '8px', fontStyle: 'bold', color: '#f4f1df'
-    }).setOrigin(1, 1).setInteractive({ useHandCursor: false });
-    back.on('pointerdown', () => window.location.href = '/');
-
-    this.input.keyboard?.on('keydown-RIGHT', () => this.showAction((this.actionIndex + 1) % ACTIONS.length));
-    this.input.keyboard?.on('keydown-SPACE', () => this.toggleFlow(play));
-
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.stopFlow();
-      this.input.keyboard?.removeAllListeners();
-    });
-
-    this.showVariant(0);
-    this.showAction(0);
-    window.dispatchEvent(new Event('admin-hub-games:game-ready'));
+    this.cameras.main.setBackgroundColor('#78a653');
+    this.cameras.main.setBounds(0,0,2400,1400);
+    this.drawWardrobeField();
+    this.add.rectangle(width/2,34,width,68,0x101512,0.86).setScrollFactor(0).setDepth(100);
+    this.add.text(18,18,'WARDROBE · FIELD LAB',{fontFamily:'monospace',fontSize:'13px',fontStyle:'bold',color:'#f4f1df'}).setScrollFactor(0).setDepth(101);
+    this.add.text(18,42,'MOVE THE COPY · SWAP SPRITES · JUDGE THE LOOK IN THE SHOOTERS FIELD',{fontFamily:'monospace',fontSize:'7px',fontStyle:'bold',color:'#8fb39b'}).setScrollFactor(0).setDepth(101);
+    this.spriteLabel=this.add.text(width-18,18,'',{fontFamily:'monospace',fontSize:'8px',fontStyle:'bold',color:'#e8c95c',align:'right'}).setOrigin(1,0).setScrollFactor(0).setDepth(101);
+    this.directionLabel=this.add.text(width-18,42,'',{fontFamily:'monospace',fontSize:'7px',color:'#f4f1df',align:'right'}).setOrigin(1,0).setScrollFactor(0).setDepth(101);
+    this.shadow=this.add.ellipse(1180,891,42,14,0x000000,0.25).setDepth(20);
+    this.character=this.add.container(1180,860).setDepth(21);
+    this.previewSprite=this.add.image(0,-2,'field-operator-down').setDisplaySize(58,76);
+    this.character.add(this.previewSprite); this.setSprite();
+    this.cameras.main.startFollow(this.character,true,0.12,0.12);
+    this.cameras.main.setDeadzone(Math.min(width*0.28,300),Math.min(height*0.22,150));
+    this.createFieldJoystick(); this.createSpriteStrip();
+    this.cursors=this.input.keyboard!.createCursorKeys();
+    this.input.keyboard?.on('keydown-R',()=>this.resetCharacter());
+    this.scale.on(Phaser.Scale.Events.RESIZE,this.handleResize,this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>{this.scale.off(Phaser.Scale.Events.RESIZE,this.handleResize,this);this.input.keyboard?.removeAllListeners();});
+    this.updateLabels(); window.dispatchEvent(new Event('admin-hub-games:game-ready'));
   }
 
-  update(_time: number, delta: number) {
-    const action = ACTIONS[this.actionIndex];
-    const walking = action === 'WALK' || action === 'WALK LEFT' || action === 'WALK RIGHT';
-    if (!walking || !this.previewSprite) return;
-    this.walkFrameClock += delta;
-    if (this.walkFrameClock < 180) return;
-    this.walkFrameClock = 0;
-    this.walkFrame = this.walkFrame === 0 ? 1 : 0;
-    this.drawPreview(action);
+  update(_time:number,delta:number) {
+    const kx=(this.cursors.right.isDown?1:0)-(this.cursors.left.isDown?1:0), ky=(this.cursors.down.isDown?1:0)-(this.cursors.up.isDown?1:0);
+    const x=Math.abs(this.move.x)>.05?this.move.x:kx, y=Math.abs(this.move.y)>.05?this.move.y:ky, len=Math.hypot(x,y);
+    if(len>.05){
+      const nx=x/Math.max(1,len),ny=y/Math.max(1,len);
+      this.character.x=Phaser.Math.Clamp(this.character.x+nx*180*delta/1000,80,2320);
+      this.character.y=Phaser.Math.Clamp(this.character.y+ny*180*delta/1000,80,1320);
+      this.shadow.setPosition(this.character.x,this.character.y+31);
+      this.direction=Math.abs(nx)>Math.abs(ny)*.65?(nx<0?'LEFT':'RIGHT'):(ny<0?'UP':'DOWN');
+      this.walkClock+=delta;if(this.walkClock>=150){this.walkClock=0;this.walkFrame=this.walkFrame?0:1;this.setSprite();}
+    }else{this.walkFrame=0;this.setSprite();}
+    this.directionLabel.setText('FACING · '+this.direction+' · CAMERA FOLLOWS');
   }
+
+
+  private setSprite(){const k=this.direction==='DOWN'?(this.walkFrame?'field-operator-down-walk'+this.walkFrame:'field-operator-down'):this.direction==='UP'?'field-operator-up':this.direction==='LEFT'?(this.walkFrame?'field-operator-left-walk'+this.walkFrame:'field-operator-left'):(this.walkFrame?'field-operator-right-walk'+this.walkFrame:'field-operator-right');this.previewSprite.setTexture(k).setDisplaySize(58,76);}
+  private createSpriteStrip(){const y=this.scale.height-58;['01 · SWAP','02 · SWAP','03 · SWAP','04 · SWAP'].forEach((label,i)=>{const b=this.add.text(16+i*82,y,label,{fontFamily:'monospace',fontSize:'8px',fontStyle:'bold',color:'#f4f1df',backgroundColor:i===this.variantIndex?'#315845':'#202a24',padding:{left:8,right:8,top:7,bottom:7}}).setScrollFactor(0).setDepth(102).setInteractive();b.on('pointerdown',()=>this.selectVariant(i));});this.add.text(this.scale.width-16,y,'RESET POSITION',{fontFamily:'monospace',fontSize:'8px',fontStyle:'bold',color:'#f4f1df',backgroundColor:'#315845',padding:{left:10,right:10,top:7,bottom:7}}).setOrigin(1,0).setScrollFactor(0).setDepth(102).setInteractive().on('pointerdown',()=>this.resetCharacter());}
+  private createFieldJoystick(){const x=72,y=this.scale.height-112,base=this.add.circle(x,y,48,0x101512,.48).setScrollFactor(0).setDepth(102).setStrokeStyle(2,0xe8c95c,.55),knob=this.add.circle(x,y,20,0x315845,.92).setScrollFactor(0).setDepth(103);let pid=-1;const reset=()=>{pid=-1;this.move.set(0,0);knob.setPosition(x,y);};this.input.on('pointerdown',(p:Phaser.Input.Pointer)=>{if(p.y<75||p.x>this.scale.width-180)return;if(Phaser.Math.Distance.Between(p.x,p.y,x,y)<=90)pid=p.id;});this.input.on('pointermove',(p:Phaser.Input.Pointer)=>{if(p.id!==pid)return;const dx=p.x-x,dy=p.y-y,d=Math.min(48,Math.hypot(dx,dy)),a=Math.atan2(dy,dx);knob.setPosition(x+Math.cos(a)*d,y+Math.sin(a)*d);this.move.set(Math.cos(a)*d/48,Math.sin(a)*d/48);});this.input.on('pointerup',(p:Phaser.Input.Pointer)=>{if(p.id===pid)reset();});this.add.text(x,y+56,'MOVE',{fontFamily:'monospace',fontSize:'7px',fontStyle:'bold',color:'#f4f1df'}).setOrigin(.5).setScrollFactor(0).setDepth(102);}
+  private selectVariant(index:number){this.variantIndex=index;this.updateLabels();this.setSprite();}
+  private updateLabels(){this.spriteLabel?.setText('SPRITE SLOT '+String(this.variantIndex+1).padStart(2,'0')+' · FIELD OPERATOR 01');}
+  private resetCharacter(){this.character.setPosition(1180,860);this.shadow.setPosition(1180,891);this.move.set(0,0);this.direction='DOWN';this.walkFrame=0;this.setSprite();}
+  private drawWardrobeField(){const g=this.add.graphics().setDepth(0);g.fillStyle(0x78a653,1).fillRect(0,0,2400,1400);g.fillStyle(0x86ad5e,.42).fillRect(0,0,1200,1400);g.fillStyle(0x679346,.32).fillRect(1200,0,1200,1400);g.fillStyle(0xd1b46c,.30).fillRect(0,510,2400,92);g.fillStyle(0xd1b46c,.22).fillRect(870,0,100,1400);g.lineStyle(5,0xf4f1df,.48).strokeRect(55,70,2290,1280);[[300,280,1.15],[2050,300,.95],[350,1110,.9],[2070,1090,1.1]].forEach(v=>this.drawWardrobeTree(v[0],v[1],v[2]));[[690,360,190,72],[1470,350,230,76],[520,760,250,70],[1570,760,220,68],[850,1030,260,74],[1420,1080,240,72]].forEach(v=>this.drawWardrobeBunker(v[0],v[1],v[2],v[3]));[[1080,300],[1900,650],[730,1170]].forEach(v=>this.drawWardrobeTires(v[0],v[1]));const f=this.add.graphics().setDepth(4);f.fillStyle(0x594838,1).fillRect(1180,860,4,78);f.fillStyle(0x2f7775,1).fillTriangle(1184,864,1244,878,1184,892);this.add.text(1212,910,'WARDROBE',{fontFamily:'monospace',fontSize:'9px',color:'#fff4d4',stroke:'#493526',strokeThickness:4}).setOrigin(.5).setDepth(5);}
+  private drawWardrobeTree(x:number,y:number,s:number){const g=this.add.graphics().setDepth(2);g.fillStyle(0x65472f,1).fillRect(x-6*s,y+18*s,12*s,60*s);g.fillStyle(0x405638,1).fillCircle(x,y,34*s).fillCircle(x-28*s,y+9*s,28*s).fillCircle(x+28*s,y+9*s,29*s);g.fillStyle(0x526d3c,.75).fillCircle(x+5*s,y-16*s,23*s);}
+  private drawWardrobeBunker(x:number,y:number,w:number,h:number){const g=this.add.graphics().setDepth(3);g.fillStyle(0x493526,.24).fillRect(x+8,y+9,w,h);g.fillStyle(0x76563b,1).fillRoundedRect(x,y,w,h,10);g.fillStyle(0xffffff,.12).fillRect(x+12,y+10,w-24,5);g.lineStyle(2,0xf4f1df,.28).strokeRoundedRect(x,y,w,h,10);}
+  private drawWardrobeTires(x:number,y:number){const g=this.add.graphics().setDepth(3);for(let i=0;i<4;i++){g.fillStyle(0x2b302d,1).fillCircle(x+i*17,y-i*3,19);g.fillStyle(0x66706a,1).fillCircle(x+i*17,y-i*3,7);}}
 
   private makeButton(x: number, y: number, width: number, label: string) {
     const button = this.add.text(x, y, label, {
