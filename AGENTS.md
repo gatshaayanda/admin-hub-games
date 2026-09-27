@@ -4814,3 +4814,8 @@ For this checkpoint, verify:
 8. Shooter Trigger combat files remain untouched by this Wardrobe visual pass.
 
 This is a Wardrobe visual checkpoint, not a claim of device/offline acceptance.
+### Final Wardrobe visual-pass additions — September 27, 2026
+- Wardrobe Intro now uses the same 1.jpg generated source family instead of the stale og.jpg crop.
+- The live generated operator's extracted textures are compacted to a 128px animation stage so the 20k-wide source JPEG does not become a huge runtime texture set.
+- Wardrobe weapon/forearm/muzzle presentation is rendered above the generated body and follows the Shooters Trigger weapon geometry/aim vector.
+- No Shooters Trigger gameplay/combat source was changed by this pass.
