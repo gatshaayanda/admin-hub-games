@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { installShootersTriggerMobileControls } from '../shooters-trigger-mobile-controls';
 
 type WardrobeAction =
   | 'IDLE'
@@ -289,6 +290,52 @@ type WardrobeCharacterDefinition = {
 };
 
 const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
+  {
+    id: 'soldier_01',
+    name: 'Soldier 01 · CC BY · ARMED',
+    source: 'soldier',
+    basePath: '/assets/wardrobe/free-packs/a/export_folder/soldier_01',
+    displaySize: 128,
+    frameWidth: 16,
+    frameHeight: 16,
+    originY: 1,
+    embeddedWeapon: true,
+  },
+  {
+    id: 'soldier_02',
+    name: 'Soldier 02 · CC BY · ARMED',
+    source: 'soldier',
+    basePath: '/assets/wardrobe/free-packs/a/export_folder/soldier_02',
+    displaySize: 128,
+    frameWidth: 16,
+    frameHeight: 16,
+    originY: 1,
+    embeddedWeapon: true,
+  },
+  {
+    id: 'robot_blue',
+    name: 'Drone Robot · BLUE · CC0 · ARMED',
+    source: 'robot',
+    basePath: '/assets/wardrobe/free-packs/b/Free8DirRobot',
+    displaySize: 128,
+    frameWidth: 256,
+    frameHeight: 256,
+    originY: 0.90,
+    embeddedWeapon: true,
+    robotColor: 'Blue',
+  },
+  {
+    id: 'robot_red',
+    name: 'Drone Robot · RED · CC0 · ARMED',
+    source: 'robot',
+    basePath: '/assets/wardrobe/free-packs/b/Free8DirRobot',
+    displaySize: 128,
+    frameWidth: 256,
+    frameHeight: 256,
+    originY: 0.90,
+    embeddedWeapon: true,
+    robotColor: 'Red',
+  },
   ...[
     'police_officer', 'firefighter', 'mechanic', 'teacher', 'butcher',
     'student', 'cook', 'priest', 'punk', 'biker', 'jogger', 'soldier',
@@ -304,52 +351,6 @@ const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
     originY: 165 / 192,
     embeddedWeapon: false,
   })),
-  {
-    id: 'soldier_01',
-    name: 'Soldier 01 · CC BY',
-    source: 'soldier',
-    basePath: '/assets/wardrobe/free-packs/a/export_folder/soldier_01',
-    displaySize: 128,
-    frameWidth: 16,
-    frameHeight: 16,
-    originY: 1,
-    embeddedWeapon: true,
-  },
-  {
-    id: 'soldier_02',
-    name: 'Soldier 02 · CC BY',
-    source: 'soldier',
-    basePath: '/assets/wardrobe/free-packs/a/export_folder/soldier_02',
-    displaySize: 128,
-    frameWidth: 16,
-    frameHeight: 16,
-    originY: 1,
-    embeddedWeapon: true,
-  },
-  {
-    id: 'robot_blue',
-    name: 'Drone Robot · BLUE · CC0',
-    source: 'robot',
-    basePath: '/assets/wardrobe/free-packs/b/Free8DirRobot',
-    displaySize: 128,
-    frameWidth: 256,
-    frameHeight: 256,
-    originY: 0.90,
-    embeddedWeapon: true,
-    robotColor: 'Blue',
-  },
-  {
-    id: 'robot_red',
-    name: 'Drone Robot · RED · CC0',
-    source: 'robot',
-    basePath: '/assets/wardrobe/free-packs/b/Free8DirRobot',
-    displaySize: 128,
-    frameWidth: 256,
-    frameHeight: 256,
-    originY: 0.90,
-    embeddedWeapon: true,
-    robotColor: 'Red',
-  },
 ];
 export class WardrobeLabScene extends Phaser.Scene {
   private character!: Phaser.GameObjects.Container;
@@ -377,14 +378,13 @@ export class WardrobeLabScene extends Phaser.Scene {
   private targetDown = false;
   private pointerId = -1;
   private pointerAimActive = false;
-  private fireButtonKnob!: Phaser.GameObjects.Arc;
   private shots: Array<{
     graphics: Phaser.GameObjects.Arc;
     position: Phaser.Math.Vector2;
     velocity: Phaser.Math.Vector2;
     ageMs: number;
   }> = [];
-  private joystickReset?: () => void;
+  private cleanupMobileControls?: () => void;
 
   private readonly worldWidth = 2400;
   private readonly worldHeight = 1400;
@@ -501,8 +501,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(101);
 
     this.createCharacterSelector();
-    this.createFieldJoystick();
-    this.createFireControl();
+    this.cleanupMobileControls = installShootersTriggerMobileControls();
 
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.input.keyboard?.on('keydown-R', () => this.resetCharacter());
@@ -536,7 +535,7 @@ export class WardrobeLabScene extends Phaser.Scene {
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.input.keyboard?.removeAllListeners();
-      this.joystickReset?.();
+      this.cleanupMobileControls?.();
       this.shots.forEach((shot) => shot.graphics.destroy());
       this.shots = [];
     });
@@ -688,9 +687,9 @@ export class WardrobeLabScene extends Phaser.Scene {
     }
 
     const sourceLabel =
-      def.source === 'gegx' ? 'GegX WALK' :
-      def.source === 'soldier' ? 'FREE SOLDIER' :
-      'CC0 SHOOTER ROBOT';
+      def.source === 'soldier' ? 'FREE SOLDIER · EMBEDDED GUN' :
+      def.source === 'robot' ? 'CC0 SHOOTER ROBOT · EMBEDDED GUN' :
+      'GegX WALK · WEAPON LAYER';
     this.spriteLabel.setText(sourceLabel);
     this.animationLabel?.setText(
       def.source === 'robot' && this.muzzleUntil > 0
@@ -912,116 +911,31 @@ export class WardrobeLabScene extends Phaser.Scene {
     );
   }
 
-  private createFieldJoystick() {
-    const x = 72;
-    const y = this.scale.height - 112;
-    const base = this.add.circle(x, y, 48, 0x101512, 0.48)
-      .setScrollFactor(0).setDepth(102).setStrokeStyle(2, 0xe8c95c, 0.55);
-    const knob = this.add.circle(x, y, 20, 0x315845, 0.92)
-      .setScrollFactor(0).setDepth(103);
-
-    let pointerId = -1;
-    const reset = () => {
-      pointerId = -1;
-      this.move.set(0, 0);
-      knob.setPosition(x, y);
-    };
-    this.joystickReset = reset;
-
-    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (pointer.y < 75 || pointer.x > 190) return;
-      if (Phaser.Math.Distance.Between(pointer.x, pointer.y, x, y) <= 90) {
-        pointerId = pointer.id;
-      }
-    });
-    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      if (pointer.id !== pointerId) return;
-      const dx = pointer.x - x;
-      const dy = pointer.y - y;
-      const distance = Math.min(48, Math.hypot(dx, dy));
-      const angle = Math.atan2(dy, dx);
-      knob.setPosition(x + Math.cos(angle) * distance, y + Math.sin(angle) * distance);
-      this.move.set(
-        Math.cos(angle) * distance / 48,
-        Math.sin(angle) * distance / 48,
-      );
-    });
-    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-      if (pointer.id === pointerId) reset();
-    });
-
-    this.add.text(x, y + 56, 'MOVE', {
-      fontFamily: 'monospace',
-      fontSize: '7px',
-      fontStyle: 'bold',
-      color: '#f4f1df',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
-
-    this.add.text(this.scale.width - 16, this.scale.height - 58, 'RESET POSITION', {
-      fontFamily: 'monospace',
-      fontSize: '8px',
-      fontStyle: 'bold',
-      color: '#f4f1df',
-      backgroundColor: '#315845',
-      padding: { left: 10, right: 10, top: 7, bottom: 7 },
-    }).setOrigin(1, 0).setScrollFactor(0).setDepth(102)
-      .setInteractive()
-      .on('pointerdown', () => this.resetCharacter());
+  public setMoveVector(x: number, y: number) {
+    this.move.set(Phaser.Math.Clamp(x, -1, 1), Phaser.Math.Clamp(y, -1, 1));
   }
 
-  private createFireControl() {
-    const x = this.scale.width - 72;
-    const y = this.scale.height - 112;
-    this.add.circle(x, y, 48, 0x101512, 0.50)
-      .setScrollFactor(0).setDepth(102)
-      .setStrokeStyle(2, 0xe8c95c, 0.70);
-    this.fireButtonKnob = this.add.circle(x, y, 20, 0x315845, 0.94)
-      .setScrollFactor(0).setDepth(103);
-    this.add.text(x, y + 56, 'AIM · FIRE', {
-      fontFamily: 'monospace',
-      fontSize: '7px',
-      fontStyle: 'bold',
-      color: '#f4f1df',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+  public setFireHeld(value: boolean) {
+    this.fireHeld = value;
+    if (!value) this.pointerAimActive = false;
+  }
 
-    const base = this.add.circle(x, y, 48, 0x000000, 0)
-      .setScrollFactor(0).setDepth(104)
-      .setInteractive(new Phaser.Geom.Circle(0, 0, 60), Phaser.Geom.Circle.Contains);
-
-    const reset = () => {
-      this.pointerId = -1;
-      this.fireHeld = false;
-      this.pointerAimActive = false;
-      this.fireButtonKnob.setPosition(x, y);
-    };
-
-    base.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      this.pointerId = pointer.id;
-      this.fireHeld = true;
+  public setAimVector(x: number, y: number) {
+    const length = Math.hypot(x, y);
+    if (length > 0.05) {
+      this.aim.set(x / length, y / length);
       this.pointerAimActive = true;
-      this.updateAimFromFirePointer(pointer, x, y);
-    });
-    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      if (pointer.id !== this.pointerId) return;
-      this.updateAimFromFirePointer(pointer, x, y);
-    });
-    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-      if (pointer.id === this.pointerId) reset();
-    });
+      this.updateWeaponLayer();
+      this.updateLabels();
+    }
   }
 
-  private updateAimFromFirePointer(pointer: Phaser.Input.Pointer, centerX: number, centerY: number) {
-    const dx = pointer.x - centerX;
-    const dy = pointer.y - centerY;
-    const distance = Math.min(48, Math.hypot(dx, dy));
-    if (distance > 4) {
-      const angle = Math.atan2(dy, dx);
-      this.fireButtonKnob.setPosition(
-        centerX + Math.cos(angle) * distance,
-        centerY + Math.sin(angle) * distance,
-      );
-      this.aim.set(Math.cos(angle), Math.sin(angle));
-    }
+  public isFireAvailable() {
+    return true;
+  }
+
+  public isPhoneSession() {
+    return window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
   }
 
   private clearShots() {
@@ -1064,7 +978,6 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.muzzleUntil = 0;
     this.pointerAimActive = false;
     this.pointerId = -1;
-    this.fireButtonKnob?.setPosition(this.scale.width - 72, this.scale.height - 112);
     this.clearShots();
     this.playCharacterAnimation(false);
     this.updateWeaponLayer();
