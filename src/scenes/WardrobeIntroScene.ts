@@ -59,13 +59,11 @@ export class WardrobeIntroScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.spritesheet('wardrobe-enemy', '/assets/wardrobe/enemy/enemy.png', {
-      frameWidth: 34,
-      frameHeight: 54,
-    });
+    this.load.image('wardrobe-generated-reference-intro', '/assets/wardrobe/incoming/og.jpg');
   }
 
   create() {
+    this.prepareGeneratedIntroTexture();
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor('#171b19');
 
@@ -162,11 +160,44 @@ export class WardrobeIntroScene extends Phaser.Scene {
     this.scene.start('WardrobeLabScene');
   }
 
+  private prepareGeneratedIntroTexture() {
+    const source = this.textures.get('wardrobe-generated-reference-intro').getSourceImage() as CanvasImageSource & {
+      width: number;
+      height: number;
+    };
+    const columns = 8;
+    const rows = 4;
+    const cellWidth = source.width / columns;
+    const cellHeight = source.height / rows;
+    const cropX = Math.round(cellWidth * (6 / 176));
+    const cropY = Math.round(cellHeight * (34 / 256));
+    const frameWidth = Math.round(cellWidth * (164 / 176));
+    const frameHeight = Math.round(cellHeight * (216 / 256));
+    const texture = this.textures.createCanvas('wardrobe-generated-intro', frameWidth, frameHeight);
+    if (!texture) return;
+
+    const context = texture.getContext();
+    context.clearRect(0, 0, frameWidth, frameHeight);
+    context.drawImage(source, cropX, cropY, frameWidth, frameHeight, 0, 0, frameWidth, frameHeight);
+
+    const pixels = context.getImageData(0, 0, frameWidth, frameHeight);
+    for (let i = 0; i < pixels.data.length; i += 4) {
+      const r = pixels.data[i];
+      const g = pixels.data[i + 1];
+      const b = pixels.data[i + 2];
+      const neutral = Math.max(r, g, b) - Math.min(r, g, b) < 12;
+      const checkerboard = neutral && r >= 170 && r <= 252;
+      if (checkerboard) pixels.data[i + 3] = 0;
+    }
+    context.putImageData(pixels, 0, 0);
+    texture.refresh();
+  }
+
   private createCharacter(x: number, y: number) {
     const container = this.add.container(x, y);
     const shadow = this.add.ellipse(0, 58, 58, 16, 0x000000, 0.28);
-    const sprite = this.add.image(0, 0, 'wardrobe-enemy', 0)
-      .setDisplaySize(85, 135)
+    const sprite = this.add.image(0, 0, 'wardrobe-generated-intro')
+      .setDisplaySize(85, 112)
       .setOrigin(0.5, 0.5);
     container.add([shadow, sprite]);
     return container;
@@ -473,13 +504,13 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.character.add([this.shadow, this.weaponLayer, this.muzzleFlash]);
     this.fieldOperator = new FieldOperatorCharacter(this, 0, 0);
     this.character.add(this.fieldOperator.gameObject);
-    this.fieldOperator.setVisible(this.selectedCharacterIndex === 0);
+    this.fieldOperator.setVisible(false);
 
     const current = this.currentDefinition();
     this.previewSprite = this.add.sprite(0, 0, this.spriteKey(current, 'DOWN'), 0)
       .setOrigin(0.5, current.originY);
     this.fitCharacterSprite(this.previewSprite, current);
-    this.previewSprite.setVisible(this.selectedCharacterIndex !== 0);
+    this.previewSprite.setVisible(true);
     this.character.add(this.previewSprite);
 
     this.createCharacterAnimations();
@@ -860,27 +891,6 @@ export class WardrobeLabScene extends Phaser.Scene {
   private playCharacterAnimation(walking: boolean) {
     const def = this.currentDefinition();
 
-    if (this.selectedCharacterIndex === 0) {
-      this.previewSprite.setVisible(false);
-      this.fieldOperator.setVisible(true);
-      this.fieldOperator.update(
-        this.direction,
-        this.aim,
-        walking,
-        this.muzzleUntil > 0,
-        this.game.loop.delta,
-      );
-      this.spriteLabel.setText('SHOOTERS TRIGGER · GEOMETRIC BASELINE');
-      this.animationLabel?.setText(
-        this.muzzleUntil > 0
-          ? 'ANIMATION · SHOOT / RECOIL'
-          : walking
-            ? 'ANIMATION · WALK'
-            : 'ANIMATION · IDLE / READY',
-      );
-      return;
-    }
-
     this.fieldOperator.setVisible(false);
     this.previewSprite.setVisible(true);
 
@@ -932,7 +942,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.weaponLayer.clear();
     this.muzzleFlash.clear();
 
-    if (this.selectedCharacterIndex === 0) {
+    if (def.source === 'generated' || def.embeddedWeapon) {
       this.weaponLayer.setVisible(false);
       this.muzzleFlash.setVisible(false);
       return;
@@ -970,9 +980,7 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   private fireShot() {
-    const origin = this.selectedCharacterIndex === 0
-      ? this.fieldOperator.getMuzzlePosition(this.aim)
-      : new Phaser.Math.Vector2(
+    const origin = new Phaser.Math.Vector2(
           this.character.x + this.aim.x * 42,
           this.character.y - 52 + this.aim.y * 10,
         );
@@ -986,7 +994,6 @@ export class WardrobeLabScene extends Phaser.Scene {
     });
     this.fireCooldown = this.fireIntervalMs;
     this.muzzleUntil = 95;
-    if (this.selectedCharacterIndex === 0) this.fieldOperator.triggerRecoil();
     this.updateWeaponLayer();
 
     if (this.currentDefinition().source === 'robot') {
@@ -1126,8 +1133,8 @@ export class WardrobeLabScene extends Phaser.Scene {
   private selectCharacter(index: number) {
     const count = this.characterDefinitions.length;
     this.selectedCharacterIndex = (index + count) % count;
-    this.fieldOperator.setVisible(this.selectedCharacterIndex === 0);
-    this.previewSprite.setVisible(this.selectedCharacterIndex !== 0);
+    this.fieldOperator.setVisible(false);
+    this.previewSprite.setVisible(true);
     this.playCharacterAnimation(false);
     this.updateWeaponLayer();
     this.updateLabels();
