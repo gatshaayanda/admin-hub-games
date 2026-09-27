@@ -130,7 +130,7 @@ export class WardrobeIntroScene extends Phaser.Scene {
         align: 'center',
       }).setOrigin(0.5);
 
-    const enter = this.add.text(width / 2, height - 40, 'TAP / ENTER · OPEN LAB', {
+    const enter = this.add.text(width / 2, height - 40, 'TAP ANYWHERE · OPEN FIELD LAB', {
       fontFamily: 'monospace',
       fontSize: '11px',
       fontStyle: 'bold',
@@ -141,12 +141,14 @@ export class WardrobeIntroScene extends Phaser.Scene {
 
     const continueLab = () => this.openLab();
     enter.on('pointerdown', continueLab);
+    this.input.on('pointerdown', continueLab);
     this.input.keyboard?.on('keydown-ENTER', continueLab);
     this.input.keyboard?.on('keydown-SPACE', continueLab);
 
     this.tweens.add({ targets: toolLine, alpha: 0.45, duration: 900, yoyo: true, repeat: -1 });
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.input.off('pointerdown', continueLab);
       this.input.keyboard?.off('keydown-ENTER', continueLab);
       this.input.keyboard?.off('keydown-SPACE', continueLab);
       enter.destroy();
