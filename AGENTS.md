@@ -4618,3 +4618,82 @@ Wardrobe must use the same shared Shooter mobile-control implementation as Shoot
 - do not maintain a separate Wardrobe-specific mobile shooting control when the shared Shooter control can be reused.
 
 The Wardrobe projectile/test combat remains a presentation laboratory and must not replace or modify the authoritative Shooters Trigger combat implementation.
+
+
+## VS Code Image / Sprite Intake Workflow
+
+When the user has an image, sprite sheet, character reference, generated artwork, or other game asset in the Windows Downloads folder, treat it as an **incoming asset**, not as a file that the codebase can magically see.
+
+Use this workflow every time:
+
+1. **Locate the real file first**
+   - In VS Code, open the repository.
+   - Use the integrated Git Bash terminal.
+   - Inspect Downloads explicitly:
+     ```
+     ls -lah "$HOME/Downloads"
+     ```
+   - Confirm the exact filename, extension and that the expected file actually exists.
+   - Do not guess a path such as `og.jpg`.
+
+2. **Inspect before importing**
+   - Check the image dimensions, format, transparency and whether it is a single reference image or an actual sprite sheet.
+   - For a character/sprite asset, inspect the artwork visually before writing code around it.
+   - Do not treat a JPG as a transparent sprite sheet: JPG has no alpha channel.
+   - If the asset is generated artwork, inspect it for inconsistent proportions, duplicated limbs, broken hands/weapons, background pixels, clipping, inconsistent frame alignment and other generation artifacts.
+
+3. **Copy the approved source into the repository**
+   - Do not build the application against a user's Downloads path.
+   - Create/use an appropriate repository staging location, normally:
+     ```
+     public/assets/wardrobe/incoming/
+     ```
+   - Copy the actual file from Downloads into that repository location.
+   - Keep the original filename where useful for traceability, but rename it deliberately when the asset becomes a production asset.
+   - Never commit an arbitrary Downloads directory or unrelated personal files.
+
+4. **Normalize before integration**
+   - Determine whether the asset is reference artwork, a complete sprite sheet, individual frames, or source material for generating/editing sprites.
+   - For sprite sheets, establish exact frame width/height, row/column meaning, direction order, animation order, transparent bounds and foot/pivot line before creating Phaser animations.
+   - For single-character artwork, treat it as a reference/source image until proper directional frames and animation frames exist.
+   - Normalize scale, visible bounds, feet/ground pivot and direction convention in Wardrobe before connecting it to Shooters Trigger.
+   - Do not solve inconsistent source padding by blindly applying one `setDisplaySize` to every pack; visible artwork bounds and pivot must be considered.
+
+5. **Use Wardrobe as the character asset test**
+   - Import and test new character artwork in Wardrobe first.
+   - Verify the character in the real Arena reference field.
+   - Verify front/back/left/right presentation, feet grounding, movement, weapon relationship and shooting presentation where applicable.
+   - Missing actions are identified explicitly and then filled by reuse, construction, editing or newly generated artwork.
+   - Do not modify authoritative Shooters Trigger combat merely to make an incoming sprite fit.
+
+6. **Only promote approved artwork**
+   - Once the character looks correct in Wardrobe, place the cleaned/normalized production asset in its final asset location.
+   - Record licensing/attribution requirements.
+   - Then connect the approved presentation asset to Shooters Trigger using the existing authoritative combat systems.
+   - Do not leave code dependent on a Downloads file, temporary reference image or uninspected generated asset.
+
+### Fast Windows/VS Code rule
+
+For a user-provided file such as `Downloads/og.jpg`, the expected sequence is:
+
+```
+Downloads/og.jpg
+      ↓
+locate + confirm
+      ↓
+inspect image
+      ↓
+copy into repo staging
+      ↓
+normalize / clean / split frames if needed
+      ↓
+Wardrobe test
+      ↓
+approve
+      ↓
+production asset
+      ↓
+Shooter integration only after verification
+```
+
+**Never skip the actual-file inspection step. Never invent the Downloads path. Never code against Downloads.**
