@@ -757,12 +757,8 @@ export class WardrobeLabScene extends Phaser.Scene {
       };
       const columns = 8;
       const rows = 4;
-      const cellWidth = source.width / columns;
-      const cellHeight = source.height / rows;
-      const cropX = Math.round(cellWidth * (6 / 176));
-      const cropY = Math.round(cellHeight * (34 / 256));
-      const frameWidth = Math.round(cellWidth * (164 / 176));
-      const frameHeight = Math.round(cellHeight * (216 / 256));
+      const cellWidth = Math.round(source.width / columns);
+      const cellHeight = Math.round(source.height / rows);
 
       const extractedByFrame = new Map<number, {
         canvas: HTMLCanvasElement;
@@ -774,35 +770,57 @@ export class WardrobeLabScene extends Phaser.Scene {
 
       const extractFrame = (sourceFrame: number) => {
         if (extractedByFrame.has(sourceFrame)) return extractedByFrame.get(sourceFrame)!;
+
         const frameCanvas = document.createElement('canvas');
-        frameCanvas.width = frameWidth;
-        frameCanvas.height = frameHeight;
+        frameCanvas.width = cellWidth;
+        frameCanvas.height = cellHeight;
         const frameContext = frameCanvas.getContext('2d', { willReadFrequently: true });
         if (!frameContext) return null;
 
-        const sx = (sourceFrame % columns) * cellWidth + cropX;
-        const sy = Math.floor(sourceFrame / columns) * cellHeight + cropY;
-        frameContext.clearRect(0, 0, frameWidth, frameHeight);
-        frameContext.drawImage(source, sx, sy, frameWidth, frameHeight, 0, 0, frameWidth, frameHeight);
+        const sx = (sourceFrame % columns) * (source.width / columns);
+        const sy = Math.floor(sourceFrame / columns) * (source.height / rows);
+        frameContext.clearRect(0, 0, cellWidth, cellHeight);
+        frameContext.drawImage(
+          source,
+          sx, sy, source.width / columns, source.height / rows,
+          0, 0, cellWidth, cellHeight,
+        );
 
-        const pixels = frameContext.getImageData(0, 0, frameWidth, frameHeight);
-        for (let i = 0; i < pixels.data.length; i += 4) {
-          const r = pixels.data[i];
-          const g = pixels.data[i + 1];
-          const b = pixels.data[i + 2];
-          const neutral = Math.max(r, g, b) - Math.min(r, g, b) < 12;
-          if (neutral && r >= 170 && r <= 252) pixels.data[i + 3] = 0;
+        const pixels = frameContext.getImageData(0, 0, cellWidth, cellHeight);
+        const data = pixels.data;
+        const cornerSamples = [
+          [data[0], data[1], data[2]],
+          [data[(cellWidth - 1) * 4], data[(cellWidth - 1) * 4 + 1], data[(cellWidth - 1) * 4 + 2]],
+          [data[(cellHeight - 1) * cellWidth * 4], data[(cellHeight - 1) * cellWidth * 4 + 1], data[(cellHeight - 1) * cellWidth * 4 + 2]],
+          [data[(cellHeight * cellWidth - 1) * 4], data[(cellHeight * cellWidth - 1) * 4 + 1], data[(cellHeight * cellWidth - 1) * 4 + 2]],
+        ];
+        const isBackground = (index: number) => {
+          const r = data[index];
+          const g = data[index + 1];
+          const b = data[index + 2];
+          const neutral = Math.max(r, g, b) - Math.min(r, g, b) < 14;
+          const cornerMatch = cornerSamples.some(([cr, cg, cb]) => {
+            const dr = r - cr;
+            const dg = g - cg;
+            const db = b - cb;
+            return dr * dr + dg * dg + db * db < 48 * 48;
+          });
+          return neutral && cornerMatch;
+        };
+
+        for (let i = 0; i < data.length; i += 4) {
+          if (isBackground(i)) data[i + 3] = 0;
         }
         frameContext.putImageData(pixels, 0, 0);
 
-        const cleaned = frameContext.getImageData(0, 0, frameWidth, frameHeight).data;
-        let minX = frameWidth;
-        let minY = frameHeight;
+        const cleaned = frameContext.getImageData(0, 0, cellWidth, cellHeight).data;
+        let minX = cellWidth;
+        let minY = cellHeight;
         let maxX = -1;
         let maxY = -1;
-        for (let y = 0; y < frameHeight; y += 1) {
-          for (let x = 0; x < frameWidth; x += 1) {
-            if (cleaned[(y * frameWidth + x) * 4 + 3] > 12) {
+        for (let y = 0; y < cellHeight; y += 1) {
+          for (let x = 0; x < cellWidth; x += 1) {
+            if (cleaned[(y * cellWidth + x) * 4 + 3] > 12) {
               minX = Math.min(minX, x);
               minY = Math.min(minY, y);
               maxX = Math.max(maxX, x);
@@ -826,11 +844,13 @@ export class WardrobeLabScene extends Phaser.Scene {
           maxX: Math.max(bounds.maxX, frame.maxX),
           maxY: Math.max(bounds.maxY, frame.maxY),
         }),
-        { minX: frameWidth, minY: frameHeight, maxX: -1, maxY: -1 },
+        { minX: cellWidth, minY: cellHeight, maxX: -1, maxY: -1 },
       );
       if (union.maxY < 0) continue;
 
-      this.generatedVisibleHeights[generatedDef.id] = union.maxY - union.minY + 1;
+      const visibleHeight = union.maxY - union.minY + 1;
+      const stageWidth = union.maxX - union.minX + 1;
+      this.generatedVisibleHeights[generatedDef.id] = visibleHeight;
 
       for (const [action, frames] of Object.entries(sequences)) {
         const extracted = frames
@@ -839,35 +859,59 @@ export class WardrobeLabScene extends Phaser.Scene {
         if (!extracted.length) continue;
 
         const normalized = document.createElement('canvas');
-        normalized.width = frameWidth * extracted.length;
-        normalized.height = frameHeight;
+        normalized.width = stageWidth;
+        normalized.height = visibleHeight;
         const normalizedContext = normalized.getContext('2d');
         if (!normalizedContext) continue;
+        normalizedContext.imageSmoothingEnabled = false;
 
         extracted.forEach((frame, index) => {
-          const y = frameHeight - (frame.maxY + 1);
+          const drawX = frame.minX - union.minX;
+          const drawY = union.maxY - (frame.maxY + 1);
           normalizedContext.drawImage(
-            frame.canvas, 0, 0, frameWidth, frameHeight,
-            index * frameWidth, y, frameWidth, frameHeight,
+            frame.canvas,
+            frame.minX, frame.minY,
+            frame.maxX - frame.minX + 1,
+            frame.maxY - frame.minY + 1,
+            drawX, drawY,
+            frame.maxX - frame.minX + 1,
+            frame.maxY - frame.minY + 1,
           );
+          void index;
         });
 
         const key = this.generatedKey(generatedDef, action);
         if (this.textures.exists(key)) continue;
-        const texture = this.textures.createCanvas(key, normalized.width, normalized.height);
+        const texture = this.textures.createCanvas(key, normalized.width * extracted.length, normalized.height);
         if (!texture) continue;
         texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
         const context = texture.getContext();
-        context.clearRect(0, 0, normalized.width, normalized.height);
-        context.drawImage(normalized, 0, 0);
+        context.clearRect(0, 0, texture.width, texture.height);
         for (let index = 0; index < extracted.length; index += 1) {
-          texture.add(index, 0, index * frameWidth, 0, frameWidth, frameHeight);
+          const frame = extracted[index];
+          const frameCanvas = document.createElement('canvas');
+          frameCanvas.width = stageWidth;
+          frameCanvas.height = visibleHeight;
+          const frameContext = frameCanvas.getContext('2d');
+          if (!frameContext) continue;
+          frameContext.imageSmoothingEnabled = false;
+          frameContext.drawImage(
+            frame.canvas,
+            frame.minX, frame.minY,
+            frame.maxX - frame.minX + 1,
+            frame.maxY - frame.minY + 1,
+            frame.minX - union.minX,
+            union.maxY - (frame.maxY + 1),
+            frame.maxX - frame.minX + 1,
+            frame.maxY - frame.minY + 1,
+          );
+          context.drawImage(frameCanvas, index * stageWidth, 0);
+          texture.add(index, 0, index * stageWidth, 0, stageWidth, visibleHeight);
         }
         texture.refresh();
       }
     }
   }
-
 
   private generatedKey(def: WardrobeCharacterDefinition, action: string) {
     return 'wardrobe-' + def.id + '-' + action;
