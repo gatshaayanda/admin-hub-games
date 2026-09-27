@@ -58,16 +58,16 @@ export class WardrobeIntroScene extends Phaser.Scene {
 
   preload() {
     const base = '/assets/wardrobe/field-operator-01/';
-    this.load.image('field-operator-down', base + 'front-idle.svg');
-    this.load.image('field-operator-up', base + 'back-idle.svg');
-    this.load.image('field-operator-left', base + 'left-idle.svg');
-    this.load.image('field-operator-right', base + 'right-idle.svg');
-    this.load.image('field-operator-down-walk0', base + 'front-walk0.svg');
-    this.load.image('field-operator-down-walk1', base + 'front-walk1.svg');
-    this.load.image('field-operator-left-walk0', base + 'left-walk0.svg');
-    this.load.image('field-operator-left-walk1', base + 'left-walk1.svg');
-    this.load.image('field-operator-right-walk0', base + 'right-walk0.svg');
-    this.load.image('field-operator-right-walk1', base + 'right-walk1.svg');
+    this.load.svg('field-operator-down', base + 'front-idle.svg');
+    this.load.svg('field-operator-up', base + 'back-idle.svg');
+    this.load.svg('field-operator-left', base + 'left-idle.svg');
+    this.load.svg('field-operator-right', base + 'right-idle.svg');
+    this.load.svg('field-operator-down-walk0', base + 'front-walk0.svg');
+    this.load.svg('field-operator-down-walk1', base + 'front-walk1.svg');
+    this.load.svg('field-operator-left-walk0', base + 'left-walk0.svg');
+    this.load.svg('field-operator-left-walk1', base + 'left-walk1.svg');
+    this.load.svg('field-operator-right-walk0', base + 'right-walk0.svg');
+    this.load.svg('field-operator-right-walk1', base + 'right-walk1.svg');
   }
 
   create() {
