@@ -292,18 +292,7 @@ type WardrobeCharacterDefinition = {
 };
 
 const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
-  {
-    id: 'gemini_operator',
-    name: 'GEMINI OPERATOR · GENERATED REFERENCE',
-    source: 'generated',
-    basePath: '/assets/wardrobe/incoming/og.jpg',
-    displaySize: 80,
-    targetVisibleHeight: 60,
-    frameWidth: 164,
-    frameHeight: 216,
-    originY: 1,
-    embeddedWeapon: true,
-  },
+
   {
     id: 'soldier_01',
     name: 'Soldier 01 · CC BY · ARMED',
@@ -313,6 +302,18 @@ const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
     targetVisibleHeight: 60,
     frameWidth: 16,
     frameHeight: 16,
+    originY: 1,
+    embeddedWeapon: true,
+  },
+  {
+    id: 'gemini_operator',
+    name: 'GEMINI OPERATOR · GENERATED REFERENCE',
+    source: 'generated',
+    basePath: '/assets/wardrobe/incoming/og.jpg',
+    displaySize: 80,
+    targetVisibleHeight: 60,
+    frameWidth: 164,
+    frameHeight: 216,
     originY: 1,
     embeddedWeapon: true,
   },
@@ -625,6 +626,7 @@ export class WardrobeLabScene extends Phaser.Scene {
 
   private prepareGeneratedCharacterTextures() {
     const source = this.textures.get('wardrobe-generated-reference').getSourceImage() as CanvasImageSource;
+    const generatedDef = this.characterDefinitions.find((def) => def.id === 'gemini_operator')!;
     const cellWidth = 176;
     const cellHeight = 256;
     const cropX = 6;
@@ -642,7 +644,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     for (const direction of Object.keys(sequences) as Array<'DOWN' | 'UP' | 'LEFT' | 'RIGHT'>) {
       for (const action of ['idle', 'walk'] as const) {
         const frames = sequences[direction][action];
-        const key = this.spriteKey(this.characterDefinitions[0], direction, action);
+        const key = this.spriteKey(generatedDef, direction, action);
         if (this.textures.exists(key)) continue;
 
         const texture = this.textures.createCanvas(key, frameWidth * frames.length, frameHeight);
