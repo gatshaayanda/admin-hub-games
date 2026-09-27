@@ -627,6 +627,39 @@ export class WardrobeLabScene extends Phaser.Scene {
     }[direction];
   }
 
+  private fitCharacterSprite(sprite: Phaser.GameObjects.Sprite, def: WardrobeCharacterDefinition) {
+    const source = sprite.texture.getSourceImage() as CanvasImageSource;
+    const frame = sprite.frame;
+    const canvas = document.createElement('canvas');
+    canvas.width = frame.width;
+    canvas.height = frame.height;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (!context) {
+      sprite.setDisplaySize(def.displaySize, def.displaySize).setOrigin(0.5, def.originY);
+      return;
+    }
+    context.drawImage(source, frame.cutX, frame.cutY, frame.width, frame.height, 0, 0, frame.width, frame.height);
+    const pixels = context.getImageData(0, 0, frame.width, frame.height).data;
+    let minY = frame.height;
+    let maxY = -1;
+    for (let y = 0; y < frame.height; y += 1) {
+      for (let x = 0; x < frame.width; x += 1) {
+        if (pixels[(y * frame.width + x) * 4 + 3] > 12) {
+          minY = Math.min(minY, y);
+          maxY = Math.max(maxY, y);
+        }
+      }
+    }
+    if (maxY < 0) {
+      sprite.setDisplaySize(def.displaySize, def.displaySize).setOrigin(0.5, def.originY);
+      return;
+    }
+    const visibleHeight = maxY - minY + 1;
+    const scale = this.targetVisibleCharacterHeight / visibleHeight;
+    sprite.setScale(scale);
+    sprite.setOrigin(0.5, (maxY + 1) / frame.height);
+  }
+
   private spriteKey(
     def: WardrobeCharacterDefinition,
     direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT',
