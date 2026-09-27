@@ -282,6 +282,7 @@ type WardrobeCharacterDefinition = {
   source: WardrobeCharacterSource;
   basePath: string;
   displaySize: number;
+  targetVisibleHeight: number;
   frameWidth: number;
   frameHeight: number;
   originY: number;
@@ -296,6 +297,7 @@ const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
     source: 'soldier',
     basePath: '/assets/wardrobe/free-packs/a/export_folder/soldier_01',
     displaySize: 80,
+    targetVisibleHeight: 60,
     frameWidth: 16,
     frameHeight: 16,
     originY: 1,
@@ -307,6 +309,7 @@ const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
     source: 'soldier',
     basePath: '/assets/wardrobe/free-packs/a/export_folder/soldier_02',
     displaySize: 80,
+    targetVisibleHeight: 60,
     frameWidth: 16,
     frameHeight: 16,
     originY: 1,
@@ -318,6 +321,7 @@ const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
     source: 'robot',
     basePath: '/assets/wardrobe/free-packs/b/Free8DirRobot',
     displaySize: 80,
+    targetVisibleHeight: 60,
     frameWidth: 256,
     frameHeight: 256,
     originY: 0.90,
@@ -330,6 +334,7 @@ const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
     source: 'robot',
     basePath: '/assets/wardrobe/free-packs/b/Free8DirRobot',
     displaySize: 80,
+    targetVisibleHeight: 60,
     frameWidth: 256,
     frameHeight: 256,
     originY: 0.90,
@@ -346,6 +351,7 @@ const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
     source: 'gegx' as const,
     basePath: '/assets/wardrobe/packs/x/gegx-free-walk-pixel-v1.1/' + id,
     displaySize: 80,
+    targetVisibleHeight: 60,
     frameWidth: 192,
     frameHeight: 192,
     originY: 165 / 192,
@@ -395,6 +401,7 @@ export class WardrobeLabScene extends Phaser.Scene {
   private readonly projectileLifetimeMs = 1100;
   private readonly fireIntervalMs = 240;
   private readonly characterDefinitions = WARDROBE_CHARACTER_DEFINITIONS;
+  private readonly targetVisibleCharacterHeight = 60;
 
   constructor() {
     super('WardrobeLabScene');
@@ -448,8 +455,8 @@ export class WardrobeLabScene extends Phaser.Scene {
 
     const current = this.currentDefinition();
     this.previewSprite = this.add.sprite(0, 0, this.spriteKey(current, 'DOWN'), 0)
-      .setDisplaySize(current.displaySize, current.displaySize)
       .setOrigin(0.5, current.originY);
+    this.fitCharacterSprite(this.previewSprite, current);
     this.character.add(this.previewSprite);
 
     this.createCharacterAnimations();
@@ -459,8 +466,8 @@ export class WardrobeLabScene extends Phaser.Scene {
     const targetShadow = this.add.ellipse(0, 0, 46, 13, 0x3d3025, 0.28);
     this.target.add(targetShadow);
     this.targetSprite = this.add.sprite(0, 0, this.spriteKey(targetDef, 'DOWN'), 0)
-      .setDisplaySize(targetDef.displaySize, targetDef.displaySize)
       .setOrigin(0.5, targetDef.originY);
+    this.fitCharacterSprite(this.targetSprite, targetDef);
     this.target.add(this.targetSprite);
     this.target.setAlpha(0.96);
 
