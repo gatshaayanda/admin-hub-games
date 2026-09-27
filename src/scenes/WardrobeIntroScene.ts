@@ -1053,22 +1053,6 @@ export class WardrobeLabScene extends Phaser.Scene {
       }
       return;
     }
-      const key = this.generatedKey(def, action);
-      if (this.previewSprite.texture.key !== key) {
-        this.previewSprite.setTexture(key, 0);
-        this.fitCharacterSprite(this.previewSprite, def);
-      }
-      this.previewSprite.setFlipX(vx < -0.08 || this.direction === 'LEFT');
-      this.previewSprite.setRotation(0);
-      if (action === 'death' || action === 'dodge' || action === 'respawn') {
-        this.previewSprite.play(key, true);
-      } else {
-        this.previewSprite.stop();
-        this.previewSprite.setFrame(0);
-      }
-      return;
-    }
-
     let key = this.generatedKey(def, 'idle_down');
     let flipX = false;
 
