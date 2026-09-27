@@ -57,10 +57,15 @@ export class WardrobeIntroScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.spritesheet('wardrobe-enemy', '/assets/wardrobe/enemy/enemy.png', {
-      frameWidth: 34,
-      frameHeight: 54,
-    });
+    for (const character of this.characterNames) {
+      for (const direction of ['south', 'north', 'east', 'west']) {
+        this.load.spritesheet(
+          this.spriteKey(character, direction),
+          `/assets/wardrobe/packs/x/gegx-free-walk-pixel-v1.1/${character}/strips/${direction}.png`,
+          { frameWidth: 192, frameHeight: 192 },
+        );
+      }
+    }
   }
 
   create() {
@@ -283,6 +288,15 @@ export class WardrobeLabScene extends Phaser.Scene {
   private direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT' = 'DOWN';
   private previewSprite!: Phaser.GameObjects.Sprite;
   private covers: Phaser.Geom.Rectangle[] = [];
+  private characterNameLabel!: Phaser.GameObjects.Text;
+  private animationLabel!: Phaser.GameObjects.Text;
+  private selectedCharacterIndex = 0;
+  private readonly characterNames = [
+    'police_officer', 'firefighter', 'mechanic', 'teacher', 'butcher',
+    'student', 'cook', 'priest', 'punk', 'biker',
+    'jogger', 'soldier', 'nurse', 'child', 'heavyset',
+    'runner', 'bruiser', 'old_man', 'businessman',
+  ];
   private joystickReset?: () => void;
 
   private readonly worldWidth = 2400;
@@ -314,12 +328,15 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.character = this.add.container(this.playerSpawn.x, this.playerSpawn.y).setDepth(30);
     this.shadow = this.add.ellipse(0, 34, 27, 10, 0x3d3025, 0.28).setDepth(29);
 
-    // Keep the Arena's body origin/ground relationship. The sprite's feet land
-    // on the same ground line as the Arena fighter shadow instead of floating.
-    this.previewSprite = this.add.sprite(0, -20, 'wardrobe-enemy', 0)
-      .setDisplaySize(68, 108)
-      .setOrigin(0.5, 0.5);
+    // The free pack uses one shared 192x192 canvas and one shared foot line.
+    // Keep the container on the Arena ground point and let the sprite origin
+    // place every character's feet on that exact point.
+    this.previewSprite = this.add.sprite(0, 0, this.spriteKey(this.currentCharacter(), 'south'), 0)
+      .setDisplaySize(128, 128)
+      .setOrigin(0.5, 165 / 192);
     this.character.add(this.previewSprite);
+    this.createCharacterAnimations();
+    this.playCharacterAnimation(false);
 
     this.cameras.main.startFollow(this.character, true, 0.08, 0.08);
     this.cameras.main.setDeadzone(
@@ -342,7 +359,7 @@ export class WardrobeLabScene extends Phaser.Scene {
       color: '#8fb39b',
     }).setScrollFactor(0).setDepth(101);
 
-    this.spriteLabel = this.add.text(width - 18, 18, 'REAL SPRITE · ENEMY', {
+    this.spriteLabel = this.add.text(width - 18, 18, 'FREE TOP-DOWN CHARACTER PACK', {
       fontFamily: 'monospace',
       fontSize: '8px',
       fontStyle: 'bold',
@@ -356,6 +373,8 @@ export class WardrobeLabScene extends Phaser.Scene {
       color: '#f4f1df',
       align: 'right',
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(101);
+
+    this.createCharacterSelector();
 
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.input.keyboard?.on('keydown-R', () => this.resetCharacter());
@@ -380,7 +399,9 @@ export class WardrobeLabScene extends Phaser.Scene {
       dy = (this.cursors.down.isDown ? 1 : 0) - (this.cursors.up.isDown ? 1 : 0);
     }
 
+    let walking = false;
     if (dx || dy) {
+      walking = true;
       if (Math.abs(dx) > 0.08) {
         this.direction = dx < 0 ? 'LEFT' : 'RIGHT';
       } else if (Math.abs(dy) > 0.08) {
@@ -405,12 +426,8 @@ export class WardrobeLabScene extends Phaser.Scene {
       }
     }
 
-    this.shadow.setPosition(this.character.x, this.character.y + 34);
-    this.directionLabel.setText('FACING · ' + this.direction + ' · ARENA CAMERA');
-
-    // Do not invent an animation mapping from the 28-frame source sheet.
-    // Frame 0 is the verified reference pose until each frame is classified.
-    this.previewSprite.setFrame(0);
+    this.directionLabel.setText('FACING · ' + this.direction + ' · ' + (walking ? 'WALK' : 'IDLE') + ' · ARENA CAMERA');
+    this.playCharacterAnimation(walking);
   }
 
   private createFieldJoystick() {
@@ -471,7 +488,111 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   private updateLabels() {
-    this.spriteLabel.setText('REAL SPRITE · ENEMY · 34×54 SOURCE');
+    const current = this.currentCharacter();
+    this.spriteLabel.setText('FREE PACK · 4 DIRECTIONS · WALK CYCLE');
+    this.characterNameLabel?.setText(this.displayCharacterName(current));
+  }
+
+  private currentCharacter() {
+    return this.characterNames[this.selectedCharacterIndex];
+  }
+
+  private displayCharacterName(name: string) {
+    return name.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+  }
+
+  private spriteKey(character: string, direction: string) {
+    return `wardrobe-pack-${character}-${direction}`;
+  }
+
+  private directionKey() {
+    return {
+      DOWN: 'south',
+      UP: 'north',
+      LEFT: 'west',
+      RIGHT: 'east',
+    }[this.direction];
+  }
+
+  private createCharacterAnimations() {
+    for (const character of this.characterNames) {
+      for (const direction of ['south', 'north', 'east', 'west']) {
+        const key = this.spriteKey(character, direction);
+        if (this.anims.exists(key)) continue;
+        const texture = this.textures.get(key);
+        const frameCount = Math.max(1, texture.frameTotal - 1);
+        this.anims.create({
+          key,
+          frames: this.anims.generateFrameNumbers(key, { start: 0, end: frameCount - 1 }),
+          frameRate: 10,
+          repeat: -1,
+        });
+      }
+    }
+  }
+
+  private playCharacterAnimation(walking: boolean) {
+    const key = this.spriteKey(this.currentCharacter(), this.directionKey());
+    if (this.previewSprite.texture.key !== key) {
+      this.previewSprite.setTexture(key, 0);
+      this.previewSprite.setOrigin(0.5, 165 / 192);
+    }
+
+    if (walking) {
+      this.previewSprite.play(key, true);
+    } else {
+      this.previewSprite.stop();
+      this.previewSprite.setFrame(0);
+    }
+
+    this.animationLabel?.setText(walking ? 'ANIMATION · WALK' : 'ANIMATION · IDLE / FIRST WALK FRAME');
+  }
+
+  private selectCharacter(index: number) {
+    const count = this.characterNames.length;
+    this.selectedCharacterIndex = (index + count) % count;
+    this.playCharacterAnimation(false);
+    this.updateLabels();
+  }
+
+  private createCharacterSelector() {
+    const width = this.scale.width;
+    const y = this.scale.height - 86;
+
+    this.add.rectangle(width / 2, y, Math.min(width - 28, 520), 68, 0x101512, 0.90)
+      .setScrollFactor(0).setDepth(100);
+
+    this.characterNameLabel = this.add.text(width / 2, y - 20, '', {
+      fontFamily: 'monospace',
+      fontSize: '13px',
+      fontStyle: 'bold',
+      color: '#e8c95c',
+      align: 'center',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(104);
+
+    this.animationLabel = this.add.text(width / 2, y - 4, 'ANIMATION · IDLE', {
+      fontFamily: 'monospace',
+      fontSize: '7px',
+      color: '#8fb39b',
+      align: 'center',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(104);
+
+    const makeButton = (x: number, label: string, deltaIndex: number) => {
+      return this.add.text(x, y + 19, label, {
+        fontFamily: 'monospace',
+        fontSize: '10px',
+        fontStyle: 'bold',
+        color: '#f4f1df',
+        backgroundColor: '#315845',
+        padding: { left: 12, right: 12, top: 6, bottom: 6 },
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(104)
+        .setInteractive({ useHandCursor: false })
+        .on('pointerdown', () => this.selectCharacter(this.selectedCharacterIndex + deltaIndex));
+    };
+
+    makeButton(width / 2 - 108, '‹ PREV', -1);
+    makeButton(width / 2 + 108, 'NEXT ›', 1);
+    this.updateLabels();
   }
 
   private resetCharacter() {
@@ -479,7 +600,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.shadow.setPosition(this.playerSpawn.x, this.playerSpawn.y + 34);
     this.move.set(0, 0);
     this.direction = 'DOWN';
-    this.previewSprite.setFrame(0);
+    this.playCharacterAnimation(false);
   }
 
   private inCover(x: number, y: number, padding = 12) {
