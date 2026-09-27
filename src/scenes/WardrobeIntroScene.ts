@@ -62,7 +62,8 @@ export class WardrobeIntroScene extends Phaser.Scene {
   preload() {
     // The intro and lab use the same live generated source so the character
     // shown before entering the lab is not a different crop or alignment.
-    this.load.image('wardrobe-generated-reference', '/assets/wardrobe/incoming/1.jpg');
+    this.load.image('wardrobe-generated-reference-player', '/assets/wardrobe/incoming/1.jpg');
+    this.load.image('wardrobe-generated-reference-bot', '/assets/wardrobe/incoming/og.jpg');
   }
 
   create() {
@@ -169,6 +170,7 @@ export class WardrobeIntroScene extends Phaser.Scene {
       height: number;
     };
     const columns = 8;
+    const rows = 4;
     const cellWidth = source.width / columns;
     const cellHeight = source.height / rows;
     const frameCanvas = document.createElement('canvas');
@@ -367,8 +369,8 @@ type WardrobeCharacterDefinition = {
 const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
 
   {
-    id: 'gemini_operator',
-    name: 'GEMINI OPERATOR · GENERATED REFERENCE',
+    id: 'arena_player',
+    name: 'ARENA PLAYER · GENERATED 1.JPG',
     source: 'generated',
     basePath: '/assets/wardrobe/incoming/1.jpg',
     displaySize: 80,
@@ -377,6 +379,18 @@ const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
     frameHeight: 216,
     originY: 1,
     // The current generated sheet is used for the body/action source. Weapon aim/fire is rendered by the same independent weapon layer used by the Shooter prototype.
+    embeddedWeapon: false,
+  },
+  {
+    id: 'arena_bot',
+    name: 'ARENA BOT · ORIGINAL OG.JPG',
+    source: 'generated',
+    basePath: '/assets/wardrobe/incoming/og.jpg',
+    displaySize: 80,
+    targetVisibleHeight: 60,
+    frameWidth: 164,
+    frameHeight: 216,
+    originY: 1,
     embeddedWeapon: false,
   },
   {
@@ -471,7 +485,7 @@ export class WardrobeLabScene extends Phaser.Scene {
   private muzzleUntil = 0;
   private generatedAction: 'ready' | 'aim' | 'shoot' | 'muzzle' | 'recoil' | 'hit' | 'headshot' | 'death' | 'dodge' | 'respawn' = 'ready';
   private generatedActionUntil = 0;
-  private generatedVisibleHeight = 0;
+  private generatedVisibleHeights: Record<string, number> = {};
   private visualMove = new Phaser.Math.Vector2(0, 1);
   private targetBodyHits = 0;
   private targetDown = false;
@@ -712,20 +726,6 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   private prepareGeneratedCharacterTextures() {
-    const source = this.textures.get('wardrobe-generated-reference').getSourceImage() as CanvasImageSource & {
-      width: number;
-      height: number;
-    };
-    const generatedDef = this.characterDefinitions.find((def) => def.id === 'gemini_operator')!;
-    const columns = 8;
-    const rows = 4;
-    const cellWidth = source.width / columns;
-    const cellHeight = source.height / rows;
-
-    // The generated sheet is a large JPEG contact sheet, not a native Phaser
-    // sprite sheet. Its current dimensions are ~20k x 2.8k, so the old 176x256
-    // crop assumptions were scaling the wrong geometry. Detect the actual
-    // foreground inside each cell first, then build fixed-baseline Phaser frames.
     const sequences: Record<string, number[]> = {
       idle_down: [0],
       idle_down_right: [1],
@@ -747,249 +747,130 @@ export class WardrobeLabScene extends Phaser.Scene {
       respawn: [28, 29, 30, 31],
     };
 
-    type ExtractedFrame = {
-      canvas: HTMLCanvasElement;
-      sourceAnchorX: number;
-      minX: number;
-      minY: number;
-      maxX: number;
-      maxY: number;
-    };
-
-    const extractedByFrame = new Map<number, ExtractedFrame>();
-
-    const getBackgroundPalette = (
-      context: CanvasRenderingContext2D,
-      width: number,
-      height: number,
-    ) => {
-      const image = context.getImageData(0, 0, width, height).data;
-      const buckets = new Map<string, { r: number; g: number; b: number; count: number }>();
-      const sample = (x: number, y: number) => {
-        const index = (y * width + x) * 4;
-        const r = image[index];
-        const g = image[index + 1];
-        const b = image[index + 2];
-        const key = Math.floor(r / 16) + ':' + Math.floor(g / 16) + ':' + Math.floor(b / 16);
-        const current = buckets.get(key);
-        if (current) current.count += 1;
-        else buckets.set(key, { r, g, b, count: 1 });
+    for (const generatedDef of this.characterDefinitions.filter((def) => def.source === 'generated')) {
+      const referenceKey = generatedDef.id === 'arena_bot'
+        ? 'wardrobe-generated-reference-bot'
+        : 'wardrobe-generated-reference-player';
+      const source = this.textures.get(referenceKey).getSourceImage() as CanvasImageSource & {
+        width: number;
+        height: number;
       };
+      const columns = 8;
+      const rows = 4;
+      const cellWidth = source.width / columns;
+      const cellHeight = source.height / rows;
+      const cropX = Math.round(cellWidth * (6 / 176));
+      const cropY = Math.round(cellHeight * (34 / 256));
+      const frameWidth = Math.round(cellWidth * (164 / 176));
+      const frameHeight = Math.round(cellHeight * (216 / 256));
 
-      for (let x = 0; x < width; x += Math.max(1, Math.floor(width / 80))) {
-        sample(x, 0);
-        sample(x, height - 1);
-      }
-      for (let y = 0; y < height; y += Math.max(1, Math.floor(height / 40))) {
-        sample(0, y);
-        sample(width - 1, y);
-      }
+      const extractedByFrame = new Map<number, {
+        canvas: HTMLCanvasElement;
+        minX: number;
+        minY: number;
+        maxX: number;
+        maxY: number;
+      }>();
 
-      return [...buckets.values()]
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 6)
-        .map(({ r, g, b }) => ({ r, g, b }));
-    };
+      const extractFrame = (sourceFrame: number) => {
+        if (extractedByFrame.has(sourceFrame)) return extractedByFrame.get(sourceFrame)!;
+        const frameCanvas = document.createElement('canvas');
+        frameCanvas.width = frameWidth;
+        frameCanvas.height = frameHeight;
+        const frameContext = frameCanvas.getContext('2d', { willReadFrequently: true });
+        if (!frameContext) return null;
 
-    const removeConnectedBackground = (
-      context: CanvasRenderingContext2D,
-      width: number,
-      height: number,
-    ) => {
-      const pixels = context.getImageData(0, 0, width, height);
-      const data = pixels.data;
-      const palette = getBackgroundPalette(context, width, height);
-      const visited = new Uint8Array(width * height);
-      const queue = new Int32Array(width * height);
-      let head = 0;
-      let tail = 0;
+        const sx = (sourceFrame % columns) * cellWidth + cropX;
+        const sy = Math.floor(sourceFrame / columns) * cellHeight + cropY;
+        frameContext.clearRect(0, 0, frameWidth, frameHeight);
+        frameContext.drawImage(source, sx, sy, frameWidth, frameHeight, 0, 0, frameWidth, frameHeight);
 
-      const isBackground = (x: number, y: number) => {
-        const index = (y * width + x) * 4;
-        const r = data[index];
-        const g = data[index + 1];
-        const b = data[index + 2];
-        return palette.some((color) => {
-          const dr = r - color.r;
-          const dg = g - color.g;
-          const db = b - color.b;
-          return dr * dr + dg * dg + db * db <= 42 * 42;
-        });
-      };
+        const pixels = frameContext.getImageData(0, 0, frameWidth, frameHeight);
+        for (let i = 0; i < pixels.data.length; i += 4) {
+          const r = pixels.data[i];
+          const g = pixels.data[i + 1];
+          const b = pixels.data[i + 2];
+          const neutral = Math.max(r, g, b) - Math.min(r, g, b) < 12;
+          if (neutral && r >= 170 && r <= 252) pixels.data[i + 3] = 0;
+        }
+        frameContext.putImageData(pixels, 0, 0);
 
-      const enqueue = (x: number, y: number) => {
-        const index = y * width + x;
-        if (visited[index] || !isBackground(x, y)) return;
-        visited[index] = 1;
-        queue[tail++] = index;
-      };
-
-      for (let x = 0; x < width; x += 1) {
-        enqueue(x, 0);
-        enqueue(x, height - 1);
-      }
-      for (let y = 1; y < height - 1; y += 1) {
-        enqueue(0, y);
-        enqueue(width - 1, y);
-      }
-
-      while (head < tail) {
-        const index = queue[head++];
-        const x = index % width;
-        const y = Math.floor(index / width);
-        data[index * 4 + 3] = 0;
-        if (x > 0) enqueue(x - 1, y);
-        if (x < width - 1) enqueue(x + 1, y);
-        if (y > 0) enqueue(x, y - 1);
-        if (y < height - 1) enqueue(x, y + 1);
-      }
-
-      context.putImageData(pixels, 0, 0);
-    };
-
-    const extractFrame = (sourceFrame: number): ExtractedFrame | null => {
-      if (extractedByFrame.has(sourceFrame)) return extractedByFrame.get(sourceFrame)!;
-
-      const sx = (sourceFrame % columns) * cellWidth;
-      const sy = Math.floor(sourceFrame / columns) * cellHeight;
-
-      // Analyze a reduced copy so foreground detection stays cheap even with
-      // the very large generated source image.
-      const analysisWidth = Math.max(96, Math.min(720, Math.round(cellWidth / 3)));
-      const analysisHeight = Math.max(96, Math.min(720, Math.round(cellHeight / 3)));
-      const analysis = document.createElement('canvas');
-      analysis.width = analysisWidth;
-      analysis.height = analysisHeight;
-      const analysisContext = analysis.getContext('2d', { willReadFrequently: true });
-      if (!analysisContext) return null;
-      analysisContext.drawImage(source, sx, sy, cellWidth, cellHeight, 0, 0, analysisWidth, analysisHeight);
-      removeConnectedBackground(analysisContext, analysisWidth, analysisHeight);
-
-      const analysisPixels = analysisContext.getImageData(0, 0, analysisWidth, analysisHeight).data;
-      let minX = analysisWidth;
-      let minY = analysisHeight;
-      let maxX = -1;
-      let maxY = -1;
-      for (let y = 0; y < analysisHeight; y += 1) {
-        for (let x = 0; x < analysisWidth; x += 1) {
-          if (analysisPixels[(y * analysisWidth + x) * 4 + 3] > 12) {
-            minX = Math.min(minX, x);
-            minY = Math.min(minY, y);
-            maxX = Math.max(maxX, x);
-            maxY = Math.max(maxY, y);
+        const cleaned = frameContext.getImageData(0, 0, frameWidth, frameHeight).data;
+        let minX = frameWidth;
+        let minY = frameHeight;
+        let maxX = -1;
+        let maxY = -1;
+        for (let y = 0; y < frameHeight; y += 1) {
+          for (let x = 0; x < frameWidth; x += 1) {
+            if (cleaned[(y * frameWidth + x) * 4 + 3] > 12) {
+              minX = Math.min(minX, x);
+              minY = Math.min(minY, y);
+              maxX = Math.max(maxX, x);
+              maxY = Math.max(maxY, y);
+            }
           }
         }
-      }
 
-      if (maxX < 0 || maxY < 0) return null;
+        const result = { canvas: frameCanvas, minX, minY, maxX, maxY };
+        extractedByFrame.set(sourceFrame, result);
+        return result;
+      };
 
-      const scaleX = cellWidth / analysisWidth;
-      const scaleY = cellHeight / analysisHeight;
-      const paddingX = Math.max(10, Math.round((maxX - minX + 1) * 0.06 * scaleX));
-      const paddingY = Math.max(10, Math.round((maxY - minY + 1) * 0.06 * scaleY));
-      const cropLeft = Math.max(0, Math.floor(sx + minX * scaleX - paddingX));
-      const cropTop = Math.max(0, Math.floor(sy + minY * scaleY - paddingY));
-      const cropRight = Math.min(source.width, Math.ceil(sx + (maxX + 1) * scaleX + paddingX));
-      const cropBottom = Math.min(source.height, Math.ceil(sy + (maxY + 1) * scaleY + paddingY));
-      const width = Math.max(1, cropRight - cropLeft);
-      const height = Math.max(1, cropBottom - cropTop);
-
-      const frameCanvas = document.createElement('canvas');
-      frameCanvas.width = width;
-      frameCanvas.height = height;
-      const frameContext = frameCanvas.getContext('2d', { willReadFrequently: true });
-      if (!frameContext) return null;
-      frameContext.drawImage(source, cropLeft, cropTop, width, height, 0, 0, width, height);
-      removeConnectedBackground(frameContext, width, height);
-
-      const cleaned = frameContext.getImageData(0, 0, width, height).data;
-      minX = width;
-      minY = height;
-      maxX = -1;
-      maxY = -1;
-      for (let y = 0; y < height; y += 1) {
-        for (let x = 0; x < width; x += 1) {
-          if (cleaned[(y * width + x) * 4 + 3] > 12) {
-            minX = Math.min(minX, x);
-            minY = Math.min(minY, y);
-            maxX = Math.max(maxX, x);
-            maxY = Math.max(maxY, y);
-          }
-        }
-      }
-
-      if (maxX < 0 || maxY < 0) return null;
-      const sourceAnchorX = (cropLeft - sx) + (minX + maxX + 1) / 2;
-      const result = { canvas: frameCanvas, sourceAnchorX, minX, minY, maxX, maxY };
-      extractedByFrame.set(sourceFrame, result);
-      return result;
-    };
-
-    const allFrames = [...new Set(Object.values(sequences).flat())]
-      .map(extractFrame)
-      .filter((frame): frame is ExtractedFrame => frame !== null && frame.maxX >= 0);
-
-    if (!allFrames.length) return;
-
-    const visibleHeight = Math.max(...allFrames.map((frame) => frame.maxY - frame.minY + 1));
-    const visibleWidth = Math.max(...allFrames.map((frame) => frame.maxX - frame.minX + 1));
-    const horizontalMin = Math.min(...allFrames.map((frame) => frame.sourceAnchorX - (frame.maxX - frame.minX + 1) / 2));
-    const horizontalMax = Math.max(...allFrames.map((frame) => frame.sourceAnchorX + (frame.maxX - frame.minX + 1) / 2));
-    const sourceToTexture = Math.min(1, 128 / visibleHeight);
-    const stageWidth = Math.max(96, Math.ceil(Math.max(visibleWidth, horizontalMax - horizontalMin) * sourceToTexture * 1.16));
-    const stageHeight = 128;
-    this.generatedVisibleHeight = visibleHeight * sourceToTexture;
-
-    for (const [action, frames] of Object.entries(sequences)) {
-      const extracted = frames
+      const allFrames = [...new Set(Object.values(sequences).flat())]
         .map(extractFrame)
-        .filter((frame): frame is ExtractedFrame => frame !== null && frame.maxX >= 0);
-      if (!extracted.length) continue;
+        .filter((frame): frame is NonNullable<typeof frame> => frame !== null && frame.maxX >= 0);
+      const union = allFrames.reduce(
+        (bounds, frame) => ({
+          minX: Math.min(bounds.minX, frame.minX),
+          minY: Math.min(bounds.minY, frame.minY),
+          maxX: Math.max(bounds.maxX, frame.maxX),
+          maxY: Math.max(bounds.maxY, frame.maxY),
+        }),
+        { minX: frameWidth, minY: frameHeight, maxX: -1, maxY: -1 },
+      );
+      if (union.maxY < 0) continue;
 
-      const normalized = document.createElement('canvas');
-      normalized.width = stageWidth * extracted.length;
-      normalized.height = stageHeight;
-      const normalizedContext = normalized.getContext('2d');
-      if (!normalizedContext) continue;
+      this.generatedVisibleHeights[generatedDef.id] = union.maxY - union.minY + 1;
 
-      extracted.forEach((frame, index) => {
-        const visibleW = frame.maxX - frame.minX + 1;
-        const visibleH = frame.maxY - frame.minY + 1;
-        const drawW = Math.max(1, Math.round(visibleW * sourceToTexture));
-        const drawH = Math.max(1, Math.round(visibleH * sourceToTexture));
-        const anchorX = (frame.sourceAnchorX - (horizontalMin + horizontalMax) / 2) * sourceToTexture;
-        const stageX = stageWidth / 2 + anchorX;
-        const drawX = Math.round(index * stageWidth + stageX - drawW / 2);
-        const drawY = Math.round(stageHeight - drawH);
-        normalizedContext.drawImage(
-          frame.canvas,
-          frame.minX,
-          frame.minY,
-          visibleW,
-          visibleH,
-          drawX,
-          drawY,
-          drawW,
-          drawH,
-        );
-      });
+      for (const [action, frames] of Object.entries(sequences)) {
+        const extracted = frames
+          .map(extractFrame)
+          .filter((frame): frame is NonNullable<typeof frame> => frame !== null && frame.maxX >= 0);
+        if (!extracted.length) continue;
 
-      const key = 'wardrobe-gemini_operator-' + action;
-      if (this.textures.exists(key)) continue;
-      const texture = this.textures.createCanvas(key, normalized.width, normalized.height);
-      if (!texture) continue;
-      texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
-      const context = texture.getContext();
-      context.clearRect(0, 0, normalized.width, normalized.height);
-      context.drawImage(normalized, 0, 0);
-      for (let index = 0; index < extracted.length; index += 1) {
-        texture.add(index, 0, index * stageWidth, 0, stageWidth, stageHeight);
+        const normalized = document.createElement('canvas');
+        normalized.width = frameWidth * extracted.length;
+        normalized.height = frameHeight;
+        const normalizedContext = normalized.getContext('2d');
+        if (!normalizedContext) continue;
+
+        extracted.forEach((frame, index) => {
+          const y = frameHeight - (frame.maxY + 1);
+          normalizedContext.drawImage(
+            frame.canvas, 0, 0, frameWidth, frameHeight,
+            index * frameWidth, y, frameWidth, frameHeight,
+          );
+        });
+
+        const key = this.generatedKey(generatedDef, action);
+        if (this.textures.exists(key)) continue;
+        const texture = this.textures.createCanvas(key, normalized.width, normalized.height);
+        if (!texture) continue;
+        texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+        const context = texture.getContext();
+        context.clearRect(0, 0, normalized.width, normalized.height);
+        context.drawImage(normalized, 0, 0);
+        for (let index = 0; index < extracted.length; index += 1) {
+          texture.add(index, 0, index * frameWidth, 0, frameWidth, frameHeight);
+        }
+        texture.refresh();
       }
-      texture.refresh();
     }
+  }
 
-    const generatedDefIndex = this.characterDefinitions.findIndex((def) => def.id === generatedDef.id);
-    if (generatedDefIndex < 0) return;
+
+  private generatedKey(def: WardrobeCharacterDefinition, action: string) {
+    return this.generatedKey(def, action);
   }
 
   private currentDefinition() {
@@ -1019,8 +900,8 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   private fitCharacterSprite(sprite: Phaser.GameObjects.Sprite, def: WardrobeCharacterDefinition) {
-    if (def.source === 'generated' && this.generatedVisibleHeight > 0) {
-      const scale = this.targetVisibleCharacterHeight / this.generatedVisibleHeight;
+    if (def.source === 'generated' && this.generatedVisibleHeights[def.id] > 0) {
+      const scale = this.targetVisibleCharacterHeight / this.generatedVisibleHeights[def.id];
       sprite.setScale(scale);
       sprite.setOrigin(0.5, 1);
       return;
@@ -1070,7 +951,6 @@ export class WardrobeLabScene extends Phaser.Scene {
     for (const def of this.characterDefinitions) {
       for (const direction of ['DOWN', 'UP', 'LEFT', 'RIGHT'] as const) {
         if (def.source === 'generated') continue;
-
         const walkKey = this.spriteKey(def, direction, 'walk');
         if (!this.anims.exists(walkKey)) {
           const texture = this.textures.get(walkKey);
@@ -1082,7 +962,6 @@ export class WardrobeLabScene extends Phaser.Scene {
             repeat: -1,
           });
         }
-
         if (def.source === 'robot') {
           const shootKey = this.spriteKey(def, direction, 'shoot');
           if (!this.anims.exists(shootKey)) {
@@ -1105,19 +984,21 @@ export class WardrobeLabScene extends Phaser.Scene {
       ['dodge', 8, 3],
       ['respawn', 7, 3],
     ];
-
-    for (const [action, frameRate, end] of generatedAnimations) {
-      const key = 'wardrobe-gemini_operator-' + action;
-      if (!this.anims.exists(key)) {
-        this.anims.create({
-          key,
-          frames: this.anims.generateFrameNumbers(key, { start: 0, end }),
-          frameRate,
-          repeat: -1,
-        });
+    for (const def of this.characterDefinitions.filter((entry) => entry.source === 'generated')) {
+      for (const [action, frameRate, end] of generatedAnimations) {
+        const key = this.generatedKey(def, action);
+        if (!this.anims.exists(key)) {
+          this.anims.create({
+            key,
+            frames: this.anims.generateFrameNumbers(key, { start: 0, end }),
+            frameRate,
+            repeat: -1,
+          });
+        }
       }
     }
   }
+
 
   private playCharacterAnimation(walking: boolean) {
     const def = this.currentDefinition();
@@ -1156,7 +1037,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     const isReactionAction = action === 'hit' || action === 'headshot' || action === 'death' || action === 'dodge' || action === 'respawn';
 
     if (isReactionAction && this.generatedActionUntil > 0) {
-      const key = 'wardrobe-gemini_operator-' + action;
+      const key = 'wardrobe-ARENA_PLACEHOLDER-' + action;
       if (this.previewSprite.texture.key !== key) {
         this.previewSprite.setTexture(key, 0);
         this.fitCharacterSprite(this.previewSprite, def);
@@ -1172,26 +1053,26 @@ export class WardrobeLabScene extends Phaser.Scene {
       return;
     }
 
-    let key = 'wardrobe-gemini_operator-idle_down';
+    let key = 'wardrobe-ARENA_PLACEHOLDER-idle_down';
     let flipX = false;
 
     if (walking && Math.abs(vx) > 0.65 && Math.abs(vy) < 0.45) {
-      key = 'wardrobe-gemini_operator-run';
+      key = 'wardrobe-ARENA_PLACEHOLDER-run';
       flipX = vx < 0;
     } else if (Math.abs(vx) > 0.35 && vy > 0.35) {
-      key = 'wardrobe-gemini_operator-idle_down_right';
+      key = 'wardrobe-ARENA_PLACEHOLDER-idle_down_right';
       flipX = vx < 0;
     } else if (Math.abs(vx) > 0.35 && vy < -0.35) {
-      key = 'wardrobe-gemini_operator-idle_up_right';
+      key = 'wardrobe-ARENA_PLACEHOLDER-idle_up_right';
       flipX = vx < 0;
     } else if (vy > 0.35) {
-      key = 'wardrobe-gemini_operator-idle_down';
+      key = 'wardrobe-ARENA_PLACEHOLDER-idle_down';
     } else if (vy < -0.35) {
-      key = 'wardrobe-gemini_operator-idle_up_right';
+      key = 'wardrobe-ARENA_PLACEHOLDER-idle_up_right';
     } else if (vx < -0.35) {
-      key = 'wardrobe-gemini_operator-idle_left';
+      key = 'wardrobe-ARENA_PLACEHOLDER-idle_left';
     } else if (vx > 0.35) {
-      key = 'wardrobe-gemini_operator-idle_right';
+      key = 'wardrobe-ARENA_PLACEHOLDER-idle_right';
     }
 
     if (this.previewSprite.texture.key !== key) {
