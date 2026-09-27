@@ -4449,3 +4449,126 @@ The visual system must eventually be verified for:
 - mobile readability;
 - independent movement/facing versus aim where applicable;
 - no change to Golden combat rules.
+
+
+## Wardrobe — Character Laboratory & Future Reuse
+
+Wardrobe is the isolated character laboratory for Admin Hub Games. It is not a second shooter and must not alter Shooters Trigger's combat rules merely to support character experiments.
+
+### Current purpose
+
+Wardrobe currently uses the Shooters Trigger Arena field as its reference environment:
+- same world scale and field presentation;
+- same player movement speed;
+- same cover collision rule;
+- same camera follow/deadzone behavior;
+- same ground/shadow relationship;
+- character presentation is the variable under test.
+
+The laboratory must remain safe to experiment in without changing the live Shooters Trigger runtime.
+
+### Character library
+
+The repository may contain multiple licensed/free character packs under:
+```
+public/assets/wardrobe/packs/
+```
+
+The current primary test library includes the free GegX Walk Pack Pixel: 19 top-down characters, four directions (south/front, north/back, east/west side) and walking cycles. The pack uses a shared 192×192 frame and shared foot line, which makes it suitable for a common Wardrobe pivot. The asset licence permits use in commercial or free projects without credit; do not redistribute the source assets as an asset pack. Verify the source licence before adding future packs.
+
+Wardrobe should make it possible to:
+- switch characters without changing gameplay;
+- move the selected character around the Arena reference field;
+- view front/back/left/right presentation;
+- play available walk animations;
+- keep a stable ground pivot;
+- add future idle, aim, shoot, hit, dodge and elimination animations without changing the Arena collision model.
+
+### Missing-animation rule
+
+A source pack does not have to contain every animation required by a future game.
+
+If a character has walking but no shooting animation, do not invent a broken mapping or substitute an unrelated frame silently. Instead:
+1. use the verified walk/directional frames that exist;
+2. identify the missing action explicitly;
+3. decide whether to layer/animate a weapon separately, construct missing frames from existing art, or generate/edit new artwork;
+4. normalize the resulting frames to the Wardrobe pivot and direction convention;
+5. verify the animation in Wardrobe before connecting it to a live game.
+
+AI-generated artwork may be used as source material for missing frames or character components, but generated art must be inspected, cleaned, aligned and licensed/cleared appropriately before shipping.
+
+### Future character system
+
+Wardrobe is intended to evolve into a reusable character system for future Admin Hub Games titles, including shooters, western/cowboy games, fantasy games, zombies, sci-fi games and other top-down experiences.
+
+Keep character presentation data-driven where practical:
+```
+character
+  ↓
+direction
+  ↓
+animation state
+  ↓
+frames / layers
+  ↓
+game action
+```
+
+The long-term system may support complete sprites or layered characters such as:
+- head / hair / hat;
+- body / clothing;
+- arms;
+- legs / shoes;
+- weapon or held item;
+- effects.
+
+Layered construction is allowed only when the source artwork shares compatible scale, perspective, frame timing and pivot rules. Do not mix incompatible packs blindly.
+
+### Shooter-specific future actions
+
+The desired reusable action vocabulary is:
+```
+IDLE
+WALK
+RUN
+AIM
+SHOOT
+RECOIL
+HIT
+DODGE
+ELIMINATED
+```
+
+Start with the actions a source pack actually provides. Missing actions are future Wardrobe work, not permission to weaken or fake Shooters Trigger's combat implementation.
+
+### Wardrobe change boundary
+
+Default Wardrobe-only changes should stay within:
+```
+src/scenes/WardrobeIntroScene.ts
+public/assets/wardrobe/**
+```
+
+Shared files such as `src/main.ts`, catalog/routing, global CSS or PWA caching may be changed only when Wardrobe genuinely requires it and the change is independently verified.
+
+Never modify Shooters Trigger Arena, Training, Evasion or combat mechanics simply to make a Wardrobe character test easier.
+
+### Acceptance gate
+
+A Wardrobe checkpoint must verify:
+- the lab opens;
+- the selected character is visible as a complete body;
+- switching characters changes the actual sprite;
+- movement works on the reference Arena field;
+- front/back/side direction changes are visible;
+- walking animation plays while moving;
+- the feet remain grounded;
+- cover collision still works;
+- mobile touch controls still work;
+- the existing Shooters Trigger flow remains unchanged.
+
+Wardrobe is successful when it makes trying a new character cheap and safe: **swap the character, inspect it in the real field, identify missing actions, then decide what artwork or animation needs to be created.**
+
+### Future-game reuse
+
+When a future game needs characters, prefer reusing the proven Wardrobe character pipeline rather than copying character code into each game. The reusable layer should be extracted deliberately only after the Wardrobe experiment has demonstrated the pattern in a real game.
