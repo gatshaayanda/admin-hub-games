@@ -326,7 +326,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.drawArenaField();
 
     this.character = this.add.container(this.playerSpawn.x, this.playerSpawn.y).setDepth(30);
-    this.shadow = this.add.ellipse(0, 34, 27, 10, 0x3d3025, 0.28).setDepth(29);
+    this.shadow = this.add.ellipse(0, 0, 46, 13, 0x3d3025, 0.28).setDepth(29);
 
     // The free pack uses one shared 192x192 canvas and one shared foot line.
     // Keep the container on the Arena ground point and let the sprite origin
@@ -557,7 +557,7 @@ export class WardrobeLabScene extends Phaser.Scene {
 
   private createCharacterSelector() {
     const width = this.scale.width;
-    const y = this.scale.height - 86;
+    const y = 100;
 
     this.add.rectangle(width / 2, y, Math.min(width - 28, 520), 68, 0x101512, 0.90)
       .setScrollFactor(0).setDepth(100);
@@ -597,7 +597,7 @@ export class WardrobeLabScene extends Phaser.Scene {
 
   private resetCharacter() {
     this.character.setPosition(this.playerSpawn.x, this.playerSpawn.y);
-    this.shadow.setPosition(this.playerSpawn.x, this.playerSpawn.y + 34);
+    this.shadow.setPosition(this.playerSpawn.x, this.playerSpawn.y);
     this.move.set(0, 0);
     this.direction = 'DOWN';
     this.playCharacterAnimation(false);
