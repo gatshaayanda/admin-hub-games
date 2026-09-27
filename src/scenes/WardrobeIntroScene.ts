@@ -275,27 +275,20 @@ export class WardrobeIntroScene extends Phaser.Scene {
 
 export class WardrobeLabScene extends Phaser.Scene {
   private character!: Phaser.GameObjects.Container;
-  private preview!: Phaser.GameObjects.Graphics;
   private shadow!: Phaser.GameObjects.Ellipse;
-  private actionText!: Phaser.GameObjects.Text;
-  private detailText!: Phaser.GameObjects.Text;
-  private stepText!: Phaser.GameObjects.Text;
-  private actionIndex = 0;
-  private playing = false;
-  private playTimer?: Phaser.Time.TimerEvent;
-  private actionButtons: Phaser.GameObjects.Rectangle[] = [];
-  private variantButtons: Phaser.GameObjects.Rectangle[] = [];
-  private variantIndex = 0;
-  private move = new Phaser.Math.Vector2();
-  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
-  private walkClock = 0;
   private spriteLabel!: Phaser.GameObjects.Text;
   private directionLabel!: Phaser.GameObjects.Text;
+  private move = new Phaser.Math.Vector2();
+  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT' = 'DOWN';
   private previewSprite!: Phaser.GameObjects.Sprite;
-  private walkFrame = 0;
-  private enemyFrame = 0;
-  private walkFrameClock = 0;
+  private covers: Phaser.Geom.Rectangle[] = [];
+  private joystickReset?: () => void;
+
+  private readonly worldWidth = 2400;
+  private readonly worldHeight = 1400;
+  private readonly playerSpawn = new Phaser.Math.Vector2(360, 1040);
+  private readonly playerSpeed = 170;
 
   constructor() {
     super('WardrobeLabScene');
@@ -310,276 +303,289 @@ export class WardrobeLabScene extends Phaser.Scene {
 
   create() {
     const { width, height } = this.scale;
-    this.cameras.main.setBackgroundColor('#78a653');
-    this.cameras.main.setBounds(0,0,2400,1400);
-    this.drawWardrobeField();
-    this.add.rectangle(width/2,34,width,68,0x101512,0.86).setScrollFactor(0).setDepth(100);
-    this.add.text(18,18,'WARDROBE · FIELD LAB',{fontFamily:'monospace',fontSize:'13px',fontStyle:'bold',color:'#f4f1df'}).setScrollFactor(0).setDepth(101);
-    this.add.text(18,42,'MOVE THE COPY · SWAP SPRITES · JUDGE THE LOOK IN THE SHOOTERS FIELD',{fontFamily:'monospace',fontSize:'7px',fontStyle:'bold',color:'#8fb39b'}).setScrollFactor(0).setDepth(101);
-    this.spriteLabel=this.add.text(width-18,18,'',{fontFamily:'monospace',fontSize:'8px',fontStyle:'bold',color:'#e8c95c',align:'right'}).setOrigin(1,0).setScrollFactor(0).setDepth(101);
-    this.directionLabel=this.add.text(width-18,42,'',{fontFamily:'monospace',fontSize:'7px',color:'#f4f1df',align:'right'}).setOrigin(1,0).setScrollFactor(0).setDepth(101);
-    this.shadow=this.add.ellipse(1180,891,42,14,0x000000,0.25).setDepth(20);
-    this.character=this.add.container(1180,860).setDepth(21);
-    this.previewSprite = this.add.sprite(0, -4, 'wardrobe-enemy', 0)
+
+    // Wardrobe is now a character-only copy of the live Arena:
+    // same world size, field layout, camera behavior, movement speed and cover
+    // collision. Only the player presentation is replaced by the real sprite.
+    this.cameras.main.setBackgroundColor('#6f984b');
+    this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
+    this.drawArenaField();
+
+    this.character = this.add.container(this.playerSpawn.x, this.playerSpawn.y).setDepth(30);
+    this.shadow = this.add.ellipse(0, 34, 27, 10, 0x3d3025, 0.28).setDepth(29);
+
+    // Keep the Arena's body origin/ground relationship. The sprite's feet land
+    // on the same ground line as the Arena fighter shadow instead of floating.
+    this.previewSprite = this.add.sprite(0, -20, 'wardrobe-enemy', 0)
       .setDisplaySize(68, 108)
       .setOrigin(0.5, 0.5);
     this.character.add(this.previewSprite);
-    this.setSprite();
-    this.cameras.main.startFollow(this.character,true,0.12,0.12);
-    this.cameras.main.setDeadzone(Math.min(width*0.28,300),Math.min(height*0.22,150));
-    this.createFieldJoystick(); this.createSpriteStrip();
-    this.cursors=this.input.keyboard!.createCursorKeys();
-    this.input.keyboard?.on('keydown-R',()=>this.resetCharacter());
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>{this.input.keyboard?.removeAllListeners();});
-    this.updateLabels(); window.dispatchEvent(new Event('admin-hub-games:game-ready'));
-  }
 
-  update(_time:number,delta:number) {
-    const kx=(this.cursors.right.isDown?1:0)-(this.cursors.left.isDown?1:0), ky=(this.cursors.down.isDown?1:0)-(this.cursors.up.isDown?1:0);
-    const x=Math.abs(this.move.x)>.05?this.move.x:kx, y=Math.abs(this.move.y)>.05?this.move.y:ky, len=Math.hypot(x,y);
-    if(len>.05){
-      const nx=x/Math.max(1,len),ny=y/Math.max(1,len);
-      this.character.x=Phaser.Math.Clamp(this.character.x+nx*180*delta/1000,80,2320);
-      this.character.y=Phaser.Math.Clamp(this.character.y+ny*180*delta/1000,80,1320);
-      this.shadow.setPosition(this.character.x,this.character.y+31);
-      this.direction=Math.abs(nx)>Math.abs(ny)*.65?(nx<0?'LEFT':'RIGHT'):(ny<0?'UP':'DOWN');
-      this.walkClock+=delta;
-      if(this.walkClock>=90){
-        this.walkClock=0;
-        this.walkFrame=(this.walkFrame+1)%28;
-        this.enemyFrame=this.walkFrame;
-        this.setSprite();
-      }
-    }else{
-      this.walkFrame=0;
-      this.enemyFrame=0;
-      this.setSprite();
-    }
-    this.directionLabel.setText('FACING · '+this.direction+' · CAMERA FOLLOWS');
-  }
+    this.cameras.main.startFollow(this.character, true, 0.08, 0.08);
+    this.cameras.main.setDeadzone(
+      Math.min(width * 0.28, 320),
+      Math.min(height * 0.22, 150),
+    );
 
-
-  private setSprite(){
-    this.previewSprite
-      .setTexture('wardrobe-enemy')
-      .setFrame(this.enemyFrame)
-      .setDisplaySize(68, 108);
-  }
-  private createSpriteStrip(){const y=this.scale.height-58;['01 · SWAP','02 · SWAP','03 · SWAP','04 · SWAP'].forEach((label,i)=>{const b=this.add.text(16+i*82,y,label,{fontFamily:'monospace',fontSize:'8px',fontStyle:'bold',color:'#f4f1df',backgroundColor:i===this.variantIndex?'#315845':'#202a24',padding:{left:8,right:8,top:7,bottom:7}}).setScrollFactor(0).setDepth(102).setInteractive();b.on('pointerdown',()=>this.selectVariant(i));});this.add.text(this.scale.width-16,y,'RESET POSITION',{fontFamily:'monospace',fontSize:'8px',fontStyle:'bold',color:'#f4f1df',backgroundColor:'#315845',padding:{left:10,right:10,top:7,bottom:7}}).setOrigin(1,0).setScrollFactor(0).setDepth(102).setInteractive().on('pointerdown',()=>this.resetCharacter());}
-  private createFieldJoystick(){const x=72,y=this.scale.height-112,base=this.add.circle(x,y,48,0x101512,.48).setScrollFactor(0).setDepth(102).setStrokeStyle(2,0xe8c95c,.55),knob=this.add.circle(x,y,20,0x315845,.92).setScrollFactor(0).setDepth(103);let pid=-1;const reset=()=>{pid=-1;this.move.set(0,0);knob.setPosition(x,y);};this.input.on('pointerdown',(p:Phaser.Input.Pointer)=>{if(p.y<75||p.x>this.scale.width-180)return;if(Phaser.Math.Distance.Between(p.x,p.y,x,y)<=90)pid=p.id;});this.input.on('pointermove',(p:Phaser.Input.Pointer)=>{if(p.id!==pid)return;const dx=p.x-x,dy=p.y-y,d=Math.min(48,Math.hypot(dx,dy)),a=Math.atan2(dy,dx);knob.setPosition(x+Math.cos(a)*d,y+Math.sin(a)*d);this.move.set(Math.cos(a)*d/48,Math.sin(a)*d/48);});this.input.on('pointerup',(p:Phaser.Input.Pointer)=>{if(p.id===pid)reset();});this.add.text(x,y+56,'MOVE',{fontFamily:'monospace',fontSize:'7px',fontStyle:'bold',color:'#f4f1df'}).setOrigin(.5).setScrollFactor(0).setDepth(102);}
-  private selectVariant(index:number){this.variantIndex=index;this.updateLabels();this.setSprite();}
-  private updateLabels(){this.spriteLabel?.setText('REAL SPRITE · ENEMY · 28 FRAMES');}
-  private resetCharacter(){this.character.setPosition(1180,860);this.shadow.setPosition(1180,891);this.move.set(0,0);this.direction='DOWN';this.walkFrame=0;this.enemyFrame=0;this.setSprite();}
-  private drawWardrobeField(){const g=this.add.graphics().setDepth(0);g.fillStyle(0x78a653,1).fillRect(0,0,2400,1400);g.fillStyle(0x86ad5e,.42).fillRect(0,0,1200,1400);g.fillStyle(0x679346,.32).fillRect(1200,0,1200,1400);g.fillStyle(0xd1b46c,.30).fillRect(0,510,2400,92);g.fillStyle(0xd1b46c,.22).fillRect(870,0,100,1400);g.lineStyle(5,0xf4f1df,.48).strokeRect(55,70,2290,1280);[[300,280,1.15],[2050,300,.95],[350,1110,.9],[2070,1090,1.1]].forEach(v=>this.drawWardrobeTree(v[0],v[1],v[2]));[[690,360,190,72],[1470,350,230,76],[520,760,250,70],[1570,760,220,68],[850,1030,260,74],[1420,1080,240,72]].forEach(v=>this.drawWardrobeBunker(v[0],v[1],v[2],v[3]));[[1080,300],[1900,650],[730,1170]].forEach(v=>this.drawWardrobeTires(v[0],v[1]));const f=this.add.graphics().setDepth(4);f.fillStyle(0x594838,1).fillRect(1180,860,4,78);f.fillStyle(0x2f7775,1).fillTriangle(1184,864,1244,878,1184,892);this.add.text(1212,910,'WARDROBE',{fontFamily:'monospace',fontSize:'9px',color:'#fff4d4',stroke:'#493526',strokeThickness:4}).setOrigin(.5).setDepth(5);}
-  private drawWardrobeTree(x:number,y:number,s:number){const g=this.add.graphics().setDepth(2);g.fillStyle(0x65472f,1).fillRect(x-6*s,y+18*s,12*s,60*s);g.fillStyle(0x405638,1).fillCircle(x,y,34*s).fillCircle(x-28*s,y+9*s,28*s).fillCircle(x+28*s,y+9*s,29*s);g.fillStyle(0x526d3c,.75).fillCircle(x+5*s,y-16*s,23*s);}
-  private drawWardrobeBunker(x:number,y:number,w:number,h:number){const g=this.add.graphics().setDepth(3);g.fillStyle(0x493526,.24).fillRect(x+8,y+9,w,h);g.fillStyle(0x76563b,1).fillRoundedRect(x,y,w,h,10);g.fillStyle(0xffffff,.12).fillRect(x+12,y+10,w-24,5);g.lineStyle(2,0xf4f1df,.28).strokeRoundedRect(x,y,w,h,10);}
-  private drawWardrobeTires(x:number,y:number){const g=this.add.graphics().setDepth(3);for(let i=0;i<4;i++){g.fillStyle(0x2b302d,1).fillCircle(x+i*17,y-i*3,19);g.fillStyle(0x66706a,1).fillCircle(x+i*17,y-i*3,7);}}
-
-  private makeButton(x: number, y: number, width: number, label: string) {
-    const button = this.add.text(x, y, label, {
+    this.add.rectangle(width / 2, 34, width, 68, 0x101512, 0.86)
+      .setScrollFactor(0).setDepth(100);
+    this.add.text(18, 18, 'WARDROBE · ARENA CHARACTER LAB', {
       fontFamily: 'monospace',
-      fontSize: '10px',
+      fontSize: '13px',
+      fontStyle: 'bold',
+      color: '#f4f1df',
+    }).setScrollFactor(0).setDepth(101);
+    this.add.text(18, 42, 'EXACT ARENA FIELD · SAME MOVEMENT · REAL SPRITE ONLY', {
+      fontFamily: 'monospace',
+      fontSize: '7px',
+      fontStyle: 'bold',
+      color: '#8fb39b',
+    }).setScrollFactor(0).setDepth(101);
+
+    this.spriteLabel = this.add.text(width - 18, 18, 'REAL SPRITE · ENEMY', {
+      fontFamily: 'monospace',
+      fontSize: '8px',
+      fontStyle: 'bold',
+      color: '#e8c95c',
+      align: 'right',
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(101);
+
+    this.directionLabel = this.add.text(width - 18, 42, '', {
+      fontFamily: 'monospace',
+      fontSize: '7px',
+      color: '#f4f1df',
+      align: 'right',
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(101);
+
+    this.cursors = this.input.keyboard!.createCursorKeys();
+    this.input.keyboard?.on('keydown-R', () => this.resetCharacter());
+
+    this.createFieldJoystick();
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.input.keyboard?.removeAllListeners();
+      this.joystickReset?.();
+    });
+
+    this.updateLabels();
+    window.dispatchEvent(new Event('admin-hub-games:game-ready'));
+  }
+
+  update(_time: number, delta: number) {
+    let dx = this.move.x;
+    let dy = this.move.y;
+
+    if (!dx && !dy) {
+      dx = (this.cursors.right.isDown ? 1 : 0) - (this.cursors.left.isDown ? 1 : 0);
+      dy = (this.cursors.down.isDown ? 1 : 0) - (this.cursors.up.isDown ? 1 : 0);
+    }
+
+    if (dx || dy) {
+      if (Math.abs(dx) > 0.08) {
+        this.direction = dx < 0 ? 'LEFT' : 'RIGHT';
+      } else if (Math.abs(dy) > 0.08) {
+        this.direction = dy < 0 ? 'UP' : 'DOWN';
+      }
+
+      const length = Math.hypot(dx, dy) || 1;
+      const nx = Phaser.Math.Clamp(
+        this.character.x + (dx / length) * this.playerSpeed * delta / 1000,
+        42,
+        2358,
+      );
+      const ny = Phaser.Math.Clamp(
+        this.character.y + (dy / length) * this.playerSpeed * delta / 1000,
+        90,
+        1350,
+      );
+
+      // Exact Arena cover collision rule for the player body.
+      if (!this.inCover(nx, ny, 14)) {
+        this.character.setPosition(nx, ny);
+      }
+    }
+
+    this.shadow.setPosition(this.character.x, this.character.y + 34);
+    this.directionLabel.setText('FACING · ' + this.direction + ' · ARENA CAMERA');
+
+    // Do not invent an animation mapping from the 28-frame source sheet.
+    // Frame 0 is the verified reference pose until each frame is classified.
+    this.previewSprite.setFrame(0);
+  }
+
+  private createFieldJoystick() {
+    const x = 72;
+    const y = this.scale.height - 112;
+    const base = this.add.circle(x, y, 48, 0x101512, 0.48)
+      .setScrollFactor(0).setDepth(102).setStrokeStyle(2, 0xe8c95c, 0.55);
+    const knob = this.add.circle(x, y, 20, 0x315845, 0.92)
+      .setScrollFactor(0).setDepth(103);
+
+    let pointerId = -1;
+    const reset = () => {
+      pointerId = -1;
+      this.move.set(0, 0);
+      knob.setPosition(x, y);
+    };
+    this.joystickReset = reset;
+
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (pointer.y < 75 || pointer.x > this.scale.width - 180) return;
+      if (Phaser.Math.Distance.Between(pointer.x, pointer.y, x, y) <= 90) {
+        pointerId = pointer.id;
+      }
+    });
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (pointer.id !== pointerId) return;
+      const dx = pointer.x - x;
+      const dy = pointer.y - y;
+      const distance = Math.min(48, Math.hypot(dx, dy));
+      const angle = Math.atan2(dy, dx);
+      knob.setPosition(x + Math.cos(angle) * distance, y + Math.sin(angle) * distance);
+      this.move.set(
+        Math.cos(angle) * distance / 48,
+        Math.sin(angle) * distance / 48,
+      );
+    });
+    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      if (pointer.id === pointerId) reset();
+    });
+
+    this.add.text(x, y + 56, 'MOVE', {
+      fontFamily: 'monospace',
+      fontSize: '7px',
+      fontStyle: 'bold',
+      color: '#f4f1df',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+
+    this.add.text(this.scale.width - 16, this.scale.height - 58, 'RESET POSITION', {
+      fontFamily: 'monospace',
+      fontSize: '8px',
       fontStyle: 'bold',
       color: '#f4f1df',
       backgroundColor: '#315845',
-      padding: { left: 15, right: 15, top: 10, bottom: 10 },
-      align: 'center',
-      fixedWidth: width,
-    }).setOrigin(0.5).setInteractive({ useHandCursor: false });
-    return button;
+      padding: { left: 10, right: 10, top: 7, bottom: 7 },
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(102)
+      .setInteractive()
+      .on('pointerdown', () => this.resetCharacter());
   }
 
-  private showVariant(index: number) {
-    this.variantIndex = (index + VARIANTS.length) % VARIANTS.length;
-    this.variantButtons.forEach((button, i) => {
-      button.setFillStyle(i === this.variantIndex ? 0x315845 : 0x202a24, 1);
-      button.setStrokeStyle(i === this.variantIndex ? 2 : 1, i === this.variantIndex ? 0xe8c95c : 0x526d5d, 1);
-    });
-    this.drawPreview(ACTIONS[this.actionIndex]);
-    this.detailText.setText(this.describe(ACTIONS[this.actionIndex]) + ' · ' + this.direction + ' · FIELD OPERATOR 01');
+  private updateLabels() {
+    this.spriteLabel.setText('REAL SPRITE · ENEMY · 34×54 SOURCE');
   }
 
-  private showAction(index: number, stopPlayback = true) {
-    this.actionIndex = (index + ACTIONS.length) % ACTIONS.length;
-    const action = ACTIONS[this.actionIndex];
+  private resetCharacter() {
+    this.character.setPosition(this.playerSpawn.x, this.playerSpawn.y);
+    this.shadow.setPosition(this.playerSpawn.x, this.playerSpawn.y + 34);
+    this.move.set(0, 0);
+    this.direction = 'DOWN';
+    this.previewSprite.setFrame(0);
+  }
 
-    if (stopPlayback) this.stopFlow();
-    this.actionText.setText(action);
-    this.stepText.setText(
-      'DISCRETE ACTION ' + String(this.actionIndex + 1).padStart(2, '0') +
-      ' / ' + String(ACTIONS.length).padStart(2, '0')
+  private inCover(x: number, y: number, padding = 12) {
+    return this.covers.some((cover) =>
+      x >= cover.x - padding &&
+      x <= cover.x + cover.width + padding &&
+      y >= cover.y - padding &&
+      y <= cover.y + cover.height + padding
     );
-
-    this.actionButtons.forEach((button, i) => {
-      button.setFillStyle(i === this.actionIndex ? 0x315845 : 0x202a24, 1);
-      button.setStrokeStyle(i === this.actionIndex ? 2 : 1, i === this.actionIndex ? 0xe8c95c : 0x526d5d, 1);
-    });
-
-    this.preview.clear();
-    this.drawPreview(action);
-    this.detailText.setText(this.describe(action) + ' · ' + this.direction + ' · FIELD OPERATOR 01');
-
-    this.playActionMotion(action);
   }
 
-  private drawPreview(action: WardrobeAction) {
-    const walking = action === 'WALK' || action === 'WALK LEFT' || action === 'WALK RIGHT';
-    const frame = walking ? this.walkFrame : 0;
-    const key = this.getSpriteKey(frame);
-    this.previewSprite.setTexture('wardrobe-enemy').setFrame(this.enemyFrame).setDisplaySize(68, 108).setOrigin(0.5, 0.5);
-    this.preview.clear().setRotation(0);
+  private drawArenaField() {
+    const g = this.add.graphics().setDepth(0);
 
-    if (action === 'AIM LEFT' || action === 'AIM RIGHT' || action === 'FIRE') {
-      const direction = action === 'AIM LEFT' ? -1 : 1;
-      const y = this.direction === 'UP' ? -2 : this.direction === 'DOWN' ? 7 : 2;
-      const x = this.direction === 'LEFT' ? -26 : this.direction === 'RIGHT' ? 26 : direction * 20;
-      this.preview.fillStyle(0x202522, 1).fillRoundedRect(x - direction * 12, y - 2, direction * 24, 4, 2);
-      this.preview.fillStyle(0x596a61, 1).fillCircle(x + direction * 14, y, 3);
-    }
+    g.fillStyle(0x78a653, 1).fillRect(0, 0, this.worldWidth, this.worldHeight);
+    g.fillStyle(0x86ad5e, 0.42).fillRect(0, 0, this.worldWidth * 0.50, this.worldHeight);
+    g.fillStyle(0x679346, 0.32).fillRect(this.worldWidth * 0.50, 0, this.worldWidth * 0.50, this.worldHeight);
+    g.fillStyle(0xd1b46c, 0.30).fillRect(0, 510, this.worldWidth, 92);
+    g.fillStyle(0xd1b46c, 0.22).fillRect(870, 0, 100, this.worldHeight);
 
-    if (action === 'FIRE') {
-      const direction = this.direction === 'LEFT' ? -1 : 1;
-      const x = this.direction === 'UP' || this.direction === 'DOWN' ? direction * 34 : direction * 38;
-      this.preview.fillStyle(0xe8c95c, 1).fillTriangle(x, 0, x - direction * 10, -7, x - direction * 10, 7);
-      this.preview.fillStyle(0xd66a3d, 0.95).fillCircle(x - direction * 3, 0, 4);
-    }
+    g.lineStyle(5, 0xf4f1df, 0.48);
+    g.strokeRect(55, 70, this.worldWidth - 110, this.worldHeight - 120);
 
-    if (action === 'BODY HIT') {
-      this.preview.fillStyle(0xd66a3d, 0.92).fillCircle(-11, 8, 5).fillCircle(10, 10, 4);
-      this.preview.lineStyle(2, 0xf0dfb6, 0.9).strokeCircle(-11, 8, 8).strokeCircle(10, 10, 7);
-    }
+    this.drawTree(300, 280, 1.15);
+    this.drawTree(2050, 300, 0.95);
+    this.drawTree(350, 1110, 0.90);
+    this.drawTree(2070, 1090, 1.10);
 
-    if (action === 'HEADSHOT') {
-      this.preview.fillStyle(0xd66a3d, 0.95).fillCircle(8, -22, 5);
-      this.preview.fillStyle(0xf0dfb6, 0.85).fillCircle(8, -22, 2);
-    }
+    this.drawBunker(690, 360, 190, 72);
+    this.drawBunker(1470, 350, 230, 76);
+    this.drawBunker(520, 760, 250, 70);
+    this.drawBunker(1570, 760, 220, 68);
+    this.drawBunker(850, 1030, 260, 74);
+    this.drawBunker(1420, 1080, 240, 72);
 
-    if (action === 'DEATH') {
-      this.previewSprite.setRotation(-0.85);
-      this.preview.setRotation(-0.85);
-    }
+    this.drawTireStack(1080, 300);
+    this.drawTireStack(1900, 650);
+    this.drawTireStack(730, 1170);
+
+    this.drawFlag(1180, 860);
+    this.drawFieldDetails();
   }
 
-  private getSpriteKey(_frame: number) {
-    return 'wardrobe-enemy';
+  private drawTree(x: number, y: number, scale: number) {
+    const g = this.add.graphics().setDepth(2);
+    g.fillStyle(0x65472f, 1).fillRect(x - 6 * scale, y + 18 * scale, 12 * scale, 60 * scale);
+    g.fillStyle(0x405638, 1)
+      .fillCircle(x, y, 34 * scale)
+      .fillCircle(x - 28 * scale, y + 9 * scale, 28 * scale)
+      .fillCircle(x + 28 * scale, y + 9 * scale, 29 * scale);
+    g.fillStyle(0x526d3c, 0.75).fillCircle(x + 5 * scale, y - 16 * scale, 23 * scale);
+    this.covers.push(new Phaser.Geom.Rectangle(x - 8 * scale, y + 14 * scale, 16 * scale, 52 * scale));
   }
 
-  private setDirection(direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT') {
-    this.direction = direction;
-    this.walkFrame = 0;
-    this.enemyFrame = 0;
-    this.walkFrameClock = 0;
-    this.drawPreview(ACTIONS[this.actionIndex]);
-    this.detailText?.setText(this.describe(ACTIONS[this.actionIndex]) + ' · ' + direction + ' · FIELD OPERATOR 01');
+  private drawBunker(x: number, y: number, width: number, height: number) {
+    const g = this.add.graphics().setDepth(3);
+    g.fillStyle(0x493526, 0.24).fillRect(x + 8, y + 9, width, height);
+    g.fillStyle(0x76563b, 1).fillRoundedRect(x, y, width, height, 10);
+    g.fillStyle(0xffffff, 0.12).fillRect(x + 12, y + 10, width - 24, 5);
+    g.lineStyle(2, 0xf4f1df, 0.28).strokeRoundedRect(x, y, width, height, 10);
+    this.covers.push(new Phaser.Geom.Rectangle(x, y, width, height));
   }
 
-
-  private describe(action: WardrobeAction) {
-    const descriptions: Record<WardrobeAction, string> = {
-      'IDLE': 'REFERENCE · neutral standing pose',
-      'WALK': 'LOCOMOTION · alternating leg step',
-      'WALK LEFT': 'DIRECTION · body leans left while walking',
-      'WALK RIGHT': 'DIRECTION · body leans right while walking',
-      'AIM LEFT': 'COMBAT · marker raised toward left',
-      'AIM RIGHT': 'COMBAT · marker raised toward right',
-      'FIRE': 'COMBAT · aim + marker + paintball muzzle flash',
-      'BODY HIT': 'DAMAGE · visible paint impact on torso',
-      'HEADSHOT': 'DAMAGE · visible paint impact on head',
-      'DEATH': 'STATE CHANGE · character falls and rotates',
-      'RESPAWN': 'RECOVERY · returns upright to neutral',
-    };
-    return descriptions[action];
-  }
-
-  private playActionMotion(action: WardrobeAction) {
-    this.tweens.killTweensOf(this.character);
-    this.tweens.killTweensOf(this.shadow);
-
-    this.character.setRotation(0).setAlpha(1).setScale(
-      Math.min(5.2, Math.max(3.2, Math.min(this.scale.width, this.scale.height) / 145))
-    );
-    this.shadow.setScale(1).setAlpha(0.28);
-
-    if (action === 'WALK' || action === 'WALK LEFT' || action === 'WALK RIGHT') {
-      this.tweens.add({
-        targets: [this.character, this.shadow],
-        x: '+=18',
-        duration: 360,
-        ease: 'Sine.inOut',
-        yoyo: true,
-        repeat: 1,
-      });
-    } else if (action === 'FIRE') {
-      this.tweens.add({
-        targets: this.character,
-        x: '+=7',
-        duration: 80,
-        ease: 'Quad.out',
-        yoyo: true,
-        repeat: 1,
-      });
-    } else if (action === 'BODY HIT' || action === 'HEADSHOT') {
-      this.tweens.add({
-        targets: this.character,
-        x: '+=5',
-        duration: 70,
-        yoyo: true,
-        repeat: 2,
-      });
-    } else if (action === 'DEATH') {
-      this.tweens.add({
-        targets: this.character,
-        y: '+=28',
-        rotation: -0.95,
-        alpha: 0.9,
-        duration: 520,
-        ease: 'Quad.in',
-      });
-      this.tweens.add({
-        targets: this.shadow,
-        scaleX: 1.25,
-        scaleY: 0.75,
-        duration: 520,
-        ease: 'Quad.in',
-      });
-    } else if (action === 'RESPAWN') {
-      this.character.setAlpha(0).setY(benchCenterY(this.scale.height));
-      this.tweens.add({
-        targets: this.character,
-        alpha: 1,
-        y: benchCenterY(this.scale.height) - 8,
-        duration: 380,
-        ease: 'Back.out',
-      });
+  private drawTireStack(x: number, y: number) {
+    const g = this.add.graphics().setDepth(3);
+    for (let i = 0; i < 4; i += 1) {
+      g.fillStyle(0x2b302d, 1).fillCircle(x + i * 17, y - i * 3, 19);
+      g.fillStyle(0x66706a, 1).fillCircle(x + i * 17, y - i * 3, 7);
     }
+    this.covers.push(new Phaser.Geom.Rectangle(x - 20, y - 25, 90, 45));
   }
 
-  private toggleFlow(button: Phaser.GameObjects.Text) {
-    if (this.playing) {
-      this.stopFlow();
-      button.setText('▶ FLOW THROUGH ALL');
-      return;
+  private drawFlag(x: number, y: number) {
+    const g = this.add.graphics().setDepth(4);
+    g.fillStyle(0x594838, 1).fillRect(x, y, 4, 78);
+    g.fillStyle(0x2f7775, 1).fillTriangle(x + 4, y + 4, x + 64, y + 18, x + 4, y + 32);
+    this.add.text(x + 32, y + 50, 'ARENA', {
+      fontFamily: 'monospace',
+      fontSize: '9px',
+      color: '#fff4d4',
+      stroke: '#493526',
+      strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(6);
+  }
+
+  private drawFieldDetails() {
+    const g = this.add.graphics().setDepth(4);
+    g.lineStyle(3, 0xf4f1df, 0.20);
+    g.strokeRoundedRect(930, 145, 500, 230, 24);
+    g.strokeRoundedRect(900, 885, 560, 250, 24);
+
+    g.lineStyle(2, 0xead8a0, 0.28);
+    for (const x of [600, 900, 1200, 1500, 1800]) {
+      g.lineBetween(x, 530, x, 585);
+      g.lineBetween(x, 815, x, 870);
     }
 
-    this.playing = true;
-    button.setText('■ STOP FLOW');
-    this.showAction(this.actionIndex, false);
+    g.fillStyle(0x493526, 0.16);
+    g.fillRoundedRect(1090, 405, 180, 36, 8);
+    g.lineStyle(2, 0xf4f1df, 0.22).strokeRoundedRect(1090, 405, 180, 36, 8);
 
-    this.playTimer = this.time.addEvent({
-      delay: 850,
-      loop: true,
-      callback: () => {
-        if (!this.playing) return;
-        this.actionIndex = (this.actionIndex + 1) % ACTIONS.length;
-        this.showAction(this.actionIndex, false);
-      },
-    });
-  }
-
-  private stopFlow() {
-    this.playing = false;
-    this.playTimer?.remove(false);
-    this.playTimer = undefined;
+    this.add.text(1180, 423, 'FIELD LINE', {
+      fontFamily: 'monospace',
+      fontSize: '8px',
+      color: '#fff4d4',
+    }).setOrigin(0.5).setDepth(6).setAlpha(0.55);
   }
 }
 
