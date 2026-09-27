@@ -2,9 +2,18 @@ import Phaser from 'phaser';
 
 export type FieldOperatorDirection = 'DOWN' | 'UP' | 'LEFT' | 'RIGHT';
 
+/**
+ * Wardrobe's first Shooter character uses the exact geometric presentation
+ * established by Shooters Trigger Arena/Training.
+ *
+ * Wardrobe changes the presentation container around this baseline; it does
+ * not invent a second character style or a different weapon mount.
+ */
 export class FieldOperatorCharacter {
   private readonly container: Phaser.GameObjects.Container;
-  private readonly body: Phaser.GameObjects.Graphics;
+  private readonly poseA: Phaser.GameObjects.Graphics;
+  private readonly poseB: Phaser.GameObjects.Graphics;
+  private readonly arms: Phaser.GameObjects.Graphics;
   private readonly weapon: Phaser.GameObjects.Graphics;
   private readonly muzzle: Phaser.GameObjects.Graphics;
   private walkClock = 0;
@@ -13,28 +22,53 @@ export class FieldOperatorCharacter {
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     this.container = scene.add.container(x, y).setDepth(31);
-    this.body = scene.add.graphics();
+
+    const makePose = (legOffset: number, bob: number) => {
+      const g = scene.add.graphics();
+
+      g.fillStyle(0x3b2f28, 1).fillEllipse(0, -20 + bob, 24, 18);
+      g.fillStyle(0xd8a66b, 1).fillEllipse(0, -17 + bob, 13, 12);
+      g.fillStyle(0xd4a45d, 1)
+        .fillCircle(-7, -17 + bob, 2.5)
+        .fillCircle(7, -17 + bob, 2.5);
+      g.fillStyle(0x2f6b4e, 1).fillEllipse(0, -23 + bob, 25, 12);
+      g.fillStyle(0x111715, 1).fillRoundedRect(-13, -17 + bob, 26, 10, 4);
+      g.fillStyle(0x9bb9b1, 0.88).fillRoundedRect(-9, -15 + bob, 18, 6, 2);
+      g.lineStyle(1, 0xe8f2dc, 0.42).strokeRoundedRect(-9, -15 + bob, 18, 6, 2);
+      g.fillStyle(0xd4a45d, 1).fillRoundedRect(-4, -8 + bob, 8, 7, 2);
+      g.fillStyle(0x2f6b4e, 1).fillRoundedRect(-15, -4 + bob, 30, 22, 8);
+      g.fillStyle(0x4f8b65, 1).fillRoundedRect(-10, -1 + bob, 20, 14, 4);
+      g.fillStyle(0x17201c, 0.9)
+        .fillRoundedRect(-15, 0 + bob, 6, 13, 2)
+        .fillRoundedRect(9, 0 + bob, 6, 13, 2);
+      g.fillStyle(0xc1a86c, 1).fillRect(-10, 8 + bob, 20, 4);
+      g.fillStyle(0x1d2923, 1).fillRect(-12, 12 + bob, 24, 5);
+      g.fillStyle(0x5e4936, 1)
+        .fillRoundedRect(-15, 8 + bob, 5, 8, 2)
+        .fillRoundedRect(10, 8 + bob, 5, 8, 2);
+      g.fillStyle(0x29372f, 1).fillRoundedRect(-11, 16 + bob, 22, 7, 3);
+      g.fillStyle(0x566052, 1)
+        .fillRoundedRect(-10 + legOffset, 20 + bob, 8, 13, 2)
+        .fillRoundedRect(2 - legOffset, 20 + bob, 8, 13, 2);
+      g.fillStyle(0x202522, 1)
+        .fillRoundedRect(-12 + legOffset, 30 + bob, 10, 7, 2)
+        .fillRoundedRect(2 - legOffset, 30 + bob, 10, 7, 2);
+      return g;
+    };
+
+    this.poseA = makePose(0, 0);
+    this.poseB = makePose(2, 1).setVisible(false);
+    this.arms = scene.add.graphics();
     this.weapon = scene.add.graphics();
     this.muzzle = scene.add.graphics();
-    this.container.add([this.body, this.weapon, this.muzzle]);
+    this.container.add([this.poseA, this.poseB, this.arms, this.weapon, this.muzzle]);
 
-    // Visual language is deliberately assembled from the inspected free packs:
-    // Pack A soldier proportions/held rifle, Pack B robot clarity, and Packs C-E
-    // provide the action/gear vocabulary. No incompatible source frames are mashed
-    // together; this is one coherent Shooter-specific presentation.
-    this.drawBody('DOWN', false, new Phaser.Math.Vector2(1, 0));
+    this.update('DOWN', new Phaser.Math.Vector2(1, 0), false, false, 0);
   }
 
   get gameObject() {
     return this.container;
   }
-
-  setPosition(x: number, y: number) {
-    this.container.setPosition(x, y);
-  }
-
-  get x() { return this.container.x; }
-  get y() { return this.container.y; }
 
   setVisible(value: boolean) {
     this.visible = value;
@@ -42,18 +76,25 @@ export class FieldOperatorCharacter {
   }
 
   update(
-    direction: FieldOperatorDirection,
+    _direction: FieldOperatorDirection,
     aim: Phaser.Math.Vector2,
     walking: boolean,
     firing: boolean,
     delta: number,
   ) {
     if (!this.visible) return;
+
     if (walking) this.walkClock += delta;
     this.recoil = Math.max(0, this.recoil - delta);
+
+    const bob = walking ? Math.sin(this.walkClock / 85) * 1 : 0;
+    this.poseA.setVisible(!walking || Math.floor(this.walkClock / 85) % 2 === 0);
+    this.poseB.setVisible(walking && !this.poseA.visible);
+
     const normalizedAim = aim.clone().normalize();
-    this.drawBody(direction, walking, normalizedAim);
-    this.drawWeapon(normalizedAim, firing);
+    this.updateWeaponPose(normalizedAim, firing);
+    this.poseA.setY(bob);
+    this.poseB.setY(bob);
   }
 
   triggerRecoil() {
@@ -63,8 +104,8 @@ export class FieldOperatorCharacter {
   getMuzzlePosition(aim: Phaser.Math.Vector2) {
     const a = aim.clone().normalize();
     return new Phaser.Math.Vector2(
-      this.container.x + a.x * 48,
-      this.container.y - 34 + a.y * 10,
+      this.container.x + a.x * 42,
+      this.container.y + a.y * 3,
     );
   }
 
@@ -72,96 +113,33 @@ export class FieldOperatorCharacter {
     this.container.destroy(true);
   }
 
-  private drawBody(
-    direction: FieldOperatorDirection,
-    walking: boolean,
-    aim: Phaser.Math.Vector2,
-  ) {
-    this.body.clear();
+  private updateWeaponPose(aim: Phaser.Math.Vector2, firing: boolean) {
+    const angle = Math.atan2(aim.y, aim.x);
 
-    const bob = walking ? Math.sin(this.walkClock / 85) * 1.4 : 0;
-    const stride = walking ? Math.sin(this.walkClock / 85) * 4 : 0;
-    const side = direction === 'LEFT' ? -1 : direction === 'RIGHT' ? 1 : 0;
-    const rear = direction === 'UP';
+    this.arms.setRotation(angle).setPosition(0, 0);
+    this.arms.clear();
+    this.arms.lineStyle(5, 0x314b3c, 1);
+    this.arms.lineBetween(-8, 5, 5, 2);
+    this.arms.lineBetween(8, 5, 12, 4);
+    this.arms.fillStyle(0xd4a45d, 1)
+      .fillCircle(5, 2, 3)
+      .fillCircle(12, 4, 3);
 
-    // Legs/boots: compact silhouette, shared 60px visible footprint.
-    this.body.fillStyle(0x566052, 1);
-    this.body.fillRoundedRect(-10 + stride, 20 + bob, 8, 13, 2);
-    this.body.fillRoundedRect(2 - stride, 20 - bob, 8, 13, 2);
-    this.body.fillStyle(0x202522, 1);
-    this.body.fillRoundedRect(-12 + stride, 30 + bob, 11, 7, 2);
-    this.body.fillRoundedRect(2 - stride, 30 - bob, 11, 7, 2);
-
-    // Utility trousers / belt.
-    this.body.fillStyle(0x3e4941, 1).fillRoundedRect(-12, 15 + bob, 24, 10, 3);
-    this.body.fillStyle(0xe8c95c, 1).fillRect(-2, 17 + bob, 4, 5);
-
-    // Torso / vest.
-    this.body.fillStyle(0x2f6b4e, 1).fillRoundedRect(-15, -7 + bob, 30, 25, 8);
-    this.body.fillStyle(0x4f8b65, 1).fillRoundedRect(-10, -3 + bob, 20, 15, 4);
-    this.body.fillStyle(0x17201c, 1).fillRoundedRect(-13, 7 + bob, 26, 5, 2);
-    this.body.fillStyle(0xe8c95c, 1).fillRoundedRect(side * 10 - 2, -2 + bob, 4, 8, 1);
-
-    // Neck.
-    this.body.fillStyle(0xd4a45d, 1).fillRoundedRect(-4, -13 + bob, 8, 8, 2);
-
-    // Helmet + paintball mask. Rear view is darker; side view exposes one mask lens.
-    this.body.fillStyle(rear ? 0x29342f : 0x5a7348, 1).fillEllipse(0, -24 + bob, 28, 18);
-    this.body.fillStyle(0x17201c, 1).fillRoundedRect(-13, -25 + bob, 26, 8, 3);
-    this.body.fillStyle(0x91b7ad, 0.95).fillEllipse(side * 5, -24 + bob, 12, 6);
-    this.body.fillStyle(0x202522, 1).fillRoundedRect(-11, -31 + bob, 22, 5, 2);
-    this.body.fillStyle(0xe8c95c, 1).fillRect(-3, -34 + bob, 6, 3);
-
-    // Face cue for front/side readability.
-    if (!rear) {
-      this.body.fillStyle(0xd4a45d, 1).fillEllipse(0, -21 + bob, 11, 8);
-      this.body.fillStyle(0x17201c, 1).fillRoundedRect(-8, -25 + bob, 16, 4, 2);
-    }
-
-    // Arms are drawn toward the weapon grip, so the gun reads as held, not floating.
-    const shoulderY = -3 + bob;
-    const grip = new Phaser.Math.Vector2(18 * aim.x, -31 + 8 * aim.y + bob);
-    const support = new Phaser.Math.Vector2(7 * aim.x, -20 + 5 * aim.y + bob);
-
-    this.body.lineStyle(7, 0x2f6b4e, 1);
-    this.body.lineBetween(-11, shoulderY, support.x, support.y);
-    this.body.lineBetween(11, shoulderY, grip.x, grip.y);
-    this.body.fillStyle(0xd4a45d, 1);
-    this.body.fillCircle(support.x, support.y, 3.2);
-    this.body.fillCircle(grip.x, grip.y, 3.2);
-  }
-
-  private drawWeapon(aim: Phaser.Math.Vector2, firing: boolean) {
+    this.weapon.setRotation(angle).setPosition(5, 3);
     this.weapon.clear();
+    this.weapon.lineStyle(3, 0x6c806f, 1).lineBetween(10, 5, 2, 12);
+    this.weapon.fillStyle(0x151b18, 1).fillEllipse(13, -8, 9, 7);
+    this.weapon.fillStyle(0x33423b, 1).fillRoundedRect(7, -4, 18, 9, 3);
+    this.weapon.fillStyle(0x111715, 1).fillRect(22, -2, 15, 5);
+    this.weapon.fillStyle(0x53635c, 1).fillRect(12, -9, 8, 4);
+    this.weapon.fillStyle(0x171d1b, 1).fillRoundedRect(11, 4, 5, 10, 2);
+    this.weapon.fillStyle(0x493b31, 1).fillRoundedRect(-5, 4, 10, 5, 2);
+    this.weapon.lineStyle(3, 0x2a332f, 1).lineBetween(-2, 6, 8, 5);
+    this.weapon.lineStyle(1, 0xe8c95c, 0.45).lineBetween(35, 0, 45, 0);
+
     this.muzzle.clear();
-
-    const a = aim.clone().normalize();
-    const p = new Phaser.Math.Vector2(19 * a.x, -31 + 8 * a.y);
-    const recoil = this.recoil > 0 ? 3 : 0;
-    const stock = p.clone().subtract(a.clone().scale(14 + recoil));
-    const barrel = p.clone().add(a.clone().scale(31 - recoil));
-
-    this.weapon.lineStyle(8, 0x17201c, 1);
-    this.weapon.lineBetween(stock.x, stock.y, barrel.x, barrel.y);
-    this.weapon.lineStyle(4, 0x566052, 1);
-    this.weapon.lineBetween(stock.x + a.x * 4, stock.y + a.y * 4, barrel.x - a.x * 7, barrel.y - a.y * 7);
-    this.weapon.fillStyle(0xe8c95c, 1);
-    this.weapon.fillRoundedRect(p.x - 3, p.y - 4, 7, 8, 2);
-    this.weapon.fillStyle(0x202522, 1);
-    this.weapon.fillCircle(barrel.x, barrel.y, 4);
-
-    if (firing || this.recoil > 0) {
-      const flash = barrel.clone().add(a.clone().scale(7));
-      this.muzzle.fillStyle(0xf0dfb6, 0.96);
-      this.muzzle.fillTriangle(
-        flash.x + a.x * 14,
-        flash.y + a.y * 14,
-        flash.x - a.y * 8,
-        flash.y + a.x * 8,
-        flash.x + a.y * 8,
-        flash.y - a.x * 8,
-      );
-      this.muzzle.fillStyle(0xd66a3d, 0.9).fillCircle(flash.x, flash.y, 4);
-    }
+    this.muzzle.setRotation(angle).setPosition(42, 0);
+    this.muzzle.fillStyle(0xf0dfb6, firing || this.recoil > 0 ? 0.72 : 0);
+    this.muzzle.fillCircle(0, 0, 3);
   }
 }
