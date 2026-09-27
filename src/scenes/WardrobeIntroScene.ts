@@ -927,8 +927,8 @@ export class WardrobeLabScene extends Phaser.Scene {
           visibleH,
           drawX,
           drawY,
-          visibleW,
-          visibleH,
+          drawW,
+          drawH,
         );
       });
 
