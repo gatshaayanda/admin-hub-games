@@ -738,7 +738,7 @@ export class WardrobeLabScene extends Phaser.Scene {
   private spriteKey(
     def: WardrobeCharacterDefinition,
     direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT',
-    action: 'walk' | 'shoot' = 'walk',
+    action: 'idle' | 'walk' | 'shoot' = 'walk',
   ) {
     return 'wardrobe-' + def.id + '-' + direction + '-' + action;
   }
@@ -746,6 +746,20 @@ export class WardrobeLabScene extends Phaser.Scene {
   private createCharacterAnimations() {
     for (const def of this.characterDefinitions) {
       for (const direction of ['DOWN', 'UP', 'LEFT', 'RIGHT'] as const) {
+        if (def.source === 'generated') {
+          const idleKey = this.spriteKey(def, direction, 'idle');
+          if (!this.anims.exists(idleKey)) {
+            const texture = this.textures.get(idleKey);
+            const frameCount = Math.max(1, texture.frameTotal - 1);
+            this.anims.create({
+              key: idleKey,
+              frames: this.anims.generateFrameNumbers(idleKey, { start: 0, end: frameCount - 1 }),
+              frameRate: 1,
+              repeat: -1,
+            });
+          }
+        }
+
         const walkKey = this.spriteKey(def, direction, 'walk');
         if (!this.anims.exists(walkKey)) {
           const texture = this.textures.get(walkKey);
@@ -801,7 +815,6 @@ export class WardrobeLabScene extends Phaser.Scene {
 
     this.fieldOperator.setVisible(false);
     this.previewSprite.setVisible(true);
-    const walkKey = this.spriteKey(def, this.direction, 'walk');
 
     if (this.muzzleUntil > 0 && def.source === 'robot') {
       const shootKey = this.spriteKey(def, this.direction, 'shoot');
@@ -810,7 +823,15 @@ export class WardrobeLabScene extends Phaser.Scene {
         this.fitCharacterSprite(this.previewSprite, def);
       }
       this.previewSprite.play(shootKey, true);
+    } else if (def.source === 'generated') {
+      const animationKey = this.spriteKey(def, this.direction, walking ? 'walk' : 'idle');
+      if (this.previewSprite.texture.key !== animationKey) {
+        this.previewSprite.setTexture(animationKey, 0);
+        this.fitCharacterSprite(this.previewSprite, def);
+      }
+      this.previewSprite.play(animationKey, true);
     } else {
+      const walkKey = this.spriteKey(def, this.direction, 'walk');
       if (this.previewSprite.texture.key !== walkKey) {
         this.previewSprite.setTexture(walkKey, 0);
         this.fitCharacterSprite(this.previewSprite, def);
@@ -827,7 +848,6 @@ export class WardrobeLabScene extends Phaser.Scene {
       def.source === 'generated' ? 'GENERATED OPERATOR · EMBEDDED MARKER' :
       def.source === 'soldier' ? 'FREE SOLDIER · EMBEDDED GUN' :
       def.source === 'robot' ? 'CC0 SHOOTER ROBOT · EMBEDDED GUN' :
-      def.source === 'generated' ? 'GENERATED OPERATOR · EMBEDDED MARKER' :
       'GegX WALK · WEAPON LAYER';
     this.spriteLabel.setText(sourceLabel);
     this.animationLabel?.setText(
