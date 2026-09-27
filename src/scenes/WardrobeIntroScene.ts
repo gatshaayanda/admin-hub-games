@@ -330,8 +330,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.createFieldJoystick(); this.createSpriteStrip();
     this.cursors=this.input.keyboard!.createCursorKeys();
     this.input.keyboard?.on('keydown-R',()=>this.resetCharacter());
-    this.scale.on(Phaser.Scale.Events.RESIZE,this.handleResize,this);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>{this.scale.off(Phaser.Scale.Events.RESIZE,this.handleResize,this);this.input.keyboard?.removeAllListeners();});
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>{this.input.keyboard?.removeAllListeners();});
     this.updateLabels(); window.dispatchEvent(new Event('admin-hub-games:game-ready'));
   }
 
