@@ -870,7 +870,7 @@ export class WardrobeLabScene extends Phaser.Scene {
 
 
   private generatedKey(def: WardrobeCharacterDefinition, action: string) {
-    return this.generatedKey(def, action);
+    return 'wardrobe-' + def.id + '-' + action;
   }
 
   private currentDefinition() {
@@ -1035,9 +1035,25 @@ export class WardrobeLabScene extends Phaser.Scene {
     const vy = this.visualMove.y;
     const action = this.generatedAction;
     const isReactionAction = action === 'hit' || action === 'headshot' || action === 'death' || action === 'dodge' || action === 'respawn';
+    const isCombatAction = action === 'aim' || action === 'shoot' || action === 'muzzle' || action === 'recoil';
 
-    if (isReactionAction && this.generatedActionUntil > 0) {
-      const key = 'wardrobe-ARENA_PLACEHOLDER-' + action;
+    if ((isReactionAction || isCombatAction) && this.generatedActionUntil > 0) {
+      const key = this.generatedKey(def, action);
+      if (this.previewSprite.texture.key !== key) {
+        this.previewSprite.setTexture(key, 0);
+        this.fitCharacterSprite(this.previewSprite, def);
+      }
+      this.previewSprite.setFlipX(vx < -0.08 || this.direction === 'LEFT');
+      this.previewSprite.setRotation(0);
+      if (isReactionAction && (action === 'death' || action === 'dodge' || action === 'respawn')) {
+        this.previewSprite.play(key, true);
+      } else {
+        this.previewSprite.stop();
+        this.previewSprite.setFrame(0);
+      }
+      return;
+    }
+      const key = this.generatedKey(def, action);
       if (this.previewSprite.texture.key !== key) {
         this.previewSprite.setTexture(key, 0);
         this.fitCharacterSprite(this.previewSprite, def);
@@ -1053,26 +1069,26 @@ export class WardrobeLabScene extends Phaser.Scene {
       return;
     }
 
-    let key = 'wardrobe-ARENA_PLACEHOLDER-idle_down';
+    let key = this.generatedKey(def, 'idle_down');
     let flipX = false;
 
     if (walking && Math.abs(vx) > 0.65 && Math.abs(vy) < 0.45) {
-      key = 'wardrobe-ARENA_PLACEHOLDER-run';
+      key = this.generatedKey(def, 'run');
       flipX = vx < 0;
     } else if (Math.abs(vx) > 0.35 && vy > 0.35) {
-      key = 'wardrobe-ARENA_PLACEHOLDER-idle_down_right';
+      key = this.generatedKey(def, 'idle_down_right');
       flipX = vx < 0;
     } else if (Math.abs(vx) > 0.35 && vy < -0.35) {
-      key = 'wardrobe-ARENA_PLACEHOLDER-idle_up_right';
+      key = this.generatedKey(def, 'idle_up_right');
       flipX = vx < 0;
     } else if (vy > 0.35) {
-      key = 'wardrobe-ARENA_PLACEHOLDER-idle_down';
+      key = this.generatedKey(def, 'idle_down');
     } else if (vy < -0.35) {
-      key = 'wardrobe-ARENA_PLACEHOLDER-idle_up_right';
+      key = this.generatedKey(def, 'idle_up_right');
     } else if (vx < -0.35) {
-      key = 'wardrobe-ARENA_PLACEHOLDER-idle_left';
+      key = this.generatedKey(def, 'idle_left');
     } else if (vx > 0.35) {
-      key = 'wardrobe-ARENA_PLACEHOLDER-idle_right';
+      key = this.generatedKey(def, 'idle_right');
     }
 
     if (this.previewSprite.texture.key !== key) {
