@@ -59,7 +59,7 @@ export class WardrobeIntroScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.image('wardrobe-generated-reference-intro', '/assets/wardrobe/incoming/og.jpg');
+    this.load.image('wardrobe-generated-reference-intro', '/assets/wardrobe/incoming/1.jpg');
   }
 
   create() {
@@ -166,7 +166,7 @@ export class WardrobeIntroScene extends Phaser.Scene {
       height: number;
     };
     const columns = 8;
-    const rows = 4;
+    const rows = 3;
     const cellWidth = source.width / columns;
     const cellHeight = source.height / rows;
     const cropX = Math.round(cellWidth * (6 / 176));
@@ -328,7 +328,7 @@ const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
     id: 'gemini_operator',
     name: 'GEMINI OPERATOR · GENERATED REFERENCE',
     source: 'generated',
-    basePath: '/assets/wardrobe/incoming/og.jpg',
+    basePath: '/assets/wardrobe/incoming/1.jpg',
     displaySize: 80,
     targetVisibleHeight: 60,
     frameWidth: 164,
@@ -454,7 +454,7 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.image('wardrobe-generated-reference', '/assets/wardrobe/incoming/og.jpg');
+    this.load.image('wardrobe-generated-reference', '/assets/wardrobe/incoming/1.jpg');
     for (const def of this.characterDefinitions) {
       for (const direction of ['DOWN', 'UP', 'LEFT', 'RIGHT'] as const) {
         if (def.source === 'generated') continue;
@@ -671,10 +671,10 @@ export class WardrobeLabScene extends Phaser.Scene {
     const frameHeight = Math.round(cellHeight * (216 / 256));
 
     const sequences: Record<'DOWN' | 'UP' | 'LEFT' | 'RIGHT', { idle: number[]; walk: number[] }> = {
-      DOWN: { idle: [0], walk: [3, 4, 5, 6, 7] },
-      UP: { idle: [11], walk: [11, 12, 13, 14, 15] },
-      LEFT: { idle: [16], walk: [19, 20, 21, 22, 23] },
-      RIGHT: { idle: [24], walk: [26, 27, 28, 29, 30, 31] },
+      DOWN: { idle: [0], walk: [0, 1, 2, 3, 4, 5, 6, 7] },
+      LEFT: { idle: [8], walk: [8, 9, 10, 11, 12, 13, 14, 15] },
+      UP: { idle: [16], walk: [16, 17, 18, 19, 20, 21, 22, 23] },
+      RIGHT: { idle: [8], walk: [8, 9, 10, 11, 12, 13, 14, 15] },
     };
 
     const extractFrame = (sourceFrame: number) => {
@@ -907,6 +907,7 @@ export class WardrobeLabScene extends Phaser.Scene {
         this.previewSprite.setTexture(animationKey, 0);
         this.fitCharacterSprite(this.previewSprite, def);
       }
+      this.previewSprite.setFlipX(this.direction === 'RIGHT');
       this.previewSprite.play(animationKey, true);
     } else {
       const walkKey = this.spriteKey(def, this.direction, 'walk');
