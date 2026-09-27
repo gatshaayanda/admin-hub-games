@@ -389,7 +389,7 @@ export class WardrobeLabScene extends Phaser.Scene {
   private readonly worldWidth = 2400;
   private readonly worldHeight = 1400;
   private readonly playerSpawn = new Phaser.Math.Vector2(360, 1040);
-  private readonly targetSpawn = new Phaser.Math.Vector2(1820, 1040);
+  private readonly targetSpawn = new Phaser.Math.Vector2(1820, 900);
   private readonly playerSpeed = 170;
   private readonly projectileSpeed = 520;
   private readonly projectileLifetimeMs = 1100;
