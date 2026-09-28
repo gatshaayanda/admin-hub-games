@@ -4620,6 +4620,22 @@ Wardrobe must use the same shared Shooter mobile-control implementation as Shoot
 The Wardrobe projectile/test combat remains a presentation laboratory and must not replace or modify the authoritative Shooters Trigger combat implementation.
 
 
+## Wardrobe — Generated Player v2 Pipeline Checkpoint
+
+The current generated Wardrobe player source is `public/assets/wardrobe/incoming/2.jpg`.
+
+Its production extraction contract is:
+- source sheet: **1408×768**, fixed **8×4** grid, **176×192** cells;
+- body cells: row 0 cells 0–7, row 1 cells 8–15, row 2 cells 16–19, row 3 cells 24–27;
+- output body atlas: `public/assets/wardrobe/generated-v2/player-body-atlas.png`;
+- separated presentation layers: `player-arms.png`, `player-weapon.png`, `player-muzzle.png`;
+- all generated PNGs are RGBA and are visually inspected before Wardrobe integration;
+- the generated character is assembled in Wardrobe as shadow + body + arms + weapon + muzzle;
+- body facing/animation follows movement only; arms/weapon/muzzle rotate from the independent aim vector;
+- the body itself must never rotate toward aim;
+- this v2 artwork remains Wardrobe-only until explicitly approved for Shooters Trigger.
+
+The extraction workflow is `.github/workflows/wardrobe-generated-player.yml` and the source script is `scripts/wardrobe/extract-generated-player-2.py`. The workflow may commit generated assets to `main`; generated assets must never be treated as verified merely because filenames exist. Inspect the actual PNGs.
 ## VS Code Image / Sprite Intake Workflow
 
 When the user has an image, sprite sheet, character reference, generated artwork, or other game asset in the Windows Downloads folder, treat it as an **incoming asset**, not as a file that the codebase can magically see.
