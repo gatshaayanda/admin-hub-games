@@ -1183,7 +1183,6 @@ export class WardrobeLabScene extends Phaser.Scene {
 
   private playCharacterAnimation(walking: boolean) {
     const def = this.currentDefinition();
-    this.poseClock += 0;
 
     if (def.source === 'arena') {
       this.fieldOperator.setVisible(false);
@@ -1194,11 +1193,6 @@ export class WardrobeLabScene extends Phaser.Scene {
       if (!walking) this.arenaPoseB.setVisible(false);
       return;
     }
-
-    this.fieldOperator.setVisible(false);
-    this.previewSprite.setVisible(true);
-
-    if (def.source !== 'generated') {    const def = this.currentDefinition();
 
     this.fieldOperator.setVisible(false);
     this.previewSprite.setVisible(true);
