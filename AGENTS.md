@@ -4836,3 +4836,52 @@ Wardrobe remains isolated from Shooters Trigger combat/AI/projectile/collision l
 - Wardrobe Intro loads and reads `wardrobe-generated-reference-player` (1.jpg), not the removed legacy single-source key.
 - Wardrobe Lab preloads both `wardrobe-generated-reference-player` (1.jpg) and `wardrobe-generated-reference-bot` (og.jpg), matching the generated character definitions.
 - This fixes texture-key mismatches introduced while separating the player and bot source sheets. It does not establish visual correctness of the extracted actions; image-by-image visual inspection and a production build/browser check remain required before promotion claims.
+## Wardrobe — Generated Player Production Asset Rule — September 28, 2026
+
+The current `1.jpg` / `og.jpg` generated sheets are **source/reference artwork**, not production-ready Phaser character textures.
+
+This rule supersedes any earlier Wardrobe wording that treats runtime JPEG background removal as the finished generated-player pipeline.
+
+### Required production pipeline
+
+```
+1.jpg / og.jpg
+      ↓
+inspect actual binary artwork + real cell layout
+      ↓
+extract the intended character frames
+      ↓
+clean the artwork outside the game runtime
+      ↓
+transparent PNG/WebP frames or a transparent texture atlas
+      ↓
+Phaser texture / animation definitions
+      ↓
+Wardrobe Arena presentation test
+      ↓
+approved Shooters Trigger player presentation
+```
+
+Non-negotiable rules:
+
+- JPG is a source/reference format here. It has no alpha channel and must not be treated as if its checkerboard/background is transparency.
+- The game must not ship with a generated player whose visible background is being removed by a heuristic flood-fill as its production asset pipeline.
+- Runtime canvas extraction/background masking may be used temporarily for inspection/debugging only. It is not the final asset solution.
+- Production generated-player frames must have real transparent pixels and stable frame dimensions/pivots.
+- The generated character must visually sit directly on the Arena field with no white/grey checkerboard rectangle, matte, halo or source-cell boundary.
+- Frame extraction must be based on the actual source image dimensions and verified cell layout; never assume a remembered crop size.
+- The player body, feet, scale and directional poses must remain stable across frames. Weapon/arms/muzzle presentation remains independent from body facing and aim.
+- `1.jpg` and `og.jpg` are two source references for the **one** generated Shooter Trigger player pipeline. They are not two selectable final characters.
+- Wardrobe's other character packs remain selectable visual-test characters because comparing real artwork in the game field is an intentional part of the lab.
+- A successful TypeScript/build check does not establish visual asset correctness. The generated player must be visually inspected on the Arena field before promotion.
+- If the source artwork itself is visibly malformed or contains baked presentation artifacts that cannot be cleanly separated, stop and inspect the source asset rather than stacking more runtime masking heuristics.
+
+### Wardrobe selector/mobile requirement
+
+The Wardrobe character selector is a real visual comparison tool, not desktop-only decoration.
+
+- PREV/NEXT must cycle through the complete Wardrobe visual-test library.
+- The generated Shooter Trigger player remains the first/authoritative entry.
+- Selector controls must remain reachable and comfortably tappable on narrow Android screens.
+- Fixed desktop coordinates that place controls outside a phone viewport are not acceptable.
+- The shared Shooter mobile controls remain the movement/aim/fire system; selector controls must not interfere with them.
