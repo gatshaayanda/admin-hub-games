@@ -1099,53 +1099,30 @@ export class WardrobeLabScene extends Phaser.Scene {
     const weaponX = 2 * bodyScale;
     const weaponY = shoulderY;
 
-    // The extracted weapon is a tightly cropped 234px-wide transparent layer.
-    // Scaling it with the 60px-tall body made the gun roughly 88px long,
-    // substantially larger than the ~50px Arena reference weapon. Keep the
-    // body/arms scale authoritative, but normalize the weapon independently.
+    // Shooter Trigger Arena presentation is authoritative for generated-player
+    // arms, weapon, muzzle and firing origin; the generated body remains independent.
     const weaponScale = 50 / 234;
 
-    this.armsSprite
-      .setVisible(true)
-      .setScale(bodyScale)
-      .setPosition(-7 * bodyScale, shoulderY)
-      .setRotation(angle)
-      .setFlipY(this.aim.x < 0);
+    // Generated body uses the authored source artwork; the arms, weapon and
+    // muzzle use the exact Shooter Trigger Arena presentation rig below.
+    // Do not scale/reposition the generated weapon artwork independently:
+    // that asset is a full-size paintball marker and is not the Arena weapon.
+    this.armsSprite.setVisible(false);
+    this.weaponSprite.setVisible(false);
+    this.muzzleSprite.setVisible(false);
 
-    this.weaponSprite
-      .setVisible(true)
-      .setScale(weaponScale)
-      .setPosition(weaponX, weaponY)
-      .setRotation(angle)
-      .setFlipY(this.aim.x < 0);
-
-    // Keep the muzzle at the end of the normalized weapon rather than using
-    // the body's scale, which previously placed it beyond the visible barrel.
-    const muzzleDistance = 50;
-    this.muzzleSprite
-      .setVisible(this.muzzleUntil > 0)
-      .setScale(bodyScale)
-      .setPosition(
-        weaponX + this.aim.x * muzzleDistance,
-        weaponY + this.aim.y * muzzleDistance,
-      )
-      .setRotation(angle)
-      .setFlipY(this.aim.x < 0);
+    this.arenaArms.setVisible(true);
+    this.arenaWeapon.setVisible(true);
+    this.arenaMuzzle.setVisible(this.muzzleUntil > 0);
+    this.updateArenaReferenceWeaponPose();
   }
 
   private fireShot() {
     const def = this.currentDefinition();
-    const muzzleOffset = def.source === 'arena' ? 42 : 42;
-    const aimOriginY = def.source === 'arena' ? 0 : -52;
-    const origin = def.source === 'generated'
-      ? new Phaser.Math.Vector2(
-        this.character.x + 2 * (this.previewSprite.scaleX || 0.375) + this.aim.x * 112 * (this.previewSprite.scaleX || 0.375),
-        this.character.y - 40 * (this.previewSprite.scaleX || 0.375) + this.aim.y * 112 * (this.previewSprite.scaleX || 0.375),
-      )
-      : new Phaser.Math.Vector2(
-        this.character.x + this.aim.x * muzzleOffset,
-        this.character.y + aimOriginY + this.aim.y * (def.source === 'arena' ? 0 : 10),
-      );
+    const origin = new Phaser.Math.Vector2(
+      this.character.x + this.aim.x * 42,
+      this.character.y + this.aim.y * (def.source === 'arena' ? 0 : 0),
+    );
     const velocity = this.aim.clone().normalize().scale(this.projectileSpeed);
     const graphics = this.add.circle(origin.x, origin.y, 4, 0xf0dfb6, 1).setDepth(60);
     this.shots.push({
