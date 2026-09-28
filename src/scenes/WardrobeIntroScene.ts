@@ -185,21 +185,31 @@ export class WardrobeIntroScene extends Phaser.Scene {
       const i = (y * frameCanvas.width + x) * 4;
       return [data[i], data[i + 1], data[i + 2]];
     };
-    const corners = [
-      sample(0, 0),
-      sample(frameCanvas.width - 1, 0),
-      sample(0, frameCanvas.height - 1),
-      sample(frameCanvas.width - 1, frameCanvas.height - 1),
-    ];
+    // The generated sheet is a JPEG, so its transparency checkerboard is baked
+    // into the pixels. Build the background palette from the whole frame border,
+    // not just the four corners (a corner can land on the operator).
+    const borderSamples: number[][] = [];
+    const addBorderSample = (x: number, y: number) => {
+      const i = (y * frameCanvas.width + x) * 4;
+      borderSamples.push([data[i], data[i + 1], data[i + 2]]);
+    };
+    for (let x = 0; x < frameCanvas.width; x += 4) {
+      addBorderSample(x, 0);
+      addBorderSample(x, frameCanvas.height - 1);
+    }
+    for (let y = 1; y < frameCanvas.height - 1; y += 4) {
+      addBorderSample(0, y);
+      addBorderSample(frameCanvas.width - 1, y);
+    }
     const isBackground = (i: number) => {
       const r = data[i];
       const g = data[i + 1];
       const b = data[i + 2];
-      return corners.some(([cr, cg, cb]) => {
-        const dr = r - cr;
-        const dg = g - cg;
-        const db = b - cb;
-        return dr * dr + dg * dg + db * db < 52 * 52;
+      return borderSamples.some(([br, bg, bb]) => {
+        const dr = r - br;
+        const dg = g - bg;
+        const db = b - bb;
+        return dr * dr + dg * dg + db * db < 42 * 42;
       });
     };
     const background = new Uint8Array(frameCanvas.width * frameCanvas.height);
@@ -832,23 +842,32 @@ export class WardrobeLabScene extends Phaser.Scene {
 
         const pixels = frameContext.getImageData(0, 0, cellWidth, cellHeight);
         const data = pixels.data;
-        const cornerSamples = [
-          [data[0], data[1], data[2]],
-          [data[(cellWidth - 1) * 4], data[(cellWidth - 1) * 4 + 1], data[(cellWidth - 1) * 4 + 2]],
-          [data[(cellHeight - 1) * cellWidth * 4], data[(cellHeight - 1) * cellWidth * 4 + 1], data[(cellHeight - 1) * cellWidth * 4 + 2]],
-          [data[(cellHeight * cellWidth - 1) * 4], data[(cellHeight * cellWidth - 1) * 4 + 1], data[(cellHeight * cellWidth - 1) * 4 + 2]],
-        ];
+        // The JPEG contains a baked transparency checkerboard. Sample the
+        // complete frame border so both checker tones are detected even when
+        // one corner happens to overlap the character.
+        const borderSamples: number[][] = [];
+        const addBorderSample = (x: number, y: number) => {
+          const i = (y * cellWidth + x) * 4;
+          borderSamples.push([data[i], data[i + 1], data[i + 2]]);
+        };
+        for (let x = 0; x < cellWidth; x += 4) {
+          addBorderSample(x, 0);
+          addBorderSample(x, cellHeight - 1);
+        }
+        for (let y = 1; y < cellHeight - 1; y += 4) {
+          addBorderSample(0, y);
+          addBorderSample(cellWidth - 1, y);
+        }
         const isBackground = (index: number) => {
           const r = data[index];
           const g = data[index + 1];
           const b = data[index + 2];
-          const cornerMatch = cornerSamples.some(([cr, cg, cb]) => {
-            const dr = r - cr;
-            const dg = g - cg;
-            const db = b - cb;
-            return dr * dr + dg * dg + db * db < 52 * 52;
+          return borderSamples.some(([br, bg, bb]) => {
+            const dr = r - br;
+            const dg = g - bg;
+            const db = b - bb;
+            return dr * dr + dg * dg + db * db < 42 * 42;
           });
-          return cornerMatch;
         };
 
         // The generated JPGs have a baked background. Remove every background
