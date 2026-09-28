@@ -569,7 +569,13 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.fieldOperator.setVisible(false);
 
     const current = this.currentDefinition();
-    this.previewSprite = this.add.sprite(0, 0, this.spriteKey(current, 'DOWN'), 0)
+    // Generated reference sheets are sliced into action-specific canvas textures,
+    // not directional Phaser spritesheets. Start on the real extracted idle frame
+    // so the first lineup character is present and controllable on first load.
+    const initialTexture = current.source === 'generated'
+      ? this.generatedKey(current, 'idle_down')
+      : this.spriteKey(current, 'DOWN');
+    this.previewSprite = this.add.sprite(0, 0, initialTexture, 0)
       .setOrigin(0.5, current.originY);
     this.fitCharacterSprite(this.previewSprite, current);
     this.previewSprite.setVisible(true);
