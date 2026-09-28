@@ -1111,7 +1111,6 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.weaponSprite.setVisible(false);
     this.muzzleSprite.setVisible(false);
 
-    const angle = Math.atan2(this.aim.y, this.aim.x);
     this.arenaArms.setVisible(true);
     this.arenaWeapon.setVisible(true);
     this.arenaMuzzle.setVisible(this.muzzleUntil > 0);
