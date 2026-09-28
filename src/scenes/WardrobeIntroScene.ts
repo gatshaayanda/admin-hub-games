@@ -350,7 +350,7 @@ export class WardrobeIntroScene extends Phaser.Scene {
   }
 }
 
-type WardrobeCharacterSource = 'gegx' | 'soldier' | 'robot' | 'generated';
+type WardrobeCharacterSource = 'gegx' | 'soldier' | 'robot' | 'generated' | 'arena';
 
 type WardrobeCharacterDefinition = {
   id: string;
@@ -370,8 +370,8 @@ const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
 
   {
     id: 'arena_player',
-    name: 'ARENA PLAYER · GENERATED 1.JPG',
-    source: 'generated',
+    name: 'ARENA PLAYER · SHOOTERS TRIGGER',
+    source: 'arena',
     basePath: '/assets/wardrobe/incoming/1.jpg',
     displaySize: 80,
     targetVisibleHeight: 60,
@@ -476,6 +476,8 @@ export class WardrobeLabScene extends Phaser.Scene {
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT' = 'DOWN';
   private previewSprite!: Phaser.GameObjects.Sprite;
+  private arenaPoseA!: Phaser.GameObjects.Graphics;
+  private arenaPoseB!: Phaser.GameObjects.Graphics;
   private covers: Phaser.Geom.Rectangle[] = [];
   private characterNameLabel!: Phaser.GameObjects.Text;
   private animationLabel!: Phaser.GameObjects.Text;
@@ -519,7 +521,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.load.image('wardrobe-generated-reference-bot', '/assets/wardrobe/incoming/og.jpg');
     for (const def of this.characterDefinitions) {
       for (const direction of ['DOWN', 'UP', 'LEFT', 'RIGHT'] as const) {
-        if (def.source === 'generated') continue;
+        if (def.source === 'generated' || def.source === 'arena') continue;
         if (def.source === 'gegx') {
           this.load.spritesheet(
             this.spriteKey(def, direction),
@@ -580,6 +582,13 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.fitCharacterSprite(this.previewSprite, current);
     this.previewSprite.setVisible(true);
     this.character.add(this.previewSprite);
+
+    // The first Wardrobe character now uses the authoritative Shooters Trigger
+    // fighter construction: the body is a Phaser Graphics presentation, while
+    // arms + marker remain the independent aim layer below.
+    this.arenaPoseA = this.createArenaPlayerPose(0, 0);
+    this.arenaPoseB = this.createArenaPlayerPose(2, 1).setVisible(false);
+    this.character.add([this.arenaPoseA, this.arenaPoseB]);
     this.character.add([this.weaponLayer, this.muzzleFlash]);
 
     this.createCharacterAnimations();
@@ -1138,8 +1147,56 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
 
+  private createArenaPlayerPose(legOffset: number, bob: number) {
+    const color = 0x2f6b4e;
+    const g = this.add.graphics();
+
+    // This is copied from the live Arena createFighter() geometry rather than
+    // inventing a second Wardrobe character model. The same silhouette,
+    // proportions, palette and foot baseline are used here.
+    g.fillStyle(0x3b2f28, 1).fillEllipse(0, -20 + bob, 24, 18);
+    g.fillStyle(0xd8a66b, 1).fillEllipse(0, -17 + bob, 13, 12);
+    g.fillStyle(0xd4a45d, 1).fillCircle(-7, -17 + bob, 2.5).fillCircle(7, -17 + bob, 2.5);
+    g.fillStyle(color, 1).fillEllipse(0, -23 + bob, 25, 12);
+    g.fillStyle(0x111715, 1).fillRoundedRect(-13, -17 + bob, 26, 10, 4);
+    g.fillStyle(0x9bb9b1, 0.88).fillRoundedRect(-9, -15 + bob, 18, 6, 2);
+    g.lineStyle(1, 0xe8f2dc, 0.42).strokeRoundedRect(-9, -15 + bob, 18, 6, 2);
+    g.fillStyle(0xd4a45d, 1).fillRoundedRect(-4, -8 + bob, 8, 7, 2);
+    g.fillStyle(color, 1).fillRoundedRect(-15, -4 + bob, 30, 22, 8);
+    g.fillStyle(0x4f8b65, 1).fillRoundedRect(-10, -1 + bob, 20, 14, 4);
+    g.fillStyle(0x17201c, 0.9).fillRoundedRect(-15, 0 + bob, 6, 13, 2).fillRoundedRect(9, 0 + bob, 6, 13, 2);
+    g.fillStyle(0xc1a86c, 1).fillRect(-10, 8 + bob, 20, 4);
+    g.fillStyle(0x1d2923, 1).fillRect(-12, 12 + bob, 24, 5);
+    g.fillStyle(0x5e4936, 1).fillRoundedRect(-15, 8 + bob, 5, 8, 2).fillRoundedRect(10, 8 + bob, 5, 8, 2);
+    g.fillStyle(0x29372f, 1).fillRoundedRect(-11, 16 + bob, 22, 7, 3);
+    g.fillStyle(0x566052, 1)
+      .fillRoundedRect(-10 + legOffset, 20 + bob, 8, 13, 2)
+      .fillRoundedRect(2 - legOffset, 20 + bob, 8, 13, 2);
+    g.fillStyle(0x202522, 1)
+      .fillRoundedRect(-12 + legOffset, 30 + bob, 10, 7, 2)
+      .fillRoundedRect(2 - legOffset, 30 + bob, 10, 7, 2);
+
+    return g;
+  }
+
   private playCharacterAnimation(walking: boolean) {
     const def = this.currentDefinition();
+    this.poseClock += 0;
+
+    if (def.source === 'arena') {
+      this.fieldOperator.setVisible(false);
+      this.previewSprite.setVisible(false);
+      const step = Math.floor(this.poseClock / 120) % 2 === 1;
+      this.arenaPoseA.setVisible(!step).setScale(this.direction === 'LEFT' ? -1 : 1, 1);
+      this.arenaPoseB.setVisible(walking && step).setScale(this.direction === 'LEFT' ? -1 : 1, 1);
+      if (!walking) this.arenaPoseB.setVisible(false);
+      return;
+    }
+
+    this.fieldOperator.setVisible(false);
+    this.previewSprite.setVisible(true);
+
+    if (def.source !== 'generated') {    const def = this.currentDefinition();
 
     this.fieldOperator.setVisible(false);
     this.previewSprite.setVisible(true);
