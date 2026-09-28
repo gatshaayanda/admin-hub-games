@@ -701,6 +701,32 @@ export class WardrobeLabScene extends Phaser.Scene {
     return 'wardrobe-' + def.id + '-' + action;
   }
 
+  private createArenaReferenceTexture() {
+    if (this.textures.exists('wardrobe-arena-reference')) return;
+    const g = this.add.graphics();
+    const bob = 0;
+    g.fillStyle(0x3b2f28, 1).fillEllipse(50, 27 + bob, 24, 18);
+    g.fillStyle(0xd8a66b, 1).fillEllipse(50, 30 + bob, 13, 12);
+    g.fillStyle(0xd4a45d, 1).fillCircle(43, 30, 2.5).fillCircle(57, 30, 2.5);
+    g.fillStyle(0x2f6b4e, 1).fillEllipse(50, 24, 25, 12);
+    g.fillStyle(0x111715, 1).fillRoundedRect(37, 30, 26, 10, 4);
+    g.fillStyle(0x9bb9b1, 0.88).fillRoundedRect(41, 32, 18, 6, 2);
+    g.fillStyle(0xd4a45d, 1).fillRoundedRect(46, 37, 8, 7, 2);
+    g.fillStyle(0x2f6b4e, 1).fillRoundedRect(35, 41, 30, 22, 8);
+    g.fillStyle(0x4f8b65, 1).fillRoundedRect(40, 44, 20, 14, 4);
+    g.fillStyle(0x17201c, 0.9).fillRoundedRect(35, 45, 6, 13, 2).fillRoundedRect(59, 45, 6, 13, 2);
+    g.fillStyle(0xc1a86c, 1).fillRect(40, 53, 20, 4);
+    g.fillStyle(0x1d2923, 1).fillRect(38, 57, 24, 5);
+    g.fillStyle(0x5e4936, 1).fillRoundedRect(35, 53, 5, 8, 2).fillRoundedRect(60, 53, 5, 8, 2);
+    g.fillStyle(0x29372f, 1).fillRoundedRect(39, 62, 22, 7, 3);
+    g.fillStyle(0x566052, 1).fillRoundedRect(40, 66, 8, 13, 2).fillRoundedRect(52, 66, 8, 13, 2);
+    g.fillStyle(0x202522, 1).fillRoundedRect(38, 76, 10, 7, 2).fillRoundedRect(52, 76, 10, 7, 2);
+    g.lineStyle(4, 0x2a332f, 1).lineBetween(57, 48, 72, 43);
+    g.fillStyle(0x111715, 1).fillRoundedRect(68, 40, 16, 5, 2);
+    g.generateTexture('wardrobe-arena-reference', 100, 100);
+    g.destroy();
+  }
+
   private currentDefinition() {
     return this.characterDefinitions[this.selectedCharacterIndex];
   }
@@ -866,8 +892,6 @@ export class WardrobeLabScene extends Phaser.Scene {
       return;
     }
 
-    const vx = this.visualMove.x;
-    const vy = this.visualMove.y;
     const action = this.generatedAction;
     const atlasKey = 'wardrobe-generated-player-atlas';
     const reactionFrames: Record<string, [number, number]> = {
