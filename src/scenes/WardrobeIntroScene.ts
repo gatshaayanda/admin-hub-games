@@ -296,7 +296,7 @@ type WardrobeCharacterDefinition = {
 
 const WARDROBE_PLAYER_DEFINITION: WardrobeCharacterDefinition = {
   id: 'arena_player',
-  name: 'SHOOTERS TRIGGER PLAYER · GENERATED V2',
+  name: 'SHOOTERS TRIGGER PLAYER · GENERATED PLAYER',
   source: 'generated',
   basePath: '/assets/wardrobe/generated',
   displaySize: 80,
@@ -310,7 +310,7 @@ const WARDROBE_PLAYER_DEFINITION: WardrobeCharacterDefinition = {
 const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
   {
     id: 'arena_player',
-    name: 'SHOOTERS TRIGGER PLAYER · GENERATED V2 · 2.JPG',
+    name: 'SHOOTERS TRIGGER PLAYER · GENERATED PLAYER · 1.JPG',
     source: 'generated',
     basePath: '/assets/wardrobe/generated',
     displaySize: 80,
@@ -394,7 +394,7 @@ const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
     displaySize: 80,
     targetVisibleHeight: 60,
     frameWidth: 192,
-    frameHeight: 256,
+    frameHeight: 192,
     originY: 165 / 192,
     embeddedWeapon: false,
   })),
