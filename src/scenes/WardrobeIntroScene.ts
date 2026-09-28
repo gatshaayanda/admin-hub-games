@@ -732,26 +732,22 @@ export class WardrobeLabScene extends Phaser.Scene {
     g.fillStyle(0x202522, 1).fillRoundedRect(px(-12), py(30), 10, 7, 2).fillRoundedRect(px(2), py(30), 10, 7, 2);
 
     // Exact Arena arms + weapon pose at the same default rightward aim.
-    const arms = this.add.graphics();
-    arms.lineStyle(5, 0x314b3c, 1);
-    arms.lineBetween(px(-8), py(5), px(5), py(2));
-    arms.lineBetween(px(8), py(5), px(12), py(4));
-    arms.fillStyle(0xd4a45d, 1).fillCircle(px(5), py(2), 3).fillCircle(px(12), py(4), 3);
+    g.lineStyle(5, 0x314b3c, 1);
+    g.lineBetween(px(-8), py(5), px(5), py(2));
+    g.lineBetween(px(8), py(5), px(12), py(4));
+    g.fillStyle(0xd4a45d, 1).fillCircle(px(5), py(2), 3).fillCircle(px(12), py(4), 3);
 
-    const weapon = this.add.graphics();
-    weapon.lineStyle(3, 0x6c806f, 1).lineBetween(px(10), py(5), px(2), py(12));
-    weapon.fillStyle(0x151b18, 1).fillEllipse(px(13), py(-8), 9, 7);
-    weapon.fillStyle(0x33423b, 1).fillRoundedRect(px(7), py(-4), 18, 9, 3);
-    weapon.fillStyle(0x111715, 1).fillRect(px(22), py(-2), 15, 5);
-    weapon.fillStyle(0x53635c, 1).fillRect(px(12), py(-9), 8, 4);
-    weapon.fillStyle(0x171d1b, 1).fillRoundedRect(px(11), py(4), 5, 10, 2);
-    weapon.fillStyle(0x493b31, 1).fillRoundedRect(px(-5), py(4), 10, 5, 2);
-    weapon.lineStyle(3, 0x2a332f, 1).lineBetween(px(-2), py(6), px(8), py(5));
-    weapon.lineStyle(1, 0xe8c95c, 0.45).lineBetween(px(35), py(0), px(45), py(0));
+    g.lineStyle(3, 0x6c806f, 1).lineBetween(px(10), py(5), px(2), py(12));
+    g.fillStyle(0x151b18, 1).fillEllipse(px(13), py(-8), 9, 7);
+    g.fillStyle(0x33423b, 1).fillRoundedRect(px(7), py(-4), 18, 9, 3);
+    g.fillStyle(0x111715, 1).fillRect(px(22), py(-2), 15, 5);
+    g.fillStyle(0x53635c, 1).fillRect(px(12), py(-9), 8, 4);
+    g.fillStyle(0x171d1b, 1).fillRoundedRect(px(11), py(4), 5, 10, 2);
+    g.fillStyle(0x493b31, 1).fillRoundedRect(px(-5), py(4), 10, 5, 2);
+    g.lineStyle(3, 0x2a332f, 1).lineBetween(px(-2), py(6), px(8), py(5));
+    g.lineStyle(1, 0xe8c95c, 0.45).lineBetween(px(35), py(0), px(45), py(0));
 
     g.generateTexture('wardrobe-arena-reference', 120, 90);
-    arms.destroy();
-    weapon.destroy();
     g.destroy();
   }
 
