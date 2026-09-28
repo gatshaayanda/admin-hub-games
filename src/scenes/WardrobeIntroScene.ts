@@ -1099,12 +1099,15 @@ export class WardrobeLabScene extends Phaser.Scene {
     const bodyScale = this.previewSprite.scaleX || (this.targetVisibleCharacterHeight / 160);
     const angle = Math.atan2(this.aim.y, this.aim.x);
     const shoulderY = -40 * bodyScale;
-    const weaponX = 2 * bodyScale;
-    const weaponY = shoulderY;
 
-    // The extracted weapon is a tightly cropped 234px-wide transparent layer.
-    // Normalize it to the Arena's approximately 50px visual weapon length.
+    // Match the separated artwork to the reference by treating the weapon
+    // grip as the attachment point, rather than positioning the whole gun
+    // from its transparent canvas center.
+    const handX = 7 * bodyScale;
+    const handY = shoulderY + 3 * bodyScale;
     const weaponScale = 50 / 234;
+    const weaponGripOriginX = 0.22;
+    const weaponGripOriginY = 0.52;
 
     this.armsSprite
       .setVisible(true)
@@ -1116,19 +1119,19 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.weaponSprite
       .setVisible(true)
       .setScale(weaponScale)
-      .setPosition(weaponX, weaponY)
+      .setOrigin(weaponGripOriginX, weaponGripOriginY)
+      .setPosition(handX, handY)
       .setRotation(angle)
       .setFlipY(this.aim.x < 0);
 
-    // The muzzle follows the normalized weapon and remains part of the same
-    // visual rig. The projectile origin is derived from this same rig below.
+    // Keep the muzzle visually attached to the weapon's forward end.
     const muzzleDistance = 50;
     this.muzzleSprite
       .setVisible(this.muzzleUntil > 0)
       .setScale(bodyScale)
       .setPosition(
-        weaponX + this.aim.x * muzzleDistance,
-        weaponY + this.aim.y * muzzleDistance,
+        handX + this.aim.x * muzzleDistance,
+        handY + this.aim.y * muzzleDistance,
       )
       .setRotation(angle)
       .setFlipY(this.aim.x < 0);
