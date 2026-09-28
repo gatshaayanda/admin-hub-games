@@ -414,6 +414,13 @@ export class WardrobeLabScene extends Phaser.Scene {
   private shadow!: Phaser.GameObjects.Ellipse;
   private weaponLayer!: Phaser.GameObjects.Graphics;
   private muzzleFlash!: Phaser.GameObjects.Graphics;
+  // Arena reference rig: the body/pose stays independent from arms, weapon and muzzle,
+  // exactly like ShootersTriggerArenaScene.createFighter().
+  private arenaPoseA!: Phaser.GameObjects.Graphics;
+  private arenaPoseB!: Phaser.GameObjects.Graphics;
+  private arenaArms!: Phaser.GameObjects.Graphics;
+  private arenaWeapon!: Phaser.GameObjects.Graphics;
+  private arenaMuzzle!: Phaser.GameObjects.Graphics;
   private target!: Phaser.GameObjects.Container;
   private targetSprite!: Phaser.GameObjects.Sprite;
   private spriteLabel!: Phaser.GameObjects.Text;
@@ -521,26 +528,45 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.drawArenaField();
 
     this.character = this.add.container(this.playerSpawn.x, this.playerSpawn.y).setDepth(30);
-    this.shadow = this.add.ellipse(0, 0, 46, 13, 0x3d3025, 0.28);
-    // The common weapon overlay must start hidden. It is only enabled
-    // explicitly for the generated Shooter Trigger operator below.
+
+    const current = this.currentDefinition();
+    const arenaReference = current.source === 'arena';
+    this.shadow = this.add.ellipse(
+      0,
+      arenaReference ? 34 : 0,
+      arenaReference ? 27 : 46,
+      arenaReference ? 10 : 13,
+      0x3d3025,
+      0.28,
+    );
+
+    // Keep the generic overlay hidden. The Arena reference gets its own exact
+    // fighter rig below; the generated operator will later graduate to the same
+    // separated weapon architecture once its artwork is prepared weapon-free.
     this.weaponLayer = this.add.graphics().setVisible(false);
     this.muzzleFlash = this.add.graphics().setVisible(false);
     this.character.add([this.shadow]);
 
-    const current = this.currentDefinition();
-    if (current.source === 'arena') {
-      this.createArenaReferenceTexture();
-      this.previewSprite = this.add.sprite(0, 0, 'wardrobe-arena-reference-a')
-        .setOrigin(0.5, 0.86)
-        .setDisplaySize(80, 80);
+    if (arenaReference) {
+      this.createArenaReferenceRig();
+      this.previewSprite = this.add.sprite(0, 0, 'wardrobe-generated-player-atlas', 0)
+        .setOrigin(0.5, 1)
+        .setVisible(false);
+      this.character.add(this.previewSprite);
+      this.character.add([
+        this.arenaPoseA,
+        this.arenaPoseB,
+        this.arenaArms,
+        this.arenaWeapon,
+        this.arenaMuzzle,
+      ]);
     } else {
       this.previewSprite = this.add.sprite(0, 0, this.spriteKey(current, 'DOWN'), 0)
         .setOrigin(0.5, current.originY);
       this.fitCharacterSprite(this.previewSprite, current);
+      this.previewSprite.setVisible(true);
+      this.character.add(this.previewSprite);
     }
-    this.previewSprite.setVisible(true);
-    this.character.add(this.previewSprite);
     this.character.add([this.weaponLayer, this.muzzleFlash]);
 
     this.createCharacterAnimations();
@@ -705,56 +731,72 @@ export class WardrobeLabScene extends Phaser.Scene {
     return 'wardrobe-' + def.id + '-' + action;
   }
 
-  private createArenaReferenceTexture() {
-    const makePoseTexture = (key: string, legOffset: number, bob: number) => {
-      if (this.textures.exists(key)) return;
+  private createArenaReferenceRig() {
+    const makePose = (legOffset: number, bob: number) => {
       const g = this.add.graphics();
-      const ox = 60;
-      const oy = 34;
-      const px = (x: number) => x + ox;
-      const py = (y: number) => y + oy;
 
-      // Keep this pose construction byte-for-byte aligned with Shooter Trigger
-      // Arena createFighter(): only the animation state is reproduced here.
-      g.fillStyle(0x3b2f28, 1).fillEllipse(px(0), py(-20 + bob), 24, 18);
-      g.fillStyle(0xd8a66b, 1).fillEllipse(px(0), py(-17 + bob), 13, 12);
-      g.fillStyle(0xd4a45d, 1).fillCircle(px(-7), py(-17 + bob), 2.5).fillCircle(px(7), py(-17 + bob), 2.5);
-      g.fillStyle(0x2f6b4e, 1).fillEllipse(px(0), py(-23 + bob), 25, 12);
-      g.fillStyle(0x111715, 1).fillRoundedRect(px(-13), py(-17 + bob), 26, 10, 4);
-      g.fillStyle(0x9bb9b1, 0.88).fillRoundedRect(px(-9), py(-15 + bob), 18, 6, 2);
-      g.lineStyle(1, 0xe8f2dc, 0.42).strokeRoundedRect(px(-9), py(-15 + bob), 18, 6, 2);
-      g.fillStyle(0xd4a45d, 1).fillRoundedRect(px(-4), py(-8 + bob), 8, 7, 2);
-      g.fillStyle(0x2f6b4e, 1).fillRoundedRect(px(-15), py(-4 + bob), 30, 22, 8);
-      g.fillStyle(0x4f8b65, 1).fillRoundedRect(px(-10), py(-1 + bob), 20, 14, 4);
-      g.fillStyle(0x17201c, 0.9).fillRoundedRect(px(-15), py(0 + bob), 6, 13, 2).fillRoundedRect(px(9), py(0 + bob), 6, 13, 2);
-      g.fillStyle(0xc1a86c, 1).fillRect(px(-10), py(8 + bob), 20, 4);
-      g.fillStyle(0x1d2923, 1).fillRect(px(-12), py(12 + bob), 24, 5);
-      g.fillStyle(0x5e4936, 1).fillRoundedRect(px(-15), py(8 + bob), 5, 8, 2).fillRoundedRect(px(10), py(8 + bob), 5, 8, 2);
-      g.fillStyle(0x29372f, 1).fillRoundedRect(px(-11), py(16 + bob), 22, 7, 3);
-      g.fillStyle(0x566052, 1).fillRoundedRect(px(-10 + legOffset), py(20 + bob), 8, 13, 2).fillRoundedRect(px(2 - legOffset), py(20 + bob), 8, 13, 2);
-      g.fillStyle(0x202522, 1).fillRoundedRect(px(-12 + legOffset), py(30 + bob), 10, 7, 2).fillRoundedRect(px(2 - legOffset), py(30 + bob), 10, 7, 2);
-
-      g.lineStyle(5, 0x314b3c, 1);
-      g.lineBetween(px(-8), py(5), px(5), py(2));
-      g.lineBetween(px(8), py(5), px(12), py(4));
-      g.fillStyle(0xd4a45d, 1).fillCircle(px(5), py(2), 3).fillCircle(px(12), py(4), 3);
-      g.lineStyle(3, 0x6c806f, 1).lineBetween(px(10), py(5), px(2), py(12));
-      g.fillStyle(0x151b18, 1).fillEllipse(px(13), py(-8), 9, 7);
-      g.fillStyle(0x33423b, 1).fillRoundedRect(px(7), py(-4), 18, 9, 3);
-      g.fillStyle(0x111715, 1).fillRect(px(22), py(-2), 15, 5);
-      g.fillStyle(0x53635c, 1).fillRect(px(12), py(-9), 8, 4);
-      g.fillStyle(0x171d1b, 1).fillRoundedRect(px(11), py(4), 5, 10, 2);
-      g.fillStyle(0x493b31, 1).fillRoundedRect(px(-5), py(4), 10, 5, 2);
-      g.lineStyle(3, 0x2a332f, 1).lineBetween(px(-2), py(6), px(8), py(5));
-      g.lineStyle(1, 0xe8c95c, 0.45).lineBetween(px(35), py(0), px(45), py(0));
-
-      g.generateTexture(key, 120, 90);
-      g.destroy();
+      // This is intentionally the same body construction as Shooter Trigger
+      // Arena. The reference is a structural copy, not a baked screenshot.
+      g.fillStyle(0x3b2f28, 1).fillEllipse(0, -20 + bob, 24, 18);
+      g.fillStyle(0xd8a66b, 1).fillEllipse(0, -17 + bob, 13, 12);
+      g.fillStyle(0xd4a45d, 1).fillCircle(-7, -17 + bob, 2.5).fillCircle(7, -17 + bob, 2.5);
+      g.fillStyle(0x2f6b4e, 1).fillEllipse(0, -23 + bob, 25, 12);
+      g.fillStyle(0x111715, 1).fillRoundedRect(-13, -17 + bob, 26, 10, 4);
+      g.fillStyle(0x9bb9b1, 0.88).fillRoundedRect(-9, -15 + bob, 18, 6, 2);
+      g.lineStyle(1, 0xe8f2dc, 0.42).strokeRoundedRect(-9, -15 + bob, 18, 6, 2);
+      g.fillStyle(0xd4a45d, 1).fillRoundedRect(-4, -8 + bob, 8, 7, 2);
+      g.fillStyle(0x2f6b4e, 1).fillRoundedRect(-15, -4 + bob, 30, 22, 8);
+      g.fillStyle(0x4f8b65, 1).fillRoundedRect(-10, -1 + bob, 20, 14, 4);
+      g.fillStyle(0x17201c, 0.9).fillRoundedRect(-15, 0 + bob, 6, 13, 2).fillRoundedRect(9, 0 + bob, 6, 13, 2);
+      g.fillStyle(0xc1a86c, 1).fillRect(-10, 8 + bob, 20, 4);
+      g.fillStyle(0x1d2923, 1).fillRect(-12, 12 + bob, 24, 5);
+      g.fillStyle(0x5e4936, 1).fillRoundedRect(-15, 8 + bob, 5, 8, 2).fillRoundedRect(10, 8 + bob, 5, 8, 2);
+      g.fillStyle(0x29372f, 1).fillRoundedRect(-11, 16 + bob, 22, 7, 3);
+      g.fillStyle(0x566052, 1).fillRoundedRect(-10 + legOffset, 20 + bob, 8, 13, 2).fillRoundedRect(2 - legOffset, 20 + bob, 8, 13, 2);
+      g.fillStyle(0x202522, 1).fillRoundedRect(-12 + legOffset, 30 + bob, 10, 7, 2).fillRoundedRect(2 - legOffset, 30 + bob, 10, 7, 2);
+      return g;
     };
 
-    makePoseTexture('wardrobe-arena-reference-a', 0, 0);
-    makePoseTexture('wardrobe-arena-reference-b', 2, 1);
+    this.arenaPoseA = makePose(0, 0);
+    this.arenaPoseB = makePose(2, 1).setVisible(false);
+    this.arenaArms = this.add.graphics();
+    this.arenaWeapon = this.add.graphics();
+    this.arenaMuzzle = this.add.graphics();
+    this.updateArenaReferenceWeaponPose();
   }
+
+  private updateArenaReferenceWeaponPose() {
+    if (!this.arenaArms || !this.arenaWeapon || !this.arenaMuzzle) return;
+
+    const angle = Math.atan2(this.aim.y, this.aim.x);
+
+    // Exact Shooter Trigger Arena offsets and artwork.
+    this.arenaWeapon.setRotation(angle).setPosition(5, 3);
+    this.arenaArms.setRotation(angle).setPosition(0, 0);
+    this.arenaArms.clear();
+    this.arenaArms.lineStyle(5, 0x314b3c, 1);
+    this.arenaArms.lineBetween(-8, 5, 5, 2);
+    this.arenaArms.lineBetween(8, 5, 12, 4);
+    this.arenaArms.fillStyle(0xd4a45d, 1).fillCircle(5, 2, 3).fillCircle(12, 4, 3);
+
+    this.arenaWeapon.clear();
+    this.arenaWeapon.lineStyle(3, 0x6c806f, 1).lineBetween(10, 5, 2, 12);
+    this.arenaWeapon.fillStyle(0x151b18, 1).fillEllipse(13, -8, 9, 7);
+    this.arenaWeapon.fillStyle(0x33423b, 1).fillRoundedRect(7, -4, 18, 9, 3);
+    this.arenaWeapon.fillStyle(0x111715, 1).fillRect(22, -2, 15, 5);
+    this.arenaWeapon.fillStyle(0x53635c, 1).fillRect(12, -9, 8, 4);
+    this.arenaWeapon.fillStyle(0x171d1b, 1).fillRoundedRect(11, 4, 5, 10, 2);
+    this.arenaWeapon.fillStyle(0x493b31, 1).fillRoundedRect(-5, 4, 10, 5, 2);
+    this.arenaWeapon.lineStyle(3, 0x2a332f, 1).lineBetween(-2, 6, 8, 5);
+    this.arenaWeapon.lineStyle(1, 0xe8c95c, 0.45).lineBetween(35, 0, 45, 0);
+
+    this.arenaMuzzle.clear();
+    this.arenaMuzzle.setRotation(angle).setPosition(42, 0);
+    this.arenaMuzzle.fillStyle(0xf0dfb6, 0.72);
+    this.arenaMuzzle.fillCircle(0, 0, 3);
+    this.arenaMuzzle.setVisible(this.muzzleUntil > 0);
+  }
+
 
   private currentDefinition() {
     return this.characterDefinitions[this.selectedCharacterIndex];
@@ -891,12 +933,15 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.previewSprite.setVisible(true);
 
     if (def.source === 'arena') {
-      this.createArenaReferenceTexture();
-      const poseB = Math.floor(this.arenaAnimTime / 120) % 2 === 1;
-      this.previewSprite.setTexture(poseB ? 'wardrobe-arena-reference-b' : 'wardrobe-arena-reference-a');
-      this.previewSprite.setDisplaySize(80, 80).setOrigin(0.5, 0.86);
-      this.previewSprite.setFlipX(vx < -0.08);
-      this.previewSprite.setRotation(0);
+      // Exact Arena animation contract: 120ms while moving, 650ms while idle.
+      const poseB = Math.floor(this.arenaAnimTime / (walking ? 120 : 650)) % 2 === 1;
+      this.previewSprite.setVisible(false);
+      this.arenaPoseA.setVisible(!poseB).setScale(this.playerFacing, 1);
+      this.arenaPoseB.setVisible(poseB).setScale(this.playerFacing, 1);
+      this.arenaArms.setVisible(true);
+      this.arenaWeapon.setVisible(true);
+      this.arenaMuzzle.setVisible(this.muzzleUntil > 0);
+      this.updateArenaReferenceWeaponPose();
       return;
     }
 
@@ -1018,6 +1063,21 @@ export class WardrobeLabScene extends Phaser.Scene {
 
   private updateWeaponLayer() {
     const def = this.currentDefinition();
+
+    if (def.source === 'arena') {
+      this.weaponLayer.clear().setVisible(false);
+      this.muzzleFlash.clear().setVisible(false);
+      this.arenaArms.setVisible(true);
+      this.arenaWeapon.setVisible(true);
+      this.arenaMuzzle.setVisible(this.muzzleUntil > 0);
+      this.updateArenaReferenceWeaponPose();
+      return;
+    }
+
+    this.arenaArms?.setVisible(false);
+    this.arenaWeapon?.setVisible(false);
+    this.arenaMuzzle?.setVisible(false);
+
     this.weaponLayer.clear();
     this.muzzleFlash.clear();
     this.weaponLayer.setVisible(false);
@@ -1065,10 +1125,13 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   private fireShot() {
+    const def = this.currentDefinition();
+    const muzzleOffset = def.source === 'arena' ? 42 : 42;
+    const aimOriginY = def.source === 'arena' ? 0 : -52;
     const origin = new Phaser.Math.Vector2(
-          this.character.x + this.aim.x * 42,
-          this.character.y - 52 + this.aim.y * 10,
-        );
+      this.character.x + this.aim.x * muzzleOffset,
+      this.character.y + aimOriginY + this.aim.y * (def.source === 'arena' ? 0 : 10),
+    );
     const velocity = this.aim.clone().normalize().scale(this.projectileSpeed);
     const graphics = this.add.circle(origin.x, origin.y, 4, 0xf0dfb6, 1).setDepth(60);
     this.shots.push({
@@ -1162,8 +1225,9 @@ export class WardrobeLabScene extends Phaser.Scene {
 
   private updateAimFromWorldPointer(pointer: Phaser.Input.Pointer) {
     const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+    const aimOriginY = this.currentDefinition().source === 'arena' ? 0 : -52;
     const dx = point.x - this.character.x;
-    const dy = point.y - (this.character.y - 52);
+    const dy = point.y - (this.character.y + aimOriginY);
     const length = Math.hypot(dx, dy);
     if (length > 2) this.aim.set(dx / length, dy / length);
   }
@@ -1238,13 +1302,26 @@ export class WardrobeLabScene extends Phaser.Scene {
 
     const def = this.currentDefinition();
     this.previewSprite.stop();
-    if (def.source === 'arena') {
-      this.createArenaReferenceTexture();
-      this.previewSprite.setTexture('wardrobe-arena-reference-a');
-      this.previewSprite.setDisplaySize(80, 80).setOrigin(0.5, 0.86);
+
+    const arenaReference = def.source === 'arena';
+    this.shadow.setPosition(0, arenaReference ? 34 : 0);
+    this.shadow.setSize(arenaReference ? 27 : 46, arenaReference ? 10 : 13);
+    this.previewSprite.setVisible(!arenaReference);
+
+    if (arenaReference) {
+      this.arenaPoseA.setVisible(true).setScale(1, 1);
+      this.arenaPoseB.setVisible(false).setScale(1, 1);
+      this.arenaArms.setVisible(true);
+      this.arenaWeapon.setVisible(true);
+      this.arenaMuzzle.setVisible(false);
     } else {
       this.previewSprite.setTexture(this.spriteKey(def, 'DOWN'), 0);
       this.fitCharacterSprite(this.previewSprite, def);
+      this.arenaPoseA.setVisible(false);
+      this.arenaPoseB.setVisible(false);
+      this.arenaArms.setVisible(false);
+      this.arenaWeapon.setVisible(false);
+      this.arenaMuzzle.setVisible(false);
     }
     this.previewSprite.setRotation(0);
     this.updateWeaponLayer();
@@ -1325,6 +1402,9 @@ export class WardrobeLabScene extends Phaser.Scene {
 
   private resetCharacter() {
     this.character.setPosition(this.playerSpawn.x, this.playerSpawn.y);
+    const arenaReference = this.currentDefinition().source === 'arena';
+    this.shadow.setPosition(0, arenaReference ? 34 : 0);
+    this.shadow.setSize(arenaReference ? 27 : 46, arenaReference ? 10 : 13);
     this.move.set(0, 0);
     this.direction = 'DOWN';
     this.visualMove.set(0, 1);
