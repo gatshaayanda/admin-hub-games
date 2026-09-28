@@ -315,7 +315,7 @@ const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
     frameWidth: 164,
     frameHeight: 216,
     originY: 1,
-    embeddedWeapon: false,
+    embeddedWeapon: true,
   },
   {
     id: 'arena_reference',
@@ -1019,7 +1019,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.weaponLayer.setVisible(false);
     this.muzzleFlash.setVisible(false);
 
-    if (def.source !== 'generated') {
+    if (def.source !== 'generated' || def.embeddedWeapon) {
       this.weaponLayer.clear();
       this.muzzleFlash.clear();
       this.weaponLayer.setVisible(false);
@@ -1027,10 +1027,8 @@ export class WardrobeLabScene extends Phaser.Scene {
       return;
     }
 
-    // Keep the generated operator's weapon presentation aligned with the
-    // actual Shooters Trigger fighter: body/facing stays independent while
-    // arms, weapon and muzzle rotate around the same shoulder/hand anchor.
-    this.weaponLayer.setVisible(true);
+    // The generated 1.jpg operator already contains its own weapon/arms.
+    // Do not draw a second synthetic weapon on top of the artwork.
     this.muzzleFlash.setVisible(this.muzzleUntil > 0);
 
     const angle = Math.atan2(this.aim.y, this.aim.x);
