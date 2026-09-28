@@ -60,12 +60,12 @@ export class WardrobeIntroScene extends Phaser.Scene {
   preload() {
     this.load.spritesheet(
       'wardrobe-generated-player-atlas',
-      '/assets/wardrobe/generated-v2/player-body-atlas.png',
-      { frameWidth: 176, frameHeight: 192 },
+      '/assets/wardrobe/generated/player-atlas.png',
+      { frameWidth: 256, frameHeight: 256 },
     );
-    this.load.image('wardrobe-generated-v2-arms', '/assets/wardrobe/generated-v2/player-arms.png');
-    this.load.image('wardrobe-generated-v2-weapon', '/assets/wardrobe/generated-v2/player-weapon.png');
-    this.load.image('wardrobe-generated-v2-muzzle', '/assets/wardrobe/generated-v2/player-muzzle.png');
+    this.load.image('wardrobe-generated-v2-arms', '/assets/wardrobe/generated/player-atlas.png');
+    this.load.image('wardrobe-generated-v2-weapon', '/assets/wardrobe/generated/player-atlas.png');
+    this.load.image('wardrobe-generated-v2-muzzle', '/assets/wardrobe/generated/player-atlas.png');
   }
 
   create() {
@@ -298,11 +298,11 @@ const WARDROBE_PLAYER_DEFINITION: WardrobeCharacterDefinition = {
   id: 'arena_player',
   name: 'SHOOTERS TRIGGER PLAYER · GENERATED V2',
   source: 'generated',
-  basePath: '/assets/wardrobe/generated-v2',
+  basePath: '/assets/wardrobe/generated',
   displaySize: 80,
   targetVisibleHeight: 60,
-  frameWidth: 176,
-  frameHeight: 192,
+  frameWidth: 256,
+  frameHeight: 256,
   originY: 1,
   embeddedWeapon: false,
 };
@@ -312,11 +312,11 @@ const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
     id: 'arena_player',
     name: 'SHOOTERS TRIGGER PLAYER · GENERATED V2 · 2.JPG',
     source: 'generated',
-    basePath: '/assets/wardrobe/generated-v2',
+    basePath: '/assets/wardrobe/generated',
     displaySize: 80,
     targetVisibleHeight: 60,
-    frameWidth: 176,
-    frameHeight: 192,
+    frameWidth: 256,
+    frameHeight: 256,
     originY: 1,
     embeddedWeapon: false,
   },
@@ -394,7 +394,7 @@ const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
     displaySize: 80,
     targetVisibleHeight: 60,
     frameWidth: 192,
-    frameHeight: 192,
+    frameHeight: 256,
     originY: 165 / 192,
     embeddedWeapon: false,
   })),
@@ -481,12 +481,12 @@ export class WardrobeLabScene extends Phaser.Scene {
   preload() {
     this.load.spritesheet(
       'wardrobe-generated-player-atlas',
-      '/assets/wardrobe/generated-v2/player-body-atlas.png',
-      { frameWidth: 176, frameHeight: 192 },
+      '/assets/wardrobe/generated/player-atlas.png',
+      { frameWidth: 256, frameHeight: 256 },
     );
-    this.load.image('wardrobe-generated-v2-arms', '/assets/wardrobe/generated-v2/player-arms.png');
-    this.load.image('wardrobe-generated-v2-weapon', '/assets/wardrobe/generated-v2/player-weapon.png');
-    this.load.image('wardrobe-generated-v2-muzzle', '/assets/wardrobe/generated-v2/player-muzzle.png');
+    this.load.image('wardrobe-generated-v2-arms', '/assets/wardrobe/generated/player-atlas.png');
+    this.load.image('wardrobe-generated-v2-weapon', '/assets/wardrobe/generated/player-atlas.png');
+    this.load.image('wardrobe-generated-v2-muzzle', '/assets/wardrobe/generated/player-atlas.png');
     for (const direction of ['DOWN', 'UP', 'LEFT', 'RIGHT'] as const) {
       this.load.spritesheet(
         this.spriteKey(this.targetDefinition, direction),
