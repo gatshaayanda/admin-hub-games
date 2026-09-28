@@ -1116,10 +1116,10 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.arenaWeapon.setVisible(true);
     this.arenaMuzzle.setVisible(this.muzzleUntil > 0);
     this.updateArenaReferenceWeaponPose();
+  }
 
   private fireShot() {
     const def = this.currentDefinition();
-    const bodyScale = this.previewSprite.scaleX || (this.targetVisibleCharacterHeight / 160);
     const origin = def.source === 'generated'
       ? new Phaser.Math.Vector2(
         this.character.x + this.aim.x * 42,
