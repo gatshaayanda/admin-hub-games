@@ -1,6 +1,5 @@
 from pathlib import Path
 from PIL import Image
-from collections import deque
 import json
 
 SOURCE = Path("public/assets/wardrobe/incoming/2.jpg")
@@ -17,27 +16,19 @@ REGIONS = {
     "muzzle": (4 * CELL_W, 3 * CELL_H, 8 * CELL_W, 4 * CELL_H),
 }
 
-def rgb_distance(a, b):
-    return sum((int(a[i]) - int(b[i])) ** 2 for i in range(3)) ** 0.5
-
 def foreground_mask(im):
     rgb = im.convert("RGB")
     px = rgb.load()
-    # Checkerboard tones are sampled from the cell corners. Anything close
-    # to those pale neutral tones is treated as source background.
-    samples = [
-        px[3, 3], px[rgb.width - 4, 3],
-        px[3, rgb.height - 4], px[rgb.width - 4, rgb.height - 4],
-    ]
     mask = Image.new("1", rgb.size, 0)
     out = mask.load()
     for y in range(rgb.height):
         for x in range(rgb.width):
             c = px[x, y]
-            # Keep strongly saturated/dark artwork, discard pale checkerboard.
-            neutral = max(c) - min(c) < 34
-            near_bg = min(rgb_distance(c, s) for s in samples) < 38
-            if not (near_bg and neutral and min(c) > 125):
+            # Gemini's baked checkerboard is pale and nearly neutral. Keep
+            # saturated/dark artwork and discard pale neutral source pixels.
+            neutral = max(c) - min(c) < 52
+            pale = min(c) > 108
+            if not (neutral and pale):
                 out[x, y] = 1
     return mask
 
