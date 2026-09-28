@@ -547,8 +547,12 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.muzzleFlash = this.add.graphics().setVisible(false);
     this.character.add([this.shadow]);
 
+    // Build the Arena reference rig once, regardless of which character is
+    // selected at startup. PREV/NEXT must be able to enter the Arena reference
+    // safely from every visual-test character.
+    this.createArenaReferenceRig();
+
     if (arenaReference) {
-      this.createArenaReferenceRig();
       this.previewSprite = this.add.sprite(0, 0, 'wardrobe-generated-player-atlas', 0)
         .setOrigin(0.5, 1)
         .setVisible(false);
@@ -566,6 +570,11 @@ export class WardrobeLabScene extends Phaser.Scene {
       this.fitCharacterSprite(this.previewSprite, current);
       this.previewSprite.setVisible(true);
       this.character.add(this.previewSprite);
+      this.arenaPoseA.setVisible(false);
+      this.arenaPoseB.setVisible(false);
+      this.arenaArms.setVisible(false);
+      this.arenaWeapon.setVisible(false);
+      this.arenaMuzzle.setVisible(false);
     }
     this.character.add([this.weaponLayer, this.muzzleFlash]);
 
