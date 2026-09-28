@@ -1134,7 +1134,12 @@ export class WardrobeLabScene extends Phaser.Scene {
       .setFlipY(this.aim.x < 0);
 
     // Keep the muzzle visually attached to the weapon's forward end.
-    const muzzleDistance = 50;
+    // The extracted weapon is 234px wide and its grip is at 22% of the
+    // source canvas. At 50px display width, the visible barrel/muzzle starts
+    // about 39px forward of the grip. Keep the muzzle and projectile origin
+    // on that same physical point so the shot cannot come from an invisible
+    // location ahead of the gun.
+    const muzzleDistance = 39;
     this.muzzleSprite
       .setVisible(this.muzzleUntil > 0)
       .setScale(bodyScale)
@@ -1156,8 +1161,8 @@ export class WardrobeLabScene extends Phaser.Scene {
     const bodyScale = this.previewSprite.scaleX || (this.targetVisibleCharacterHeight / 160);
     const origin = def.source === 'generated'
       ? new Phaser.Math.Vector2(
-        this.character.x + 2 * bodyScale + this.aim.x * 112 * bodyScale,
-        this.character.y - 40 * bodyScale + this.aim.y * 112 * bodyScale,
+        this.character.x + 7 * bodyScale + this.aim.x * 39,
+        this.character.y - 40 * bodyScale + this.aim.y * 39,
       )
       : new Phaser.Math.Vector2(
         this.character.x + this.aim.x * 42,
@@ -1256,7 +1261,7 @@ export class WardrobeLabScene extends Phaser.Scene {
 
   private updateAimFromWorldPointer(pointer: Phaser.Input.Pointer) {
     const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-    const aimOriginY = this.currentDefinition().source === 'arena' ? 0 : -52;
+    const aimOriginY = this.currentDefinition().source === 'arena' ? 0 : -40 * (this.previewSprite.scaleX || (this.targetVisibleCharacterHeight / 160));
     const dx = point.x - this.character.x;
     const dy = point.y - (this.character.y + aimOriginY);
     const length = Math.hypot(dx, dy);
