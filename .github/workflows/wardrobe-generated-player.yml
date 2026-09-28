@@ -1,4 +1,5 @@
 name: Build Wardrobe Generated Player Assets
+# Keep this workflow independently triggerable after installation on main.
 
 on:
   push:
