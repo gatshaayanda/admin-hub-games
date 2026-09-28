@@ -405,11 +405,88 @@ const WARDROBE_PLAYER_DEFINITION: WardrobeCharacterDefinition = {
 };
 
 const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
-  WARDROBE_PLAYER_DEFINITION,
+  {
+    id: 'arena_player',
+    name: 'SHOOTERS TRIGGER PLAYER · GENERATED 1.JPG',
+    source: 'generated',
+    basePath: '/assets/wardrobe/incoming/1.jpg',
+    displaySize: 80,
+    targetVisibleHeight: 60,
+    frameWidth: 164,
+    frameHeight: 216,
+    originY: 1,
+    embeddedWeapon: false,
+  },
+  {
+    id: 'soldier_01',
+    name: 'Soldier 01 · CC BY · ARMED',
+    source: 'soldier',
+    basePath: '/assets/wardrobe/free-packs/a/export_folder/soldier_01',
+    displaySize: 80,
+    targetVisibleHeight: 60,
+    frameWidth: 16,
+    frameHeight: 16,
+    originY: 1,
+    embeddedWeapon: true,
+  },
+  {
+    id: 'soldier_02',
+    name: 'Soldier 02 · CC BY · ARMED',
+    source: 'soldier',
+    basePath: '/assets/wardrobe/free-packs/a/export_folder/soldier_02',
+    displaySize: 80,
+    targetVisibleHeight: 60,
+    frameWidth: 16,
+    frameHeight: 16,
+    originY: 1,
+    embeddedWeapon: true,
+  },
+  {
+    id: 'robot_blue',
+    name: 'Drone Robot · BLUE · CC0 · ARMED',
+    source: 'robot',
+    basePath: '/assets/wardrobe/free-packs/b/Free8DirRobot',
+    displaySize: 80,
+    targetVisibleHeight: 60,
+    frameWidth: 256,
+    frameHeight: 256,
+    originY: 0.90,
+    embeddedWeapon: true,
+    robotColor: 'Blue',
+  },
+  {
+    id: 'robot_red',
+    name: 'Drone Robot · RED · CC0 · ARMED',
+    source: 'robot',
+    basePath: '/assets/wardrobe/free-packs/b/Free8DirRobot',
+    displaySize: 80,
+    targetVisibleHeight: 60,
+    frameWidth: 256,
+    frameHeight: 256,
+    originY: 0.90,
+    embeddedWeapon: true,
+    robotColor: 'Red',
+  },
+  ...[
+    'police_officer', 'firefighter', 'mechanic', 'teacher', 'butcher',
+    'student', 'cook', 'priest', 'punk', 'biker', 'jogger', 'soldier',
+    'nurse', 'child', 'heavyset', 'runner', 'bruiser', 'old_man', 'businessman',
+  ].map((id) => ({
+    id,
+    name: id.replace(/_/g, ' ').replace(/\\b\\w/g, (letter) => letter.toUpperCase()),
+    source: 'gegx' as const,
+    basePath: '/assets/wardrobe/packs/x/gegx-free-walk-pixel-v1.1/' + id,
+    displaySize: 80,
+    targetVisibleHeight: 60,
+    frameWidth: 192,
+    frameHeight: 192,
+    originY: 165 / 192,
+    embeddedWeapon: false,
+  })),
 ];
 
 const WARDROBE_TARGET_DEFINITION: WardrobeCharacterDefinition = {
-  id: 'soldier_02',
+  id: 'soldier_02_target',
   name: 'Training Target',
   source: 'soldier',
   basePath: '/assets/wardrobe/free-packs/a/export_folder/soldier_02',
@@ -1278,37 +1355,77 @@ export class WardrobeLabScene extends Phaser.Scene {
     const width = this.scale.width;
     const y = 100;
 
-    this.add.rectangle(width / 2, y, Math.min(width - 28, 520), 68, 0x101512, 0.90)
+    this.add.rectangle(width / 2, y, Math.min(width - 28, 620), 76, 0x101512, 0.92)
       .setScrollFactor(0).setDepth(100);
 
-    this.characterNameLabel = this.add.text(width / 2, y - 20, '', {
+    this.characterNameLabel = this.add.text(width / 2, y - 22, '', {
       fontFamily: 'monospace',
-      fontSize: '12px',
+      fontSize: '11px',
       fontStyle: 'bold',
       color: '#e8c95c',
       align: 'center',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(104);
 
-    this.animationLabel = this.add.text(width / 2, y - 4, 'ANIMATION · IDLE', {
+    this.animationLabel = this.add.text(width / 2, y - 5, 'ANIMATION · IDLE', {
       fontFamily: 'monospace',
       fontSize: '7px',
       color: '#8fb39b',
       align: 'center',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(104);
 
-    this.add.text(width / 2, y + 19, 'PLAYER COPY · 1.JPG PRIMARY · OG.JPG REFERENCE / FALLBACK', {
+    const makeButton = (x: number, label: string, deltaIndex: number) =>
+      this.add.text(x, y + 22, label, {
+        fontFamily: 'monospace',
+        fontSize: '8px',
+        fontStyle: 'bold',
+        color: '#f4f1df',
+        backgroundColor: '#315845',
+        padding: { left: 10, right: 10, top: 5, bottom: 5 },
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(104)
+        .setInteractive({ useHandCursor: false })
+        .on('pointerdown', () => {
+          this.fireHeld = false;
+          this.pointerAimActive = false;
+          this.targetDown = false;
+          this.targetBodyHits = 0;
+          this.clearShots();
+          this.selectCharacter(this.selectedCharacterIndex + deltaIndex);
+        });
+
+    makeButton(width / 2 - 210, '‹ PREV SPRITE', -1);
+    makeButton(width / 2 + 210, 'NEXT SPRITE ›', 1);
+
+    this.add.text(width / 2, y + 22, 'OTHER SPRITES = VISUAL GAME TESTS · PLAYER = 1.JPG PIPELINE', {
       fontFamily: 'monospace',
-      fontSize: '8px',
-      fontStyle: 'bold',
+      fontSize: '6px',
       color: '#8fb39b',
       align: 'center',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(104);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(103);
+
+    this.updateLabels();
+  }
+
+  private selectCharacter(index: number) {
+    const count = this.characterDefinitions.length;
+    this.selectedCharacterIndex = (index + count) % count;
+    this.generatedAction = 'ready';
+    this.generatedActionUntil = 0;
+    this.fireHeld = false;
+    this.pointerAimActive = false;
+    this.clearShots();
+
+    const def = this.currentDefinition();
+    this.previewSprite.stop();
+    this.previewSprite.setTexture(this.spriteKey(def, 'DOWN'), 0);
+    this.fitCharacterSprite(this.previewSprite, def);
+    this.previewSprite.setRotation(0);
+    this.updateWeaponLayer();
     this.updateLabels();
   }
 
   private updateLabels() {
     const def = this.currentDefinition();
-    this.characterNameLabel?.setText('SHOOTERS TRIGGER PLAYER · GENERATED');
+    this.characterNameLabel?.setText(def.id === 'arena_player' ? 'SHOOTERS TRIGGER PLAYER · GENERATED · AUTHORITATIVE' : def.name + ' · VISUAL TEST');
     const action = this.fireHeld ? 'FIRE' : this.pointerAimActive ? 'AIM' : 'READY';
     this.directionLabel?.setText(
       'FACING · ' + this.direction +
