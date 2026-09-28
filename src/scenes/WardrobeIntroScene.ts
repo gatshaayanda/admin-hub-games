@@ -430,6 +430,7 @@ export class WardrobeLabScene extends Phaser.Scene {
   private aim = new Phaser.Math.Vector2(1, 0);
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT' = 'DOWN';
+  private playerFacing = 1;
   private previewSprite!: Phaser.GameObjects.Sprite;
   private covers: Phaser.Geom.Rectangle[] = [];
   private characterNameLabel!: Phaser.GameObjects.Text;
@@ -679,6 +680,9 @@ export class WardrobeLabScene extends Phaser.Scene {
       this.visualMove.set(dx, dy).normalize();
       if (Math.abs(dx) > 0.08) {
         this.direction = dx < 0 ? 'LEFT' : 'RIGHT';
+        if (this.currentDefinition().source === 'arena') {
+          this.playerFacing = dx < 0 ? -1 : 1;
+        }
       } else if (Math.abs(dy) > 0.08) {
         this.direction = dy < 0 ? 'UP' : 'DOWN';
       }
@@ -1411,6 +1415,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.shadow.setSize(arenaReference ? 27 : 46, arenaReference ? 10 : 13);
     this.move.set(0, 0);
     this.direction = 'DOWN';
+    this.playerFacing = 1;
     this.visualMove.set(0, 1);
     this.aim.set(1, 0);
     this.generatedAction = 'ready';
