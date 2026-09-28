@@ -550,8 +550,8 @@ export class WardrobeLabScene extends Phaser.Scene {
     );
 
     // Keep the generic overlay hidden. The Arena reference gets its own exact
-    // fighter rig below; the generated operator will later graduate to the same
-    // separated weapon architecture once its artwork is prepared weapon-free.
+    // fighter rig below; the generated v2 operator uses the real separated
+    // arms / weapon / muzzle artwork loaded above.
     this.weaponLayer = this.add.graphics().setVisible(false);
     this.muzzleFlash = this.add.graphics().setVisible(false);
     this.character.add([this.shadow]);
@@ -1104,7 +1104,7 @@ export class WardrobeLabScene extends Phaser.Scene {
       .setScale(scale)
       .setPosition(-7 * scale, shoulderY)
       .setRotation(angle)
-      .setFlipX(this.aim.x < 0);
+      .setFlipY(this.aim.x < 0);
 
     this.weaponSprite
       .setVisible(true)
