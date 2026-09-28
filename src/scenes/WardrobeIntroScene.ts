@@ -526,9 +526,7 @@ export class WardrobeLabScene extends Phaser.Scene {
 
     const current = this.currentDefinition();
     if (current.source === 'arena') {
-      const reference = this.drawCharacter('AIM RIGHT');
-      reference.generateTexture('wardrobe-arena-reference', 100, 100);
-      reference.destroy();
+      this.createArenaReferenceTexture();
       this.previewSprite = this.add.sprite(0, 0, 'wardrobe-arena-reference')
         .setOrigin(0.5, 0.86)
         .setDisplaySize(80, 80);
@@ -856,6 +854,8 @@ export class WardrobeLabScene extends Phaser.Scene {
 
   private playCharacterAnimation(walking: boolean) {
     const def = this.currentDefinition();
+    const vx = this.visualMove.x;
+    const vy = this.visualMove.y;
 
     this.previewSprite.setVisible(true);
 
