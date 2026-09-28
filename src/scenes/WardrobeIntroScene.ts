@@ -723,8 +723,8 @@ export class WardrobeLabScene extends Phaser.Scene {
       };
       const columns = 8;
       const rows = 4;
-      const cellWidth = Math.round(source.width / columns);
-      const cellHeight = Math.round(source.height / rows);
+      const cellWidth = Math.round(primarySource.width / columns);
+      const cellHeight = Math.round(primarySource.height / rows);
 
       const extractedByFrame = new Map<number, {
         canvas: HTMLCanvasElement;
