@@ -1093,16 +1093,6 @@ export class WardrobeLabScene extends Phaser.Scene {
       return;
     }
 
-    const bodyScale = this.previewSprite.scaleX || (this.targetVisibleCharacterHeight / 160);
-    const angle = Math.atan2(this.aim.y, this.aim.x);
-    const shoulderY = -40 * bodyScale;
-    const weaponX = 2 * bodyScale;
-    const weaponY = shoulderY;
-
-    // Shooter Trigger Arena presentation is authoritative for generated-player
-    // arms, weapon, muzzle and firing origin; the generated body remains independent.
-    const weaponScale = 50 / 234;
-
     // Generated body uses the authored source artwork; the arms, weapon and
     // muzzle use the exact Shooter Trigger Arena presentation rig below.
     // Do not scale/reposition the generated weapon artwork independently:
