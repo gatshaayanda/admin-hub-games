@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
 import { installShootersTriggerMobileControls } from '../shooters-trigger-mobile-controls';
-import { FieldOperatorCharacter } from './FieldOperatorCharacter';
 
 type WardrobeAction =
   | 'IDLE'
@@ -392,104 +391,38 @@ type WardrobeCharacterDefinition = {
   robotColor?: 'Blue' | 'Red';
 };
 
-const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
+const WARDROBE_PLAYER_DEFINITION: WardrobeCharacterDefinition = {
+  id: 'arena_player',
+  name: 'SHOOTERS TRIGGER PLAYER · GENERATED',
+  source: 'generated',
+  basePath: '/assets/wardrobe/incoming/1.jpg',
+  displaySize: 80,
+  targetVisibleHeight: 60,
+  frameWidth: 164,
+  frameHeight: 216,
+  originY: 1,
+  embeddedWeapon: false,
+};
 
-  {
-    id: 'arena_player',
-    name: 'ARENA PLAYER · GENERATED 1.JPG',
-    source: 'generated',
-    basePath: '/assets/wardrobe/incoming/1.jpg',
-    displaySize: 80,
-    targetVisibleHeight: 60,
-    frameWidth: 164,
-    frameHeight: 216,
-    originY: 1,
-    // The current generated sheet is used for the body/action source. Weapon aim/fire is rendered by the same independent weapon layer used by the Shooter prototype.
-    embeddedWeapon: false,
-  },
-  {
-    id: 'arena_bot',
-    name: 'ARENA BOT · ORIGINAL OG.JPG',
-    source: 'generated',
-    basePath: '/assets/wardrobe/incoming/og.jpg',
-    displaySize: 80,
-    targetVisibleHeight: 60,
-    frameWidth: 164,
-    frameHeight: 216,
-    originY: 1,
-    embeddedWeapon: false,
-  },
-  {
-    id: 'soldier_01',
-    name: 'Soldier 01 · CC BY · ARMED',
-    source: 'soldier',
-    basePath: '/assets/wardrobe/free-packs/a/export_folder/soldier_01',
-    displaySize: 80,
-    targetVisibleHeight: 60,
-    frameWidth: 16,
-    frameHeight: 16,
-    originY: 1,
-    embeddedWeapon: true,
-  },
-  {
-    id: 'soldier_02',
-    name: 'Soldier 02 · CC BY · ARMED',
-    source: 'soldier',
-    basePath: '/assets/wardrobe/free-packs/a/export_folder/soldier_02',
-    displaySize: 80,
-    targetVisibleHeight: 60,
-    frameWidth: 16,
-    frameHeight: 16,
-    originY: 1,
-    embeddedWeapon: true,
-  },
-  {
-    id: 'robot_blue',
-    name: 'Drone Robot · BLUE · CC0 · ARMED',
-    source: 'robot',
-    basePath: '/assets/wardrobe/free-packs/b/Free8DirRobot',
-    displaySize: 80,
-    targetVisibleHeight: 60,
-    frameWidth: 256,
-    frameHeight: 256,
-    originY: 0.90,
-    embeddedWeapon: true,
-    robotColor: 'Blue',
-  },
-  {
-    id: 'robot_red',
-    name: 'Drone Robot · RED · CC0 · ARMED',
-    source: 'robot',
-    basePath: '/assets/wardrobe/free-packs/b/Free8DirRobot',
-    displaySize: 80,
-    targetVisibleHeight: 60,
-    frameWidth: 256,
-    frameHeight: 256,
-    originY: 0.90,
-    embeddedWeapon: true,
-    robotColor: 'Red',
-  },
-  ...[
-    'police_officer', 'firefighter', 'mechanic', 'teacher', 'butcher',
-    'student', 'cook', 'priest', 'punk', 'biker', 'jogger', 'soldier',
-    'nurse', 'child', 'heavyset', 'runner', 'bruiser', 'old_man', 'businessman',
-  ].map((id) => ({
-    id,
-    name: id.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()),
-    source: 'gegx' as const,
-    basePath: '/assets/wardrobe/packs/x/gegx-free-walk-pixel-v1.1/' + id,
-    displaySize: 80,
-    targetVisibleHeight: 60,
-    frameWidth: 192,
-    frameHeight: 192,
-    originY: 165 / 192,
-    embeddedWeapon: false,
-  })),
+const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
+  WARDROBE_PLAYER_DEFINITION,
 ];
+
+const WARDROBE_TARGET_DEFINITION: WardrobeCharacterDefinition = {
+  id: 'soldier_02',
+  name: 'Training Target',
+  source: 'soldier',
+  basePath: '/assets/wardrobe/free-packs/a/export_folder/soldier_02',
+  displaySize: 80,
+  targetVisibleHeight: 60,
+  frameWidth: 16,
+  frameHeight: 16,
+  originY: 1,
+  embeddedWeapon: true,
+};
 export class WardrobeLabScene extends Phaser.Scene {
   private character!: Phaser.GameObjects.Container;
   private shadow!: Phaser.GameObjects.Ellipse;
-  private fieldOperator!: FieldOperatorCharacter;
   private weaponLayer!: Phaser.GameObjects.Graphics;
   private muzzleFlash!: Phaser.GameObjects.Graphics;
   private target!: Phaser.GameObjects.Container;
@@ -533,8 +466,9 @@ export class WardrobeLabScene extends Phaser.Scene {
   private readonly projectileSpeed = 520;
   private readonly projectileLifetimeMs = 1100;
   private readonly fireIntervalMs = 240;
-  private readonly characterDefinitions = WARDROBE_CHARACTER_DEFINITIONS;
+  private readonly characterDefinitions = WARDROBE_CHARACTER_DEFINITIONS.filter((def) => def.id === 'arena_player');
   private readonly targetVisibleCharacterHeight = 60;
+  private readonly targetDefinition = WARDROBE_TARGET_DEFINITION;
 
   constructor() {
     super('WardrobeLabScene');
@@ -542,7 +476,14 @@ export class WardrobeLabScene extends Phaser.Scene {
 
   preload() {
     this.load.image('wardrobe-generated-reference-player', '/assets/wardrobe/incoming/1.jpg');
-    this.load.image('wardrobe-generated-reference-bot', '/assets/wardrobe/incoming/og.jpg');
+    this.load.image('wardrobe-generated-reference-reference', '/assets/wardrobe/incoming/og.jpg');
+    for (const direction of ['DOWN', 'UP', 'LEFT', 'RIGHT'] as const) {
+      this.load.spritesheet(
+        this.spriteKey(this.targetDefinition, direction),
+        this.targetDefinition.basePath + '/soldier_02_spritesheet_walking_' + direction.toLowerCase() + '.png',
+        { frameWidth: this.targetDefinition.frameWidth, frameHeight: this.targetDefinition.frameHeight },
+      );
+    }
     for (const def of this.characterDefinitions) {
       for (const direction of ['DOWN', 'UP', 'LEFT', 'RIGHT'] as const) {
         if (def.source === 'generated') continue;
@@ -590,9 +531,6 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.weaponLayer = this.add.graphics();
     this.muzzleFlash = this.add.graphics();
     this.character.add([this.shadow]);
-    this.fieldOperator = new FieldOperatorCharacter(this, 0, 0);
-    this.character.add(this.fieldOperator.gameObject);
-    this.fieldOperator.setVisible(false);
 
     const current = this.currentDefinition();
     this.previewSprite = this.add.sprite(0, 0, this.spriteKey(current, 'DOWN'), 0)
@@ -605,7 +543,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.createCharacterAnimations();
 
     this.target = this.add.container(this.targetSpawn.x, this.targetSpawn.y).setDepth(29);
-    const targetDef = this.characterDefinitions.find((def) => def.id === 'soldier_02')!;
+    const targetDef = this.targetDefinition;
     const targetShadow = this.add.ellipse(0, 0, 46, 13, 0x3d3025, 0.28);
     this.target.add(targetShadow);
     this.targetSprite = this.add.sprite(0, 0, this.spriteKey(targetDef, 'DOWN'), 0)
@@ -622,13 +560,13 @@ export class WardrobeLabScene extends Phaser.Scene {
 
     this.add.rectangle(width / 2, 34, width, 68, 0x101512, 0.86)
       .setScrollFactor(0).setDepth(100);
-    this.add.text(18, 18, 'WARDROBE · ARENA CHARACTER + SHOOTER LAB', {
+    this.add.text(18, 18, 'WARDROBE · SHOOTERS TRIGGER PLAYER LAB', {
       fontFamily: 'monospace',
       fontSize: '13px',
       fontStyle: 'bold',
       color: '#f4f1df',
     }).setScrollFactor(0).setDepth(101);
-    this.add.text(18, 42, 'REAL SPRITES · SAME ARENA MOVEMENT · AIM / FIRE TEST', {
+    this.add.text(18, 42, 'ONE AUTHORITATIVE PLAYER · 1.JPG + OG.JPG SOURCE MATERIAL · AIM / FIRE TEST', {
       fontFamily: 'monospace',
       fontSize: '7px',
       fontStyle: 'bold',
@@ -775,10 +713,11 @@ export class WardrobeLabScene extends Phaser.Scene {
     };
 
     for (const generatedDef of this.characterDefinitions.filter((def) => def.source === 'generated')) {
-      const referenceKey = generatedDef.id === 'arena_bot'
-        ? 'wardrobe-generated-reference-bot'
-        : 'wardrobe-generated-reference-player';
-      const source = this.textures.get(referenceKey).getSourceImage() as CanvasImageSource & {
+      const primarySource = this.textures.get('wardrobe-generated-reference-player').getSourceImage() as CanvasImageSource & {
+        width: number;
+        height: number;
+      };
+      const referenceSource = this.textures.get('wardrobe-generated-reference-reference').getSourceImage() as CanvasImageSource & {
         width: number;
         height: number;
       };
@@ -798,20 +737,21 @@ export class WardrobeLabScene extends Phaser.Scene {
       const extractFrame = (sourceFrame: number) => {
         if (extractedByFrame.has(sourceFrame)) return extractedByFrame.get(sourceFrame)!;
 
-        const frameCanvas = document.createElement('canvas');
-        frameCanvas.width = cellWidth;
-        frameCanvas.height = cellHeight;
-        const frameContext = frameCanvas.getContext('2d', { willReadFrequently: true });
-        if (!frameContext) return null;
+        const makeFrame = (source: CanvasImageSource & { width: number; height: number }) => {
+          const frameCanvas = document.createElement('canvas');
+          frameCanvas.width = cellWidth;
+          frameCanvas.height = cellHeight;
+          const frameContext = frameCanvas.getContext('2d', { willReadFrequently: true });
+          if (!frameContext) return null;
 
-        const sx = (sourceFrame % columns) * (source.width / columns);
-        const sy = Math.floor(sourceFrame / columns) * (source.height / rows);
-        frameContext.clearRect(0, 0, cellWidth, cellHeight);
-        frameContext.drawImage(
-          source,
-          sx, sy, source.width / columns, source.height / rows,
-          0, 0, cellWidth, cellHeight,
-        );
+          const sx = (sourceFrame % columns) * (source.width / columns);
+          const sy = Math.floor(sourceFrame / columns) * (source.height / rows);
+          frameContext.clearRect(0, 0, cellWidth, cellHeight);
+          frameContext.drawImage(
+            source,
+            sx, sy, source.width / columns, source.height / rows,
+            0, 0, cellWidth, cellHeight,
+          );
 
         const pixels = frameContext.getImageData(0, 0, cellWidth, cellHeight);
         const data = pixels.data;
@@ -885,9 +825,22 @@ export class WardrobeLabScene extends Phaser.Scene {
           }
         }
 
-        const result = { canvas: frameCanvas, minX, minY, maxX, maxY };
-        extractedByFrame.set(sourceFrame, result);
-        return result;
+        return { canvas: frameCanvas, minX, minY, maxX, maxY };
+        };
+
+        const primary = makeFrame(primarySource);
+        if (primary && primary.maxX >= 0 && primary.maxY >= 0) {
+          extractedByFrame.set(sourceFrame, primary);
+          return primary;
+        }
+
+        const reference = makeFrame(referenceSource);
+        if (reference && reference.maxX >= 0 && reference.maxY >= 0) {
+          extractedByFrame.set(sourceFrame, reference);
+          return reference;
+        }
+
+        return null;
       };
 
       const allFrames = [...new Set(Object.values(sequences).flat())]
@@ -1078,7 +1031,6 @@ export class WardrobeLabScene extends Phaser.Scene {
   private playCharacterAnimation(walking: boolean) {
     const def = this.currentDefinition();
 
-    this.fieldOperator.setVisible(false);
     this.previewSprite.setVisible(true);
 
     if (def.source !== 'generated') {
@@ -1299,7 +1251,7 @@ export class WardrobeLabScene extends Phaser.Scene {
 
   private updateTargetFacing() {
     if (!this.target || this.targetDown) return;
-    const def = this.characterDefinitions.find((entry) => entry.id === 'soldier_02')!;
+    const def = this.targetDefinition;
     const dx = this.character.x - this.target.x;
     const dy = this.character.y - this.target.y;
     let direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT' = 'DOWN';
@@ -1344,44 +1296,19 @@ export class WardrobeLabScene extends Phaser.Scene {
       align: 'center',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(104);
 
-    const makeButton = (x: number, label: string, deltaIndex: number) => {
-      return this.add.text(x, y + 19, label, {
-        fontFamily: 'monospace',
-        fontSize: '10px',
-        fontStyle: 'bold',
-        color: '#f4f1df',
-        backgroundColor: '#315845',
-        padding: { left: 12, right: 12, top: 6, bottom: 6 },
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(104)
-        .setInteractive({ useHandCursor: false })
-        .on('pointerdown', () => {
-          this.fireHeld = false;
-          this.pointerAimActive = false;
-          this.targetDown = false;
-          this.targetBodyHits = 0;
-          this.clearShots();
-          this.selectCharacter(this.selectedCharacterIndex + deltaIndex);
-        });
-    };
-
-    makeButton(width / 2 - 108, '‹ PREV', -1);
-    makeButton(width / 2 + 108, 'NEXT ›', 1);
-    this.updateLabels();
-  }
-
-  private selectCharacter(index: number) {
-    const count = this.characterDefinitions.length;
-    this.selectedCharacterIndex = (index + count) % count;
-    this.fieldOperator.setVisible(false);
-    this.previewSprite.setVisible(true);
-    this.playCharacterAnimation(false);
-    this.updateWeaponLayer();
+    this.add.text(width / 2, y + 19, 'PLAYER COPY · 1.JPG PRIMARY · OG.JPG REFERENCE / FALLBACK', {
+      fontFamily: 'monospace',
+      fontSize: '8px',
+      fontStyle: 'bold',
+      color: '#8fb39b',
+      align: 'center',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(104);
     this.updateLabels();
   }
 
   private updateLabels() {
     const def = this.currentDefinition();
-    this.characterNameLabel?.setText(this.displayCharacterName(def));
+    this.characterNameLabel?.setText('SHOOTERS TRIGGER PLAYER · GENERATED');
     const action = this.fireHeld ? 'FIRE' : this.pointerAimActive ? 'AIM' : 'READY';
     this.directionLabel?.setText(
       'FACING · ' + this.direction +
