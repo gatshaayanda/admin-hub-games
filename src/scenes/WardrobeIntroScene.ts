@@ -937,13 +937,18 @@ export class WardrobeLabScene extends Phaser.Scene {
       }
     }
 
+    // The audited 1.jpg source is not a conventional directional spritesheet:
+    // frames 0-3 are the clean directional idle poses, 4-7 are the authored
+    // right-facing run sequence, and later frames contain armed action poses.
+    // Keep the body's armed presentation separate from those baked action frames.
     const generatedAnimations: Array<[string, number, number]> = [
-      ['DOWN', 0, 3],
-      ['UP', 4, 7],
-      ['LEFT', 8, 11],
-      ['RIGHT', 12, 15],
-      ['DOWN-RIGHT', 16, 19],
-      ['UP-RIGHT', 24, 27],
+      ['DOWN', 0, 0],
+      ['RIGHT', 2, 2],
+      ['LEFT', 8, 8],
+      ['RUN-RIGHT', 4, 7],
+      ['DOWN-RIGHT', 1, 1],
+      ['UP-RIGHT', 3, 3],
+      ['UP', 3, 3],
     ];
     const atlasKey = 'wardrobe-generated-player-atlas';
     for (const def of this.characterDefinitions.filter((entry) => entry.source === 'generated')) {
@@ -1017,9 +1022,11 @@ export class WardrobeLabScene extends Phaser.Scene {
     } else if (this.direction === 'UP') {
       animation = 'UP';
     } else if (this.direction === 'LEFT') {
-      animation = 'LEFT';
+      animation = 'RUN-RIGHT';
+      flipX = true;
     } else if (this.direction === 'RIGHT') {
-      animation = 'RIGHT';
+      animation = 'RUN-RIGHT';
+      flipX = false;
     }
 
     // The generated body supplies the character artwork only. The armed pose
@@ -1028,6 +1035,9 @@ export class WardrobeLabScene extends Phaser.Scene {
     // extracted arm/gun layered over the body.
     const aiming = Math.abs(this.aim.x) > 0.2 || this.generatedAction === 'aim' || this.generatedAction === 'shoot';
     if (aiming && !walking) {
+      // Never use frames 11-15 for the body while aiming: those source cells
+      // are authored armed/shooting poses and would bake a second gun into the
+      // generated body. Use the clean directional idle body instead.
       animation = this.aim.x < 0 ? 'LEFT' : 'RIGHT';
       flipX = false;
     }
@@ -1056,11 +1066,12 @@ export class WardrobeLabScene extends Phaser.Scene {
     } else {
       const idleFrames: Record<string, number> = {
         DOWN: 0,
-        UP: 4,
+        UP: 3,
         LEFT: 8,
-        RIGHT: 12,
-        'DOWN-RIGHT': 16,
-        'UP-RIGHT': 24,
+        RIGHT: 2,
+        'RUN-RIGHT': 4,
+        'DOWN-RIGHT': 1,
+        'UP-RIGHT': 3,
       };
       this.previewSprite.stop();
       this.previewSprite.setFrame(idleFrames[animation] ?? 0);
