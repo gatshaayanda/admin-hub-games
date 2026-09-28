@@ -733,6 +733,23 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   private prepareGeneratedCharacterTextures() {
+    for (const generatedDef of this.characterDefinitions.filter((def) => def.source === 'generated')) {
+      const referenceKey = generatedDef.id === 'arena_bot'
+        ? 'wardrobe-generated-reference-bot'
+        : 'wardrobe-generated-reference-player';
+      const source = this.textures.get(referenceKey).getSourceImage() as CanvasImageSource & {
+        width: number;
+        height: number;
+      };
+    const columns = 8;
+    const rows = 4;
+    const cellWidth = source.width / columns;
+    const cellHeight = source.height / rows;
+
+    // The generated sheet is a large JPEG contact sheet, not a native Phaser
+    // sprite sheet. Its current dimensions are ~20k x 2.8k, so the old 176x256
+    // crop assumptions were scaling the wrong geometry. Detect the actual
+    // foreground inside each cell first, then build fixed-baseline Phaser frames.
     const sequences: Record<string, number[]> = {
       idle_down: [0],
       idle_down_right: [1],
@@ -754,146 +771,244 @@ export class WardrobeLabScene extends Phaser.Scene {
       respawn: [28, 29, 30, 31],
     };
 
-    for (const generatedDef of this.characterDefinitions.filter((def) => def.source === 'generated')) {
-      const referenceKey = generatedDef.id === 'arena_bot'
-        ? 'wardrobe-generated-reference-bot'
-        : 'wardrobe-generated-reference-player';
-      const source = this.textures.get(referenceKey).getSourceImage() as CanvasImageSource & {
-        width: number;
-        height: number;
+    type ExtractedFrame = {
+      canvas: HTMLCanvasElement;
+      minX: number;
+      minY: number;
+      maxX: number;
+      maxY: number;
+    };
+
+    const extractedByFrame = new Map<number, ExtractedFrame>();
+
+    const getBackgroundPalette = (
+      context: CanvasRenderingContext2D,
+      width: number,
+      height: number,
+    ) => {
+      const image = context.getImageData(0, 0, width, height).data;
+      const buckets = new Map<string, { r: number; g: number; b: number; count: number }>();
+      const sample = (x: number, y: number) => {
+        const index = (y * width + x) * 4;
+        const r = image[index];
+        const g = image[index + 1];
+        const b = image[index + 2];
+        const key = Math.floor(r / 16) + ':' + Math.floor(g / 16) + ':' + Math.floor(b / 16);
+        const current = buckets.get(key);
+        if (current) current.count += 1;
+        else buckets.set(key, { r, g, b, count: 1 });
       };
-      const columns = 8;
-      const rows = 4;
-      const cellWidth = Math.round(source.width / columns);
-      const cellHeight = Math.round(source.height / rows);
 
-      const extractedByFrame = new Map<number, {
-        canvas: HTMLCanvasElement;
-        minX: number;
-        minY: number;
-        maxX: number;
-        maxY: number;
-      }>();
+      for (let x = 0; x < width; x += Math.max(1, Math.floor(width / 80))) {
+        sample(x, 0);
+        sample(x, height - 1);
+      }
+      for (let y = 0; y < height; y += Math.max(1, Math.floor(height / 40))) {
+        sample(0, y);
+        sample(width - 1, y);
+      }
 
-      const extractFrame = (sourceFrame: number) => {
-        if (extractedByFrame.has(sourceFrame)) return extractedByFrame.get(sourceFrame)!;
+      return [...buckets.values()]
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 6)
+        .map(({ r, g, b }) => ({ r, g, b }));
+    };
 
-        const frameCanvas = document.createElement('canvas');
-        frameCanvas.width = cellWidth;
-        frameCanvas.height = cellHeight;
-        const frameContext = frameCanvas.getContext('2d', { willReadFrequently: true });
-        if (!frameContext) return null;
+    const removeConnectedBackground = (
+      context: CanvasRenderingContext2D,
+      width: number,
+      height: number,
+    ) => {
+      const pixels = context.getImageData(0, 0, width, height);
+      const data = pixels.data;
+      const palette = getBackgroundPalette(context, width, height);
+      const visited = new Uint8Array(width * height);
+      const queue = new Int32Array(width * height);
+      let head = 0;
+      let tail = 0;
 
-        const sx = (sourceFrame % columns) * (source.width / columns);
-        const sy = Math.floor(sourceFrame / columns) * (source.height / rows);
-        frameContext.clearRect(0, 0, cellWidth, cellHeight);
-        frameContext.drawImage(
-          source,
-          sx, sy, source.width / columns, source.height / rows,
-          0, 0, cellWidth, cellHeight,
-        );
+      const isBackground = (x: number, y: number) => {
+        const index = (y * width + x) * 4;
+        const r = data[index];
+        const g = data[index + 1];
+        const b = data[index + 2];
+        return palette.some((color) => {
+          const dr = r - color.r;
+          const dg = g - color.g;
+          const db = b - color.b;
+          return dr * dr + dg * dg + db * db <= 42 * 42;
+        });
+      };
 
-        const pixels = frameContext.getImageData(0, 0, cellWidth, cellHeight);
-        const data = pixels.data;
-        const cornerSamples = [
-          [data[0], data[1], data[2]],
-          [data[(cellWidth - 1) * 4], data[(cellWidth - 1) * 4 + 1], data[(cellWidth - 1) * 4 + 2]],
-          [data[(cellHeight - 1) * cellWidth * 4], data[(cellHeight - 1) * cellWidth * 4 + 1], data[(cellHeight - 1) * cellWidth * 4 + 2]],
-          [data[(cellHeight * cellWidth - 1) * 4], data[(cellHeight * cellWidth - 1) * 4 + 1], data[(cellHeight * cellWidth - 1) * 4 + 2]],
-        ];
-        const isBackground = (index: number) => {
-          const r = data[index];
-          const g = data[index + 1];
-          const b = data[index + 2];
-          const neutral = Math.max(r, g, b) - Math.min(r, g, b) < 14;
-          const cornerMatch = cornerSamples.some(([cr, cg, cb]) => {
-            const dr = r - cr;
-            const dg = g - cg;
-            const db = b - cb;
-            return dr * dr + dg * dg + db * db < 48 * 48;
-          });
-          return neutral && cornerMatch;
-        };
+      const enqueue = (x: number, y: number) => {
+        const index = y * width + x;
+        if (visited[index] || !isBackground(x, y)) return;
+        visited[index] = 1;
+        queue[tail++] = index;
+      };
 
-        for (let i = 0; i < data.length; i += 4) {
-          if (isBackground(i)) data[i + 3] = 0;
-        }
-        frameContext.putImageData(pixels, 0, 0);
+      for (let x = 0; x < width; x += 1) {
+        enqueue(x, 0);
+        enqueue(x, height - 1);
+      }
+      for (let y = 1; y < height - 1; y += 1) {
+        enqueue(0, y);
+        enqueue(width - 1, y);
+      }
 
-        const cleaned = frameContext.getImageData(0, 0, cellWidth, cellHeight).data;
-        let minX = cellWidth;
-        let minY = cellHeight;
-        let maxX = -1;
-        let maxY = -1;
-        for (let y = 0; y < cellHeight; y += 1) {
-          for (let x = 0; x < cellWidth; x += 1) {
-            if (cleaned[(y * cellWidth + x) * 4 + 3] > 12) {
-              minX = Math.min(minX, x);
-              minY = Math.min(minY, y);
-              maxX = Math.max(maxX, x);
-              maxY = Math.max(maxY, y);
-            }
+      while (head < tail) {
+        const index = queue[head++];
+        const x = index % width;
+        const y = Math.floor(index / width);
+        data[index * 4 + 3] = 0;
+        if (x > 0) enqueue(x - 1, y);
+        if (x < width - 1) enqueue(x + 1, y);
+        if (y > 0) enqueue(x, y - 1);
+        if (y < height - 1) enqueue(x, y + 1);
+      }
+
+      context.putImageData(pixels, 0, 0);
+    };
+
+    const extractFrame = (sourceFrame: number): ExtractedFrame | null => {
+      if (extractedByFrame.has(sourceFrame)) return extractedByFrame.get(sourceFrame)!;
+
+      const sx = (sourceFrame % columns) * cellWidth;
+      const sy = Math.floor(sourceFrame / columns) * cellHeight;
+
+      // Analyze a reduced copy so foreground detection stays cheap even with
+      // the very large generated source image.
+      const analysisWidth = Math.max(96, Math.min(720, Math.round(cellWidth / 3)));
+      const analysisHeight = Math.max(96, Math.min(720, Math.round(cellHeight / 3)));
+      const analysis = document.createElement('canvas');
+      analysis.width = analysisWidth;
+      analysis.height = analysisHeight;
+      const analysisContext = analysis.getContext('2d', { willReadFrequently: true });
+      if (!analysisContext) return null;
+      analysisContext.drawImage(source, sx, sy, cellWidth, cellHeight, 0, 0, analysisWidth, analysisHeight);
+      removeConnectedBackground(analysisContext, analysisWidth, analysisHeight);
+
+      const analysisPixels = analysisContext.getImageData(0, 0, analysisWidth, analysisHeight).data;
+      let minX = analysisWidth;
+      let minY = analysisHeight;
+      let maxX = -1;
+      let maxY = -1;
+      for (let y = 0; y < analysisHeight; y += 1) {
+        for (let x = 0; x < analysisWidth; x += 1) {
+          if (analysisPixels[(y * analysisWidth + x) * 4 + 3] > 12) {
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x);
+            maxY = Math.max(maxY, y);
           }
         }
-
-        const result = { canvas: frameCanvas, minX, minY, maxX, maxY };
-        extractedByFrame.set(sourceFrame, result);
-        return result;
-      };
-
-      const allFrames = [...new Set(Object.values(sequences).flat())]
-        .map(extractFrame)
-        .filter((frame): frame is NonNullable<typeof frame> => frame !== null && frame.maxX >= 0);
-      const union = allFrames.reduce(
-        (bounds, frame) => ({
-          minX: Math.min(bounds.minX, frame.minX),
-          minY: Math.min(bounds.minY, frame.minY),
-          maxX: Math.max(bounds.maxX, frame.maxX),
-          maxY: Math.max(bounds.maxY, frame.maxY),
-        }),
-        { minX: cellWidth, minY: cellHeight, maxX: -1, maxY: -1 },
-      );
-      if (union.maxY < 0) continue;
-
-      const visibleHeight = union.maxY - union.minY + 1;
-      const stageWidth = union.maxX - union.minX + 1;
-      this.generatedVisibleHeights[generatedDef.id] = visibleHeight;
-
-      for (const [action, frames] of Object.entries(sequences)) {
-        const extracted = frames
-          .map(extractFrame)
-          .filter((frame): frame is NonNullable<typeof frame> => frame !== null && frame.maxX >= 0);
-        if (!extracted.length) continue;
-
-        const key = this.generatedKey(generatedDef, action);
-        if (this.textures.exists(key)) continue;
-        const texture = this.textures.createCanvas(
-          key,
-          stageWidth * extracted.length,
-          visibleHeight,
-        );
-        if (!texture) continue;
-        texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
-        const context = texture.getContext();
-        context.clearRect(0, 0, texture.width, texture.height);
-        context.imageSmoothingEnabled = false;
-
-        extracted.forEach((frame, index) => {
-          const sourceWidth = frame.maxX - frame.minX + 1;
-          const sourceHeight = frame.maxY - frame.minY + 1;
-          const drawX = index * stageWidth + frame.minX - union.minX;
-          const drawY = union.maxY - (frame.maxY + 1);
-          context.drawImage(
-            frame.canvas,
-            frame.minX, frame.minY, sourceWidth, sourceHeight,
-            drawX, drawY, sourceWidth, sourceHeight,
-          );
-          texture.add(index, 0, index * stageWidth, 0, stageWidth, visibleHeight);
-        });
-        texture.refresh();
       }
+
+      if (maxX < 0 || maxY < 0) return null;
+
+      const scaleX = cellWidth / analysisWidth;
+      const scaleY = cellHeight / analysisHeight;
+      const paddingX = Math.max(10, Math.round((maxX - minX + 1) * 0.06 * scaleX));
+      const paddingY = Math.max(10, Math.round((maxY - minY + 1) * 0.06 * scaleY));
+      const cropLeft = Math.max(0, Math.floor(sx + minX * scaleX - paddingX));
+      const cropTop = Math.max(0, Math.floor(sy + minY * scaleY - paddingY));
+      const cropRight = Math.min(source.width, Math.ceil(sx + (maxX + 1) * scaleX + paddingX));
+      const cropBottom = Math.min(source.height, Math.ceil(sy + (maxY + 1) * scaleY + paddingY));
+      const width = Math.max(1, cropRight - cropLeft);
+      const height = Math.max(1, cropBottom - cropTop);
+
+      const frameCanvas = document.createElement('canvas');
+      frameCanvas.width = width;
+      frameCanvas.height = height;
+      const frameContext = frameCanvas.getContext('2d', { willReadFrequently: true });
+      if (!frameContext) return null;
+      frameContext.drawImage(source, cropLeft, cropTop, width, height, 0, 0, width, height);
+      removeConnectedBackground(frameContext, width, height);
+
+      const cleaned = frameContext.getImageData(0, 0, width, height).data;
+      minX = width;
+      minY = height;
+      maxX = -1;
+      maxY = -1;
+      for (let y = 0; y < height; y += 1) {
+        for (let x = 0; x < width; x += 1) {
+          if (cleaned[(y * width + x) * 4 + 3] > 12) {
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x);
+            maxY = Math.max(maxY, y);
+          }
+        }
+      }
+
+      if (maxX < 0 || maxY < 0) return null;
+      const result = { canvas: frameCanvas, minX, minY, maxX, maxY };
+      extractedByFrame.set(sourceFrame, result);
+      return result;
+    };
+
+    const allFrames = [...new Set(Object.values(sequences).flat())]
+      .map(extractFrame)
+      .filter((frame): frame is ExtractedFrame => frame !== null && frame.maxX >= 0);
+
+    if (!allFrames.length) return;
+
+    const visibleHeight = Math.max(...allFrames.map((frame) => frame.maxY - frame.minY + 1));
+    const visibleWidth = Math.max(...allFrames.map((frame) => frame.maxX - frame.minX + 1));
+    const stageWidth = Math.ceil(visibleWidth * 1.16);
+    const stageHeight = Math.ceil(visibleHeight * 1.12);
+    this.generatedVisibleHeights[generatedDef.id] = visibleHeight;
+
+    for (const [action, frames] of Object.entries(sequences)) {
+      const extracted = frames
+        .map(extractFrame)
+        .filter((frame): frame is ExtractedFrame => frame !== null && frame.maxX >= 0);
+      if (!extracted.length) continue;
+
+      const normalized = document.createElement('canvas');
+      normalized.width = stageWidth * extracted.length;
+      normalized.height = stageHeight;
+      const normalizedContext = normalized.getContext('2d');
+      if (!normalizedContext) continue;
+
+      extracted.forEach((frame, index) => {
+        const visibleW = frame.maxX - frame.minX + 1;
+        const visibleH = frame.maxY - frame.minY + 1;
+        const sourceCenterX = (frame.minX + frame.maxX + 1) / 2;
+        const stageX = stageWidth / 2 + (sourceCenterX - frame.canvas.width / 2);
+        const drawX = Math.round(index * stageWidth + stageX - visibleW / 2);
+        const drawY = Math.round(stageHeight - visibleH);
+        normalizedContext.drawImage(
+          frame.canvas,
+          frame.minX,
+          frame.minY,
+          visibleW,
+          visibleH,
+          drawX,
+          drawY,
+          visibleW,
+          visibleH,
+        );
+      });
+
+      const key = this.generatedKey(generatedDef, action);
+      if (this.textures.exists(key)) continue;
+      const texture = this.textures.createCanvas(key, normalized.width, normalized.height);
+      if (!texture) continue;
+      texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+      const context = texture.getContext();
+      context.clearRect(0, 0, normalized.width, normalized.height);
+      context.drawImage(normalized, 0, 0);
+      for (let index = 0; index < extracted.length; index += 1) {
+        texture.add(index, 0, index * stageWidth, 0, stageWidth, stageHeight);
+      }
+      texture.refresh();
     }
+
+    const generatedDefIndex = this.characterDefinitions.findIndex((def) => def.id === generatedDef.id);
+    if (generatedDefIndex < 0) return;
   }
+
 
   private generatedKey(def: WardrobeCharacterDefinition, action: string) {
     return 'wardrobe-' + def.id + '-' + action;
