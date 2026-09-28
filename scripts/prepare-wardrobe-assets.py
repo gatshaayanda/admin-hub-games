@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 INCOMING = ROOT / "public/assets/wardrobe/incoming"
 OUT = ROOT / "public/assets/wardrobe/generated"
 COLUMNS, ROWS, FRAME_SIZE = 8, 4, 256
+COMMON_VISIBLE_HEIGHT = 210
 TOLERANCE_SQ = 38 ** 2
 MAX_FOREGROUND_RATIO = 0.99
 
@@ -57,13 +58,19 @@ def extract(sheet, index):
         )
 
     crop = cell.crop((xs, ys, xe + 1, ye + 1))
-    scale = min((FRAME_SIZE * .82) / crop.width, (FRAME_SIZE * .82) / crop.height)
+    scale = COMMON_VISIBLE_HEIGHT / crop.height
+    scaled_width = max(1, round(crop.width * scale))
+    if scaled_width > FRAME_SIZE:
+        scale = FRAME_SIZE / crop.width
+        scaled_width = FRAME_SIZE
     crop = crop.resize(
-        (max(1, round(crop.width * scale)), max(1, round(crop.height * scale))),
+        (scaled_width, max(1, round(crop.height * scale))),
         Image.Resampling.LANCZOS,
     )
     out = Image.new("RGBA", (FRAME_SIZE, FRAME_SIZE), (0, 0, 0, 0))
     out.alpha_composite(crop, ((FRAME_SIZE - crop.width)//2, FRAME_SIZE - crop.height))
+    if any(out.getpixel(point)[3] != 0 for point in ((0, 0), (FRAME_SIZE-1, 0), (0, FRAME_SIZE-1), (FRAME_SIZE-1, FRAME_SIZE-1))):
+        raise RuntimeError(f"frame {index}: non-transparent atlas corner")
     return out
 
 def prepare(name, source):
