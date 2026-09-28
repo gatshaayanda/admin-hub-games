@@ -9,7 +9,7 @@ COLS, ROWS = 8, 4
 
 # The Gemini sheet is a fixed 8x4 contact sheet at 1408x768 (176x192 cells).
 # The production step deliberately converts the JPG's baked checkerboard into real alpha.
-BODY_CELLS = list(range(14)) + [16, 17, 18, 19, 24, 25, 26, 27]
+BODY_CELLS = list(range(16)) + [16, 17, 18, 19, 24, 25, 26, 27]
 REGIONS = {
     "arms": (4 * CELL_W, 2 * CELL_H, 6 * CELL_W, 3 * CELL_H),
     "weapon": (6 * CELL_W, 2 * CELL_H, 8 * CELL_W, 3 * CELL_H),
