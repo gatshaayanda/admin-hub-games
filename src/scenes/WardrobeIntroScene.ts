@@ -478,6 +478,7 @@ export class WardrobeLabScene extends Phaser.Scene {
   private previewSprite!: Phaser.GameObjects.Sprite;
   private arenaPoseA!: Phaser.GameObjects.Graphics;
   private arenaPoseB!: Phaser.GameObjects.Graphics;
+  private arenaPoseClock = 0;
   private covers: Phaser.Geom.Rectangle[] = [];
   private characterNameLabel!: Phaser.GameObjects.Text;
   private animationLabel!: Phaser.GameObjects.Text;
@@ -574,7 +575,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     // Generated reference sheets are sliced into action-specific canvas textures,
     // not directional Phaser spritesheets. Start on the real extracted idle frame
     // so the first lineup character is present and controllable on first load.
-    const initialTexture = current.source === 'generated'
+    const initialTexture = current.source === 'generated' || current.source === 'arena'
       ? this.generatedKey(current, 'idle_down')
       : this.spriteKey(current, 'DOWN');
     this.previewSprite = this.add.sprite(0, 0, initialTexture, 0)
@@ -726,6 +727,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.fireCooldown = Math.max(0, this.fireCooldown - delta);
     this.muzzleUntil = Math.max(0, this.muzzleUntil - delta);
     this.generatedActionUntil = Math.max(0, this.generatedActionUntil - delta);
+    this.arenaPoseClock += delta;
     if (this.generatedActionUntil === 0 && this.generatedAction !== 'ready') {
       this.generatedAction = 'ready';
     }
@@ -742,7 +744,7 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   private prepareGeneratedCharacterTextures() {
-    for (const generatedDef of this.characterDefinitions.filter((def) => def.source === 'generated')) {
+    for (const generatedDef of this.characterDefinitions.filter((def) => def.source === 'generated' || def.source === 'arena')) {
       const referenceKey = generatedDef.id === 'arena_bot'
         ? 'wardrobe-generated-reference-bot'
         : 'wardrobe-generated-reference-player';
@@ -1186,7 +1188,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     if (def.source === 'arena') {
       this.fieldOperator.setVisible(false);
       this.previewSprite.setVisible(false);
-      const step = Math.floor(this.poseClock / 120) % 2 === 1;
+      const step = walking && Math.floor(this.arenaPoseClock / 120) % 2 === 1;
       this.arenaPoseA.setVisible(!step).setScale(this.direction === 'LEFT' ? -1 : 1, 1);
       this.arenaPoseB.setVisible(walking && step).setScale(this.direction === 'LEFT' ? -1 : 1, 1);
       if (!walking) this.arenaPoseB.setVisible(false);
