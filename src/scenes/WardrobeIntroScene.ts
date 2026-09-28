@@ -521,8 +521,10 @@ export class WardrobeLabScene extends Phaser.Scene {
 
     this.character = this.add.container(this.playerSpawn.x, this.playerSpawn.y).setDepth(30);
     this.shadow = this.add.ellipse(0, 0, 46, 13, 0x3d3025, 0.28);
-    this.weaponLayer = this.add.graphics();
-    this.muzzleFlash = this.add.graphics();
+    // The common weapon overlay must start hidden. It is only enabled
+    // explicitly for the generated Shooter Trigger operator below.
+    this.weaponLayer = this.add.graphics().setVisible(false);
+    this.muzzleFlash = this.add.graphics().setVisible(false);
     this.character.add([this.shadow]);
 
     const current = this.currentDefinition();
@@ -1014,6 +1016,8 @@ export class WardrobeLabScene extends Phaser.Scene {
     const def = this.currentDefinition();
     this.weaponLayer.clear();
     this.muzzleFlash.clear();
+    this.weaponLayer.setVisible(false);
+    this.muzzleFlash.setVisible(false);
 
     if (def.source !== 'generated') {
       this.weaponLayer.clear();
