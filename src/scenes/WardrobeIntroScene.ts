@@ -1022,9 +1022,10 @@ export class WardrobeLabScene extends Phaser.Scene {
       animation = 'RIGHT';
     }
 
-    // When the generated player is armed, use the side-facing body pose that
-    // matches the separated arm/weapon artwork. A front-facing body with a
-    // side-facing arm layer is what makes the arm appear to float in front.
+    // The generated body supplies the character artwork only. The armed pose
+    // is driven by the same Arena arms/weapon rig used by Shooters Trigger,
+    // so there is exactly one weapon representation and no second floating
+    // extracted arm/gun layered over the body.
     const aiming = Math.abs(this.aim.x) > 0.2 || this.generatedAction === 'aim' || this.generatedAction === 'shoot';
     if (aiming && !walking) {
       animation = this.aim.x < 0 ? 'LEFT' : 'RIGHT';
@@ -1102,67 +1103,27 @@ export class WardrobeLabScene extends Phaser.Scene {
       return;
     }
 
-    // Generated player uses the separated artwork that was visually correct:
-    // authored body + extracted arms + extracted weapon + extracted muzzle.
-    // Keep the rig attached to the body container so the weapon cannot float.
-    const bodyScale = this.previewSprite.scaleX || (this.targetVisibleCharacterHeight / 160);
+    // Generated player: use the authoritative Shooter Trigger Arena weapon
+    // rig. The generated artwork remains the body; arms, weapon and muzzle
+    // are not rendered from the extracted PNG layers, preventing duplicate
+    // or floating weapon artwork.
+    this.armsSprite.setVisible(false);
+    this.weaponSprite.setVisible(false);
+    this.muzzleSprite.setVisible(false);
+
     const angle = Math.atan2(this.aim.y, this.aim.x);
-    const shoulderY = -40 * bodyScale;
-
-    // Match the separated artwork to the reference by treating the weapon
-    // grip as the attachment point, rather than positioning the whole gun
-    // from its transparent canvas center.
-    const handX = 7 * bodyScale;
-    const handY = shoulderY + 3 * bodyScale;
-    const weaponScale = 50 / 234;
-    const weaponGripOriginX = 0.22;
-    const weaponGripOriginY = 0.52;
-
-    this.armsSprite
-      .setVisible(true)
-      .setScale(bodyScale)
-      .setPosition(-7 * bodyScale, shoulderY)
-      .setRotation(angle)
-      .setFlipY(this.aim.x < 0);
-
-    this.weaponSprite
-      .setVisible(true)
-      .setScale(weaponScale)
-      .setOrigin(weaponGripOriginX, weaponGripOriginY)
-      .setPosition(handX, handY)
-      .setRotation(angle)
-      .setFlipY(this.aim.x < 0);
-
-    // Keep the muzzle visually attached to the weapon's forward end.
-    // The extracted weapon is 234px wide and its grip is at 22% of the
-    // source canvas. At 50px display width, the visible barrel/muzzle starts
-    // about 39px forward of the grip. Keep the muzzle and projectile origin
-    // on that same physical point so the shot cannot come from an invisible
-    // location ahead of the gun.
-    const muzzleDistance = 39;
-    this.muzzleSprite
-      .setVisible(this.muzzleUntil > 0)
-      .setScale(bodyScale)
-      .setPosition(
-        handX + this.aim.x * muzzleDistance,
-        handY + this.aim.y * muzzleDistance,
-      )
-      .setRotation(angle)
-      .setFlipY(this.aim.x < 0);
-
-    // Hide the temporary geometric Arena overlay for the generated character.
-    this.arenaArms.setVisible(false);
-    this.arenaWeapon.setVisible(false);
-    this.arenaMuzzle.setVisible(false);
-  }
+    this.arenaArms.setVisible(true);
+    this.arenaWeapon.setVisible(true);
+    this.arenaMuzzle.setVisible(this.muzzleUntil > 0);
+    this.updateArenaReferenceWeaponPose();
 
   private fireShot() {
     const def = this.currentDefinition();
     const bodyScale = this.previewSprite.scaleX || (this.targetVisibleCharacterHeight / 160);
     const origin = def.source === 'generated'
       ? new Phaser.Math.Vector2(
-        this.character.x + 7 * bodyScale + this.aim.x * 39,
-        this.character.y - 40 * bodyScale + this.aim.y * 39,
+        this.character.x + this.aim.x * 42,
+        this.character.y + this.aim.y * 42,
       )
       : new Phaser.Math.Vector2(
         this.character.x + this.aim.x * 42,
