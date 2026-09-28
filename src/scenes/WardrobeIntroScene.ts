@@ -521,7 +521,6 @@ export class WardrobeLabScene extends Phaser.Scene {
     const { width, height } = this.scale;
 
     this.prepareGeneratedCharacterTextures();
-    this.createArenaReferenceTexture();
 
     this.cameras.main.setBackgroundColor('#6f984b');
     this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
@@ -685,13 +684,16 @@ export class WardrobeLabScene extends Phaser.Scene {
       }
 
       const length = Math.hypot(dx, dy) || 1;
+      const speed = this.currentDefinition().source === 'arena'
+        ? this.getArenaReferenceSpeed()
+        : this.playerSpeed;
       const nx = Phaser.Math.Clamp(
-        this.character.x + (dx / length) * this.playerSpeed * delta / 1000,
+        this.character.x + (dx / length) * speed * delta / 1000,
         42,
         2358,
       );
       const ny = Phaser.Math.Clamp(
-        this.character.y + (dy / length) * this.playerSpeed * delta / 1000,
+        this.character.y + (dy / length) * speed * delta / 1000,
         90,
         1350,
       );
@@ -704,7 +706,9 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.fireCooldown = Math.max(0, this.fireCooldown - delta);
     this.muzzleUntil = Math.max(0, this.muzzleUntil - delta);
     this.generatedActionUntil = Math.max(0, this.generatedActionUntil - delta);
-    if (this.currentDefinition().source === 'arena' && walking) this.arenaAnimTime += delta;
+    // Arena's animation clock never stops; only its cadence changes between
+    // moving (120ms) and idle (650ms). This mirrors ShootersTriggerArenaScene.
+    if (this.currentDefinition().source === 'arena') this.arenaAnimTime += delta;
     else this.arenaAnimTime = 0;
     if (this.generatedActionUntil === 0 && this.generatedAction !== 'ready') {
       this.generatedAction = 'ready';
@@ -1419,6 +1423,20 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.clearShots();
     this.playCharacterAnimation(false);
     this.updateWeaponLayer();
+  }
+
+  private getArenaReferenceSpeed() {
+    // Shooters Trigger Arena uses 170 + evasionSkill * 0.45 with a 50-point
+    // fallback when no Training Camp profile exists. Use the same contract in
+    // the reference lab so movement is not an approximation.
+    try {
+      const raw = JSON.parse(localStorage.getItem('shooters-trigger:training-report') || 'null');
+      const score = Number(raw?.profile?.playerEvasionScore);
+      const evasion = Number.isFinite(score) ? Math.max(0, Math.min(100, score)) : 50;
+      return 170 + evasion * 0.45;
+    } catch {
+      return 170 + 50 * 0.45;
+    }
   }
 
   private inCover(x: number, y: number, padding = 12) {
