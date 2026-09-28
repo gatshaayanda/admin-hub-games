@@ -4885,3 +4885,41 @@ The Wardrobe character selector is a real visual comparison tool, not desktop-on
 - Selector controls must remain reachable and comfortably tappable on narrow Android screens.
 - Fixed desktop coordinates that place controls outside a phone viewport are not acceptable.
 - The shared Shooter mobile controls remain the movement/aim/fire system; selector controls must not interfere with them.
+
+## Wardrobe — Generated Player 32-Frame Source Audit — September 28, 2026
+
+The current generated-player source artwork has now been visually inspected from the actual binaries on `main`. This audit is an asset finding, not a production promotion.
+
+### 1.jpg — current player source
+
+`public/assets/wardrobe/incoming/1.jpg` is a labelled 8×4 contact sheet containing 32 source cells. The visible authored content is:
+
+- frames 0–3: DOWN, DOWN-RIGHT, RIGHT, UP-RIGHT idle/directional poses;
+- frames 4–7: four RUN poses, all authored as a right-facing movement sequence;
+- frame 8: LEFT;
+- frames 9–10: alternate DOWN and LEFT poses;
+- frames 11–15: AIM/READY, SHOOT+RECOIL, READY, MUZZLE FLASH, RECOIL;
+- frames 16–18: HIT, HEADSHOT, and an additional standing/weapon pose;
+- frames 19–23: DEATH / ELIMINATED sequence;
+- frames 24–27: DODGE sequence;
+- frames 28–31: RESPAWN sequence.
+
+The source therefore already contains useful player artwork, but it does **not** contain a complete four-direction walking set. In particular, there is no dedicated pure-UP walk sequence, no dedicated pure-DOWN walk sequence, and no dedicated pure-LEFT walk sequence. The four RUN frames are a right-facing sequence that can be horizontally mirrored for LEFT, but that does not create genuine front/back walking artwork. The source also does not provide a full set of authored diagonal walking frames.
+
+### og.jpg — reference source
+
+`public/assets/wardrobe/incoming/og.jpg` is also an 8×4, 32-cell source/reference sheet. It provides broader directional material than `1.jpg`, including front/down, back/up, left and right presentation and multiple WALK sequences. It is useful as visual reference for the same generated operator, but it is **not a second production player** and its weapon/arms are baked into the artwork.
+
+### Current conclusion
+
+Do **not** generate another whole character yet. The existing source material is sufficient to establish the character's visual identity, but the exact Shooter Trigger directional movement contract exposes a real artwork gap: the final generated player needs genuine directional walking coverage, especially UP/DOWN/LEFT, rather than relying on one right-facing RUN sequence and flips.
+
+The next asset decision must therefore be made from this audit:
+
+1. preserve the existing usable 1.jpg artwork;
+2. use og.jpg as visual reference where it supplies missing directional/body information;
+3. if additional artwork is required, ask Gemini for only the specific missing body frames/sequences, not a new character/system;
+4. keep the authored weapon/arms out of the production body layer where possible, because Shooter Trigger's authoritative arms/weapon/muzzle/aim system must remain separate;
+5. run any new frames through the existing clean extraction/normalization pipeline and visually compare them against the Arena reference before promotion.
+
+The Wardrobe generated-player work remains isolated from Shooter Trigger combat, projectile, collision, AI and Golden Playthrough logic.
