@@ -1093,26 +1093,64 @@ export class WardrobeLabScene extends Phaser.Scene {
       return;
     }
 
-    // Generated body uses the authored source artwork; the arms, weapon and
-    // muzzle use the exact Shooter Trigger Arena presentation rig below.
-    // Do not scale/reposition the generated weapon artwork independently:
-    // that asset is a full-size paintball marker and is not the Arena weapon.
-    this.armsSprite.setVisible(false);
-    this.weaponSprite.setVisible(false);
-    this.muzzleSprite.setVisible(false);
+    // Generated player uses the separated artwork that was visually correct:
+    // authored body + extracted arms + extracted weapon + extracted muzzle.
+    // Keep the rig attached to the body container so the weapon cannot float.
+    const bodyScale = this.previewSprite.scaleX || (this.targetVisibleCharacterHeight / 160);
+    const angle = Math.atan2(this.aim.y, this.aim.x);
+    const shoulderY = -40 * bodyScale;
+    const weaponX = 2 * bodyScale;
+    const weaponY = shoulderY;
 
-    this.arenaArms.setVisible(true);
-    this.arenaWeapon.setVisible(true);
-    this.arenaMuzzle.setVisible(this.muzzleUntil > 0);
-    this.updateArenaReferenceWeaponPose();
+    // The extracted weapon is a tightly cropped 234px-wide transparent layer.
+    // Normalize it to the Arena's approximately 50px visual weapon length.
+    const weaponScale = 50 / 234;
+
+    this.armsSprite
+      .setVisible(true)
+      .setScale(bodyScale)
+      .setPosition(-7 * bodyScale, shoulderY)
+      .setRotation(angle)
+      .setFlipY(this.aim.x < 0);
+
+    this.weaponSprite
+      .setVisible(true)
+      .setScale(weaponScale)
+      .setPosition(weaponX, weaponY)
+      .setRotation(angle)
+      .setFlipY(this.aim.x < 0);
+
+    // The muzzle follows the normalized weapon and remains part of the same
+    // visual rig. The projectile origin is derived from this same rig below.
+    const muzzleDistance = 50;
+    this.muzzleSprite
+      .setVisible(this.muzzleUntil > 0)
+      .setScale(bodyScale)
+      .setPosition(
+        weaponX + this.aim.x * muzzleDistance,
+        weaponY + this.aim.y * muzzleDistance,
+      )
+      .setRotation(angle)
+      .setFlipY(this.aim.x < 0);
+
+    // Hide the temporary geometric Arena overlay for the generated character.
+    this.arenaArms.setVisible(false);
+    this.arenaWeapon.setVisible(false);
+    this.arenaMuzzle.setVisible(false);
   }
 
   private fireShot() {
     const def = this.currentDefinition();
-    const origin = new Phaser.Math.Vector2(
-      this.character.x + this.aim.x * 42,
-      this.character.y + this.aim.y * (def.source === 'arena' ? 0 : 0),
-    );
+    const bodyScale = this.previewSprite.scaleX || (this.targetVisibleCharacterHeight / 160);
+    const origin = def.source === 'generated'
+      ? new Phaser.Math.Vector2(
+        this.character.x + 2 * bodyScale + this.aim.x * 112 * bodyScale,
+        this.character.y - 40 * bodyScale + this.aim.y * 112 * bodyScale,
+      )
+      : new Phaser.Math.Vector2(
+        this.character.x + this.aim.x * 42,
+        this.character.y + (def.source === 'arena' ? 0 : 0),
+      );
     const velocity = this.aim.clone().normalize().scale(this.projectileSpeed);
     const graphics = this.add.circle(origin.x, origin.y, 4, 0xf0dfb6, 1).setDepth(60);
     this.shots.push({
