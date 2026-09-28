@@ -476,9 +476,6 @@ export class WardrobeLabScene extends Phaser.Scene {
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT' = 'DOWN';
   private previewSprite!: Phaser.GameObjects.Sprite;
-  private arenaPoseA!: Phaser.GameObjects.Graphics;
-  private arenaPoseB!: Phaser.GameObjects.Graphics;
-  private arenaPoseClock = 0;
   private covers: Phaser.Geom.Rectangle[] = [];
   private characterNameLabel!: Phaser.GameObjects.Text;
   private animationLabel!: Phaser.GameObjects.Text;
@@ -575,7 +572,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     // Generated reference sheets are sliced into action-specific canvas textures,
     // not directional Phaser spritesheets. Start on the real extracted idle frame
     // so the first lineup character is present and controllable on first load.
-    const initialTexture = current.source === 'generated' || current.source === 'arena'
+    const initialTexture = current.source === 'generated'
       ? this.generatedKey(current, 'idle_down')
       : this.spriteKey(current, 'DOWN');
     this.previewSprite = this.add.sprite(0, 0, initialTexture, 0)
@@ -587,9 +584,6 @@ export class WardrobeLabScene extends Phaser.Scene {
     // The first Wardrobe character now uses the authoritative Shooters Trigger
     // fighter construction: the body is a Phaser Graphics presentation, while
     // arms + marker remain the independent aim layer below.
-    this.arenaPoseA = this.createArenaPlayerPose(0, 0);
-    this.arenaPoseB = this.createArenaPlayerPose(2, 1).setVisible(false);
-    this.character.add([this.arenaPoseA, this.arenaPoseB]);
     this.character.add([this.weaponLayer, this.muzzleFlash]);
 
     this.createCharacterAnimations();
@@ -727,7 +721,6 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.fireCooldown = Math.max(0, this.fireCooldown - delta);
     this.muzzleUntil = Math.max(0, this.muzzleUntil - delta);
     this.generatedActionUntil = Math.max(0, this.generatedActionUntil - delta);
-    this.arenaPoseClock += delta;
     if (this.generatedActionUntil === 0 && this.generatedAction !== 'ready') {
       this.generatedAction = 'ready';
     }
@@ -1149,50 +1142,8 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
 
-  private createArenaPlayerPose(legOffset: number, bob: number) {
-    const color = 0x2f6b4e;
-    const g = this.add.graphics();
-
-    // This is copied from the live Arena createFighter() geometry rather than
-    // inventing a second Wardrobe character model. The same silhouette,
-    // proportions, palette and foot baseline are used here.
-    g.fillStyle(0x3b2f28, 1).fillEllipse(0, -20 + bob, 24, 18);
-    g.fillStyle(0xd8a66b, 1).fillEllipse(0, -17 + bob, 13, 12);
-    g.fillStyle(0xd4a45d, 1).fillCircle(-7, -17 + bob, 2.5).fillCircle(7, -17 + bob, 2.5);
-    g.fillStyle(color, 1).fillEllipse(0, -23 + bob, 25, 12);
-    g.fillStyle(0x111715, 1).fillRoundedRect(-13, -17 + bob, 26, 10, 4);
-    g.fillStyle(0x9bb9b1, 0.88).fillRoundedRect(-9, -15 + bob, 18, 6, 2);
-    g.lineStyle(1, 0xe8f2dc, 0.42).strokeRoundedRect(-9, -15 + bob, 18, 6, 2);
-    g.fillStyle(0xd4a45d, 1).fillRoundedRect(-4, -8 + bob, 8, 7, 2);
-    g.fillStyle(color, 1).fillRoundedRect(-15, -4 + bob, 30, 22, 8);
-    g.fillStyle(0x4f8b65, 1).fillRoundedRect(-10, -1 + bob, 20, 14, 4);
-    g.fillStyle(0x17201c, 0.9).fillRoundedRect(-15, 0 + bob, 6, 13, 2).fillRoundedRect(9, 0 + bob, 6, 13, 2);
-    g.fillStyle(0xc1a86c, 1).fillRect(-10, 8 + bob, 20, 4);
-    g.fillStyle(0x1d2923, 1).fillRect(-12, 12 + bob, 24, 5);
-    g.fillStyle(0x5e4936, 1).fillRoundedRect(-15, 8 + bob, 5, 8, 2).fillRoundedRect(10, 8 + bob, 5, 8, 2);
-    g.fillStyle(0x29372f, 1).fillRoundedRect(-11, 16 + bob, 22, 7, 3);
-    g.fillStyle(0x566052, 1)
-      .fillRoundedRect(-10 + legOffset, 20 + bob, 8, 13, 2)
-      .fillRoundedRect(2 - legOffset, 20 + bob, 8, 13, 2);
-    g.fillStyle(0x202522, 1)
-      .fillRoundedRect(-12 + legOffset, 30 + bob, 10, 7, 2)
-      .fillRoundedRect(2 - legOffset, 30 + bob, 10, 7, 2);
-
-    return g;
-  }
-
   private playCharacterAnimation(walking: boolean) {
     const def = this.currentDefinition();
-
-    if (def.source === 'arena') {
-      this.fieldOperator.setVisible(false);
-      this.previewSprite.setVisible(false);
-      const step = walking && Math.floor(this.arenaPoseClock / 120) % 2 === 1;
-      this.arenaPoseA.setVisible(!step).setScale(this.direction === 'LEFT' ? -1 : 1, 1);
-      this.arenaPoseB.setVisible(walking && step).setScale(this.direction === 'LEFT' ? -1 : 1, 1);
-      if (!walking) this.arenaPoseB.setVisible(false);
-      return;
-    }
 
     this.fieldOperator.setVisible(false);
     this.previewSprite.setVisible(true);
