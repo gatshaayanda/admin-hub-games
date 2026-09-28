@@ -165,7 +165,7 @@ export class WardrobeIntroScene extends Phaser.Scene {
   }
 
   private prepareGeneratedIntroTexture() {
-    const source = this.textures.get('wardrobe-generated-reference').getSourceImage() as CanvasImageSource & {
+    const source = this.textures.get('wardrobe-generated-reference-player').getSourceImage() as CanvasImageSource & {
       width: number;
       height: number;
     };
@@ -515,7 +515,8 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.image('wardrobe-generated-reference', '/assets/wardrobe/incoming/1.jpg');
+    this.load.image('wardrobe-generated-reference-player', '/assets/wardrobe/incoming/1.jpg');
+    this.load.image('wardrobe-generated-reference-bot', '/assets/wardrobe/incoming/og.jpg');
     for (const def of this.characterDefinitions) {
       for (const direction of ['DOWN', 'UP', 'LEFT', 'RIGHT'] as const) {
         if (def.source === 'generated') continue;
