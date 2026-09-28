@@ -200,11 +200,37 @@ export class WardrobeIntroScene extends Phaser.Scene {
         const dr = r - cr;
         const dg = g - cg;
         const db = b - cb;
-        return dr * dr + dg * dg + db * db < 42 * 42;
+        return dr * dr + dg * dg + db * db < 52 * 52;
       });
     };
-    for (let i = 0; i < data.length; i += 4) {
-      if (isBackground(i)) data[i + 3] = 0;
+    const background = new Uint8Array(frameCanvas.width * frameCanvas.height);
+    const queue: number[] = [];
+    const pushIfBackground = (x: number, y: number) => {
+      if (x < 0 || y < 0 || x >= frameCanvas.width || y >= frameCanvas.height) return;
+      const pixel = y * frameCanvas.width + x;
+      if (background[pixel] || !isBackground(pixel * 4)) return;
+      background[pixel] = 1;
+      queue.push(pixel);
+    };
+    for (let x = 0; x < frameCanvas.width; x += 1) {
+      pushIfBackground(x, 0);
+      pushIfBackground(x, frameCanvas.height - 1);
+    }
+    for (let y = 1; y < frameCanvas.height - 1; y += 1) {
+      pushIfBackground(0, y);
+      pushIfBackground(frameCanvas.width - 1, y);
+    }
+    for (let head = 0; head < queue.length; head += 1) {
+      const pixel = queue[head];
+      const x = pixel % frameCanvas.width;
+      const y = Math.floor(pixel / frameCanvas.width);
+      pushIfBackground(x - 1, y);
+      pushIfBackground(x + 1, y);
+      pushIfBackground(x, y - 1);
+      pushIfBackground(x, y + 1);
+    }
+    for (let pixel = 0; pixel < background.length; pixel += 1) {
+      if (background[pixel]) data[pixel * 4 + 3] = 0;
     }
     context.putImageData(pixels, 0, 0);
 
@@ -799,18 +825,47 @@ export class WardrobeLabScene extends Phaser.Scene {
           const r = data[index];
           const g = data[index + 1];
           const b = data[index + 2];
-          const neutral = Math.max(r, g, b) - Math.min(r, g, b) < 14;
           const cornerMatch = cornerSamples.some(([cr, cg, cb]) => {
             const dr = r - cr;
             const dg = g - cg;
             const db = b - cb;
-            return dr * dr + dg * dg + db * db < 48 * 48;
+            return dr * dr + dg * dg + db * db < 52 * 52;
           });
-          return neutral && cornerMatch;
+          return cornerMatch;
         };
 
-        for (let i = 0; i < data.length; i += 4) {
-          if (isBackground(i)) data[i + 3] = 0;
+        // The generated JPGs have a baked background. Remove every background
+        // region connected to the frame edge rather than relying on the
+        // background being neutral grey. This keeps the operator itself intact
+        // while preventing the source rectangle from becoming the character.
+        const background = new Uint8Array(cellWidth * cellHeight);
+        const queue: number[] = [];
+        const pushIfBackground = (x: number, y: number) => {
+          if (x < 0 || y < 0 || x >= cellWidth || y >= cellHeight) return;
+          const pixel = y * cellWidth + x;
+          if (background[pixel] || !isBackground(pixel * 4)) return;
+          background[pixel] = 1;
+          queue.push(pixel);
+        };
+        for (let x = 0; x < cellWidth; x += 1) {
+          pushIfBackground(x, 0);
+          pushIfBackground(x, cellHeight - 1);
+        }
+        for (let y = 1; y < cellHeight - 1; y += 1) {
+          pushIfBackground(0, y);
+          pushIfBackground(cellWidth - 1, y);
+        }
+        for (let head = 0; head < queue.length; head += 1) {
+          const pixel = queue[head];
+          const x = pixel % cellWidth;
+          const y = Math.floor(pixel / cellWidth);
+          pushIfBackground(x - 1, y);
+          pushIfBackground(x + 1, y);
+          pushIfBackground(x, y - 1);
+          pushIfBackground(x, y + 1);
+        }
+        for (let pixel = 0; pixel < background.length; pixel += 1) {
+          if (background[pixel]) data[pixel * 4 + 3] = 0;
         }
         frameContext.putImageData(pixels, 0, 0);
 
