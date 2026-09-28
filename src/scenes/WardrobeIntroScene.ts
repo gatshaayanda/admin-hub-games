@@ -1302,3 +1302,276 @@ export class WardrobeLabScene extends Phaser.Scene {
     const sideOffset = compact ? Math.max(66, width * 0.22) : Math.min(210, width * 0.30);
     makeButton(width / 2 - sideOffset, '‹ PREV', -1);
     makeButton(width / 2 + sideOffset, 'NEXT ›', 1);
+
+    this.add.text(width / 2, y + (compact ? 44 : 22), compact ? 'SWIPE/TOUCH TO COMPARE SPRITES' : 'OTHER SPRITES = VISUAL GAME TESTS · PLAYER = 1.JPG PIPELINE', {
+      fontFamily: 'monospace',
+      fontSize: compact ? '5px' : '6px',
+      color: '#8fb39b',
+      align: 'center',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(103);
+
+    this.updateLabels();
+  }
+
+  private selectCharacter(index: number) {
+    const count = this.characterDefinitions.length;
+    this.selectedCharacterIndex = (index + count) % count;
+    this.generatedAction = 'ready';
+    this.generatedActionUntil = 0;
+    this.fireHeld = false;
+    this.pointerAimActive = false;
+    this.clearShots();
+
+    const def = this.currentDefinition();
+    this.previewSprite.stop();
+
+    const arenaReference = def.source === 'arena';
+    this.shadow.setPosition(0, arenaReference ? 34 : 0);
+    this.shadow.setSize(arenaReference ? 27 : 46, arenaReference ? 10 : 13);
+    this.previewSprite.setVisible(!arenaReference);
+
+    if (arenaReference) {
+      this.arenaPoseA.setVisible(true).setScale(1, 1);
+      this.arenaPoseB.setVisible(false).setScale(1, 1);
+      this.arenaArms.setVisible(true);
+      this.arenaWeapon.setVisible(true);
+      this.arenaMuzzle.setVisible(false);
+    } else {
+      this.previewSprite.setTexture(this.spriteKey(def, 'DOWN'), 0);
+      this.fitCharacterSprite(this.previewSprite, def);
+      this.arenaPoseA.setVisible(false);
+      this.arenaPoseB.setVisible(false);
+      this.arenaArms.setVisible(false);
+      this.arenaWeapon.setVisible(false);
+      this.arenaMuzzle.setVisible(false);
+    }
+    this.previewSprite.setRotation(0);
+    this.updateWeaponLayer();
+    this.updateLabels();
+  }
+
+  private updateLabels() {
+    const def = this.currentDefinition();
+    this.characterNameLabel?.setText(def.id === 'arena_player' ? 'SHOOTERS TRIGGER PLAYER · GENERATED · AUTHORITATIVE' : def.name + ' · VISUAL TEST');
+    const action = this.fireHeld ? 'FIRE' : this.pointerAimActive ? 'AIM' : 'READY';
+    this.directionLabel?.setText(
+      'FACING · ' + this.direction +
+      ' · ' + action +
+      ' · AIM VECTOR ' + Math.round(Phaser.Math.RadToDeg(Math.atan2(this.aim.y, this.aim.x))) + '°',
+    );
+    this.combatLabel?.setText(
+      'TARGET · ' + (this.targetDown ? 'DOWN' : 'LIVE') +
+      ' · BODY HITS ' + this.targetBodyHits + '/2 · HEADSHOT = INSTANT',
+    );
+  }
+
+  public setMoveVector(x: number, y: number) {
+    this.move.set(Phaser.Math.Clamp(x, -1, 1), Phaser.Math.Clamp(y, -1, 1));
+  }
+
+  public setFireHeld(value: boolean) {
+    this.fireHeld = value;
+    if (!value) this.pointerAimActive = false;
+  }
+
+  public setAimVector(x: number, y: number) {
+    const length = Math.hypot(x, y);
+    if (length > 0.05) {
+      this.aim.set(x / length, y / length);
+      this.pointerAimActive = true;
+      this.updateWeaponLayer();
+      this.updateLabels();
+    }
+  }
+
+  public isFireAvailable() {
+    return true;
+  }
+
+  public isPhoneSession() {
+    return window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+  }
+
+  private clearShots() {
+    this.shots.forEach((shot) => shot.graphics.destroy());
+    this.shots = [];
+  }
+
+  private removeShot(index: number) {
+    this.shots[index].graphics.destroy();
+    this.shots.splice(index, 1);
+  }
+
+  private showCombatMessage(text: string, color: string) {
+    const label = this.add.text(this.target.x, this.target.y - 116, text, {
+      fontFamily: 'monospace',
+      fontSize: '13px',
+      fontStyle: 'bold',
+      color,
+      stroke: '#151a16',
+      strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(150);
+
+    this.tweens.add({
+      targets: label,
+      y: label.y - 38,
+      alpha: 0,
+      duration: 500,
+      ease: 'Quad.easeOut',
+      onComplete: () => label.destroy(),
+    });
+  }
+
+  private resetCharacter() {
+    this.character.setPosition(this.playerSpawn.x, this.playerSpawn.y);
+    const arenaReference = this.currentDefinition().source === 'arena';
+    this.shadow.setPosition(0, arenaReference ? 34 : 0);
+    this.shadow.setSize(arenaReference ? 27 : 46, arenaReference ? 10 : 13);
+    this.move.set(0, 0);
+    this.direction = 'DOWN';
+    this.playerFacing = 1;
+    this.visualMove.set(0, 1);
+    this.aim.set(1, 0);
+    this.generatedAction = 'ready';
+    this.generatedActionUntil = 0;
+    this.fireHeld = false;
+    this.fireCooldown = 0;
+    this.muzzleUntil = 0;
+    this.pointerAimActive = false;
+    this.pointerId = -1;
+    this.clearShots();
+    this.playCharacterAnimation(false);
+    this.updateWeaponLayer();
+  }
+
+  private getArenaReferenceSpeed() {
+    // Shooters Trigger Arena uses 170 + evasionSkill * 0.45 with a 50-point
+    // fallback when no Training Camp profile exists. Use the same contract in
+    // the reference lab so movement is not an approximation.
+    try {
+      const raw = JSON.parse(localStorage.getItem('shooters-trigger:training-report') || 'null');
+      const score = Number(raw?.profile?.playerEvasionScore);
+      const evasion = Number.isFinite(score) ? Math.max(0, Math.min(100, score)) : 50;
+      return 170 + evasion * 0.45;
+    } catch {
+      return 170 + 50 * 0.45;
+    }
+  }
+
+  private inCover(x: number, y: number, padding = 12) {
+    return this.covers.some((cover) =>
+      x >= cover.x - padding &&
+      x <= cover.x + cover.width + padding &&
+      y >= cover.y - padding &&
+      y <= cover.y + cover.height + padding
+    );
+  }
+
+  private drawArenaField() {
+    const g = this.add.graphics().setDepth(0);
+
+    g.fillStyle(0x78a653, 1).fillRect(0, 0, this.worldWidth, this.worldHeight);
+    g.fillStyle(0x86ad5e, 0.42).fillRect(0, 0, this.worldWidth * 0.50, this.worldHeight);
+    g.fillStyle(0x679346, 0.32).fillRect(this.worldWidth * 0.50, 0, this.worldWidth * 0.50, this.worldHeight);
+    g.fillStyle(0xd1b46c, 0.30).fillRect(0, 510, this.worldWidth, 92);
+    g.fillStyle(0xd1b46c, 0.22).fillRect(870, 0, 100, this.worldHeight);
+
+    g.lineStyle(5, 0xf4f1df, 0.48);
+    g.strokeRect(55, 70, this.worldWidth - 110, this.worldHeight - 120);
+
+    this.drawTree(300, 280, 1.15);
+    this.drawTree(2050, 300, 0.95);
+    this.drawTree(350, 1110, 0.90);
+    this.drawTree(2070, 1090, 1.10);
+
+    this.drawBunker(690, 360, 190, 72);
+    this.drawBunker(1470, 350, 230, 76);
+    this.drawBunker(520, 760, 250, 70);
+    this.drawBunker(1570, 760, 220, 68);
+    this.drawBunker(850, 1030, 260, 74);
+    this.drawBunker(1420, 1080, 240, 72);
+
+    this.drawTireStack(1080, 300);
+    this.drawTireStack(1900, 650);
+    this.drawTireStack(730, 1170);
+
+    this.drawFlag(1180, 860);
+    this.drawFieldDetails();
+
+    this.combatLabel = this.add.text(this.scale.width / 2, this.scale.height - 18, '', {
+      fontFamily: 'monospace',
+      fontSize: '7px',
+      fontStyle: 'bold',
+      color: '#f4f1df',
+      align: 'center',
+    }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(104);
+  }
+
+  private drawTree(x: number, y: number, scale: number) {
+    const g = this.add.graphics().setDepth(2);
+    g.fillStyle(0x65472f, 1).fillRect(x - 6 * scale, y + 18 * scale, 12 * scale, 60 * scale);
+    g.fillStyle(0x405638, 1)
+      .fillCircle(x, y, 34 * scale)
+      .fillCircle(x - 28 * scale, y + 9 * scale, 28 * scale)
+      .fillCircle(x + 28 * scale, y + 9 * scale, 29 * scale);
+    g.fillStyle(0x526d3c, 0.75).fillCircle(x + 5 * scale, y - 16 * scale, 23 * scale);
+    this.covers.push(new Phaser.Geom.Rectangle(x - 8 * scale, y + 14 * scale, 16 * scale, 52 * scale));
+  }
+
+  private drawBunker(x: number, y: number, width: number, height: number) {
+    const g = this.add.graphics().setDepth(3);
+    g.fillStyle(0x493526, 0.24).fillRect(x + 8, y + 9, width, height);
+    g.fillStyle(0x76563b, 1).fillRoundedRect(x, y, width, height, 10);
+    g.fillStyle(0xffffff, 0.12).fillRect(x + 12, y + 10, width - 24, 5);
+    g.lineStyle(2, 0xf4f1df, 0.28).strokeRoundedRect(x, y, width, height, 10);
+    this.covers.push(new Phaser.Geom.Rectangle(x, y, width, height));
+  }
+
+  private drawTireStack(x: number, y: number) {
+    const g = this.add.graphics().setDepth(3);
+    for (let i = 0; i < 4; i += 1) {
+      g.fillStyle(0x2b302d, 1).fillCircle(x + i * 17, y - i * 3, 19);
+      g.fillStyle(0x66706a, 1).fillCircle(x + i * 17, y - i * 3, 7);
+    }
+    this.covers.push(new Phaser.Geom.Rectangle(x - 20, y - 25, 90, 45));
+  }
+
+  private drawFlag(x: number, y: number) {
+    const g = this.add.graphics().setDepth(4);
+    g.fillStyle(0x594838, 1).fillRect(x, y, 4, 78);
+    g.fillStyle(0x2f7775, 1).fillTriangle(x + 4, y + 4, x + 64, y + 18, x + 4, y + 32);
+    this.add.text(x + 32, y + 50, 'ARENA', {
+      fontFamily: 'monospace',
+      fontSize: '9px',
+      color: '#fff4d4',
+      stroke: '#493526',
+      strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(6);
+  }
+
+  private drawFieldDetails() {
+    const g = this.add.graphics().setDepth(4);
+    g.lineStyle(3, 0xf4f1df, 0.20);
+    g.strokeRoundedRect(930, 145, 500, 230, 24);
+    g.strokeRoundedRect(900, 885, 560, 250, 24);
+
+    g.lineStyle(2, 0xead8a0, 0.28);
+    for (const x of [600, 900, 1200, 1500, 1800]) {
+      g.lineBetween(x, 530, x, 585);
+      g.lineBetween(x, 815, x, 870);
+    }
+
+    g.fillStyle(0x493526, 0.16);
+    g.fillRoundedRect(1090, 405, 180, 36, 8);
+    g.lineStyle(2, 0xf4f1df, 0.22).strokeRoundedRect(1090, 405, 180, 36, 8);
+
+    this.add.text(1180, 423, 'FIELD LINE', {
+      fontFamily: 'monospace',
+      fontSize: '8px',
+      color: '#fff4d4',
+    }).setOrigin(0.5).setDepth(6).setAlpha(0.55);
+  }
+}
+function benchCenterY(height: number) {
+  return height * 0.47 + 82;
+}
