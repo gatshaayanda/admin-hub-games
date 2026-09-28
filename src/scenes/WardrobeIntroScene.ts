@@ -513,6 +513,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     const { width, height } = this.scale;
 
     this.prepareGeneratedCharacterTextures();
+    this.createArenaReferenceTexture();
 
     this.cameras.main.setBackgroundColor('#6f984b');
     this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
@@ -701,27 +702,56 @@ export class WardrobeLabScene extends Phaser.Scene {
 
   private createArenaReferenceTexture() {
     if (this.textures.exists('wardrobe-arena-reference')) return;
+
+    // This is a literal visual copy of the authoritative Arena createFighter()
+    // pose, baked only so Wardrobe can show the real Shooter reference beside
+    // the generated operator. It is not a replacement implementation of the
+    // Shooter fighter and it does not alter Shooter Trigger.
     const g = this.add.graphics();
-    const bob = 0;
-    g.fillStyle(0x3b2f28, 1).fillEllipse(50, 27 + bob, 24, 18);
-    g.fillStyle(0xd8a66b, 1).fillEllipse(50, 30 + bob, 13, 12);
-    g.fillStyle(0xd4a45d, 1).fillCircle(43, 30, 2.5).fillCircle(57, 30, 2.5);
-    g.fillStyle(0x2f6b4e, 1).fillEllipse(50, 24, 25, 12);
-    g.fillStyle(0x111715, 1).fillRoundedRect(37, 30, 26, 10, 4);
-    g.fillStyle(0x9bb9b1, 0.88).fillRoundedRect(41, 32, 18, 6, 2);
-    g.fillStyle(0xd4a45d, 1).fillRoundedRect(46, 37, 8, 7, 2);
-    g.fillStyle(0x2f6b4e, 1).fillRoundedRect(35, 41, 30, 22, 8);
-    g.fillStyle(0x4f8b65, 1).fillRoundedRect(40, 44, 20, 14, 4);
-    g.fillStyle(0x17201c, 0.9).fillRoundedRect(35, 45, 6, 13, 2).fillRoundedRect(59, 45, 6, 13, 2);
-    g.fillStyle(0xc1a86c, 1).fillRect(40, 53, 20, 4);
-    g.fillStyle(0x1d2923, 1).fillRect(38, 57, 24, 5);
-    g.fillStyle(0x5e4936, 1).fillRoundedRect(35, 53, 5, 8, 2).fillRoundedRect(60, 53, 5, 8, 2);
-    g.fillStyle(0x29372f, 1).fillRoundedRect(39, 62, 22, 7, 3);
-    g.fillStyle(0x566052, 1).fillRoundedRect(40, 66, 8, 13, 2).fillRoundedRect(52, 66, 8, 13, 2);
-    g.fillStyle(0x202522, 1).fillRoundedRect(38, 76, 10, 7, 2).fillRoundedRect(52, 76, 10, 7, 2);
-    g.lineStyle(4, 0x2a332f, 1).lineBetween(57, 48, 72, 43);
-    g.fillStyle(0x111715, 1).fillRoundedRect(68, 40, 16, 5, 2);
-    g.generateTexture('wardrobe-arena-reference', 100, 100);
+    const ox = 60;
+    const oy = 34;
+    const px = (x: number) => x + ox;
+    const py = (y: number) => y + oy;
+
+    g.fillStyle(0x3b2f28, 1).fillEllipse(px(0), py(-20), 24, 18);
+    g.fillStyle(0xd8a66b, 1).fillEllipse(px(0), py(-17), 13, 12);
+    g.fillStyle(0xd4a45d, 1).fillCircle(px(-7), py(-17), 2.5).fillCircle(px(7), py(-17), 2.5);
+    g.fillStyle(0x2f6b4e, 1).fillEllipse(px(0), py(-23), 25, 12);
+    g.fillStyle(0x111715, 1).fillRoundedRect(px(-13), py(-17), 26, 10, 4);
+    g.fillStyle(0x9bb9b1, 0.88).fillRoundedRect(px(-9), py(-15), 18, 6, 2);
+    g.lineStyle(1, 0xe8f2dc, 0.42).strokeRoundedRect(px(-9), py(-15), 18, 6, 2);
+    g.fillStyle(0xd4a45d, 1).fillRoundedRect(px(-4), py(-8), 8, 7, 2);
+    g.fillStyle(0x2f6b4e, 1).fillRoundedRect(px(-15), py(-4), 30, 22, 8);
+    g.fillStyle(0x4f8b65, 1).fillRoundedRect(px(-10), py(-1), 20, 14, 4);
+    g.fillStyle(0x17201c, 0.9).fillRoundedRect(px(-15), py(0), 6, 13, 2).fillRoundedRect(px(9), py(0), 6, 13, 2);
+    g.fillStyle(0xc1a86c, 1).fillRect(px(-10), py(8), 20, 4);
+    g.fillStyle(0x1d2923, 1).fillRect(px(-12), py(12), 24, 5);
+    g.fillStyle(0x5e4936, 1).fillRoundedRect(px(-15), py(8), 5, 8, 2).fillRoundedRect(px(10), py(8), 5, 8, 2);
+    g.fillStyle(0x29372f, 1).fillRoundedRect(px(-11), py(16), 22, 7, 3);
+    g.fillStyle(0x566052, 1).fillRoundedRect(px(-10), py(20), 8, 13, 2).fillRoundedRect(px(2), py(20), 8, 13, 2);
+    g.fillStyle(0x202522, 1).fillRoundedRect(px(-12), py(30), 10, 7, 2).fillRoundedRect(px(2), py(30), 10, 7, 2);
+
+    // Exact Arena arms + weapon pose at the same default rightward aim.
+    const arms = this.add.graphics();
+    arms.lineStyle(5, 0x314b3c, 1);
+    arms.lineBetween(px(-8), py(5), px(5), py(2));
+    arms.lineBetween(px(8), py(5), px(12), py(4));
+    arms.fillStyle(0xd4a45d, 1).fillCircle(px(5), py(2), 3).fillCircle(px(12), py(4), 3);
+
+    const weapon = this.add.graphics();
+    weapon.lineStyle(3, 0x6c806f, 1).lineBetween(px(10), py(5), px(2), py(12));
+    weapon.fillStyle(0x151b18, 1).fillEllipse(px(13), py(-8), 9, 7);
+    weapon.fillStyle(0x33423b, 1).fillRoundedRect(px(7), py(-4), 18, 9, 3);
+    weapon.fillStyle(0x111715, 1).fillRect(px(22), py(-2), 15, 5);
+    weapon.fillStyle(0x53635c, 1).fillRect(px(12), py(-9), 8, 4);
+    weapon.fillStyle(0x171d1b, 1).fillRoundedRect(px(11), py(4), 5, 10, 2);
+    weapon.fillStyle(0x493b31, 1).fillRoundedRect(px(-5), py(4), 10, 5, 2);
+    weapon.lineStyle(3, 0x2a332f, 1).lineBetween(px(-2), py(6), px(8), py(5));
+    weapon.lineStyle(1, 0xe8c95c, 0.45).lineBetween(px(35), py(0), px(45), py(0));
+
+    g.generateTexture('wardrobe-arena-reference', 120, 90);
+    arms.destroy();
+    weapon.destroy();
     g.destroy();
   }
 
@@ -860,6 +890,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.previewSprite.setVisible(true);
 
     if (def.source === 'arena') {
+      this.createArenaReferenceTexture();
       this.previewSprite.setTexture('wardrobe-arena-reference');
       this.previewSprite.setDisplaySize(80, 80).setOrigin(0.5, 0.86);
       this.previewSprite.setFlipX(vx < -0.08);
@@ -988,7 +1019,9 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.weaponLayer.clear();
     this.muzzleFlash.clear();
 
-    if (def.source !== 'generated' && def.source !== 'arena') {
+    if (def.source !== 'generated') {
+      this.weaponLayer.clear();
+      this.muzzleFlash.clear();
       this.weaponLayer.setVisible(false);
       this.muzzleFlash.setVisible(false);
       return;
@@ -1204,6 +1237,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     const def = this.currentDefinition();
     this.previewSprite.stop();
     if (def.source === 'arena') {
+      this.createArenaReferenceTexture();
       this.previewSprite.setTexture('wardrobe-arena-reference');
       this.previewSprite.setDisplaySize(80, 80).setOrigin(0.5, 0.86);
     } else {
