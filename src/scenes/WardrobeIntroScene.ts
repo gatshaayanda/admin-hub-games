@@ -1093,30 +1093,38 @@ export class WardrobeLabScene extends Phaser.Scene {
       return;
     }
 
-    const scale = this.previewSprite.scaleX || (this.targetVisibleCharacterHeight / 160);
+    const bodyScale = this.previewSprite.scaleX || (this.targetVisibleCharacterHeight / 160);
     const angle = Math.atan2(this.aim.y, this.aim.x);
-    const shoulderY = -40 * scale;
-    const weaponX = 2 * scale;
+    const shoulderY = -40 * bodyScale;
+    const weaponX = 2 * bodyScale;
     const weaponY = shoulderY;
+
+    // The extracted weapon is a tightly cropped 234px-wide transparent layer.
+    // Scaling it with the 60px-tall body made the gun roughly 88px long,
+    // substantially larger than the ~50px Arena reference weapon. Keep the
+    // body/arms scale authoritative, but normalize the weapon independently.
+    const weaponScale = 50 / 234;
 
     this.armsSprite
       .setVisible(true)
-      .setScale(scale)
-      .setPosition(-7 * scale, shoulderY)
+      .setScale(bodyScale)
+      .setPosition(-7 * bodyScale, shoulderY)
       .setRotation(angle)
       .setFlipY(this.aim.x < 0);
 
     this.weaponSprite
       .setVisible(true)
-      .setScale(scale)
+      .setScale(weaponScale)
       .setPosition(weaponX, weaponY)
       .setRotation(angle)
       .setFlipY(this.aim.x < 0);
 
-    const muzzleDistance = 112 * scale;
+    // Keep the muzzle at the end of the normalized weapon rather than using
+    // the body's scale, which previously placed it beyond the visible barrel.
+    const muzzleDistance = 50;
     this.muzzleSprite
       .setVisible(this.muzzleUntil > 0)
-      .setScale(scale)
+      .setScale(bodyScale)
       .setPosition(
         weaponX + this.aim.x * muzzleDistance,
         weaponY + this.aim.y * muzzleDistance,
