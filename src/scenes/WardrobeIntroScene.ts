@@ -1005,7 +1005,7 @@ export class WardrobeLabScene extends Phaser.Scene {
       texture.refresh();
     }
   }
-
+  }
 
   private generatedKey(def: WardrobeCharacterDefinition, action: string) {
     return 'wardrobe-' + def.id + '-' + action;
