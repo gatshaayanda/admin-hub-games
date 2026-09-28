@@ -1004,6 +1004,7 @@ export class WardrobeLabScene extends Phaser.Scene {
       }
       texture.refresh();
     }
+    }
 
     const generatedDefIndex = this.characterDefinitions.findIndex((def) => def.id === generatedDef.id);
     if (generatedDefIndex < 0) return;
