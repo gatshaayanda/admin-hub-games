@@ -275,7 +275,7 @@ export class WardrobeIntroScene extends Phaser.Scene {
   }
 }
 
-type WardrobeCharacterSource = 'gegx' | 'soldier' | 'robot' | 'generated';
+type WardrobeCharacterSource = 'gegx' | 'soldier' | 'robot' | 'generated' | 'arena';
 
 type WardrobeCharacterDefinition = {
   id: string;
@@ -316,6 +316,18 @@ const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
     frameHeight: 216,
     originY: 1,
     embeddedWeapon: false,
+  },
+  {
+    id: 'arena_reference',
+    name: 'SHOOTERS TRIGGER ARENA · REFERENCE COPY',
+    source: 'arena',
+    basePath: '',
+    displaySize: 80,
+    targetVisibleHeight: 60,
+    frameWidth: 1,
+    frameHeight: 1,
+    originY: 1,
+    embeddedWeapon: true,
   },
   {
     id: 'soldier_01',
@@ -466,7 +478,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     }
     for (const def of this.characterDefinitions) {
       for (const direction of ['DOWN', 'UP', 'LEFT', 'RIGHT'] as const) {
-        if (def.source === 'generated') continue;
+        if (def.source === 'generated' || def.source === 'arena') continue;
         if (def.source === 'gegx') {
           this.load.spritesheet(
             this.spriteKey(def, direction),
@@ -513,9 +525,18 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.character.add([this.shadow]);
 
     const current = this.currentDefinition();
-    this.previewSprite = this.add.sprite(0, 0, this.spriteKey(current, 'DOWN'), 0)
-      .setOrigin(0.5, current.originY);
-    this.fitCharacterSprite(this.previewSprite, current);
+    if (current.source === 'arena') {
+      const reference = this.drawCharacter('AIM RIGHT');
+      reference.generateTexture('wardrobe-arena-reference', 100, 100);
+      reference.destroy();
+      this.previewSprite = this.add.sprite(0, 0, 'wardrobe-arena-reference')
+        .setOrigin(0.5, 0.86)
+        .setDisplaySize(80, 80);
+    } else {
+      this.previewSprite = this.add.sprite(0, 0, this.spriteKey(current, 'DOWN'), 0)
+        .setOrigin(0.5, current.originY);
+      this.fitCharacterSprite(this.previewSprite, current);
+    }
     this.previewSprite.setVisible(true);
     this.character.add(this.previewSprite);
     this.character.add([this.weaponLayer, this.muzzleFlash]);
@@ -812,6 +833,14 @@ export class WardrobeLabScene extends Phaser.Scene {
 
     this.previewSprite.setVisible(true);
 
+    if (def.source === 'arena') {
+      this.previewSprite.setTexture('wardrobe-arena-reference');
+      this.previewSprite.setDisplaySize(80, 80).setOrigin(0.5, 0.86);
+      this.previewSprite.setFlipX(vx < -0.08);
+      this.previewSprite.setRotation(0);
+      return;
+    }
+
     if (def.source !== 'generated') {
       if (this.muzzleUntil > 0 && def.source === 'robot') {
         const shootKey = this.spriteKey(def, this.direction, 'shoot');
@@ -935,7 +964,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.weaponLayer.clear();
     this.muzzleFlash.clear();
 
-    if (def.embeddedWeapon) {
+    if (def.source !== 'generated' && def.source !== 'arena') {
       this.weaponLayer.setVisible(false);
       this.muzzleFlash.setVisible(false);
       return;
@@ -1150,8 +1179,13 @@ export class WardrobeLabScene extends Phaser.Scene {
 
     const def = this.currentDefinition();
     this.previewSprite.stop();
-    this.previewSprite.setTexture(this.spriteKey(def, 'DOWN'), 0);
-    this.fitCharacterSprite(this.previewSprite, def);
+    if (def.source === 'arena') {
+      this.previewSprite.setTexture('wardrobe-arena-reference');
+      this.previewSprite.setDisplaySize(80, 80).setOrigin(0.5, 0.86);
+    } else {
+      this.previewSprite.setTexture(this.spriteKey(def, 'DOWN'), 0);
+      this.fitCharacterSprite(this.previewSprite, def);
+    }
     this.previewSprite.setRotation(0);
     this.updateWeaponLayer();
     this.updateLabels();
