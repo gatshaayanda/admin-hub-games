@@ -1022,6 +1022,15 @@ export class WardrobeLabScene extends Phaser.Scene {
       animation = 'RIGHT';
     }
 
+    // When the generated player is armed, use the side-facing body pose that
+    // matches the separated arm/weapon artwork. A front-facing body with a
+    // side-facing arm layer is what makes the arm appear to float in front.
+    const aiming = Math.abs(this.aim.x) > 0.2 || this.generatedAction === 'aim' || this.generatedAction === 'shoot';
+    if (aiming && !walking) {
+      animation = this.aim.x < 0 ? 'LEFT' : 'RIGHT';
+      flipX = false;
+    }
+
     const action = this.generatedAction;
     const hitState = action === 'hit' || action === 'headshot';
     const deadState = action === 'death';
