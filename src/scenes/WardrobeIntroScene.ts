@@ -553,7 +553,7 @@ export class WardrobeLabScene extends Phaser.Scene {
   private readonly projectileSpeed = 520;
   private readonly projectileLifetimeMs = 1100;
   private readonly fireIntervalMs = 240;
-  private readonly characterDefinitions = WARDROBE_CHARACTER_DEFINITIONS.filter((def) => def.id === 'arena_player');
+  private readonly characterDefinitions = WARDROBE_CHARACTER_DEFINITIONS;
   private readonly targetVisibleCharacterHeight = 60;
   private readonly targetDefinition = WARDROBE_TARGET_DEFINITION;
 
@@ -563,7 +563,7 @@ export class WardrobeLabScene extends Phaser.Scene {
 
   preload() {
     this.load.image('wardrobe-generated-reference-player', '/assets/wardrobe/incoming/1.jpg');
-    this.load.image('wardrobe-generated-reference-reference', '/assets/wardrobe/incoming/og.jpg');
+    this.load.image('wardrobe-generated-reference-bot', '/assets/wardrobe/incoming/og.jpg');
     for (const direction of ['DOWN', 'UP', 'LEFT', 'RIGHT'] as const) {
       this.load.spritesheet(
         this.spriteKey(this.targetDefinition, direction),
@@ -804,7 +804,7 @@ export class WardrobeLabScene extends Phaser.Scene {
         width: number;
         height: number;
       };
-      const referenceSource = this.textures.get('wardrobe-generated-reference-reference').getSourceImage() as CanvasImageSource & {
+      const referenceSource = this.textures.get('wardrobe-generated-reference-bot').getSourceImage() as CanvasImageSource & {
         width: number;
         height: number;
       };
@@ -1373,19 +1373,22 @@ export class WardrobeLabScene extends Phaser.Scene {
   private createCharacterSelector() {
     const width = this.scale.width;
     const y = 100;
+    const compact = width < 520;
+    const panelHeight = compact ? 88 : 76;
 
-    this.add.rectangle(width / 2, y, Math.min(width - 28, 620), 76, 0x101512, 0.92)
+    this.add.rectangle(width / 2, y, Math.min(width - 18, 620), panelHeight, 0x101512, 0.92)
       .setScrollFactor(0).setDepth(100);
 
-    this.characterNameLabel = this.add.text(width / 2, y - 22, '', {
+    this.characterNameLabel = this.add.text(width / 2, y - (compact ? 28 : 22), '', {
       fontFamily: 'monospace',
-      fontSize: '11px',
+      fontSize: compact ? '9px' : '11px',
       fontStyle: 'bold',
       color: '#e8c95c',
       align: 'center',
+      wordWrap: { width: Math.min(width - 120, 500) },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(104);
 
-    this.animationLabel = this.add.text(width / 2, y - 5, 'ANIMATION · IDLE', {
+    this.animationLabel = this.add.text(width / 2, y - (compact ? 12 : 5), 'ANIMATION · IDLE', {
       fontFamily: 'monospace',
       fontSize: '7px',
       color: '#8fb39b',
@@ -1393,16 +1396,17 @@ export class WardrobeLabScene extends Phaser.Scene {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(104);
 
     const makeButton = (x: number, label: string, deltaIndex: number) =>
-      this.add.text(x, y + 22, label, {
+      this.add.text(x, y + (compact ? 20 : 22), label, {
         fontFamily: 'monospace',
-        fontSize: '8px',
+        fontSize: compact ? '9px' : '8px',
         fontStyle: 'bold',
         color: '#f4f1df',
         backgroundColor: '#315845',
-        padding: { left: 10, right: 10, top: 5, bottom: 5 },
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(104)
+        padding: { left: compact ? 14 : 10, right: compact ? 14 : 10, top: compact ? 8 : 5, bottom: compact ? 8 : 5 },
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(105)
         .setInteractive({ useHandCursor: false })
-        .on('pointerdown', () => {
+        .on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+          pointer.event?.preventDefault?.();
           this.fireHeld = false;
           this.pointerAimActive = false;
           this.targetDown = false;
@@ -1411,12 +1415,13 @@ export class WardrobeLabScene extends Phaser.Scene {
           this.selectCharacter(this.selectedCharacterIndex + deltaIndex);
         });
 
-    makeButton(width / 2 - 210, '‹ PREV SPRITE', -1);
-    makeButton(width / 2 + 210, 'NEXT SPRITE ›', 1);
+    const sideOffset = compact ? Math.max(66, width * 0.22) : Math.min(210, width * 0.30);
+    makeButton(width / 2 - sideOffset, '‹ PREV', -1);
+    makeButton(width / 2 + sideOffset, 'NEXT ›', 1);
 
-    this.add.text(width / 2, y + 22, 'OTHER SPRITES = VISUAL GAME TESTS · PLAYER = 1.JPG PIPELINE', {
+    this.add.text(width / 2, y + (compact ? 44 : 22), compact ? 'SWIPE/TOUCH TO COMPARE SPRITES' : 'OTHER SPRITES = VISUAL GAME TESTS · PLAYER = 1.JPG PIPELINE', {
       fontFamily: 'monospace',
-      fontSize: '6px',
+      fontSize: compact ? '5px' : '6px',
       color: '#8fb39b',
       align: 'center',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(103);
