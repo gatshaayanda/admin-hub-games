@@ -438,6 +438,7 @@ export class WardrobeLabScene extends Phaser.Scene {
   private targetBodyHits = 0;
   private targetDown = false;
   private pointerId = -1;
+  private arenaAnimTime = 0;
   private pointerAimActive = false;
   private shots: Array<{
     graphics: Phaser.GameObjects.Arc;
@@ -677,6 +678,8 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.fireCooldown = Math.max(0, this.fireCooldown - delta);
     this.muzzleUntil = Math.max(0, this.muzzleUntil - delta);
     this.generatedActionUntil = Math.max(0, this.generatedActionUntil - delta);
+    if (this.currentDefinition().source === 'arena' && walking) this.arenaAnimTime += delta;
+    else this.arenaAnimTime = 0;
     if (this.generatedActionUntil === 0 && this.generatedAction !== 'ready') {
       this.generatedAction = 'ready';
     }
@@ -703,54 +706,54 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   private createArenaReferenceTexture() {
-    if (this.textures.exists('wardrobe-arena-reference')) return;
+    const makePoseTexture = (key: string, legOffset: number, bob: number) => {
+      if (this.textures.exists(key)) return;
+      const g = this.add.graphics();
+      const ox = 60;
+      const oy = 34;
+      const px = (x: number) => x + ox;
+      const py = (y: number) => y + oy;
 
-    // This is a literal visual copy of the authoritative Arena createFighter()
-    // pose, baked only so Wardrobe can show the real Shooter reference beside
-    // the generated operator. It is not a replacement implementation of the
-    // Shooter fighter and it does not alter Shooter Trigger.
-    const g = this.add.graphics();
-    const ox = 60;
-    const oy = 34;
-    const px = (x: number) => x + ox;
-    const py = (y: number) => y + oy;
+      // Keep this pose construction byte-for-byte aligned with Shooter Trigger
+      // Arena createFighter(): only the animation state is reproduced here.
+      g.fillStyle(0x3b2f28, 1).fillEllipse(px(0), py(-20 + bob), 24, 18);
+      g.fillStyle(0xd8a66b, 1).fillEllipse(px(0), py(-17 + bob), 13, 12);
+      g.fillStyle(0xd4a45d, 1).fillCircle(px(-7), py(-17 + bob), 2.5).fillCircle(px(7), py(-17 + bob), 2.5);
+      g.fillStyle(0x2f6b4e, 1).fillEllipse(px(0), py(-23 + bob), 25, 12);
+      g.fillStyle(0x111715, 1).fillRoundedRect(px(-13), py(-17 + bob), 26, 10, 4);
+      g.fillStyle(0x9bb9b1, 0.88).fillRoundedRect(px(-9), py(-15 + bob), 18, 6, 2);
+      g.lineStyle(1, 0xe8f2dc, 0.42).strokeRoundedRect(px(-9), py(-15 + bob), 18, 6, 2);
+      g.fillStyle(0xd4a45d, 1).fillRoundedRect(px(-4), py(-8 + bob), 8, 7, 2);
+      g.fillStyle(0x2f6b4e, 1).fillRoundedRect(px(-15), py(-4 + bob), 30, 22, 8);
+      g.fillStyle(0x4f8b65, 1).fillRoundedRect(px(-10), py(-1 + bob), 20, 14, 4);
+      g.fillStyle(0x17201c, 0.9).fillRoundedRect(px(-15), py(0 + bob), 6, 13, 2).fillRoundedRect(px(9), py(0 + bob), 6, 13, 2);
+      g.fillStyle(0xc1a86c, 1).fillRect(px(-10), py(8 + bob), 20, 4);
+      g.fillStyle(0x1d2923, 1).fillRect(px(-12), py(12 + bob), 24, 5);
+      g.fillStyle(0x5e4936, 1).fillRoundedRect(px(-15), py(8 + bob), 5, 8, 2).fillRoundedRect(px(10), py(8 + bob), 5, 8, 2);
+      g.fillStyle(0x29372f, 1).fillRoundedRect(px(-11), py(16 + bob), 22, 7, 3);
+      g.fillStyle(0x566052, 1).fillRoundedRect(px(-10 + legOffset), py(20 + bob), 8, 13, 2).fillRoundedRect(px(2 - legOffset), py(20 + bob), 8, 13, 2);
+      g.fillStyle(0x202522, 1).fillRoundedRect(px(-12 + legOffset), py(30 + bob), 10, 7, 2).fillRoundedRect(px(2 - legOffset), py(30 + bob), 10, 7, 2);
 
-    g.fillStyle(0x3b2f28, 1).fillEllipse(px(0), py(-20), 24, 18);
-    g.fillStyle(0xd8a66b, 1).fillEllipse(px(0), py(-17), 13, 12);
-    g.fillStyle(0xd4a45d, 1).fillCircle(px(-7), py(-17), 2.5).fillCircle(px(7), py(-17), 2.5);
-    g.fillStyle(0x2f6b4e, 1).fillEllipse(px(0), py(-23), 25, 12);
-    g.fillStyle(0x111715, 1).fillRoundedRect(px(-13), py(-17), 26, 10, 4);
-    g.fillStyle(0x9bb9b1, 0.88).fillRoundedRect(px(-9), py(-15), 18, 6, 2);
-    g.lineStyle(1, 0xe8f2dc, 0.42).strokeRoundedRect(px(-9), py(-15), 18, 6, 2);
-    g.fillStyle(0xd4a45d, 1).fillRoundedRect(px(-4), py(-8), 8, 7, 2);
-    g.fillStyle(0x2f6b4e, 1).fillRoundedRect(px(-15), py(-4), 30, 22, 8);
-    g.fillStyle(0x4f8b65, 1).fillRoundedRect(px(-10), py(-1), 20, 14, 4);
-    g.fillStyle(0x17201c, 0.9).fillRoundedRect(px(-15), py(0), 6, 13, 2).fillRoundedRect(px(9), py(0), 6, 13, 2);
-    g.fillStyle(0xc1a86c, 1).fillRect(px(-10), py(8), 20, 4);
-    g.fillStyle(0x1d2923, 1).fillRect(px(-12), py(12), 24, 5);
-    g.fillStyle(0x5e4936, 1).fillRoundedRect(px(-15), py(8), 5, 8, 2).fillRoundedRect(px(10), py(8), 5, 8, 2);
-    g.fillStyle(0x29372f, 1).fillRoundedRect(px(-11), py(16), 22, 7, 3);
-    g.fillStyle(0x566052, 1).fillRoundedRect(px(-10), py(20), 8, 13, 2).fillRoundedRect(px(2), py(20), 8, 13, 2);
-    g.fillStyle(0x202522, 1).fillRoundedRect(px(-12), py(30), 10, 7, 2).fillRoundedRect(px(2), py(30), 10, 7, 2);
+      g.lineStyle(5, 0x314b3c, 1);
+      g.lineBetween(px(-8), py(5), px(5), py(2));
+      g.lineBetween(px(8), py(5), px(12), py(4));
+      g.fillStyle(0xd4a45d, 1).fillCircle(px(5), py(2), 3).fillCircle(px(12), py(4), 3);
+      g.lineStyle(3, 0x6c806f, 1).lineBetween(px(10), py(5), px(2), py(12));
+      g.fillStyle(0x151b18, 1).fillEllipse(px(13), py(-8), 9, 7);
+      g.fillStyle(0x33423b, 1).fillRoundedRect(px(7), py(-4), 18, 9, 3);
+      g.fillStyle(0x111715, 1).fillRect(px(22), py(-2), 15, 5);
+      g.fillStyle(0x53635c, 1).fillRect(px(12), py(-9), 8, 4);
+      g.fillStyle(0x171d1b, 1).fillRoundedRect(px(11), py(4), 5, 10, 2);
+      g.fillStyle(0x493b31, 1).fillRoundedRect(px(-5), py(4), 10, 5, 2);
+      g.lineStyle(3, 0x2a332f, 1).lineBetween(px(-2), py(6), px(8), py(5));
+      g.lineStyle(1, 0xe8c95c, 0.45).lineBetween(px(35), py(0), px(45), py(0));
 
-    // Exact Arena arms + weapon pose at the same default rightward aim.
-    g.lineStyle(5, 0x314b3c, 1);
-    g.lineBetween(px(-8), py(5), px(5), py(2));
-    g.lineBetween(px(8), py(5), px(12), py(4));
-    g.fillStyle(0xd4a45d, 1).fillCircle(px(5), py(2), 3).fillCircle(px(12), py(4), 3);
+      g.generateTexture(key, 120, 90);
+      g.destroy();
+    };
 
-    g.lineStyle(3, 0x6c806f, 1).lineBetween(px(10), py(5), px(2), py(12));
-    g.fillStyle(0x151b18, 1).fillEllipse(px(13), py(-8), 9, 7);
-    g.fillStyle(0x33423b, 1).fillRoundedRect(px(7), py(-4), 18, 9, 3);
-    g.fillStyle(0x111715, 1).fillRect(px(22), py(-2), 15, 5);
-    g.fillStyle(0x53635c, 1).fillRect(px(12), py(-9), 8, 4);
-    g.fillStyle(0x171d1b, 1).fillRoundedRect(px(11), py(4), 5, 10, 2);
-    g.fillStyle(0x493b31, 1).fillRoundedRect(px(-5), py(4), 10, 5, 2);
-    g.lineStyle(3, 0x2a332f, 1).lineBetween(px(-2), py(6), px(8), py(5));
-    g.lineStyle(1, 0xe8c95c, 0.45).lineBetween(px(35), py(0), px(45), py(0));
-
-    g.generateTexture('wardrobe-arena-reference', 120, 90);
-    g.destroy();
+    makePoseTexture('wardrobe-arena-reference-a', 0, 0);
+    makePoseTexture('wardrobe-arena-reference-b', 2, 1);
   }
 
   private currentDefinition() {
