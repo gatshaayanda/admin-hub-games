@@ -5,11 +5,11 @@ import json
 
 SOURCE = Path("public/assets/wardrobe/incoming/2.jpg")
 OUT = Path("public/assets/wardrobe/generated-v2")
-CELL_W, CELL_H = 192, 128
+CELL_W, CELL_H = 176, 192
 COLS, ROWS = 8, 4
 
-# The Gemini sheet is a fixed 8x4 contact sheet. The production step
-# deliberately converts the JPG's baked checkerboard into real alpha.
+# The Gemini sheet is a fixed 8x4 contact sheet at 1408x768 (176x192 cells).
+# The production step deliberately converts the JPG's baked checkerboard into real alpha.
 BODY_CELLS = list(range(14)) + [16, 17, 18, 19, 24, 25, 26, 27]
 REGIONS = {
     "arms": (4 * CELL_W, 2 * CELL_H, 6 * CELL_W, 3 * CELL_H),
