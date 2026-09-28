@@ -170,7 +170,7 @@ export class WardrobeIntroScene extends Phaser.Scene {
     const shadow = this.add.ellipse(0, 0, 46, 13, 0x3d3025, 0.28);
     const sprite = this.add.sprite(0, 0, 'wardrobe-generated-player-atlas', 0)
       .setOrigin(0.5, 1)
-      .setScale(60 / 210);
+      .setScale(60 / 160);
     container.add([shadow, sprite]);
     return container;
   }
@@ -481,9 +481,12 @@ export class WardrobeLabScene extends Phaser.Scene {
   preload() {
     this.load.spritesheet(
       'wardrobe-generated-player-atlas',
-      '/assets/wardrobe/generated/player-atlas.png',
-      { frameWidth: 256, frameHeight: 256 },
+      '/assets/wardrobe/generated-v2/player-body-atlas.png',
+      { frameWidth: 176, frameHeight: 192 },
     );
+    this.load.image('wardrobe-generated-v2-arms', '/assets/wardrobe/generated-v2/player-arms.png');
+    this.load.image('wardrobe-generated-v2-weapon', '/assets/wardrobe/generated-v2/player-weapon.png');
+    this.load.image('wardrobe-generated-v2-muzzle', '/assets/wardrobe/generated-v2/player-muzzle.png');
     for (const direction of ['DOWN', 'UP', 'LEFT', 'RIGHT'] as const) {
       this.load.spritesheet(
         this.spriteKey(this.targetDefinition, direction),
