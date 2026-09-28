@@ -805,7 +805,7 @@ export class WardrobeLabScene extends Phaser.Scene {
         }
       }
     }
-
+  }
 
   private playCharacterAnimation(walking: boolean) {
     const def = this.currentDefinition();
@@ -922,6 +922,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.previewSprite.setFlipX(flipX);
     this.previewSprite.setRotation(0);
     this.previewSprite.stop();
+  }
 
   private triggerGeneratedAction(action: 'aim' | 'shoot' | 'muzzle' | 'recoil' | 'hit' | 'headshot' | 'death' | 'dodge' | 'respawn', duration: number) {
     if (this.currentDefinition().source !== 'generated') return;
