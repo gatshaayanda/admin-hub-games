@@ -805,18 +805,50 @@ export class WardrobeLabScene extends Phaser.Scene {
           const r = data[index];
           const g = data[index + 1];
           const b = data[index + 2];
-          const neutral = Math.max(r, g, b) - Math.min(r, g, b) < 14;
+          const neutral = Math.max(r, g, b) - Math.min(r, g, b) < 18;
           const cornerMatch = cornerSamples.some(([cr, cg, cb]) => {
             const dr = r - cr;
             const dg = g - cg;
             const db = b - cb;
-            return dr * dr + dg * dg + db * db < 48 * 48;
+            return dr * dr + dg * dg + db * db < 52 * 52;
           });
           return neutral && cornerMatch;
         };
 
-        for (let i = 0; i < data.length; i += 4) {
-          if (isBackground(i)) data[i + 3] = 0;
+        // JPEG backgrounds can contain compression noise and several near-identical
+        // checkerboard tones. Only erase background that is connected to a cell edge;
+        // this prevents gray/neutral details inside the character from disappearing.
+        const visited = new Uint8Array(cellWidth * cellHeight);
+        const queue = new Int32Array(cellWidth * cellHeight);
+        let head = 0;
+        let tail = 0;
+        const enqueue = (x: number, y: number) => {
+          const position = y * cellWidth + x;
+          if (visited[position]) return;
+          const index = position * 4;
+          if (!isBackground(index)) return;
+          visited[position] = 1;
+          queue[tail++] = position;
+        };
+
+        for (let x = 0; x < cellWidth; x += 1) {
+          enqueue(x, 0);
+          enqueue(x, cellHeight - 1);
+        }
+        for (let y = 1; y < cellHeight - 1; y += 1) {
+          enqueue(0, y);
+          enqueue(cellWidth - 1, y);
+        }
+
+        while (head < tail) {
+          const position = queue[head++];
+          const x = position % cellWidth;
+          const y = Math.floor(position / cellWidth);
+          data[position * 4 + 3] = 0;
+          if (x > 0) enqueue(x - 1, y);
+          if (x + 1 < cellWidth) enqueue(x + 1, y);
+          if (y > 0) enqueue(x, y - 1);
+          if (y + 1 < cellHeight) enqueue(x, y + 1);
         }
         frameContext.putImageData(pixels, 0, 0);
 
