@@ -531,7 +531,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     const current = this.currentDefinition();
     if (current.source === 'arena') {
       this.createArenaReferenceTexture();
-      this.previewSprite = this.add.sprite(0, 0, 'wardrobe-arena-reference')
+      this.previewSprite = this.add.sprite(0, 0, 'wardrobe-arena-reference-a')
         .setOrigin(0.5, 0.86)
         .setDisplaySize(80, 80);
     } else {
@@ -892,7 +892,8 @@ export class WardrobeLabScene extends Phaser.Scene {
 
     if (def.source === 'arena') {
       this.createArenaReferenceTexture();
-      this.previewSprite.setTexture('wardrobe-arena-reference');
+      const poseB = Math.floor(this.arenaAnimTime / 120) % 2 === 1;
+      this.previewSprite.setTexture(poseB ? 'wardrobe-arena-reference-b' : 'wardrobe-arena-reference-a');
       this.previewSprite.setDisplaySize(80, 80).setOrigin(0.5, 0.86);
       this.previewSprite.setFlipX(vx < -0.08);
       this.previewSprite.setRotation(0);
@@ -1239,7 +1240,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.previewSprite.stop();
     if (def.source === 'arena') {
       this.createArenaReferenceTexture();
-      this.previewSprite.setTexture('wardrobe-arena-reference');
+      this.previewSprite.setTexture('wardrobe-arena-reference-a');
       this.previewSprite.setDisplaySize(80, 80).setOrigin(0.5, 0.86);
     } else {
       this.previewSprite.setTexture(this.spriteKey(def, 'DOWN'), 0);
