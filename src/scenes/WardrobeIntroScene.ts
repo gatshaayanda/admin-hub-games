@@ -60,9 +60,12 @@ export class WardrobeIntroScene extends Phaser.Scene {
   preload() {
     this.load.spritesheet(
       'wardrobe-generated-player-atlas',
-      '/assets/wardrobe/generated/player-atlas.png',
-      { frameWidth: 256, frameHeight: 256 },
+      '/assets/wardrobe/generated-v2/player-body-atlas.png',
+      { frameWidth: 176, frameHeight: 192 },
     );
+    this.load.image('wardrobe-generated-v2-arms', '/assets/wardrobe/generated-v2/player-arms.png');
+    this.load.image('wardrobe-generated-v2-weapon', '/assets/wardrobe/generated-v2/player-weapon.png');
+    this.load.image('wardrobe-generated-v2-muzzle', '/assets/wardrobe/generated-v2/player-muzzle.png');
   }
 
   create() {
@@ -293,13 +296,13 @@ type WardrobeCharacterDefinition = {
 
 const WARDROBE_PLAYER_DEFINITION: WardrobeCharacterDefinition = {
   id: 'arena_player',
-  name: 'SHOOTERS TRIGGER PLAYER · GENERATED',
+  name: 'SHOOTERS TRIGGER PLAYER · GENERATED V2',
   source: 'generated',
-  basePath: '/assets/wardrobe/incoming/1.jpg',
+  basePath: '/assets/wardrobe/generated-v2',
   displaySize: 80,
   targetVisibleHeight: 60,
-  frameWidth: 164,
-  frameHeight: 216,
+  frameWidth: 176,
+  frameHeight: 192,
   originY: 1,
   embeddedWeapon: false,
 };
@@ -307,15 +310,15 @@ const WARDROBE_PLAYER_DEFINITION: WardrobeCharacterDefinition = {
 const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
   {
     id: 'arena_player',
-    name: 'SHOOTERS TRIGGER PLAYER · GENERATED 1.JPG',
+    name: 'SHOOTERS TRIGGER PLAYER · GENERATED V2 · 2.JPG',
     source: 'generated',
-    basePath: '/assets/wardrobe/incoming/1.jpg',
+    basePath: '/assets/wardrobe/generated-v2',
     displaySize: 80,
     targetVisibleHeight: 60,
-    frameWidth: 164,
-    frameHeight: 216,
+    frameWidth: 176,
+    frameHeight: 192,
     originY: 1,
-    embeddedWeapon: true,
+    embeddedWeapon: false,
   },
   {
     id: 'arena_reference',
@@ -432,6 +435,10 @@ export class WardrobeLabScene extends Phaser.Scene {
   private direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT' = 'DOWN';
   private playerFacing = 1;
   private previewSprite!: Phaser.GameObjects.Sprite;
+  private bodySprite!: Phaser.GameObjects.Sprite;
+  private armsSprite!: Phaser.GameObjects.Sprite;
+  private weaponSprite!: Phaser.GameObjects.Sprite;
+  private muzzleSprite!: Phaser.GameObjects.Sprite;
   private covers: Phaser.Geom.Rectangle[] = [];
   private characterNameLabel!: Phaser.GameObjects.Text;
   private animationLabel!: Phaser.GameObjects.Text;
@@ -441,7 +448,6 @@ export class WardrobeLabScene extends Phaser.Scene {
   private muzzleUntil = 0;
   private generatedAction: 'ready' | 'aim' | 'shoot' | 'muzzle' | 'recoil' | 'hit' | 'headshot' | 'death' | 'dodge' | 'respawn' = 'ready';
   private generatedActionUntil = 0;
-  private generatedVisibleHeights: Record<string, number> = {};
   private visualMove = new Phaser.Math.Vector2(0, 1);
   private targetBodyHits = 0;
   private targetDown = false;
@@ -562,7 +568,18 @@ export class WardrobeLabScene extends Phaser.Scene {
       this.fitCharacterSprite(this.previewSprite, current);
       this.previewSprite.setVisible(true);
     }
-    this.character.add(this.previewSprite);
+    this.bodySprite = this.previewSprite;
+    this.armsSprite = this.add.sprite(0, 0, 'wardrobe-generated-v2-arms')
+      .setOrigin(0.08, 0.5)
+      .setVisible(false);
+    this.weaponSprite = this.add.sprite(0, 0, 'wardrobe-generated-v2-weapon')
+      .setOrigin(0.50, 0.5)
+      .setVisible(false);
+    this.muzzleSprite = this.add.sprite(0, 0, 'wardrobe-generated-v2-muzzle')
+      .setOrigin(0, 0.5)
+      .setVisible(false);
+
+    this.character.add([this.previewSprite, this.armsSprite, this.weaponSprite, this.muzzleSprite]);
 
     // The Arena reference rig must always be part of the character container.
     // It is hidden for other characters and revealed when PREV/NEXT selects it.
@@ -744,9 +761,8 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   private prepareGeneratedCharacterTextures() {
-    for (const def of this.characterDefinitions.filter((entry) => entry.source === 'generated')) {
-      this.generatedVisibleHeights[def.id] = 210;
-    }
+    // Generated v2 is a real RGBA spritesheet. fitCharacterSprite() measures
+    // the actual visible alpha bounds so every frame shares a grounded baseline.
   }
 
   private generatedKey(def: WardrobeCharacterDefinition, action: string) {
@@ -847,13 +863,6 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   private fitCharacterSprite(sprite: Phaser.GameObjects.Sprite, def: WardrobeCharacterDefinition) {
-    if (def.source === 'generated' && this.generatedVisibleHeights[def.id] > 0) {
-      const scale = this.targetVisibleCharacterHeight / this.generatedVisibleHeights[def.id];
-      sprite.setScale(scale);
-      sprite.setOrigin(0.5, 1);
-      return;
-    }
-
     const source = sprite.texture.getSourceImage() as CanvasImageSource;
     const frame = sprite.frame;
     const canvas = document.createElement('canvas');
@@ -925,21 +934,23 @@ export class WardrobeLabScene extends Phaser.Scene {
       }
     }
 
-    const generatedAnimations: Array<[string, number, number, number]> = [
-      ['run', 4, 7, 8],
-      ['death', 20, 23, 7],
-      ['dodge', 24, 27, 8],
-      ['respawn', 28, 31, 7],
+    const generatedAnimations: Array<[string, number, number]> = [
+      ['DOWN', 0, 3],
+      ['UP', 4, 7],
+      ['LEFT', 8, 11],
+      ['RIGHT', 12, 15],
+      ['DOWN-RIGHT', 16, 19],
+      ['UP-RIGHT', 24, 27],
     ];
     const atlasKey = 'wardrobe-generated-player-atlas';
     for (const def of this.characterDefinitions.filter((entry) => entry.source === 'generated')) {
-      for (const [action, start, end, frameRate] of generatedAnimations) {
-        const key = this.generatedKey(def, action);
+      for (const [direction, start, end] of generatedAnimations) {
+        const key = this.generatedKey(def, direction);
         if (!this.anims.exists(key)) {
           this.anims.create({
             key,
             frames: this.anims.generateFrameNumbers(atlasKey, { start, end }),
-            frameRate,
+            frameRate: 8,
             repeat: -1,
           });
         }
@@ -992,89 +1003,56 @@ export class WardrobeLabScene extends Phaser.Scene {
       return;
     }
 
-    const action = this.generatedAction;
     const atlasKey = 'wardrobe-generated-player-atlas';
-    const reactionFrames: Record<string, [number, number]> = {
-      death: [20, 23],
-      dodge: [24, 27],
-      respawn: [28, 31],
-    };
-    const staticFrames: Record<string, number> = {
-      idle_down: 0,
-      idle_down_right: 1,
-      idle_right: 2,
-      idle_up_right: 3,
-      idle_left: 8,
-      idle_down_alt: 9,
-      idle_left_alt: 10,
-      aim: 11,
-      shoot: 12,
-      ready: 13,
-      muzzle: 14,
-      recoil: 15,
-      hit: 16,
-      headshot: 17,
-    };
-
-    if (this.generatedActionUntil > 0 && reactionFrames[action]) {
-      const [start, end] = reactionFrames[action];
-      this.previewSprite.setTexture(atlasKey, start);
-      this.previewSprite.setScale(this.targetVisibleCharacterHeight / 210);
-      this.previewSprite.setOrigin(0.5, 1);
-      this.previewSprite.setFlipX(vx < -0.08 || this.direction === 'LEFT');
-      this.previewSprite.setRotation(0);
-      this.previewSprite.play(this.generatedKey(def, action), true);
-      return;
-    }
-
-    if (this.generatedActionUntil > 0 && staticFrames[action] !== undefined) {
-      this.previewSprite.setTexture(atlasKey, staticFrames[action]);
-      this.previewSprite.setScale(this.targetVisibleCharacterHeight / 210);
-      this.previewSprite.setOrigin(0.5, 1);
-      this.previewSprite.setFlipX(vx < -0.08 || this.direction === 'LEFT');
-      this.previewSprite.setRotation(0);
-      this.previewSprite.stop();
-      return;
-    }
-
-    let frame = staticFrames.idle_down;
+    const diagonal = walking && Math.abs(vx) > 0.35 && Math.abs(vy) > 0.35;
+    let animation = 'DOWN';
     let flipX = false;
 
-    if (walking && Math.abs(vx) > 0.65 && Math.abs(vy) < 0.45) {
-      if (this.previewSprite.texture.key !== atlasKey) {
-        this.previewSprite.setTexture(atlasKey, 4);
-      }
-      this.previewSprite.setScale(this.targetVisibleCharacterHeight / 210);
-      this.previewSprite.setOrigin(0.5, 1);
+    if (diagonal) {
+      animation = vy < 0 ? 'UP-RIGHT' : 'DOWN-RIGHT';
       flipX = vx < 0;
-      this.previewSprite.setFlipX(flipX);
-      this.previewSprite.setRotation(0);
-      this.previewSprite.play(this.generatedKey(def, 'run'), true);
-      return;
+    } else if (this.direction === 'UP') {
+      animation = 'UP';
+    } else if (this.direction === 'LEFT') {
+      animation = 'LEFT';
+    } else if (this.direction === 'RIGHT') {
+      animation = 'RIGHT';
     }
 
-    if (Math.abs(vx) > 0.35 && vy > 0.35) {
-      frame = 1;
-      flipX = vx < 0;
-    } else if (Math.abs(vx) > 0.35 && vy < -0.35) {
-      frame = 3;
-      flipX = vx < 0;
-    } else if (vy > 0.35) {
-      frame = 0;
-    } else if (vy < -0.35) {
-      frame = 3;
-    } else if (vx < -0.35) {
-      frame = 8;
-    } else if (vx > 0.35) {
-      frame = 2;
+    const action = this.generatedAction;
+    const hitState = action === 'hit' || action === 'headshot';
+    const deadState = action === 'death';
+
+    if (deadState) {
+      this.previewSprite.setAlpha(0.42);
+    } else {
+      this.previewSprite.setAlpha(1);
     }
 
-    this.previewSprite.setTexture(atlasKey, frame);
-    this.previewSprite.setScale(this.targetVisibleCharacterHeight / 210);
-    this.previewSprite.setOrigin(0.5, 1);
+    if (this.previewSprite.texture.key !== atlasKey) {
+      this.previewSprite.setTexture(atlasKey, 0);
+      this.fitCharacterSprite(this.previewSprite, def);
+    }
+
     this.previewSprite.setFlipX(flipX);
     this.previewSprite.setRotation(0);
-    this.previewSprite.stop();
+    this.previewSprite.setTint(hitState ? 0xffd8c8 : 0xffffff);
+
+    if (walking) {
+      this.previewSprite.play(this.generatedKey(def, animation), true);
+    } else {
+      const idleFrames: Record<string, number> = {
+        DOWN: 0,
+        UP: 4,
+        LEFT: 8,
+        RIGHT: 12,
+        'DOWN-RIGHT': 16,
+        'UP-RIGHT': 24,
+      };
+      this.previewSprite.stop();
+      this.previewSprite.setFrame(idleFrames[animation] ?? 0);
+    }
+
   }
 
   private triggerGeneratedAction(action: 'aim' | 'shoot' | 'muzzle' | 'recoil' | 'hit' | 'headshot' | 'death' | 'dodge' | 'respawn', duration: number) {
@@ -1089,6 +1067,9 @@ export class WardrobeLabScene extends Phaser.Scene {
     if (def.source === 'arena') {
       this.weaponLayer.clear().setVisible(false);
       this.muzzleFlash.clear().setVisible(false);
+      this.armsSprite.setVisible(false);
+      this.weaponSprite.setVisible(false);
+      this.muzzleSprite.setVisible(false);
       this.arenaArms.setVisible(true);
       this.arenaWeapon.setVisible(true);
       this.arenaMuzzle.setVisible(this.muzzleUntil > 0);
@@ -1099,61 +1080,61 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.arenaArms?.setVisible(false);
     this.arenaWeapon?.setVisible(false);
     this.arenaMuzzle?.setVisible(false);
+    this.weaponLayer.clear().setVisible(false);
+    this.muzzleFlash.clear().setVisible(false);
 
-    this.weaponLayer.clear();
-    this.muzzleFlash.clear();
-    this.weaponLayer.setVisible(false);
-    this.muzzleFlash.setVisible(false);
-
-    if (def.source !== 'generated' || def.embeddedWeapon) {
-      this.weaponLayer.clear();
-      this.muzzleFlash.clear();
-      this.weaponLayer.setVisible(false);
-      this.muzzleFlash.setVisible(false);
+    if (def.source !== 'generated') {
+      this.armsSprite.setVisible(false);
+      this.weaponSprite.setVisible(false);
+      this.muzzleSprite.setVisible(false);
       return;
     }
 
-    // The generated 1.jpg operator already contains its own weapon/arms.
-    // Do not draw a second synthetic weapon on top of the artwork.
-    this.muzzleFlash.setVisible(this.muzzleUntil > 0);
-
+    const scale = this.previewSprite.scaleX || (this.targetVisibleCharacterHeight / 160);
     const angle = Math.atan2(this.aim.y, this.aim.x);
-    this.weaponLayer.setRotation(angle).setPosition(5, 3);
-    this.weaponLayer.lineStyle(3, 0x6c806f, 1).lineBetween(10, 5, 2, 12);
-    this.weaponLayer.fillStyle(0x151b18, 1).fillEllipse(13, -8, 9, 7);
-    this.weaponLayer.fillStyle(0x33423b, 1).fillRoundedRect(7, -4, 18, 9, 3);
-    this.weaponLayer.fillStyle(0x111715, 1).fillRect(22, -2, 15, 5);
-    this.weaponLayer.fillStyle(0x53635c, 1).fillRect(12, -9, 8, 4);
-    this.weaponLayer.fillStyle(0x171d1b, 1).fillRoundedRect(11, 4, 5, 10, 2);
-    this.weaponLayer.fillStyle(0x493b31, 1).fillRoundedRect(-5, 4, 10, 5, 2);
-    this.weaponLayer.lineStyle(3, 0x2a332f, 1).lineBetween(-2, 6, 8, 5);
-    this.weaponLayer.lineStyle(1, 0xe8c95c, 0.45).lineBetween(35, 0, 45, 0);
+    const shoulderY = -40 * scale;
+    const weaponX = 2 * scale;
+    const weaponY = shoulderY;
 
-    if (this.muzzleUntil > 0) {
-      this.muzzleFlash.setRotation(angle).setPosition(42, 0);
-      this.muzzleFlash.fillStyle(0xf0dfb6, 0.72);
-      this.muzzleFlash.fillCircle(0, 0, 3);
-    }
+    this.armsSprite
+      .setVisible(true)
+      .setScale(scale)
+      .setPosition(-7 * scale, shoulderY)
+      .setRotation(angle)
+      .setFlipX(this.aim.x < 0);
 
-    // Arms are part of the weapon presentation, not the body sprite. This
-    // matches the Shooter fighter and prevents the body sheet from rotating.
-    this.weaponLayer.fillStyle(0x314b3c, 1);
-    this.weaponLayer.lineStyle(5, 0x314b3c, 1);
-    this.weaponLayer.lineBetween(-8, 5, 5, 2);
-    this.weaponLayer.lineBetween(8, 5, 12, 4);
-    this.weaponLayer.fillStyle(0xd4a45d, 1);
-    this.weaponLayer.fillCircle(5, 2, 3);
-    this.weaponLayer.fillCircle(12, 4, 3);
+    this.weaponSprite
+      .setVisible(true)
+      .setScale(scale)
+      .setPosition(weaponX, weaponY)
+      .setRotation(angle)
+      .setFlipY(this.aim.x < 0);
+
+    const muzzleDistance = 112 * scale;
+    this.muzzleSprite
+      .setVisible(this.muzzleUntil > 0)
+      .setScale(scale)
+      .setPosition(
+        weaponX + this.aim.x * muzzleDistance,
+        weaponY + this.aim.y * muzzleDistance,
+      )
+      .setRotation(angle)
+      .setFlipY(this.aim.x < 0);
   }
 
   private fireShot() {
     const def = this.currentDefinition();
     const muzzleOffset = def.source === 'arena' ? 42 : 42;
     const aimOriginY = def.source === 'arena' ? 0 : -52;
-    const origin = new Phaser.Math.Vector2(
-      this.character.x + this.aim.x * muzzleOffset,
-      this.character.y + aimOriginY + this.aim.y * (def.source === 'arena' ? 0 : 10),
-    );
+    const origin = def.source === 'generated'
+      ? new Phaser.Math.Vector2(
+        this.character.x + 2 * (this.previewSprite.scaleX || 0.375) + this.aim.x * 112 * (this.previewSprite.scaleX || 0.375),
+        this.character.y - 40 * (this.previewSprite.scaleX || 0.375) + this.aim.y * 112 * (this.previewSprite.scaleX || 0.375),
+      )
+      : new Phaser.Math.Vector2(
+        this.character.x + this.aim.x * muzzleOffset,
+        this.character.y + aimOriginY + this.aim.y * (def.source === 'arena' ? 0 : 10),
+      );
     const velocity = this.aim.clone().normalize().scale(this.projectileSpeed);
     const graphics = this.add.circle(origin.x, origin.y, 4, 0xf0dfb6, 1).setDepth(60);
     this.shots.push({
