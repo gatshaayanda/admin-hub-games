@@ -9,7 +9,7 @@ INCOMING = ROOT / "public/assets/wardrobe/incoming"
 OUT = ROOT / "public/assets/wardrobe/generated"
 COLUMNS, ROWS, FRAME_SIZE = 8, 4, 256
 TOLERANCE_SQ = 38 ** 2
-MAX_FOREGROUND_RATIO = 0.88
+MAX_FOREGROUND_RATIO = 0.99
 
 def dist(a, b):
     return sum((a[i] - b[i]) ** 2 for i in range(3))
