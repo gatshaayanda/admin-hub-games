@@ -34,4 +34,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -f public/assets/wardrobe/generated
           git commit -m "Generate transparent Wardrobe player assets"
-          git push
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
