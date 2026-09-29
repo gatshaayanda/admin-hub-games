@@ -3,7 +3,7 @@ import { getShootersTriggerPhoneAlert, markShootersTriggerPhoneAlertRead, recove
 import { fieldGrade, readShootersTriggerFieldProfile } from '../shooters-trigger-field-profile';
 
 type Location = {
-  id: 'training' | 'upgrades' | 'arena';
+  id: 'training' | 'upgrades' | 'arena' | 'online';
   name: string;
   subtitle: string;
   x: number;
@@ -35,11 +35,17 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
   private phoneLastAlertCreatedAt = 0;
   private phonePollClock = 0;
   private phoneAudioContext?: AudioContext;
+  private fieldObstacles: Phaser.Geom.Rectangle[] = [];
+  private guideText?: Phaser.GameObjects.Text;
+  private guidePulse?: Phaser.GameObjects.Graphics;
+  private guideLocationId: Location['id'] | null = null;
+  private readonly guideOrder: Location['id'][] = ['training', 'upgrades', 'arena', 'online'];
 
   private locations: Location[] = [
-    { id: 'training', name: 'TRAINING CAMP', subtitle: '01 · EVASION → SHOOTING · 30s + 30s', x: 780, y: 690, color: 0x2f7775 },
-    { id: 'upgrades', name: 'ARMORY & OUTFITTER', subtitle: '02 · GEAR · UPGRADE · PREP', x: 760, y: 1080, color: 0xe8c95c },
-    { id: 'arena', name: 'ARENA', subtitle: '03 · 1v1 · FIRST TO 3', x: 1180, y: 420, color: 0xd66a3d },
+    { id: 'training', name: 'TRAINING CAMP', subtitle: '01 · EVASION → SHOOTING · 30s + 30s', x: 650, y: 600, color: 0x2f7775 },
+    { id: 'upgrades', name: 'ARMORY & OUTFITTER', subtitle: '02 · GEAR · UPGRADE · PREP', x: 560, y: 1080, color: 0xe8c95c },
+    { id: 'arena', name: 'OFFLINE ARENA', subtitle: '03 · AI 1v1 · FIRST TO 3', x: 1180, y: 250, color: 0xd66a3d },
+    { id: 'online', name: 'ONLINE ARENA', subtitle: '04 · TWO PLAYERS · ONLINE 1v1', x: 1850, y: 610, color: 0x4fc3b1 },
   ];
 
   private playerMoving = false;
@@ -99,6 +105,9 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
       this.activeLocationId = null;
       this.enterButton?.destroy();
       this.enterButton = undefined;
+      this.guidePulse?.destroy();
+      this.guidePulse = undefined;
+      this.guideText = undefined;
     });
 
     window.dispatchEvent(new Event('admin-hub-games:game-ready'));
@@ -122,11 +131,16 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     this.playerMoving = !!(dx || dy);
     if (dx || dy) {
       const len = Math.hypot(dx, dy) || 1;
-      this.player.x = Phaser.Math.Clamp(this.player.x + dx / len * 175 * delta / 1000, 70, WORLD_WIDTH - 70);
-      this.player.y = Phaser.Math.Clamp(this.player.y + dy / len * 175 * delta / 1000, 120, WORLD_HEIGHT - 70);
+      const stepX = dx / len * 175 * delta / 1000;
+      const stepY = dy / len * 175 * delta / 1000;
+      const nextX = Phaser.Math.Clamp(this.player.x + stepX, 70, WORLD_WIDTH - 70);
+      const nextY = Phaser.Math.Clamp(this.player.y + stepY, 120, WORLD_HEIGHT - 70);
+      if (!this.inFieldObstacle(nextX, nextY, 16)) this.player.x = nextX;
+      if (!this.inFieldObstacle(this.player.x, nextY, 16)) this.player.y = nextY;
     }
     this.walkClock += delta;
     this.updatePlayerAnimation();
+    this.updateFieldGuide();
 
     if (Phaser.Input.Keyboard.JustDown(this.interactKey)) this.interact();
     this.updateLocationHint();
@@ -160,6 +174,73 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
 
   private getBudget() {
     try { return Number(localStorage.getItem('shooters-trigger:budget') || 0); } catch { return 0; }
+  }
+
+  private updateFieldGuide() {
+    const key = 'shooters-trigger:home-field-guide-v2';
+    let completed = new Set<Location['id']>();
+    try { completed = new Set(JSON.parse(localStorage.getItem(key) || '[]')); } catch {}
+    const nearby = this.getNearbyLocation();
+    if (nearby && nearby.distance <= 175) {
+      completed.add(nearby.location.id);
+      try { localStorage.setItem(key, JSON.stringify([...completed])); } catch {}
+    }
+    const next = this.guideOrder.find((id) => !completed.has(id));
+    if (!next) {
+      this.guideText?.setVisible(false);
+      this.guidePulse?.setVisible(false);
+      this.guideLocationId = null;
+      return;
+    }
+    const location = this.locations.find((item) => item.id === next);
+    if (!location) return;
+    this.guideLocationId = location.id;
+    this.guideText?.setVisible(true).setText(
+      location.id === 'training' ? 'FIELD GUIDE · START AT TRAINING CAMP' :
+      location.id === 'upgrades' ? 'FIELD GUIDE · ARMORY IS YOUR PREP STOP' :
+      location.id === 'arena' ? 'FIELD GUIDE · OFFLINE ARENA · FIGHT THE AI' :
+      'FIELD GUIDE · ONLINE ARENA · TWO PLAYERS',
+    );
+    if (!this.guidePulse) this.guidePulse = this.add.graphics().setDepth(18);
+    this.guidePulse.clear();
+    const angle = Math.atan2(location.y - this.player.y, location.x - this.player.x);
+    const distance = Math.min(190, Math.max(70, Phaser.Math.Distance.Between(this.player.x, this.player.y, location.x, location.y) * 0.22));
+    const px = this.player.x + Math.cos(angle) * distance;
+    const py = this.player.y + Math.sin(angle) * distance;
+    this.guidePulse.fillStyle(location.color, 0.22);
+    this.guidePulse.fillTriangle(
+      px + Math.cos(angle) * 20, py + Math.sin(angle) * 20,
+      px + Math.cos(angle + 2.55) * 16, py + Math.sin(angle + 2.55) * 16,
+      px + Math.cos(angle - 2.55) * 16, py + Math.sin(angle - 2.55) * 16,
+    );
+    this.guidePulse.lineStyle(2, location.color, 0.75).strokeTriangle(
+      px + Math.cos(angle) * 20, py + Math.sin(angle) * 20,
+      px + Math.cos(angle + 2.55) * 16, py + Math.sin(angle + 2.55) * 16,
+      px + Math.cos(angle - 2.55) * 16, py + Math.sin(angle - 2.55) * 16,
+    );
+  }
+
+  private inFieldObstacle(x: number, y: number, padding = 12) {
+    return this.fieldObstacles.some((obstacle) =>
+      x >= obstacle.x - padding &&
+      x <= obstacle.x + obstacle.width + padding &&
+      y >= obstacle.y - padding &&
+      y <= obstacle.y + obstacle.height + padding
+    );
+  }
+
+  private showOnlineArenaPreview() {
+    if (this.equipmentModal) return;
+    const modal = document.createElement('div');
+    Object.assign(modal.style, { position:'fixed', inset:'0', zIndex:'1500', display:'grid', placeItems:'center', padding:'24px', background:'rgba(12,18,14,.74)', fontFamily:'monospace', touchAction:'manipulation' });
+    const card = document.createElement('div');
+    Object.assign(card.style, { width:'min(440px,92vw)', padding:'24px', border:'2px solid #4fc3b1', borderRadius:'14px', background:'#151a16', color:'#f4f1df', textAlign:'center', boxShadow:'0 12px 36px rgba(0,0,0,.4)' });
+    card.innerHTML = '<div style="font-size:19px;font-weight:900;color:#4fc3b1;letter-spacing:1px">ONLINE ARENA</div><div style="font-size:11px;line-height:1.7;margin:14px 0">TWO PLAYERS · SAME ARENA · FIRST TO 3<br><br>This physical field is ready for the online 1v1 layer. The next online checkpoint connects two devices to this same battlefield.</div>';
+    const close=document.createElement('button');
+    close.type='button'; close.textContent='BACK TO FIELD';
+    Object.assign(close.style,{width:'100%',minHeight:'48px',border:'2px solid #f4f1df',borderRadius:'9px',background:'#102018',color:'#f4f1df',fontFamily:'monospace',fontSize:'10px',fontWeight:'800'});
+    close.addEventListener('pointerdown',(event)=>{event.preventDefault();event.stopPropagation();modal.remove();this.equipmentModal=undefined;});
+    card.appendChild(close); modal.appendChild(card); document.body.appendChild(modal); this.equipmentModal=modal;
   }
 
   private getNearbyLocation() {
@@ -208,6 +289,9 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
           break;
         }
         this.scene.start('ShootersTriggerArenaScene');
+        break;
+      case 'online':
+        this.showOnlineArenaPreview();
         break;
     }
   }
@@ -822,56 +906,72 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
   private drawField() {
     const g = this.add.graphics();
     g.fillStyle(0x78a653, 1).fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    g.fillStyle(0x86ad5e, 0.42).fillRect(0, 0, WORLD_WIDTH * 0.50, WORLD_HEIGHT);
+    g.fillStyle(0x679346, 0.32).fillRect(WORLD_WIDTH * 0.50, 0, WORLD_WIDTH * 0.50, WORLD_HEIGHT);
+    g.fillStyle(0xd1b46c, 0.30).fillRect(0, 510, WORLD_WIDTH, 92);
+    g.fillStyle(0xd1b46c, 0.22).fillRect(870, 0, 100, WORLD_HEIGHT);
+    g.lineStyle(5, 0xf4f1df, 0.48).strokeRect(55, 70, WORLD_WIDTH - 110, WORLD_HEIGHT - 120);
 
-    // The lobby is a field headquarters: four playable destinations around a calm arrival area.
-    g.fillStyle(0x8fb36b, 0.24).fillRoundedRect(760, 760, 880, 470, 34);
-    g.fillStyle(0xd1b46c, 0.26).fillRect(1080, 180, 240, 1010);
-    g.fillStyle(0xd1b46c, 0.18).fillRect(320, 730, 1760, 120);
-
-    g.lineStyle(5, 0xf4f1df, 0.42);
-    g.strokeRect(55, 70, WORLD_WIDTH - 110, WORLD_HEIGHT - 120);
-
-    // Arrival / staging compound.
-    this.drawShelter(1180, 1050, 330, 150, 'FIELD HQ');
-    this.drawBench(930, 1035, 150);
-    this.drawBench(1430, 1035, 150);
-    this.drawCrates(1000, 1140, 3);
-    this.drawCrates(1510, 1140, 2);
-    this.drawInfoBoard(1180, 790, 'FIELD BOARD');
-
-    // Three physical field destinations: Training Camp, Armory, Arena.
-    this.drawBunker(430, 620, 230, 70, 0x76563b);
-    this.drawBunker(680, 760, 170, 64, 0x5f6e69);
-    this.drawTireStack(470, 870);
-    this.drawTireStack(700, 950);
-    this.drawCourseFence(380, 530, 560, 470);
-    this.drawSign(780, 500, '01', 'TRAINING CAMP', 0x2f7775);
-
-    this.drawShelter(580, 1110, 360, 150, 'ARMORY');
-    this.drawEquipmentRack(580, 1310);
-    this.drawCrates(800, 1310, 3);
-    this.drawSign(760, 1060, '02', 'ARMORY & OUTFITTER', 0xe8c95c);
-
-    this.drawArenaField(980, 300, 400, 240);
-    this.drawSign(1180, 560, '03', 'ARENA', 0xd66a3d);
-
+    // Same Arena battlefield vocabulary: same scale, ground, cover, trees and tires.
     this.drawTree(300, 280, 1.15);
-    this.drawTree(2110, 330, 0.95);
-    this.drawTree(280, 1110, 0.90);
-    this.drawTree(2140, 1110, 1.10);
+    this.drawTree(2050, 300, 0.95);
+    this.drawTree(350, 1110, 0.90);
+    this.drawTree(2070, 1090, 1.10);
+    this.drawBunker(690, 360, 190, 72, 0x76563b);
+    this.drawBunker(1470, 350, 230, 76, 0x5f6e69);
+    this.drawBunker(520, 760, 250, 70, 0x9d754d);
+    this.drawBunker(1570, 760, 220, 68, 0x6e8190);
+    this.drawBunker(850, 1030, 260, 74, 0xb58c58);
+    this.drawBunker(1420, 1080, 240, 72, 0x737b79);
+    this.drawTireStack(1080, 300);
+    this.drawTireStack(1900, 650);
+    this.drawTireStack(730, 1170);
+
+    this.drawShelter(1050, 870, 260, 120, 'FIELD HQ');
+    this.drawBench(930, 1020, 150);
+    this.drawBench(1330, 1020, 150);
+    this.drawCrates(1000, 1100, 3);
+    this.drawInfoBoard(1180, 760, 'FIELD BOARD');
+
+    this.drawSign(650, 560, '01', 'TRAINING CAMP', 0x2f7775);
+    this.drawCourseFence(360, 470, 420, 260);
+    this.drawBunker(430, 610, 170, 60, 0x76563b);
+    this.drawTireStack(650, 820);
+    this.drawTargetStand(690, 540);
+    this.drawTargetStand(560, 540);
+
+    this.drawShelter(420, 1010, 300, 130, 'ARMORY');
+    this.drawEquipmentRack(470, 1190);
+    this.drawCrates(650, 1190, 2);
+    this.drawSign(560, 960, '02', 'ARMORY & OUTFITTER', 0xe8c95c);
+
+    this.drawFlag(1180, 170, 0xd66a3d, 'OFFLINE ARENA');
+    this.drawSign(1180, 235, '03', 'OFFLINE ARENA', 0xd66a3d);
+
+    this.drawSign(1850, 540, '04', 'ONLINE ARENA', 0x4fc3b1);
+    this.drawBunker(1760, 520, 150, 58, 0x5f6e69);
+    this.drawTireStack(1940, 760);
 
     this.add.text(WORLD_WIDTH / 2, 30, 'SHOOTERS TRIGGER · FIELD HQ', {
       fontFamily: 'monospace', fontSize: '15px', fontStyle: 'bold',
       color: '#fff4d4', stroke: '#315845', strokeThickness: 5,
     }).setOrigin(0.5).setDepth(6);
-    this.add.text(WORLD_WIDTH / 2, 56, 'ARRIVE · LOOK AROUND · CHOOSE YOUR NEXT STOP', {
+    this.add.text(WORLD_WIDTH / 2, 56, 'ONE FIELD · TRAIN · PREPARE · FIGHT OFFLINE · FIGHT ONLINE', {
       fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold',
       color: '#f5d37a', stroke: '#315845', strokeThickness: 3,
     }).setOrigin(0.5).setDepth(6);
+
+    this.guideText = this.add.text(this.scale.width / 2, 78, '', {
+      fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold',
+      color: '#f4f1df', backgroundColor: '#102018',
+      padding: { left: 10, right: 10, top: 7, bottom: 7 },
+      align: 'center',
+    }).setOrigin(.5).setScrollFactor(0).setDepth(205);
   }
 
   private drawTree(x: number, y: number, scale: number) {
     const g = this.add.graphics();
+    this.fieldObstacles.push(new Phaser.Geom.Rectangle(x - 8 * scale, y + 14 * scale, 16 * scale, 52 * scale));
     g.fillStyle(0x65472f, 1).fillRect(x - 6 * scale, y + 18 * scale, 12 * scale, 60 * scale);
     g.fillStyle(0x405638, 1).fillCircle(x, y, 34 * scale).fillCircle(x - 28 * scale, y + 9 * scale, 28 * scale).fillCircle(x + 28 * scale, y + 9 * scale, 29 * scale);
     g.fillStyle(0x526d3c, 0.75).fillCircle(x + 5 * scale, y - 16 * scale, 23 * scale);
@@ -883,10 +983,12 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
     g.fillStyle(color, 1).fillRoundedRect(x, y, width, height, 10);
     g.fillStyle(0xffffff, 0.12).fillRect(x + 12, y + 10, width - 24, 5);
     g.lineStyle(2, 0xf4f1df, 0.28).strokeRoundedRect(x, y, width, height, 10);
+    this.fieldObstacles.push(new Phaser.Geom.Rectangle(x, y, width, height));
   }
 
   private drawTireStack(x: number, y: number) {
     const g = this.add.graphics();
+    this.fieldObstacles.push(new Phaser.Geom.Rectangle(x - 20, y - 25, 90, 45));
     for (let i = 0; i < 4; i += 1) {
       g.fillStyle(0x2b302d, 1).fillCircle(x + i * 17, y - i * 3, 19);
       g.fillStyle(0x66706a, 1).fillCircle(x + i * 17, y - i * 3, 7);
@@ -1019,18 +1121,11 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
       g.fillStyle(0x3b2f28, 1).fillEllipse(0, -20 + bob, 24, 18);
       g.fillStyle(0xd8a66b, 1).fillEllipse(0, -17 + bob, 13, 12);
       g.fillStyle(0xd4a45d, 1).fillCircle(-7, -17 + bob, 2.5).fillCircle(7, -17 + bob, 2.5);
-      g.fillStyle(0x5a7348, 1).fillEllipse(0, -23 + bob, 25, 12);
-      // Visible neck + shoulder bridge prevents the head from reading as a
-      // separate piece from the torso in the unarmed Home Field sprite.
+      g.fillStyle(0x2f6b4e, 1).fillEllipse(0, -23 + bob, 25, 12);
       g.fillStyle(0xd4a45d, 1).fillRoundedRect(-4, -8 + bob, 8, 7, 2);
       g.fillStyle(0x2f6b4e, 1).fillRoundedRect(-15, -4 + bob, 30, 22, 8);
       g.fillStyle(0x4f8b65, 1).fillRoundedRect(-10, -1 + bob, 20, 14, 4);
-      g.fillStyle(0x2f6b4e, 1)
-        .fillRoundedRect(-17, 0 + bob, 7, 15, 3)
-        .fillRoundedRect(10, 0 + bob, 7, 15, 3);
-      g.fillStyle(0xd4a45d, 1)
-        .fillCircle(-14, 15 + bob, 3)
-        .fillCircle(14, 15 + bob, 3);
+      g.fillStyle(0x17201c, 0.9).fillRoundedRect(-15, 0 + bob, 6, 13, 2).fillRoundedRect(9, 0 + bob, 6, 13, 2);
       g.fillStyle(0x29372f, 1).fillRoundedRect(-11, 16 + bob, 22, 7, 3);
       g.fillStyle(0x566052, 1).fillRoundedRect(-10 + legOffset, 20 + bob, 8, 13, 2).fillRoundedRect(2 - legOffset, 20 + bob, 8, 13, 2);
       g.fillStyle(0x202522, 1).fillRoundedRect(-12 + legOffset, 30 + bob, 10, 7, 2).fillRoundedRect(2 - legOffset, 30 + bob, 10, 7, 2);

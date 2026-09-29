@@ -5184,3 +5184,72 @@ The next user QA checkpoint is visual, not speculative:
 If any of those is wrong: STOP → inspect the rendered asset geometry and contract values → correct the contract/asset pipeline, not the combat engine.
 
 Do not promote the Wardrobe rig to the next baseline until this visual QA passes.
+
+## Shooters Trigger — Home Field as the Arena Launchpad — September 29, 2026
+
+The Home Field is now the **staging version of the same physical world used by the Arena**, rather than a separate lobby environment.
+
+### World foundation
+
+- Home Field uses the Arena's established **2400×1400 world scale, ground treatment, lane bands, trees, bunkers and tire-stack obstacle vocabulary**.
+- Movement in Home Field respects the same major physical obstacles used by Arena. The player cannot simply walk through bunkers, trees or tire stacks.
+- The Home Field player uses the **same geometric character language as the Arena fighter**, but is deliberately **unarmed**.
+- Do not create a second unrelated lobby character style. The current unarmed geometry is the bridge toward the future Wardrobe character system.
+- Home Field is staging/base space; it does not inherit Arena combat, projectiles, damage or AI.
+
+### Physical launchpad
+
+The field now communicates four destinations through the physical environment:
+
+1. **TRAINING CAMP** — movement/evasion and shooting preparation.
+2. **ARMORY & OUTFITTER** — equipment and preparation.
+3. **OFFLINE ARENA** — the existing AI first-to-3 Arena.
+4. **ONLINE ARENA** — the future two-human first-to-3 Arena using the same battlefield.
+
+The Online Arena is a real physical destination now so the world already communicates the intended future game structure. Until the realtime layer is implemented, entering it shows a truthful preparation message rather than pretending that online combat exists.
+
+### First-time wayfinding
+
+- A new player receives a temporary **FIELD GUIDE** recommendation and directional cue.
+- Guidance follows the physical world rather than replacing it with a menu.
+- The first-time route is:
+  **TRAINING CAMP → ARMORY → OFFLINE ARENA → ONLINE ARENA**.
+- Visiting a destination records that the player has discovered it locally; once all four are discovered, the temporary guide disappears.
+- This guidance is onboarding only. It is not a quest gate, difficulty gate or permanent floating marker system.
+- The player remains free to walk anywhere and can revisit any destination according to the existing open-order rules.
+
+### Character / Wardrobe bridge
+
+Home Field's unarmed character intentionally shares the Arena fighter's geometric proportions and walking treatment. This gives the future Wardrobe work one consistent base character to replace or skin rather than requiring separate lobby and combat rigs.
+
+Wardrobe remains a visual-development lab. Do not move Wardrobe-specific assets or rig logic into Home Field until the actual attachment/character contract is ready.
+
+### Online Arena foundation
+
+The Home Field's Online Arena destination is preparation for the next implementation checkpoint:
+
+**two devices → private two-player room → same Arena field → human opponent replaces AI → first to 3**
+
+The online layer should preserve the offline Arena as the reference implementation. Current Phaser/Colyseus guidance supports the required architecture: server-authoritative fixed-timestep simulation, client prediction/reconciliation for the local player, and interpolation/smoothing for the remote player. citeturn0search0turn0search2turn0search6
+
+Do not replace the current Arena with a network-only implementation. Build the online opponent path beside the offline reference first.
+
+### Acceptance
+
+The Home Field checkpoint is accepted when a phone playtest can confirm:
+
+1. the player arrives unarmed;
+2. the character visually belongs to the same world as Arena;
+3. the ground, bunkers, trees and tire stacks read as the same physical battlefield vocabulary;
+4. major obstacles block walking rather than being decorative only;
+5. Training Camp, Armory, Offline Arena and Online Arena are understandable as physical destinations;
+6. first-time guidance helps without becoming a permanent HUD/navigation system;
+7. Offline Arena still opens the existing combat scene and is unchanged;
+8. Online Arena truthfully presents the future 1v1 direction without claiming live networking.
+
+The product principle is:
+
+**HOME FIELD = THE WORLD'S LAUNCHPAD.  
+ARENA = THE COMBAT REFERENCE.  
+ONLINE ARENA = THE SAME COMBAT WORLD WITH A HUMAN ON THE OTHER END.**
+
