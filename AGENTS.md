@@ -4417,6 +4417,63 @@ Phase 7 — Release verification: full Golden Playthrough, save/restore and slot
 
 Roadmap priority: source audit → behavior tests + authoritative events → three-slot local career saves → Home Field/navigation/tutorial → Field Reports/fan reactions/Peak Highlights V1 → equipment/upgrades/progression → optional Firebase sync → release verification. Do not defer event instrumentation or Peak Highlights indefinitely. Do not skip ahead to cloud sync or live video capture. Do not change shooting/evasion mechanics to implement visuals, navigation, saves, upgrades, fan reactions or highlights. Shared platform changes require a demonstrated Shooters Trigger need and regression checks. Each phase gets its own reviewed diff, tests/build, affected-flow verification and coherent main checkpoint when requested. Unexpected behavior means STOP and inspect.
 
+### Current Shooters Trigger Product Position — 2026-09-29
+
+This is the current owner-approved direction and status. It extends the roadmap above without replacing the Golden Playthrough or Golden Combat Rules.
+
+**Current product status**
+- Golden shooter core: established.
+- Training → Arena: established.
+- Arena AI: good, with one identifiable navigation weakness: the rival can become stuck against an obstacle when backing/retreating into cover geometry. This is an AI navigation/recovery defect, not a combat/collision defect.
+- Characters: ready to evolve through the Wardrobe character laboratory. Wardrobe remains the visual-development path; character artwork must not alter shooter combat authority.
+- Peak Highlights: important unfinished infrastructure and a core part of the future competitive product.
+- Equipment / Armory: important unfinished progression layer.
+- Online: potential long-term game structure, not yet implemented.
+- Competitive cycles: intended to turn Shooters Trigger from a good playable match into an ongoing competitive game with daily, weekly and championship/title-defence layers.
+
+**Arena navigation recovery checkpoint**
+The rival movement system must retain the existing cover collision and tactical modes. Navigation recovery may detect repeated failed movement, temporarily choose a wider escape direction and clear the obstacle before returning to the tactical route. It must never enlarge hitboxes, bypass cover, teleport through obstacles, change projectile authority or modify Golden Hit rules. The current implementation is a bounded movement-only recovery.
+
+**Online 1v1 direction**
+The intended first online experiment is a direct **Arena 1v1** replacement for the bot:
+- Player A creates/hosts or receives a private match code.
+- Player B joins that match from another internet-connected device.
+- Both clients load the existing Arena presentation/controls.
+- A dedicated realtime match server/room owns the authoritative shared match state.
+- Clients send player inputs/actions; the server validates movement, projectile firing, collision, damage, round state, ammo/recovery and match result.
+- Other-player presentation is interpolated; local input can use client prediction where needed.
+- Match rooms are strictly two-player and isolated.
+- Disconnect/reconnect and match-abandon behavior must be explicit.
+- Training results can later seed preparation/loadout, but the first online prototype should not rewrite the Golden offline Arena until the network contract is proven.
+
+**Recommended online architecture**
+Do not use Firebase Firestore as the realtime combat transport. The repository already uses Firebase for shared persistence/security, but a live shooter needs bidirectional realtime state and authoritative tick processing. Phaser's current multiplayer guidance and Colyseus' Phaser integration provide the appropriate model: a Node/TypeScript realtime server with rooms, synchronized state, fixed-timestep processing and client prediction/interpolation where required. References: https://docs.colyseus.io/learn/tutorial/phaser ; https://docs.colyseus.io/learn/tutorial/phaser/fixed-tickrate ; https://docs.colyseus.io/learn/tutorial/phaser/client-predicted-input.
+
+The first production candidate should be a small dedicated Colyseus server/room rather than embedding a second game backend into the existing Vite client. Colyseus rooms are isolated match instances and support two-player room capacity/matchmaking. Reference: https://docs.colyseus.io/room ; https://docs.colyseus.io/matchmaker.
+
+Hosting must be decided after a minimal local 1v1 prototype. Colyseus officially supports Node-based deployment and managed Colyseus Cloud; current Vercel documentation also reports WebSocket support in public beta, but the long-lived authoritative game-server workload should be benchmarked before choosing Vercel versus a dedicated realtime host. References: https://docs.colyseus.io/deployment ; https://docs.colyseus.io/cloud ; https://vercel.com/changelog/websocket-support-is-now-in-public-beta.
+
+**Online implementation order**
+1. Keep the existing offline Arena as the golden gameplay reference.
+2. Extract/define a pure authoritative match model for two fighters, inputs, projectiles, cover, hits, rounds and result.
+3. Build a local two-client Colyseus room with the same field dimensions and Golden rules.
+4. Add input transport, fixed server tick, state replication, interpolation/prediction and latency instrumentation.
+5. Add private room code/join flow for exactly two players.
+6. Verify disconnect/reconnect, duplicate inputs, late packets, simultaneous hits, round transitions and match completion.
+7. Only after that connect the online match to career records, Peak Highlights, Armory/loadout and later daily timezone/weekly/championship competition.
+
+**Competitive-world direction**
+The long-term online game can build from verified Arena records:
+- match result and performance;
+- daily timezone standings;
+- 24-hour ranking/check cycle;
+- weekly qualification/playoff cycles;
+- finals and championship status;
+- title defenses and challenger cycles;
+- career history and Peak Highlights.
+
+Do not implement rankings, qualifiers, titles or power-up economy before the underlying authoritative match/event record is trustworthy.
+
 ## Wardrobe — Field Operator 01 Visual Identity Contract
 
 Field Operator 01 is the initial original Shooters Trigger character prototype. The current Wardrobe prototype uses a CC0 Kenney Toon Characters base as a temporary cartoon construction layer, with Shooters Trigger-specific paintball mask, jersey, trousers, marker, yellow shoulder marking and operator identifier layered over it. This is a Wardrobe experiment only; production artwork can replace the base without changing combat rules.
