@@ -5060,3 +5060,80 @@ Verification rule for this checkpoint:
 - Wardrobe generated player must be visually inspected on the field;
 - idle, aim-left/right, fire and movement must show one attached weapon with no duplicate geometric gun;
 - if the rendered weapon is still detached, STOP and inspect the actual v2 layer bounds/attachment before changing offsets again.
+
+
+## Wardrobe — Generated v2 Deep Rig Audit — September 29, 2026
+
+The September 29 bronze-corrected deployment was inspected against the actual main source, generated-v2 manifest, extraction script, Wardrobe Phaser scene, package dependency versions, and the current Phaser transform model. This audit is the authoritative follow-up to the Bronze Baseline Corrected Weapon-Rig Checkpoint.
+
+### What is confirmed
+
+- The repository uses Phaser ^4.2.1.
+- public/assets/wardrobe/generated-v2/ contains player-body-atlas.png, player-arms.png, player-weapon.png, player-muzzle.png and manifest.json.
+- Wardrobe loads the four generated-v2 layers as separate Phaser textures.
+- All four layers are children of the same player Container.
+- The procedural geometric Arena arms/weapon/muzzle are explicitly hidden when the generated player is selected.
+- The generated body remains unrotated while the independent aim vector drives the weapon presentation.
+- The generated body atlas is a real RGBA spritesheet and Wardrobe measures its alpha bounds to establish visible-height/grounding scale.
+- The current production checkpoint therefore has the correct high-level architecture: body artwork is separated from the independently aimed weapon presentation.
+
+### Critical findings from the implementation audit
+
+The current v2 rig is not yet a true data-driven attachment rig. It is a separated-layer rig with several empirically chosen constants:
+
+- generated arms position: (-7 * bodyScale, -40 * bodyScale);
+- generated weapon hand position: (7 * bodyScale, shoulderY + 3 * bodyScale);
+- weapon origin: (0.22, 0.52);
+- weapon display scale: 50 / 234;
+- muzzle distance: 39;
+- projectile origin duplicates the same hardcoded 39-pixel relationship instead of deriving its position from the rendered muzzle layer;
+- the v2 manifest contains layer names and source/grid information but contains no grip/pivot/muzzle attachment metadata;
+- the extraction script crops the arms/weapon/muzzle regions from the source sheet but does not calculate or persist physical attachment points for those layers.
+
+This distinction matters. Phaser's origin is the point around which a Game Object is positioned and rotated, and Phaser supports custom origins/display origins and custom frame pivots. Containers make child positions relative to the player root and propagate parent transforms. The correct long-term solution is therefore to encode the artwork's actual attachment contract rather than accumulating scene-specific offsets.
+
+### Asset-source finding
+
+The checked-in v2 manifest currently identifies its source as public/assets/wardrobe/incoming/2.jpg while the broader Wardrobe history previously described 1.jpg / og.jpg as the authoritative generated source pair. This must not be silently normalized by assumption. Before another artwork extraction or Gemini generation pass, inspect the actual incoming/2.jpg provenance and compare it with 1.jpg/og.jpg. The v2 asset pipeline currently derives its 8x4 grid from 2.jpg, with 176x192 cells.
+
+### Correct next technical target
+
+Do not solve the remaining visual problem by repeatedly changing 7, -40, 3, 0.22, 0.52, 50 / 234, or 39 in isolation.
+
+The next rig pass should establish one explicit artwork attachment definition, including:
+- player/root anchor;
+- body hand/shoulder attachment point;
+- arms attachment point;
+- weapon grip point;
+- weapon muzzle point;
+- weapon display scale;
+- optional left/right mirror rules.
+
+The weapon sprite should rotate around its actual grip attachment, and the muzzle position used for both muzzle rendering and projectile spawning should be derived from the same weapon-rig transform. A future character should be able to supply a different attachment definition without changing Wardrobe gameplay code.
+
+### Reusable-character goal
+
+Wardrobe is being developed as a character-production laboratory, not a one-off player fix.
+
+The desired contract is:
+Character Definition -> Body + Arms + Weapon + Muzzle + Attachment Data -> common Phaser rig
+
+A new character should therefore require new artwork and attachment metadata, not another custom weapon implementation.
+
+Do not generate a new whole character merely to compensate for this rigging issue. Preserve the current accepted character identity and improve the reusable rig first. If additional Gemini artwork is later required, request only the missing directional/body frames identified by the existing asset audit.
+
+### Verification boundary
+
+This audit does not promote the current v2 artwork to Silver. It records the implementation truth discovered after the Bronze checkpoint.
+
+Before the next visual checkpoint:
+1. inspect the actual v2 layer artwork/bounds and confirm grip/muzzle locations;
+2. reconcile the 2.jpg source reference against the Wardrobe source history;
+3. implement one explicit attachment contract;
+4. derive rendered muzzle and projectile origin from that contract;
+5. visually verify idle, left/right aim, firing and movement in Wardrobe;
+6. verify no geometric duplicate weapon appears;
+7. run TypeScript/Vite build and Wardrobe asset workflow;
+8. verify Shooters Trigger combat/AI/projectile/collision files remain untouched.
+
+Unexpected visual result remains: STOP -> inspect the actual rendered result and asset geometry -> then act.
