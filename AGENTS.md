@@ -5253,3 +5253,21 @@ The product principle is:
 ARENA = THE COMBAT REFERENCE.  
 ONLINE ARENA = THE SAME COMBAT WORLD WITH A HUMAN ON THE OTHER END.**
 
+
+
+## Wardrobe — Integrated Combat Silhouette Correction — September 29, 2026
+
+The previous v2 implementation separated the body, arms and gun at the asset-pipeline level, but that construction produced the wrong visual result: the body already contained authored anatomy while a separate extracted arm was rendered over it, creating the extra-arm / floating-gun effect identified during visual QA.
+
+The visual contract is now explicit:
+
+- 2.jpg remains the movement/body source.
+- 1.jpg supplies the authored AIM / SHOOT combat frames because those frames contain the character, arms/hands and gun as one connected silhouette.
+- Wardrobe renders those combat frames as one Phaser sprite.
+- The extracted arms, gun and muzzle crops remain audit outputs only; they are not runtime overlays for the generated player.
+- Do not return to grip-coordinate tuning to disguise duplicate anatomy.
+- Projectile spawning remains gameplay logic and uses an origin near the visible integrated muzzle; Shooters Trigger combat/collision systems remain untouched.
+
+Acceptance target: one character -> one natural arm/hand -> one gun held by that hand.
+
+If the next rendered result is still detached, STOP and inspect the authored combat frame itself before changing offsets or resurrecting the separated-layer rig.
