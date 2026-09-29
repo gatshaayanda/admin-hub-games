@@ -105,6 +105,9 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
       this.activeLocationId = null;
       this.enterButton?.destroy();
       this.enterButton = undefined;
+      this.guidePulse?.destroy();
+      this.guidePulse = undefined;
+      this.guideText = undefined;
     });
 
     window.dispatchEvent(new Event('admin-hub-games:game-ready'));
