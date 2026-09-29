@@ -4943,7 +4943,7 @@ The Wardrobe generated-player work remains isolated from Shooter Trigger combat,
 ## Wardrobe — Generated Player Visual Isolation — September 29, 2026
 
 - The generated 1.jpg player is the Wardrobe player being tested for Shooter-style movement, aiming and firing.
-- The procedural geometric Arena reference is a behavior/mechanics reference only; it must not be offered as a selectable Wardrobe character or appear as the generated player's visual layer.
-- Keep the generated player's authored artwork as the visible character. Do not reintroduce the geometric Arena arms, rifle or muzzle as an overlay.
-- The generated player remains Wardrobe-only; Shooter Trigger combat, projectile, collision, AI and Golden Playthrough code remain isolated.
+- The procedural geometric Arena reference remains a selectable Wardrobe reference character. It is the mechanical/presentation reference for movement, aim and shooting.
+- When the generated player is selected, its authored artwork is the only visible character artwork. Do not render the geometric Arena body, arms, rifle or muzzle as an overlay on it.
+- Generated movement, aim and firing behavior stays in Wardrobe; Shooter Trigger combat, projectile, collision, AI and Golden Playthrough code remain isolated.
 
