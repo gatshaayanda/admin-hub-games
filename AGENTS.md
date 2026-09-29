@@ -5193,8 +5193,9 @@ The Home Field is now the **staging version of the same physical world used by t
 
 - Home Field uses the Arena's established **2400×1400 world scale, ground treatment, lane bands, trees, bunkers and tire-stack obstacle vocabulary**.
 - Movement in Home Field respects the same major physical obstacles used by Arena. The player cannot simply walk through bunkers, trees or tire stacks.
-- The Home Field player uses the **same geometric character language as the Arena fighter**, but is deliberately **unarmed**.
-- Do not create a second unrelated lobby character style. The current unarmed geometry is the bridge toward the future Wardrobe character system.
+- The Home Field player uses the **exact Arena fighter geometric body construction and walking poses**, but is deliberately **unarmed**. This is the same visual construction already used by the Arena fighter and the Training Camp fighter.
+- Do not hand-recreate or approximate a separate lobby character. Home Field must reuse the Arena geometry exactly at the shape/pose level; only combat-specific arms/weapon presentation is omitted.
+- This exact visual parity is the bridge toward the future Wardrobe character system.
 - Home Field is staging/base space; it does not inherit Arena combat, projectiles, damage or AI.
 
 ### Physical launchpad

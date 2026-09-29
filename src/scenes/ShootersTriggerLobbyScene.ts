@@ -1128,23 +1128,34 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
   }
 
   private createPlayer(x: number, y: number) {
-    const container = this.add.container(x, y);
+    // This is the Arena fighter's exact geometric body construction, reused here
+    // without the Arena weapon/arms so Home Field remains unarmed.
+    const container = this.add.container(x, y).setDepth(30);
     const shadow = this.add.ellipse(0, 34, 27, 10, 0x3d3025, 0.28);
+
     const makePose = (legOffset: number, bob: number) => {
       const g = this.add.graphics();
+
       g.fillStyle(0x3b2f28, 1).fillEllipse(0, -20 + bob, 24, 18);
       g.fillStyle(0xd8a66b, 1).fillEllipse(0, -17 + bob, 13, 12);
       g.fillStyle(0xd4a45d, 1).fillCircle(-7, -17 + bob, 2.5).fillCircle(7, -17 + bob, 2.5);
       g.fillStyle(0x2f6b4e, 1).fillEllipse(0, -23 + bob, 25, 12);
+      g.fillStyle(0x111715, 1).fillRoundedRect(-13, -17 + bob, 26, 10, 4);
+      g.fillStyle(0x9bb9b1, 0.88).fillRoundedRect(-9, -15 + bob, 18, 6, 2);
+      g.lineStyle(1, 0xe8f2dc, 0.42).strokeRoundedRect(-9, -15 + bob, 18, 6, 2);
       g.fillStyle(0xd4a45d, 1).fillRoundedRect(-4, -8 + bob, 8, 7, 2);
       g.fillStyle(0x2f6b4e, 1).fillRoundedRect(-15, -4 + bob, 30, 22, 8);
       g.fillStyle(0x4f8b65, 1).fillRoundedRect(-10, -1 + bob, 20, 14, 4);
       g.fillStyle(0x17201c, 0.9).fillRoundedRect(-15, 0 + bob, 6, 13, 2).fillRoundedRect(9, 0 + bob, 6, 13, 2);
+      g.fillStyle(0xc1a86c, 1).fillRect(-10, 8 + bob, 20, 4);
+      g.fillStyle(0x1d2923, 1).fillRect(-12, 12 + bob, 24, 5);
+      g.fillStyle(0x5e4936, 1).fillRoundedRect(-15, 8 + bob, 5, 8, 2).fillRoundedRect(10, 8 + bob, 5, 8, 2);
       g.fillStyle(0x29372f, 1).fillRoundedRect(-11, 16 + bob, 22, 7, 3);
       g.fillStyle(0x566052, 1).fillRoundedRect(-10 + legOffset, 20 + bob, 8, 13, 2).fillRoundedRect(2 - legOffset, 20 + bob, 8, 13, 2);
       g.fillStyle(0x202522, 1).fillRoundedRect(-12 + legOffset, 30 + bob, 10, 7, 2).fillRoundedRect(2 - legOffset, 30 + bob, 10, 7, 2);
       return g;
     };
+
     const poseA = makePose(0, 0);
     const poseB = makePose(2, 1).setVisible(false);
     container.add([shadow, poseA, poseB]);
