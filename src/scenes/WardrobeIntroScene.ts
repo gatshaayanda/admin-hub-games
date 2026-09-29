@@ -318,18 +318,6 @@ const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
     embeddedWeapon: false,
   },
   {
-    id: 'arena_reference',
-    name: 'SHOOTERS TRIGGER ARENA · REFERENCE COPY',
-    source: 'arena',
-    basePath: '',
-    displaySize: 80,
-    targetVisibleHeight: 60,
-    frameWidth: 1,
-    frameHeight: 1,
-    originY: 1,
-    embeddedWeapon: true,
-  },
-  {
     id: 'soldier_01',
     name: 'Soldier 01 · CC BY · ARMED',
     source: 'soldier',
