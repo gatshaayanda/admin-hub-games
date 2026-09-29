@@ -1155,7 +1155,6 @@ export class WardrobeLabScene extends Phaser.Scene {
   private fireShot() {
     const def = this.currentDefinition();
     const bodyScale = this.previewSprite.scaleX || (this.targetVisibleCharacterHeight / 160);
-    const bodyScale = this.previewSprite.scaleX || (this.targetVisibleCharacterHeight / 160);
     const origin = def.source === 'generated'
       ? new Phaser.Math.Vector2(
         this.character.x + 7 * bodyScale + this.aim.x * 39,
