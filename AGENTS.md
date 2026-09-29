@@ -5271,3 +5271,8 @@ The visual contract is now explicit:
 Acceptance target: one character -> one natural arm/hand -> one gun held by that hand.
 
 If the next rendered result is still detached, STOP and inspect the authored combat frame itself before changing offsets or resurrecting the separated-layer rig.
+
+
+### Verification note — integrated combat atlas
+
+The generated-v2 asset workflow successfully produced `player-combat-atlas.png` from the existing 1.jpg authored combat frames. The current main checkpoint contains that atlas and the Wardrobe scene consumes it as a single sprite. The earlier asset-workflow push rejection was a concurrent-main race; the workflow now has a branch-scoped concurrency group so generated asset commits cannot race each other.
