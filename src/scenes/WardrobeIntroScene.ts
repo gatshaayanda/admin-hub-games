@@ -1,6 +1,28 @@
 import Phaser from 'phaser';
 import { installShootersTriggerMobileControls } from '../shooters-trigger-mobile-controls';
 
+type GeneratedV2RigManifest = {
+  source: string;
+  rig: {
+    body: {
+      armsAnchor: { x: number; y: number };
+      weaponGripAnchor: { x: number; y: number };
+    };
+    weapon: {
+      sourceWidth: number;
+      sourceHeight: number;
+      displayWidth: number;
+      grip: { x: number; y: number };
+      muzzle: { x: number; y: number };
+    };
+    muzzleLayer: {
+      sourceWidth: number;
+      sourceHeight: number;
+      origin: { x: number; y: number };
+    };
+  };
+};
+
 type WardrobeAction =
   | 'IDLE'
   | 'WALK'
@@ -66,6 +88,7 @@ export class WardrobeIntroScene extends Phaser.Scene {
     this.load.image('wardrobe-generated-v2-arms', '/assets/wardrobe/generated-v2/player-arms.png');
     this.load.image('wardrobe-generated-v2-weapon', '/assets/wardrobe/generated-v2/player-weapon.png');
     this.load.image('wardrobe-generated-v2-muzzle', '/assets/wardrobe/generated-v2/player-muzzle.png');
+    this.load.json('wardrobe-generated-v2-manifest', '/assets/wardrobe/generated-v2/manifest.json');
   }
 
   create() {
@@ -461,6 +484,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     ageMs: number;
   }> = [];
   private cleanupMobileControls?: () => void;
+  private generatedRig!: GeneratedV2RigManifest['rig'];
 
   private readonly worldWidth = 2400;
   private readonly worldHeight = 1400;
@@ -531,6 +555,11 @@ export class WardrobeLabScene extends Phaser.Scene {
     const { width, height } = this.scale;
 
     this.prepareGeneratedCharacterTextures();
+    const generatedManifest = this.cache.json.get('wardrobe-generated-v2-manifest') as GeneratedV2RigManifest | undefined;
+    if (!generatedManifest?.rig) {
+      throw new Error('Wardrobe generated-v2 attachment manifest is missing');
+    }
+    this.generatedRig = generatedManifest.rig;
 
     this.cameras.main.setBackgroundColor('#6f984b');
     this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
@@ -1103,46 +1132,49 @@ export class WardrobeLabScene extends Phaser.Scene {
       return;
     }
 
-    // Generated player uses the separated artwork: authored body + extracted
-    // arms + extracted weapon + extracted muzzle. Keep the complete presentation
-    // rig attached to the player container so the weapon cannot float.
+    // Generated player uses the separated artwork and the attachment contract
+    // emitted by the v2 asset pipeline. All display-space offsets are derived
+    // from source-pixel grip/muzzle geometry; there are no weapon-specific
+    // gameplay coordinates hidden in this scene.
     const bodyScale = this.previewSprite.scaleX || (this.targetVisibleCharacterHeight / 160);
     const angle = Math.atan2(this.aim.y, this.aim.x);
-    const shoulderY = -40 * bodyScale;
+    const rig = this.generatedRig;
+    const armsAnchor = rig.body.armsAnchor;
+    const gripAnchor = rig.body.weaponGripAnchor;
+    const weapon = rig.weapon;
+    const gripOriginX = weapon.grip.x / weapon.sourceWidth;
+    const gripOriginY = weapon.grip.y / weapon.sourceHeight;
+    const weaponScale = rig.weapon.displayWidth / weapon.sourceWidth;
 
-    // Treat the extracted weapon grip as the attachment point. The layer is
-    // tightly cropped, so its transparent canvas center is not the hand.
-    const handX = 7 * bodyScale;
-    const handY = shoulderY + 3 * bodyScale;
-    const weaponScale = 50 / 234;
-    const weaponGripOriginX = 0.22;
-    const weaponGripOriginY = 0.52;
+    const handX = gripAnchor.x * bodyScale;
+    const handY = gripAnchor.y * bodyScale;
+    const muzzleLocalX = (weapon.muzzle.x - weapon.grip.x) * weaponScale;
+    const muzzleLocalY = (weapon.muzzle.y - weapon.grip.y) * weaponScale;
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const muzzleOffsetX = muzzleLocalX * cos - muzzleLocalY * sin;
+    const muzzleOffsetY = muzzleLocalX * sin + muzzleLocalY * cos;
 
     this.armsSprite
       .setVisible(true)
       .setScale(bodyScale)
-      .setPosition(-7 * bodyScale, shoulderY)
+      .setPosition(armsAnchor.x * bodyScale, armsAnchor.y * bodyScale)
       .setRotation(angle)
       .setFlipY(this.aim.x < 0);
 
     this.weaponSprite
       .setVisible(true)
       .setScale(weaponScale)
-      .setOrigin(weaponGripOriginX, weaponGripOriginY)
+      .setOrigin(gripOriginX, gripOriginY)
       .setPosition(handX, handY)
       .setRotation(angle)
       .setFlipY(this.aim.x < 0);
 
-    // The extracted weapon's visible muzzle begins about 39px forward of
-    // the grip at the normalized display size.
-    const muzzleDistance = 39;
     this.muzzleSprite
       .setVisible(this.muzzleUntil > 0)
       .setScale(bodyScale)
-      .setPosition(
-        handX + this.aim.x * muzzleDistance,
-        handY + this.aim.y * muzzleDistance,
-      )
+      .setOrigin(rig.muzzleLayer.origin.x, rig.muzzleLayer.origin.y)
+      .setPosition(handX + muzzleOffsetX, handY + muzzleOffsetY)
       .setRotation(angle)
       .setFlipY(this.aim.x < 0);
 
@@ -1154,16 +1186,29 @@ export class WardrobeLabScene extends Phaser.Scene {
 
   private fireShot() {
     const def = this.currentDefinition();
-    const bodyScale = this.previewSprite.scaleX || (this.targetVisibleCharacterHeight / 160);
-    const origin = def.source === 'generated'
-      ? new Phaser.Math.Vector2(
-        this.character.x + 7 * bodyScale + this.aim.x * 39,
-        this.character.y - 40 * bodyScale + this.aim.y * 39,
-      )
-      : new Phaser.Math.Vector2(
-        this.character.x + this.aim.x * 42,
-        this.character.y + (def.source === 'arena' ? 0 : 0),
+    let origin: Phaser.Math.Vector2;
+    if (def.source === 'generated') {
+      const bodyScale = this.previewSprite.scaleX || (this.targetVisibleCharacterHeight / 160);
+      const angle = Math.atan2(this.aim.y, this.aim.x);
+      const rig = this.generatedRig;
+      const weapon = rig.weapon;
+      const handX = rig.body.weaponGripAnchor.x * bodyScale;
+      const handY = rig.body.weaponGripAnchor.y * bodyScale;
+      const weaponScale = rig.weapon.displayWidth / weapon.sourceWidth;
+      const muzzleLocalX = (weapon.muzzle.x - weapon.grip.x) * weaponScale;
+      const muzzleLocalY = (weapon.muzzle.y - weapon.grip.y) * weaponScale;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      origin = new Phaser.Math.Vector2(
+        this.character.x + handX + muzzleLocalX * cos - muzzleLocalY * sin,
+        this.character.y + handY + muzzleLocalX * sin + muzzleLocalY * cos,
       );
+    } else {
+      origin = new Phaser.Math.Vector2(
+        this.character.x + this.aim.x * 42,
+        this.character.y,
+      );
+    }
     const velocity = this.aim.clone().normalize().scale(this.projectileSpeed);
     const graphics = this.add.circle(origin.x, origin.y, 4, 0xf0dfb6, 1).setDepth(60);
     this.shots.push({
