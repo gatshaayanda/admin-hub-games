@@ -1014,6 +1014,20 @@ export class WardrobeLabScene extends Phaser.Scene {
       return;
     }
 
+    // Generated player = artwork only. The geometric Arena rig remains
+    // selectable as its own reference character, but none of its body/arms/
+    // weapon/muzzle layers may ever render with the generated player.
+    this.arenaPoseA.setVisible(false);
+    this.arenaPoseB.setVisible(false);
+    this.arenaArms.setVisible(false);
+    this.arenaWeapon.setVisible(false);
+    this.arenaMuzzle.setVisible(false);
+    this.armsSprite.setVisible(false);
+    this.weaponSprite.setVisible(false);
+    this.muzzleSprite.setVisible(false);
+    this.weaponLayer.setVisible(false);
+    this.muzzleFlash.setVisible(false);
+
     const atlasKey = 'wardrobe-generated-player-atlas';
     const diagonal = walking && Math.abs(vx) > 0.35 && Math.abs(vy) > 0.35;
     let frame = 0;
