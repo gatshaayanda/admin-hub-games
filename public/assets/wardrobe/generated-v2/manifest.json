@@ -60,7 +60,7 @@
         "units": "sourcePixels"
       },
       "muzzle": {
-        "x": 234,
+        "x": 234.0,
         "y": 61.36,
         "units": "sourcePixels"
       }
