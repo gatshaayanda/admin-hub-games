@@ -37,6 +37,16 @@
     "weapon": "player-weapon.png",
     "muzzle": "player-muzzle.png"
   },
+  "combat": {
+    "source": "public/assets/wardrobe/incoming/1.jpg",
+    "atlas": "player-combat-atlas.png",
+    "frameWidth": 176,
+    "frameHeight": 192,
+    "aimFrame": 11,
+    "fireFrame": 12,
+    "readyFrame": 13,
+    "recoilFrame": 15
+  },
   "rig": {
     "body": {
       "armsAnchor": {
@@ -74,5 +84,5 @@
       }
     }
   },
-  "note": "Generated production candidate. Rig attachment geometry is stored in source pixels so Phaser can derive the display transform without hardcoded weapon offsets."
+  "note": "Generated production candidate. Movement uses 2.jpg body artwork; weapon-bearing presentation uses authored integrated combat frames from 1.jpg. Extracted arms/weapon/muzzle crops remain audit outputs and are not rendered as runtime overlays."
 }
