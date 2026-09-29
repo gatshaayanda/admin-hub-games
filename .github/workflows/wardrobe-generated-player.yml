@@ -6,6 +6,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: wardrobe-generated-player-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
