@@ -4,6 +4,7 @@ import json
 
 SOURCE = Path("public/assets/wardrobe/incoming/2.jpg")
 COMBAT_SOURCE = Path("public/assets/wardrobe/incoming/1.jpg")
+COMBAT_SOURCE = Path("public/assets/wardrobe/incoming/1.jpg")
 OUT = Path("public/assets/wardrobe/generated-v2")
 CELL_W, CELL_H = 176, 192
 COLS, ROWS = 8, 4
@@ -157,6 +158,7 @@ def main():
         "grid": {"columns": COLS, "rows": ROWS, "cellWidth": CELL_W, "cellHeight": CELL_H},
         "bodyCells": BODY_CELLS,
         "layers": {k: f"player-{k}.png" for k in REGIONS},
+    "combat": {"source": "public/assets/wardrobe/incoming/1.jpg", "atlas": "player-combat-atlas.png", "frameWidth": 176, "frameHeight": 192, "aimFrame": 11, "fireFrame": 12, "readyFrame": 13, "recoilFrame": 15},
         "combat": {
             "source": "public/assets/wardrobe/incoming/1.jpg",
             "atlas": "player-combat-atlas.png",
