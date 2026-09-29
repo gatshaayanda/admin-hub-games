@@ -857,7 +857,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     }[direction];
   }
 
-  private fitGeneratedCharacterSprite(sprite: Phaser.GameObjects.Sprite, def: WardrobeCharacterDefinition) {
+  private fitGeneratedCharacterSprite(sprite: Phaser.GameObjects.Sprite, _def: WardrobeCharacterDefinition) {
     // The source contact sheet includes action labels around the soldier. Keep
     // the central authored character/rifle region only; otherwise those labels
     // become visible foreground pixels and distort the sprite's scale.
