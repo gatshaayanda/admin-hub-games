@@ -121,12 +121,46 @@ def main():
         layer = crop_region(sheet, box)
         layer.save(OUT / f"player-{name}.png", optimize=True)
 
+    weapon_path = OUT / "player-weapon.png"
+    muzzle_path = OUT / "player-muzzle.png"
+    with Image.open(weapon_path) as weapon_image:
+        weapon_w, weapon_h = weapon_image.size
+    with Image.open(muzzle_path) as muzzle_image:
+        muzzle_w, muzzle_h = muzzle_image.size
+
+    # Attachment geometry is expressed in source pixels, not Phaser display pixels.
+    # The grip calibration is the point where the extracted artwork meets the
+    # authored hand; the muzzle is the forward edge of the weapon on that same
+    # centerline. Runtime Phaser code derives scale/rotation from these values.
+    grip_x = round(weapon_w * 0.22, 2)
+    grip_y = round(weapon_h * 0.52, 2)
+    muzzle_x = float(weapon_w)
+    muzzle_y = grip_y
+
     manifest = {
         "source": "public/assets/wardrobe/incoming/2.jpg",
         "grid": {"columns": COLS, "rows": ROWS, "cellWidth": CELL_W, "cellHeight": CELL_H},
         "bodyCells": BODY_CELLS,
         "layers": {k: f"player-{k}.png" for k in REGIONS},
-        "note": "Generated production candidate. Visual inspection in Wardrobe is required before promotion."
+        "rig": {
+            "body": {
+                "armsAnchor": {"x": -7, "y": -40, "units": "bodyScale"},
+                "weaponGripAnchor": {"x": 7, "y": -37, "units": "bodyScale"}
+            },
+            "weapon": {
+                "sourceWidth": weapon_w,
+                "sourceHeight": weapon_h,
+                "displayWidth": 50,
+                "grip": {"x": grip_x, "y": grip_y, "units": "sourcePixels"},
+                "muzzle": {"x": muzzle_x, "y": muzzle_y, "units": "sourcePixels"}
+            },
+            "muzzleLayer": {
+                "sourceWidth": muzzle_w,
+                "sourceHeight": muzzle_h,
+                "origin": {"x": 0, "y": 0.5}
+            }
+        },
+        "note": "Generated production candidate. Rig attachment geometry is stored in source pixels so Phaser can derive the display transform without hardcoded weapon offsets."
     }
     (OUT / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
