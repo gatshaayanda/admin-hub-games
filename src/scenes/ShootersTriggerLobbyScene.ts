@@ -947,6 +947,19 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
 
     this.drawFlag(1180, 170, 0xd66a3d, 'OFFLINE ARENA');
     this.drawSign(1180, 235, '03', 'OFFLINE ARENA', 0xd66a3d);
+  private drawFlag(x: number, y: number, color: number, label: string) {
+    const g = this.add.graphics();
+    g.fillStyle(0x594838, 1).fillRect(x, y, 4, 78);
+    g.fillStyle(color, 1).fillTriangle(x + 4, y + 4, x + 64, y + 18, x + 4, y + 32);
+    this.add.text(x + 32, y + 50, label, {
+      fontFamily: 'monospace',
+      fontSize: '9px',
+      color: '#fff4d4',
+      stroke: '#493526',
+      strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(6);
+  }
+
 
     this.drawSign(1850, 540, '04', 'ONLINE ARENA', 0x4fc3b1);
     this.drawBunker(1760, 520, 150, 58, 0x5f6e69);
