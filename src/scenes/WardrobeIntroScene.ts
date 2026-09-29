@@ -85,9 +85,11 @@ export class WardrobeIntroScene extends Phaser.Scene {
       '/assets/wardrobe/generated-v2/player-body-atlas.png',
       { frameWidth: 176, frameHeight: 192 },
     );
-    this.load.image('wardrobe-generated-v2-arms', '/assets/wardrobe/generated-v2/player-arms.png');
-    this.load.image('wardrobe-generated-v2-weapon', '/assets/wardrobe/generated-v2/player-weapon.png');
-    this.load.image('wardrobe-generated-v2-muzzle', '/assets/wardrobe/generated-v2/player-muzzle.png');
+    this.load.spritesheet(
+      'wardrobe-generated-combat-atlas',
+      '/assets/wardrobe/generated-v2/player-combat-atlas.png',
+      { frameWidth: 176, frameHeight: 192 },
+    );
     this.load.json('wardrobe-generated-v2-manifest', '/assets/wardrobe/generated-v2/manifest.json');
   }
 
@@ -601,15 +603,11 @@ export class WardrobeLabScene extends Phaser.Scene {
       this.previewSprite.setVisible(true);
     }
     this.bodySprite = this.previewSprite;
-    this.armsSprite = this.add.sprite(0, 0, 'wardrobe-generated-v2-arms')
-      .setOrigin(0.08, 0.5)
-      .setVisible(false);
-    this.weaponSprite = this.add.sprite(0, 0, 'wardrobe-generated-v2-weapon')
-      .setOrigin(0.50, 0.5)
-      .setVisible(false);
-    this.muzzleSprite = this.add.sprite(0, 0, 'wardrobe-generated-v2-muzzle')
-      .setOrigin(0, 0.5)
-      .setVisible(false);
+    // Generated combat is one authored silhouette; these legacy layer slots
+    // remain hidden for compatibility and are never rendered.
+    this.armsSprite = this.add.sprite(0, 0, 'wardrobe-generated-player-atlas', 0).setVisible(false);
+    this.weaponSprite = this.add.sprite(0, 0, 'wardrobe-generated-player-atlas', 0).setVisible(false);
+    this.muzzleSprite = this.add.sprite(0, 0, 'wardrobe-generated-player-atlas', 0).setVisible(false);
 
     this.character.add([this.previewSprite, this.armsSprite, this.weaponSprite, this.muzzleSprite]);
 
@@ -1051,14 +1049,26 @@ export class WardrobeLabScene extends Phaser.Scene {
       animation = 'RIGHT';
     }
 
-    // The generated body supplies the character artwork only. The armed pose
-    // is driven by the same Arena arms/weapon rig used by Shooters Trigger,
-    // so there is exactly one weapon representation and no second floating
-    // extracted arm/gun layered over the body.
-    const aiming = Math.abs(this.aim.x) > 0.2 || this.generatedAction === 'aim' || this.generatedAction === 'shoot';
-    if (aiming && !walking) {
-      animation = this.aim.x < 0 ? 'LEFT' : 'RIGHT';
-      flipX = false;
+    // Weapon-bearing presentation is a single authored combat silhouette.
+    const aiming = this.pointerAimActive || this.fireHeld ||
+      this.generatedAction === 'aim' || this.generatedAction === 'shoot' ||
+      this.generatedAction === 'muzzle' || this.generatedAction === 'recoil';
+    if (aiming) {
+      const key = 'wardrobe-generated-combat-atlas';
+      const frame = this.muzzleUntil > 0 || this.generatedAction === 'shoot' ||
+        this.generatedAction === 'muzzle' ? 12 : 11;
+      if (this.previewSprite.texture.key !== key) {
+        this.previewSprite.setTexture(key, frame);
+        this.fitCharacterSprite(this.previewSprite, def);
+      } else {
+        this.previewSprite.setFrame(frame);
+      }
+      this.previewSprite.setFlipX(this.aim.x < 0);
+      this.previewSprite.setRotation(0);
+      this.armsSprite.setVisible(false);
+      this.weaponSprite.setVisible(false);
+      this.muzzleSprite.setVisible(false);
+      return;
     }
 
     const action = this.generatedAction;
@@ -1132,76 +1142,38 @@ export class WardrobeLabScene extends Phaser.Scene {
       return;
     }
 
-    // Generated player uses the separated artwork and the attachment contract
-    // emitted by the v2 asset pipeline. All display-space offsets are derived
-    // from source-pixel grip/muzzle geometry; there are no weapon-specific
-    // gameplay coordinates hidden in this scene.
-    const bodyScale = this.previewSprite.scaleX || (this.targetVisibleCharacterHeight / 160);
-    const angle = Math.atan2(this.aim.y, this.aim.x);
-    const rig = this.generatedRig;
-    const armsAnchor = rig.body.armsAnchor;
-    const gripAnchor = rig.body.weaponGripAnchor;
-    const weapon = rig.weapon;
-    const gripOriginX = weapon.grip.x / weapon.sourceWidth;
-    const gripOriginY = weapon.grip.y / weapon.sourceHeight;
-    const weaponScale = rig.weapon.displayWidth / weapon.sourceWidth;
+    // One authored silhouette: body + natural arms/hands + gun.
+    this.armsSprite.setVisible(false);
+    this.weaponSprite.setVisible(false);
+    this.muzzleSprite.setVisible(false);
 
-    const handX = gripAnchor.x * bodyScale;
-    const handY = gripAnchor.y * bodyScale;
-    const muzzleLocalX = (weapon.muzzle.x - weapon.grip.x) * weaponScale;
-    const muzzleLocalY = (weapon.muzzle.y - weapon.grip.y) * weaponScale;
-    const cos = Math.cos(angle);
-    const sin = Math.sin(angle);
-    const muzzleOffsetX = muzzleLocalX * cos - muzzleLocalY * sin;
-    const muzzleOffsetY = muzzleLocalX * sin + muzzleLocalY * cos;
+    const aiming = this.pointerAimActive || this.fireHeld ||
+      this.generatedAction === 'aim' || this.generatedAction === 'shoot' ||
+      this.generatedAction === 'muzzle' || this.generatedAction === 'recoil';
 
-    this.armsSprite
-      .setVisible(true)
-      .setScale(bodyScale)
-      .setPosition(armsAnchor.x * bodyScale, armsAnchor.y * bodyScale)
-      .setRotation(angle)
-      .setFlipY(this.aim.x < 0);
-
-    this.weaponSprite
-      .setVisible(true)
-      .setScale(weaponScale)
-      .setOrigin(gripOriginX, gripOriginY)
-      .setPosition(handX, handY)
-      .setRotation(angle)
-      .setFlipY(this.aim.x < 0);
-
-    this.muzzleSprite
-      .setVisible(this.muzzleUntil > 0)
-      .setScale(bodyScale)
-      .setOrigin(rig.muzzleLayer.origin.x, rig.muzzleLayer.origin.y)
-      .setPosition(handX + muzzleOffsetX, handY + muzzleOffsetY)
-      .setRotation(angle)
-      .setFlipY(this.aim.x < 0);
-
-    // Never show the procedural geometric Arena weapon on the generated player.
-    this.arenaArms.setVisible(false);
-    this.arenaWeapon.setVisible(false);
-    this.arenaMuzzle.setVisible(false);
+    if (aiming) {
+      const key = 'wardrobe-generated-combat-atlas';
+      const frame = this.muzzleUntil > 0 || this.generatedAction === 'shoot' ||
+        this.generatedAction === 'muzzle' ? 12 : 11;
+      if (this.previewSprite.texture.key !== key) {
+        this.previewSprite.setTexture(key, frame);
+        this.fitCharacterSprite(this.previewSprite, def);
+      } else {
+        this.previewSprite.setFrame(frame);
+      }
+      this.previewSprite.setFlipX(this.aim.x < 0);
+      this.previewSprite.setRotation(0);
+    }
   }
 
   private fireShot() {
     const def = this.currentDefinition();
     let origin: Phaser.Math.Vector2;
     if (def.source === 'generated') {
-      const bodyScale = this.previewSprite.scaleX || (this.targetVisibleCharacterHeight / 160);
-      const angle = Math.atan2(this.aim.y, this.aim.x);
-      const rig = this.generatedRig;
-      const weapon = rig.weapon;
-      const handX = rig.body.weaponGripAnchor.x * bodyScale;
-      const handY = rig.body.weaponGripAnchor.y * bodyScale;
-      const weaponScale = rig.weapon.displayWidth / weapon.sourceWidth;
-      const muzzleLocalX = (weapon.muzzle.x - weapon.grip.x) * weaponScale;
-      const muzzleLocalY = (weapon.muzzle.y - weapon.grip.y) * weaponScale;
-      const cos = Math.cos(angle);
-      const sin = Math.sin(angle);
+      const aim = this.aim.clone().normalize();
       origin = new Phaser.Math.Vector2(
-        this.character.x + handX + muzzleLocalX * cos - muzzleLocalY * sin,
-        this.character.y + handY + muzzleLocalX * sin + muzzleLocalY * cos,
+        this.character.x + aim.x * 38,
+        this.character.y - 28 + aim.y * 10,
       );
     } else {
       origin = new Phaser.Math.Vector2(
