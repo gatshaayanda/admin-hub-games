@@ -37,5 +37,42 @@
     "weapon": "player-weapon.png",
     "muzzle": "player-muzzle.png"
   },
-  "note": "Generated production candidate. Visual inspection in Wardrobe is required before promotion."
+  "rig": {
+    "body": {
+      "armsAnchor": {
+        "x": -7,
+        "y": -40,
+        "units": "bodyScale"
+      },
+      "weaponGripAnchor": {
+        "x": 7,
+        "y": -37,
+        "units": "bodyScale"
+      }
+    },
+    "weapon": {
+      "sourceWidth": 234,
+      "sourceHeight": 118,
+      "displayWidth": 50,
+      "grip": {
+        "x": 51.48,
+        "y": 61.36,
+        "units": "sourcePixels"
+      },
+      "muzzle": {
+        "x": 234.0,
+        "y": 61.36,
+        "units": "sourcePixels"
+      }
+    },
+    "muzzleLayer": {
+      "sourceWidth": 66,
+      "sourceHeight": 49,
+      "origin": {
+        "x": 0,
+        "y": 0.5
+      }
+    }
+  },
+  "note": "Generated production candidate. Rig attachment geometry is stored in source pixels so Phaser can derive the display transform without hardcoded weapon offsets."
 }
