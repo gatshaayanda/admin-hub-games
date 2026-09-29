@@ -156,6 +156,13 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
   private rivalHiddenSearchStartedAt = 0;
   private rivalHiddenPatrolAttempts = 0;
   private rivalSeekingAmmo = false;
+  // Navigation recovery: if the rival cannot make a valid movement step for
+  // several frames, temporarily leave its tactical route and deliberately move
+  // away from the blocked intent. This is movement recovery only; it does not
+  // alter cover geometry, combat collision or target hitboxes.
+  private rivalBlockedElapsed = 0;
+  private rivalRecoveryUntil = 0;
+  private rivalRecoveryDirection = new Phaser.Math.Vector2(0, 0);
   private trainingEdge: { overall: 'PLAYER' | 'BOT' | 'TIE'; evasion: 'PLAYER' | 'BOT' | 'TIE'; shooting: 'PLAYER' | 'BOT' | 'TIE' } = { overall: 'TIE', evasion: 'TIE', shooting: 'TIE' };
   private rivalAmmoStation = new Phaser.Geom.Rectangle(0, 0, 0, 0);
   private readonly rivalPatrolSpeed = 92;
@@ -402,7 +409,11 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       this.rivalMoving = false;
       return;
     }
-    const baseAngle = Math.atan2(desiredY, desiredX);
+    const now = Date.now();
+    const recoveryActive = now < this.rivalRecoveryUntil && this.rivalRecoveryDirection.lengthSq() > 0;
+    const movementX = recoveryActive ? this.rivalRecoveryDirection.x : desiredX;
+    const movementY = recoveryActive ? this.rivalRecoveryDirection.y : desiredY;
+    const baseAngle = Math.atan2(movementY, movementX);
     const speed = speedOverride ?? (this.rival.wounded ? this.rival.speed * 0.92 : this.rival.speed);
     const step = speed * delta / 1000;
     const canStep = (nx: number, ny: number, padding: number) =>
@@ -418,6 +429,8 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       this.rival.body.x = nx;
       this.rival.body.y = ny;
       this.rivalMoving = true;
+      this.rivalBlockedElapsed = 0;
+      if (recoveryActive) this.rivalRecoveryUntil = 0;
       if (Math.abs(Math.cos(angle)) > 0.08) this.rivalFacing = Math.cos(angle) < 0 ? -1 : 1;
       return;
     }
@@ -428,10 +441,85 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
       this.rival.body.x = nx;
       this.rival.body.y = ny;
       this.rivalMoving = true;
+      this.rivalBlockedElapsed = 0;
+      if (recoveryActive) this.rivalRecoveryUntil = 0;
       if (Math.abs(Math.cos(angle)) > 0.08) this.rivalFacing = Math.cos(angle) < 0 ? -1 : 1;
       return;
     }
+    this.rivalBlockedElapsed += delta;
+
+    // A rival can legitimately fail a movement step when its intended route
+    // meets a cover rectangle. Previously that left the AI with only its
+    // normal angular/cardinal retries, so it could remain pressed against the
+    // same obstacle while its tactical target never changed. After a short
+    // no-progress window, choose a temporary escape vector from a wider radial
+    // sample and hold that recovery direction long enough to clear the obstacle.
+    // The recovery is navigation only: it never changes collision geometry or
+    // combat outcomes.
+    if (this.rivalBlockedElapsed >= 220) {
+      const recovery = this.findRivalRecoveryDirection(baseAngle, step, canStep);
+      if (recovery) {
+        this.rivalRecoveryDirection.copy(recovery);
+        this.rivalRecoveryUntil = Date.now() + 650;
+        this.rivalBlockedElapsed = 0;
+
+        const recoveryAngle = Math.atan2(recovery.y, recovery.x);
+        const recoveryX = Phaser.Math.Clamp(
+          this.rival.body.x + Math.cos(recoveryAngle) * step,
+          42,
+          2358,
+        );
+        const recoveryY = Phaser.Math.Clamp(
+          this.rival.body.y + Math.sin(recoveryAngle) * step,
+          90,
+          1350,
+        );
+        if (canStep(recoveryX, recoveryY, 10)) {
+          this.rival.body.x = recoveryX;
+          this.rival.body.y = recoveryY;
+          this.rivalMoving = true;
+          if (Math.abs(recovery.x) > 0.08) this.rivalFacing = recovery.x < 0 ? -1 : 1;
+          return;
+        }
+      }
+    }
+
     this.rivalMoving = false;
+  }
+
+  private findRivalRecoveryDirection(
+    blockedAngle: number,
+    step: number,
+    canStep: (x: number, y: number, padding: number) => boolean,
+  ) {
+    const candidates: Array<{ direction: Phaser.Math.Vector2; score: number }> = [];
+    const sampleCount = 24;
+
+    for (let index = 0; index < sampleCount; index += 1) {
+      const angle = (Math.PI * 2 * index) / sampleCount;
+      const nx = Phaser.Math.Clamp(
+        this.rival.body.x + Math.cos(angle) * step,
+        42,
+        2358,
+      );
+      const ny = Phaser.Math.Clamp(
+        this.rival.body.y + Math.sin(angle) * step,
+        90,
+        1350,
+      );
+      if (!canStep(nx, ny, 10)) continue;
+
+      const direction = new Phaser.Math.Vector2(Math.cos(angle), Math.sin(angle));
+      const away = -Math.cos(angle - blockedAngle);
+      const perpendicular = Math.abs(Math.sin(angle - blockedAngle));
+      candidates.push({
+        direction,
+        score: away * 0.7 + perpendicular * 0.3,
+      });
+    }
+
+    candidates.sort((a, b) => b.score - a.score);
+    return candidates[0]?.direction ?? null;
   }
 
   private updateRival(delta: number) {
@@ -2536,4 +2624,3 @@ export class ShootersTriggerArenaScene extends Phaser.Scene {
     );
   }
 }
-
