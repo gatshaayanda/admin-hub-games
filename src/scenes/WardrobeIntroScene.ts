@@ -318,6 +318,18 @@ const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
     embeddedWeapon: false,
   },
   {
+    id: 'arena_reference',
+    name: 'SHOOTERS TRIGGER ARENA · REFERENCE COPY',
+    source: 'arena',
+    basePath: '',
+    displaySize: 80,
+    targetVisibleHeight: 60,
+    frameWidth: 1,
+    frameHeight: 1,
+    originY: 1,
+    embeddedWeapon: true,
+  },
+  {
     id: 'soldier_01',
     name: 'Soldier 01 · CC BY · ARMED',
     source: 'soldier',
@@ -531,9 +543,8 @@ export class WardrobeLabScene extends Phaser.Scene {
       0.28,
     );
 
-    // Keep the generic overlay hidden. The Arena reference gets its own exact
-    // fighter rig below; the generated v2 operator uses the real separated
-    // arms / weapon / muzzle artwork loaded above.
+    // Keep generic weapon overlays hidden. The selectable Arena reference
+    // has its own procedural rig; the generated player uses only its artwork.
     this.weaponLayer = this.add.graphics().setVisible(false);
     this.muzzleFlash = this.add.graphics().setVisible(false);
     this.character.add([this.shadow]);
