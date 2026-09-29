@@ -5137,3 +5137,50 @@ Before the next visual checkpoint:
 8. verify Shooters Trigger combat/AI/projectile/collision files remain untouched.
 
 Unexpected visual result remains: STOP -> inspect the actual rendered result and asset geometry -> then act.
+
+
+---
+
+## Wardrobe v2 attachment-contract checkpoint — 2026-09-29
+
+The v2 generated-player rig has now moved from scene-level weapon constants to an asset-pipeline attachment contract.
+
+### Reconciliation
+
+- The checked-in v2 extraction source is public/assets/wardrobe/incoming/2.jpg.
+- 1.jpg and og.jpg remain present historical/source assets, but they are not the source named by the v2 extraction manifest.
+- Wardrobe UI/source labeling has been corrected to identify 2.jpg as the v2 authoritative source instead of claiming 1.jpg + og.jpg.
+- The generated v2 weapon asset is 234×118 RGBA; the muzzle layer is 66×49 RGBA; the arms layer is 92×103 RGBA.
+- The v2 extraction pipeline now persists attachment geometry in generated-v2/manifest.json.
+- The weapon grip is represented in source pixels and converted to Phaser's normalized origin at runtime.
+- The weapon muzzle is represented in the same source-pixel coordinate system, so muzzle presentation and projectile spawning derive from the same attachment transform.
+- Body/arms and body/weapon anchor coordinates are also stored in the contract rather than duplicated inside the scene.
+
+### Runtime contract
+
+WardrobeLabScene now loads generated-v2/manifest.json and derives:
+
+1. weapon display scale from source width + contract display width;
+2. weapon origin from the source-pixel grip;
+3. muzzle position from the source-pixel grip→muzzle vector rotated by the live aim angle;
+4. projectile origin from the same muzzle transform.
+
+The generated player still uses the separated body/arms/weapon/muzzle layers and the geometric Arena weapon remains hidden for that player.
+
+### Verification boundary
+
+The next user QA checkpoint is visual, not speculative:
+
+- idle generated character;
+- aim right;
+- aim left;
+- fire right;
+- fire left;
+- movement while aiming;
+- confirm the hand/grip is visually connected;
+- confirm the muzzle sits at the weapon's actual front;
+- confirm there is no floating weapon, floating muzzle, or duplicate geometric weapon.
+
+If any of those is wrong: STOP → inspect the rendered asset geometry and contract values → correct the contract/asset pipeline, not the combat engine.
+
+Do not promote the Wardrobe rig to the next baseline until this visual QA passes.
