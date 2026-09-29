@@ -3,6 +3,7 @@ from PIL import Image
 import json
 
 SOURCE = Path("public/assets/wardrobe/incoming/2.jpg")
+COMBAT_SOURCE = Path("public/assets/wardrobe/incoming/1.jpg")
 OUT = Path("public/assets/wardrobe/generated-v2")
 CELL_W, CELL_H = 176, 192
 COLS, ROWS = 8, 4
@@ -115,8 +116,22 @@ def main():
         atlas.alpha_composite(frame, (x, y))
     atlas.save(OUT / "player-body-atlas.png", optimize=True)
 
-    # These are intentionally separate layers: Phaser can rotate them with
-    # the independent aim vector instead of baking weapon direction into body.
+    # The combat presentation is authored as one silhouette. 1.jpg contains
+    # the character, arms/hands and weapon naturally connected in its combat frames.
+    if not COMBAT_SOURCE.exists():
+        raise SystemExit(f"Missing combat source: {COMBAT_SOURCE}")
+    combat_sheet = Image.open(COMBAT_SOURCE).convert("RGB")
+    if combat_sheet.size != (COLS * CELL_W, ROWS * CELL_H):
+        raise SystemExit(f"Unexpected combat sheet size {combat_sheet.size}; expected {(COLS*CELL_W, ROWS*CELL_H)}")
+    combat_atlas = Image.new("RGBA", combat_sheet.size, (0, 0, 0, 0))
+    for i in range(COLS * ROWS):
+        frame = clean_cell(combat_sheet, i)
+        x = (i % COLS) * CELL_W
+        y = (i // COLS) * CELL_H
+        combat_atlas.alpha_composite(frame, (x, y))
+    combat_atlas.save(OUT / "player-combat-atlas.png", optimize=True)
+
+    # Keep the source-layer crops for audit/reference only.
     for name, box in REGIONS.items():
         layer = crop_region(sheet, box)
         layer.save(OUT / f"player-{name}.png", optimize=True)
@@ -142,6 +157,16 @@ def main():
         "grid": {"columns": COLS, "rows": ROWS, "cellWidth": CELL_W, "cellHeight": CELL_H},
         "bodyCells": BODY_CELLS,
         "layers": {k: f"player-{k}.png" for k in REGIONS},
+        "combat": {
+            "source": "public/assets/wardrobe/incoming/1.jpg",
+            "atlas": "player-combat-atlas.png",
+            "frameWidth": CELL_W,
+            "frameHeight": CELL_H,
+            "aimFrame": 11,
+            "fireFrame": 12,
+            "readyFrame": 13,
+            "recoilFrame": 15
+        },
         "rig": {
             "body": {
                 "armsAnchor": {"x": -7, "y": -40, "units": "bodyScale"},
@@ -160,7 +185,7 @@ def main():
                 "origin": {"x": 0, "y": 0.5}
             }
         },
-        "note": "Generated production candidate. Rig attachment geometry is stored in source pixels so Phaser can derive the display transform without hardcoded weapon offsets."
+        "note": "Generated production candidate. Movement uses 2.jpg body artwork; weapon-bearing presentation uses authored integrated combat frames from 1.jpg. Extracted arms/weapon/muzzle crops remain audit outputs and are not rendered as runtime overlays."
     }
     (OUT / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
