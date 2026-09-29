@@ -658,7 +658,7 @@ export class WardrobeLabScene extends Phaser.Scene {
       fontStyle: 'bold',
       color: '#f4f1df',
     }).setScrollFactor(0).setDepth(101);
-    this.add.text(18, 42, 'ONE AUTHORITATIVE PLAYER · 1.JPG + OG.JPG SOURCE MATERIAL · AIM / FIRE TEST', {
+    this.add.text(18, 42, 'ONE AUTHORITATIVE PLAYER · 2.JPG SOURCE MATERIAL · DATA-DRIVEN AIM / FIRE RIG', {
       fontFamily: 'monospace',
       fontSize: '7px',
       fontStyle: 'bold',
