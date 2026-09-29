@@ -4978,3 +4978,28 @@ Until the owner explicitly requests the next visual change:
 
 This baseline supersedes any assumption that the generated weapon/forearms are currently visually correct. It does not change Shooters Trigger combat, collision, projectile, AI, or Golden Playthrough behavior.
 
+
+
+## Wardrobe — Bronze Baseline Corrected Weapon-Rig Checkpoint — September 29, 2026
+
+The bronze screenshot lock identified a real generated-player presentation defect: the generated authoritative player was using the baked 1.jpg rifle presentation, which visibly separated the rifle/forearm from the dark tactical body.
+
+The corrective implementation is now explicit:
+
+- Wardrobe uses the existing production-candidate v2 pipeline from `public/assets/wardrobe/generated-v2/`.
+- The generated player body comes from `player-body-atlas.png`.
+- Arms, weapon and muzzle are separate transparent layers.
+- The extracted weapon is anchored from its grip to the generated player's hand position rather than from the transparent layer center.
+- Weapon display scale is normalized to the Arena reference weapon length.
+- Muzzle and projectile origin use the same physical attachment point.
+- The procedural geometric Arena arms/weapon/muzzle are hidden whenever the generated player is selected.
+- Body facing remains independent from aim; the weapon rig rotates from the aim vector.
+- Shooter Trigger combat, projectile, collision, AI and Golden Playthrough systems remain untouched.
+
+This supersedes the bronze-baseline statement that the detached generated rifle is an unresolved presentation defect. The screenshot remains the comparison reference; the implementation target is now the corrected separated v2 rig.
+
+Verification rule for this checkpoint:
+- production build must pass;
+- Wardrobe generated player must be visually inspected on the field;
+- idle, aim-left/right, fire and movement must show one attached weapon with no duplicate geometric gun;
+- if the rendered weapon is still detached, STOP and inspect the actual v2 layer bounds/attachment before changing offsets again.
