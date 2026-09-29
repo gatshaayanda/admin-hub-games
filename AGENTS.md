@@ -4947,3 +4947,34 @@ The Wardrobe generated-player work remains isolated from Shooter Trigger combat,
 - When the generated player is selected, its authored artwork is the only visible character artwork. Do not render the geometric Arena body, arms, rifle or muzzle as an overlay on it.
 - Generated movement, aim and firing behavior stays in Wardrobe; Shooter Trigger combat, projectile, collision, AI and Golden Playthrough code remain isolated.
 
+## Wardrobe — Bronze Visual Baseline Lock — September 29, 2026
+
+The current Wardrobe Player Lab screenshots are the **bronze baseline** for visual comparison. Do not treat the current generated-player presentation as finished, and do not change it unless the owner explicitly specifies a new visual change.
+
+Figma visual reference:
+- File: `7e8DUuQZ4Vj72UaLqV43FV`
+- Reference-copy screenshot node: `35:4`
+- Generated-authoritative screenshot node: `35:7`
+- The two screenshots were inspected directly from the Figma file on September 29, 2026.
+
+### Confirmed visual issue
+
+The two screenshots show a real presentation difference that must remain recorded rather than being guessed away:
+
+- **Reference copy (35:4):** the green-helmeted character's rifle/arms are visually integrated with the body and point up/right. The weapon reads as part of the character silhouette.
+- **Generated authoritative copy (35:7):** the dark tactical character's body is upright, while the rifle/forearm presentation is visibly detached and sits down/right of the body. It reads as a floating/separated weapon rather than a naturally held rifle.
+- Therefore, the generated character's current weapon/arm relationship is **not visually equivalent to the reference presentation**.
+- This is a visual baseline finding, not permission to immediately fix it.
+
+### Bronze lock rules
+
+Until the owner explicitly requests the next visual change:
+- Preserve the current Wardrobe presentation as the rollback/checkpoint baseline.
+- Do not alter character scale, body pose, weapon position, arm position, aim vector, muzzle, extraction, animation mapping, or overlay visibility merely because this defect is known.
+- Do not stack speculative fixes.
+- Any future character/weapon visual change must be isolated, inspected against this bronze baseline, and explicitly verified before it becomes the next checkpoint.
+- If a proposed fix produces an unexpected visual result: **STOP → inspect the actual rendered result → then act**.
+- The current known floating/detached generated weapon is part of the baseline and must not be silently "fixed" as a side effect of unrelated work.
+
+This baseline supersedes any assumption that the generated weapon/forearms are currently visually correct. It does not change Shooters Trigger combat, collision, projectile, AI, or Golden Playthrough behavior.
+
