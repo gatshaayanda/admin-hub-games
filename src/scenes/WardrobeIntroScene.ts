@@ -487,6 +487,8 @@ export class WardrobeLabScene extends Phaser.Scene {
   }> = [];
   private cleanupMobileControls?: () => void;
   private generatedRig!: GeneratedV2RigManifest['rig'];
+  private generatedBodyScale = 0;
+  private generatedBodyOriginY = 1;
 
   private readonly worldWidth = 2400;
   private readonly worldHeight = 1400;
@@ -921,8 +923,27 @@ export class WardrobeLabScene extends Phaser.Scene {
     }
     const visibleHeight = maxY - minY + 1;
     const scale = this.targetVisibleCharacterHeight / visibleHeight;
+    const originY = (maxY + 1) / frame.height;
     sprite.setScale(scale);
-    sprite.setOrigin(0.5, (maxY + 1) / frame.height);
+    sprite.setOrigin(0.5, originY);
+
+    // The generated body establishes the authoritative player footprint.
+    // Combat frames use that exact scale/grounding so the authored combat
+    // silhouette can change pose without making the player grow or jump.
+    if (sprite === this.previewSprite && sprite.texture.key === 'wardrobe-generated-player-atlas') {
+      this.generatedBodyScale = scale;
+      this.generatedBodyOriginY = originY;
+    }
+  }
+
+  private fitGeneratedCombatSprite(sprite: Phaser.GameObjects.Sprite) {
+    if (this.generatedBodyScale > 0) {
+      sprite.setScale(this.generatedBodyScale);
+      sprite.setOrigin(0.5, this.generatedBodyOriginY);
+      return;
+    }
+    // Defensive fallback: establish the body contract before combat is shown.
+    this.fitCharacterSprite(sprite, this.currentDefinition());
   }
 
   private spriteKey(
@@ -1059,7 +1080,7 @@ export class WardrobeLabScene extends Phaser.Scene {
         this.generatedAction === 'muzzle' ? 12 : 11;
       if (this.previewSprite.texture.key !== key) {
         this.previewSprite.setTexture(key, frame);
-        this.fitCharacterSprite(this.previewSprite, def);
+        this.fitGeneratedCombatSprite(this.previewSprite);
       } else {
         this.previewSprite.setFrame(frame);
       }
@@ -1157,7 +1178,7 @@ export class WardrobeLabScene extends Phaser.Scene {
         this.generatedAction === 'muzzle' ? 12 : 11;
       if (this.previewSprite.texture.key !== key) {
         this.previewSprite.setTexture(key, frame);
-        this.fitCharacterSprite(this.previewSprite, def);
+        this.fitGeneratedCombatSprite(this.previewSprite);
       } else {
         this.previewSprite.setFrame(frame);
       }
