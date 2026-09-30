@@ -649,11 +649,9 @@ export class WardrobeLabScene extends Phaser.Scene {
       0.28,
     );
 
-    // Keep the generic drawing layers hidden. The Arena reference gets its own
-    // exact fighter rig below; the generated v2 operator uses the authored
-    // separated arms / weapon / muzzle artwork so aiming behaves like the Arena:
-    // the 3.jpg body keeps its limited four-direction movement while only the
-    // weapon-bearing upper layers rotate toward the aim vector.
+    // Keep the generated player visually authoritative as one grounded sprite.
+    // The Arena reference has its own separate visual weapon rig; generated
+    // weapon crops are audit data, not runtime textures.
     this.weaponLayer = this.add.graphics().setVisible(false);
     this.muzzleFlash = this.add.graphics().setVisible(false);
     this.character.add([this.shadow]);
@@ -682,11 +680,8 @@ export class WardrobeLabScene extends Phaser.Scene {
       .setOrigin(0.5, 1);
     this.character.add(this.generatedCombatOverlay);
 
-    // Do not instantiate the extracted audit crops as Phaser sprites. They are
-    // region crops from the source contact sheet, not per-frame weapon textures.
-    // The combat weapon remains a logical rig for muzzle/collision math only.
-
-    this.character.add([this.previewSprite, this.armsSprite, this.weaponSprite, this.muzzleSprite]);
+    // Do not render the extracted audit crops. They are not per-frame textures.
+    this.character.add([this.previewSprite]);
 
     // The Arena reference rig must always be part of the character container.
     // It is hidden for other characters and revealed when PREV/NEXT selects it.
