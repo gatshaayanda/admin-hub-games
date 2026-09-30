@@ -5333,3 +5333,38 @@ For Phaser 4:
 - A transition/touch event must not be allowed to turn an invalid combat manifest into a movement-loop exception.
 
 If the Wardrobe lab freezes when movement begins, inspect for runtime exceptions first—especially the generated combat manifest contract and any overlay method reached from `update()`—before changing sprite artwork or movement physics.
+
+## Wardrobe / Generated Player — Current Art Contract
+
+The Wardrobe generated player is a visual implementation of the existing Shooters Trigger Arena mechanics, not a second combat system.
+
+### Current authoritative artwork
+
+- 3.jpg / player-body-atlas.png is the authoritative generated movement body: 32 authored frames, 8 frames each for DOWN / UP / RIGHT / LEFT.
+- 1.jpg / player-combat-atlas.png is an integrated combat silhouette with authored aim/fire/recoil frames. It is usable only as a horizontal presentation layer after a controlled crop; it must not be continuously rotated as if it were a clean weapon sprite.
+- player-arms.png, player-weapon.png, and player-muzzle.png remain audit outputs from the earlier extraction. Do not render them as independent rotating runtime layers unless their source is re-authored into true per-frame transparent layers.
+- The Arena geometric rig remains the mechanical reference for projectile origin, movement timing, aim, and combat resolution.
+
+### Current generated-player contract
+
+- Movement remains driven by 3.jpg.
+- Aim remains an independent vector.
+- Projectile origin follows the Arena 42px aim-vector muzzle contract.
+- Projectile speed/lifetime remain 520 / 1100ms.
+- Swept collision and weapon → head → body → scrape ordering remain authoritative.
+- The integrated 1.jpg combat artwork may appear for compatible horizontal aim only; LEFT uses a mirror, while arbitrary vertical/diagonal aim does not rotate the integrated artwork.
+- Do not solve missing artwork by inventing world-space offsets or continuously rotating an integrated full-character crop.
+- The next artwork pass should supply the missing independent upper-body/weapon directional layers rather than replacing the working body atlas.
+
+### Wardrobe verification rule
+
+After each generated-art change, verify on a real phone:
+1. move in all four authored body directions;
+2. aim/fire left and right;
+3. aim/fire up and down;
+4. move one direction while firing another direction;
+5. confirm the projectile direction and visual weapon direction agree;
+6. confirm no duplicate/spinning character layer appears;
+7. confirm Arena reference still matches its established mechanical contract.
+
+Unexpected visual result = STOP → inspect the actual asset/frame/crop/transform before changing mechanics.
