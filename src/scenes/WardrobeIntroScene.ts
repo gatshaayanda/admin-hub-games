@@ -8,7 +8,15 @@ type GeneratedV2RigManifest = {
       armsAnchor: { x: number; y: number };
       weaponGripAnchor: { x: number; y: number };
     };
-    weapon: {
+    combat: {
+    frameWidth: number;
+    frameHeight: number;
+    aimFrame: number;
+    fireFrame: number;
+    readyFrame: number;
+    recoilFrame: number;
+  };
+  weapon: {
       sourceWidth: number;
       sourceHeight: number;
       displayWidth: number;
@@ -326,24 +334,24 @@ const WARDROBE_PLAYER_DEFINITION: WardrobeCharacterDefinition = {
   basePath: '/assets/wardrobe/generated-v2',
   displaySize: 80,
   targetVisibleHeight: 60,
-  frameWidth: 176,
+  frameWidth: 172,
   frameHeight: 192,
   originY: 1,
-  embeddedWeapon: false,
+  embeddedWeapon: true,
 };
 
 const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
   {
     id: 'arena_player',
-    name: 'SHOOTERS TRIGGER PLAYER · GENERATED PLAYER · V2 · 2.JPG',
+    name: 'SHOOTERS TRIGGER PLAYER · GENERATED PLAYER · 3.JPG MOVEMENT',
     source: 'generated',
     basePath: '/assets/wardrobe/generated-v2',
     displaySize: 80,
     targetVisibleHeight: 60,
-    frameWidth: 176,
+    frameWidth: 172,
     frameHeight: 192,
     originY: 1,
-    embeddedWeapon: false,
+    embeddedWeapon: true,
   },
   {
     id: 'arena_reference',
@@ -658,7 +666,7 @@ export class WardrobeLabScene extends Phaser.Scene {
       fontStyle: 'bold',
       color: '#f4f1df',
     }).setScrollFactor(0).setDepth(101);
-    this.add.text(18, 42, 'ONE AUTHORITATIVE PLAYER · 2.JPG SOURCE MATERIAL · DATA-DRIVEN AIM / FIRE RIG', {
+    this.add.text(18, 42, 'ONE AUTHORITATIVE PLAYER · 3.JPG MOVEMENT + 1.JPG COMBAT · DATA-DRIVEN PRESENTATION', {
       fontFamily: 'monospace',
       fontSize: '7px',
       fontStyle: 'bold',
@@ -936,6 +944,44 @@ export class WardrobeLabScene extends Phaser.Scene {
     }
   }
 
+  private getGeneratedCombatMuzzleWorldPoint() {
+    const sprite = this.previewSprite;
+    const frame = sprite.frame;
+    const source = sprite.texture.getSourceImage() as CanvasImageSource;
+    const canvas = document.createElement('canvas');
+    canvas.width = frame.width;
+    canvas.height = frame.height;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (!context) return new Phaser.Math.Vector2(this.character.x, this.character.y - 28);
+    context.drawImage(source, frame.cutX, frame.cutY, frame.width, frame.height, 0, 0, frame.width, frame.height);
+    const pixels = context.getImageData(0, 0, frame.width, frame.height).data;
+    let maxX = -1;
+    let sumY = 0;
+    let countY = 0;
+    for (let y = 0; y < frame.height; y += 1) {
+      for (let x = 0; x < frame.width; x += 1) {
+        if (pixels[(y * frame.width + x) * 4 + 3] > 12) {
+          if (x > maxX) {
+            maxX = x;
+            sumY = y;
+            countY = 1;
+          } else if (x >= maxX - 2) {
+            sumY += y;
+            countY += 1;
+          }
+        }
+      }
+    }
+    if (maxX < 0) return new Phaser.Math.Vector2(this.character.x, this.character.y - 28);
+    const muzzleY = sumY / Math.max(1, countY);
+    const scale = sprite.scaleX;
+    const localX = (maxX - frame.width * sprite.originX) * scale;
+    const localY = (muzzleY - frame.height * sprite.originY) * scale;
+    const worldX = this.character.x + (sprite.flipX ? -localX : localX);
+    const worldY = this.character.y + localY;
+    return new Phaser.Math.Vector2(worldX, worldY);
+  }
+
   private fitGeneratedCombatSprite(sprite: Phaser.GameObjects.Sprite) {
     if (this.generatedBodyScale > 0) {
       sprite.setScale(this.generatedBodyScale);
@@ -1073,7 +1119,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     if (aiming) {
       const key = 'wardrobe-generated-combat-atlas';
       const frame = this.muzzleUntil > 0 || this.generatedAction === 'shoot' ||
-        this.generatedAction === 'muzzle' ? 12 : 11;
+        this.generatedAction === 'muzzle' ? this.generatedRig.combat.fireFrame : this.generatedRig.combat.aimFrame;
       if (this.previewSprite.texture.key !== key) {
         this.previewSprite.setTexture(key, frame);
         this.fitGeneratedCombatSprite(this.previewSprite);
@@ -1186,11 +1232,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     const def = this.currentDefinition();
     let origin: Phaser.Math.Vector2;
     if (def.source === 'generated') {
-      const aim = this.aim.clone().normalize();
-      origin = new Phaser.Math.Vector2(
-        this.character.x + aim.x * 38,
-        this.character.y - 28 + aim.y * 10,
-      );
+      origin = this.getGeneratedCombatMuzzleWorldPoint();
     } else {
       origin = new Phaser.Math.Vector2(
         this.character.x + this.aim.x * 42,
@@ -1207,6 +1249,8 @@ export class WardrobeLabScene extends Phaser.Scene {
     });
     this.fireCooldown = this.fireIntervalMs;
     this.muzzleUntil = 95;
+    this.generatedAction = 'shoot';
+    this.generatedActionUntil = 130;
     this.updateWeaponLayer();
 
     if (this.currentDefinition().source === 'robot') {
@@ -1346,7 +1390,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     makeButton(width / 2 - sideOffset, '‹ PREV', -1);
     makeButton(width / 2 + sideOffset, 'NEXT ›', 1);
 
-    this.add.text(width / 2, y + (compact ? 44 : 22), compact ? 'SWIPE/TOUCH TO COMPARE SPRITES' : 'OTHER SPRITES = VISUAL GAME TESTS · PLAYER = 1.JPG PIPELINE', {
+    this.add.text(width / 2, y + (compact ? 44 : 22), compact ? 'SWIPE/TOUCH TO COMPARE SPRITES' : 'OTHER SPRITES = VISUAL GAME TESTS · PLAYER = 3.JPG MOVEMENT / 1.JPG COMBAT', {
       fontFamily: 'monospace',
       fontSize: compact ? '5px' : '6px',
       color: '#8fb39b',
