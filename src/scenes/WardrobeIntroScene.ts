@@ -672,12 +672,13 @@ export class WardrobeLabScene extends Phaser.Scene {
       this.previewSprite.setVisible(true);
     }
     this.bodySprite = this.previewSprite;
-    // The generated body is the only runtime artwork for now. The combat atlas
-    // remains an audit/reference asset; it must never be rotated on top of the
-    // walking body because it is an integrated silhouette, not a weapon layer.
+    // The combat atlas is used only where its authored pose is mechanically
+    // compatible: horizontal aim. It is an integrated silhouette, so it is
+    // cropped to the weapon-bearing side and never continuously rotated.
     this.generatedCombatOverlay = this.add.sprite(0, 0, 'wardrobe-generated-combat-atlas', 11)
       .setVisible(false)
-      .setOrigin(0.5, 1);
+      .setOrigin(0.5, 1)
+      .setCrop(82, 34, 94, 128);
     this.character.add(this.generatedCombatOverlay);
 
     // Do not render the extracted audit crops. They are not per-frame textures.
@@ -1024,89 +1025,16 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   private getGeneratedCombatMuzzleWorldPoint() {
-    const sprite = this.generatedCombatOverlay?.visible ? this.generatedCombatOverlay : this.previewSprite;
-    if (this.generatedCombatOverlay?.visible) {
-      // The combat atlas is the same authoritative weapon presentation used by
-      // the generated player. Derive the muzzle from the authored pixels inside
-      // the actual 176×192 frame, then apply the exact sprite transform. This
-      // removes the old world-space "54 / -30" approximation and gives the
-      // generated player the same body → weapon → muzzle → projectile contract
-      // as the Arena reference rig.
-      const frame = this.generatedCombatOverlay.frame;
-      const source = this.generatedCombatOverlay.texture.getSourceImage() as CanvasImageSource;
-      const canvas = document.createElement('canvas');
-      canvas.width = frame.width;
-      canvas.height = frame.height;
-      const context = canvas.getContext('2d', { willReadFrequently: true });
-      if (context) {
-        context.drawImage(source, frame.cutX, frame.cutY, frame.width, frame.height, 0, 0, frame.width, frame.height);
-        const pixels = context.getImageData(0, 0, frame.width, frame.height).data;
-        const cropX = 82;
-        const cropY = 34;
-        const cropRight = Math.min(frame.width - 1, cropX + 94 - 1);
-        let maxX = cropX - 1;
-        let sumY = 0;
-        let count = 0;
-        for (let y = cropY; y < Math.min(frame.height, cropY + 128); y += 1) {
-          for (let x = cropX; x <= cropRight; x += 1) {
-            if (pixels[(y * frame.width + x) * 4 + 3] > 12) {
-              if (x > maxX) {
-                maxX = x;
-                sumY = y;
-                count = 1;
-              } else if (x >= maxX - 2) {
-                sumY += y;
-                count += 1;
-              }
-            }
-          }
-        }
-        if (maxX >= cropX) {
-          const scale = this.generatedBodyScale || 1;
-          const localX = (maxX - frame.width * this.generatedCombatOverlay.originX) * scale;
-          const localY = ((sumY / Math.max(1, count)) - frame.height * this.generatedCombatOverlay.originY) * scale;
-          const angle = this.generatedCombatOverlay.rotation;
-          const rotatedX = localX * Math.cos(angle) - localY * Math.sin(angle);
-          const rotatedY = localX * Math.sin(angle) + localY * Math.cos(angle);
-          this.generatedCombatMuzzleLocal.set(rotatedX, rotatedY);
-          return new Phaser.Math.Vector2(this.character.x + rotatedX, this.character.y + rotatedY);
-        }
-      }
-    }
-    const frame = sprite.frame;
-    const source = sprite.texture.getSourceImage() as CanvasImageSource;
-    const canvas = document.createElement('canvas');
-    canvas.width = frame.width;
-    canvas.height = frame.height;
-    const context = canvas.getContext('2d', { willReadFrequently: true });
-    if (!context) return new Phaser.Math.Vector2(this.character.x, this.character.y - 28);
-    context.drawImage(source, frame.cutX, frame.cutY, frame.width, frame.height, 0, 0, frame.width, frame.height);
-    const pixels = context.getImageData(0, 0, frame.width, frame.height).data;
-    let maxX = -1;
-    let sumY = 0;
-    let countY = 0;
-    for (let y = 0; y < frame.height; y += 1) {
-      for (let x = 0; x < frame.width; x += 1) {
-        if (pixels[(y * frame.width + x) * 4 + 3] > 12) {
-          if (x > maxX) {
-            maxX = x;
-            sumY = y;
-            countY = 1;
-          } else if (x >= maxX - 2) {
-            sumY += y;
-            countY += 1;
-          }
-        }
-      }
-    }
-    if (maxX < 0) return new Phaser.Math.Vector2(this.character.x, this.character.y - 28);
-    const muzzleY = sumY / Math.max(1, countY);
-    const scale = sprite.scaleX;
-    const localX = (maxX - frame.width * sprite.originX) * scale;
-    const localY = (muzzleY - frame.height * sprite.originY) * scale;
-    const worldX = this.character.x + (sprite.flipX ? -localX : localX);
-    const worldY = this.character.y + localY;
-    return new Phaser.Math.Vector2(worldX, worldY);
+    // Keep the generated player on the Arena projectile contract. The authored
+    // combat artwork is presentation only; projectile origin follows the same
+    // 42px aim-vector muzzle used by the geometric Arena. This prevents an
+    // artwork crop from ever making a mechanically correct shot appear to fire
+    // from the wrong side of the character.
+    const direction = this.aim.clone().normalize();
+    return new Phaser.Math.Vector2(
+      this.character.x + direction.x * 42,
+      this.character.y + direction.y * 42,
+    );
   }
 
   private fitGeneratedCombatSprite(sprite: Phaser.GameObjects.Sprite) {
@@ -1244,9 +1172,9 @@ export class WardrobeLabScene extends Phaser.Scene {
     const aiming = this.pointerAimActive || this.fireHeld ||
       this.generatedAction === 'aim' || this.generatedAction === 'shoot' ||
       this.generatedAction === 'muzzle' || this.generatedAction === 'recoil';
-    // Keep the 3.jpg body animation authoritative even while aiming. The authored
-    // 1.jpg combat silhouette is now an upper-body presentation layer instead of
-    // replacing the walking body, so movement direction and aim direction can differ.
+    // Keep the 3.jpg body animation authoritative even while aiming. The 1.jpg
+    // combat artwork is an authored horizontal upper-body presentation layer;
+    // it is intentionally not rotated for arbitrary aim angles.
     if (aiming) {
       this.previewSprite.setAlpha(1);
       this.previewSprite.setTint(0xffffff);
@@ -1295,10 +1223,42 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   private updateWeaponLayer() {
-    // Generated artwork stays as a single grounded body. The weapon is currently
-    // logical-only; this prevents source-sheet crops from rendering as duplicate
-    // spinning artwork. The projectile still uses the same aim vector.
-    this.generatedCombatOverlay?.setVisible(false);
+    const generated = this.currentDefinition().source === 'generated';
+    const horizontalAim = Math.abs(this.aim.x) >= Math.abs(this.aim.y) * 0.9;
+    const horizontalPresentation = generated && horizontalAim && (
+      this.pointerAimActive ||
+      this.fireHeld ||
+      this.muzzleUntil > 0 ||
+      this.generatedAction === 'aim' ||
+      this.generatedAction === 'shoot' ||
+      this.generatedAction === 'muzzle' ||
+      this.generatedAction === 'recoil'
+    );
+
+    if (generated && horizontalPresentation && this.generatedCombatOverlay) {
+      const firing = this.muzzleUntil > 0 || this.generatedAction === 'shoot' ||
+        this.generatedAction === 'muzzle' || this.generatedAction === 'recoil';
+      const frame = firing
+        ? (this.generatedAction === 'recoil' ? this.generatedCombat.recoilFrame : this.generatedCombat.fireFrame)
+        : this.generatedCombat.aimFrame;
+
+      // The source frame is authored, so preserve its pixels. Only mirror the
+      // whole horizontal presentation for LEFT; never rotate the integrated art.
+      this.generatedCombatOverlay
+        .setFrame(frame, false, false)
+        .setCrop(82, 34, 94, 128)
+        .setScale(this.generatedBodyScale || 1)
+        .setOrigin(0.5, this.generatedBodyOriginY || 1)
+        .setRotation(0)
+        .setFlipX(this.aim.x < 0)
+        .setAlpha(1)
+        .setVisible(true);
+    } else {
+      this.generatedCombatOverlay?.setVisible(false);
+    }
+
+    // The Arena reference keeps its independent geometric rig. Generated
+    // artwork never borrows that rig, which avoids cross-character duplication.
     this.arenaArms?.setVisible(false);
     this.arenaWeapon?.setVisible(false);
     this.arenaMuzzle?.setVisible(false);
