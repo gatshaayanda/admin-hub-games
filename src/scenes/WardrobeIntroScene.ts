@@ -348,10 +348,10 @@ const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
     basePath: '/assets/wardrobe/generated-v2',
     displaySize: 80,
     targetVisibleHeight: 60,
-    frameWidth: 176,
+    frameWidth: 172,
     frameHeight: 192,
     originY: 1,
-    embeddedWeapon: false,
+    embeddedWeapon: true,
   },
   {
     id: 'arena_reference',
