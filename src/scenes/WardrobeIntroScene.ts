@@ -1132,7 +1132,6 @@ export class WardrobeLabScene extends Phaser.Scene {
     }
     return false;
   }
-  }
 
   private playCharacterAnimation(walking: boolean) {
     const def = this.currentDefinition();
