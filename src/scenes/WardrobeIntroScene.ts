@@ -1186,13 +1186,13 @@ export class WardrobeLabScene extends Phaser.Scene {
       this.generatedAction === 'aim' || this.generatedAction === 'shoot' ||
       this.generatedAction === 'muzzle' || this.generatedAction === 'recoil';
 
-    // 3.jpg provides four authored body directions only. While moving, the
-    // body follows movement so move-and-shoot remains mechanically independent.
-    // While stationary and aiming, the body follows the aim vector instead of
-    // retaining the last movement direction. This prevents the exact failure
-    // where the player faces the screen while the weapon fires sideways/backward.
-    const facingX = aiming && !walking ? this.aim.x : vx;
-    const facingY = aiming && !walking ? this.aim.y : vy;
+    // 3.jpg is an armed movement atlas, so it already contains the gun.
+    // There must be exactly one visible weapon presentation. While aiming,
+    // the generated body follows the aim direction even while moving; this
+    // keeps the embedded gun and projectile direction visually coherent
+    // instead of introducing a second independently rotating character rig.
+    const facingX = aiming ? this.aim.x : vx;
+    const facingY = aiming ? this.aim.y : vy;
     if (Math.abs(facingX) > Math.abs(facingY) && Math.abs(facingX) > 0.35) {
       animation = facingX < 0 ? 'LEFT' : 'RIGHT';
     } else if (Math.abs(facingY) > 0.35) {
@@ -1278,62 +1278,44 @@ export class WardrobeLabScene extends Phaser.Scene {
       this.generatedAction === 'aim' || this.generatedAction === 'shoot' ||
       this.generatedAction === 'muzzle' || this.generatedAction === 'recoil';
 
-    if (generated && aiming) {
-      const angle = this.aim.lengthSq() > 0.0025 ? this.aim.angle() : 0;
-      const scale = this.getGeneratedCombatRigScale();
+    // 3.jpg is already the complete armed player presentation. The extracted
+    // arms/weapon layers remain in the manifest for audit/reference, but they
+    // must not be rendered on top of the armed body or the player becomes a
+    // split/double character when the independent layer rotates.
+    this.generatedArmsLayer?.setVisible(false);
+    this.generatedWeaponLayer?.setVisible(false);
+    this.generatedMuzzleLayer?.setVisible(false);
 
-      // One attachment contract drives both presentation and projectile
-      // origin. The weapon grip and muzzle are never independently guessed.
-      this.generatedArmsLayer
-        .setPosition(-7 * scale, -40 * scale)
-        .setScale(scale)
-        .setRotation(angle)
-        .setFlipX(false)
-        .setVisible(true);
-
-      this.generatedWeaponLayer
-        .setPosition(7 * scale, -37 * scale)
-        .setScale(scale * (50 / 110))
-        .setRotation(angle)
-        .setFlipX(false)
-        .setVisible(true);
-
-      const muzzle = this.getGeneratedCombatMuzzleLocalPoint();
-      this.generatedMuzzleLayer
-        .setPosition(muzzle.x, muzzle.y)
-        .setScale(scale)
-        .setRotation(angle)
-        .setVisible(this.muzzleUntil > 0);
-    } else {
-      this.generatedArmsLayer?.setVisible(false);
-      this.generatedWeaponLayer?.setVisible(false);
-      this.generatedMuzzleLayer?.setVisible(false);
-    }
-
-    // The geometric Arena rig remains authoritative only for the Arena
-    // reference character. Generated combat now uses its own transparent
-    // extracted layers, with no duplicated full-character overlay.
+    // The Arena reference rig remains authoritative for the Arena character
+    // only. Generated shots use the same 42px muzzle contract mechanically.
     this.arenaArms?.setVisible(false);
     this.arenaWeapon?.setVisible(false);
     this.arenaMuzzle?.setVisible(false);
+
     this.weaponLayer.clear().setVisible(false);
-    this.muzzleFlash.clear().setVisible(false);
+    this.muzzleFlash.clear();
+    if (generated && aiming && this.muzzleUntil > 0) {
+      const angle = this.aim.lengthSq() > 0.0025 ? this.aim.angle() : 0;
+      this.muzzleFlash
+        .fillStyle(0xf0dfb6, 0.72)
+        .fillCircle(0, 0, 3)
+        .setPosition(Math.cos(angle) * 42, Math.sin(angle) * 42)
+        .setVisible(true);
+    } else {
+      this.muzzleFlash.setVisible(false);
+    }
   }
 
   private fireShot() {
     const def = this.currentDefinition();
     let origin: Phaser.Math.Vector2;
-    if (def.source === 'generated') {
-      origin = this.getGeneratedCombatMuzzleWorldPoint();
-    } else {
-      // Match the Arena reference rig's weapon muzzle: local (42, 0) rotated
-      // by the current aim vector around the player body origin.
-      const angle = this.aim.angle();
-      origin = new Phaser.Math.Vector2(
-        this.character.x + Math.cos(angle) * 42,
-        this.character.y + Math.sin(angle) * 42,
-      );
-    }
+    // Match the Arena reference rig's muzzle contract for every player:
+    // one body, one visible weapon, one projectile origin 42px along aim.
+    const angle = this.aim.lengthSq() > 0.0025 ? this.aim.angle() : 0;
+    const origin = new Phaser.Math.Vector2(
+      this.character.x + Math.cos(angle) * 42,
+      this.character.y + Math.sin(angle) * 42,
+    );
     // fireShot and the rendered muzzle now share the exact same local
     // attachment point. This removes the old center-origin projectile mismatch.
     const velocity = this.aim.clone().normalize().scale(this.projectileSpeed);
