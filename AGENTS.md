@@ -5316,3 +5316,20 @@ A Wardrobe checkpoint is not complete merely because TypeScript/build passes. Ve
 - the character does not visibly double-arm or float a weapon;
 - the existing Wardrobe target/combat test still works;
 - Hall and unrelated game flows remain untouched.
+
+
+### Wardrobe Generated Player — Freeze Fix Contract (2026-09-30)
+
+The generated-player manifest has two distinct contracts:
+- `combat` is a top-level manifest section containing the 176×192 authored `1.jpg` combat atlas contract.
+- `rig` contains body/weapon anchor metadata only.
+
+Runtime code must not read `manifest.rig.combat`. A malformed TypeScript shape can compile while still producing an undefined runtime object when the JSON shape differs.
+
+For Phaser 4:
+- `setFrame(frame, false, false)` is preferred for the generated combat overlay after its scale/origin have been established, because Phaser 4's `setFrame` updates size and origin by default.
+- Combat cropping must remain inside the 176×192 frame. Phaser crop coordinates are frame-local and may not exceed the frame bounds.
+- The movement body remains authoritative. The combat overlay is optional presentation only and must never be required for movement to continue.
+- A transition/touch event must not be allowed to turn an invalid combat manifest into a movement-loop exception.
+
+If the Wardrobe lab freezes when movement begins, inspect for runtime exceptions first—especially the generated combat manifest contract and any overlay method reached from `update()`—before changing sprite artwork or movement physics.
