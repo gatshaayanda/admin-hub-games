@@ -5383,3 +5383,12 @@ Unexpected visual result = STOP → inspect the actual asset/frame/crop/transfor
 - If additional generated combat states are needed, prefer adding/authoring independent transparent directional layers or precomposed atlas frames. Do not compensate for missing artwork with random world-space offsets, enlarged hitboxes, or arbitrary rotation of integrated full-character artwork.
 - Generated body animation rejects empty atlas frames at runtime so an authored blank cell cannot make the player disappear. While stationary, the body follows the dominant aim axis; while moving, body direction remains movement-driven so move-vs-fire can stay independent. Verification must cover generated DOWN/UP/LEFT/RIGHT movement, diagonal movement, stationary cardinal/diagonal aim, move one direction while firing another, visible muzzle vs projectile origin, no duplicate/split body, no spinning/detached weapon, and Arena reference unchanged.
 - Unexpected result = **STOP -> inspect the actual frame/layer/anchor/transform -> then change one controlled thing**.
+
+
+## Wardrobe / Generated Player — Shooting Visual Checkpoint
+
+- Movement is locked: 3.jpg / player-body-atlas.png remains the authoritative generated player body and current directional movement behavior is preserved.
+- Shooting presentation: 3.jpg is an armed movement atlas (embeddedWeapon: true), so it is the single visible generated-player weapon presentation. Do not render player-arms.png or player-weapon.png over the body at runtime; those extracted layers remain audit/reference assets.
+- Phaser/Arena contract: generated shots use the same simple Arena muzzle geometry: projectile origin is exactly 42px from the player body along the aim vector, with the generated muzzle flash using that same local point. No independently rotated full-character combat overlay is used.
+- Aim while moving: when the generated player is aiming/firing, its four-direction body animation follows the aim direction rather than adding a second rotating weapon/body copy. Movement animation continues underneath that directional choice.
+- Do not regress: no duplicate player, spinning combat copy, detached weapon, enlarged hitboxes, or changed Arena combat mechanics. If shooting visuals fail again, inspect the generated body + aim-direction contract first rather than adding another full-character overlay.
