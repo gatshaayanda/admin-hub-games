@@ -1307,8 +1307,6 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   private fireShot() {
-    const def = this.currentDefinition();
-    let origin: Phaser.Math.Vector2;
     // Match the Arena reference rig's muzzle contract for every player:
     // one body, one visible weapon, one projectile origin 42px along aim.
     const angle = this.aim.lengthSq() > 0.0025 ? this.aim.angle() : 0;
