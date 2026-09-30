@@ -521,6 +521,7 @@ export class WardrobeLabScene extends Phaser.Scene {
   private generatedCombat!: GeneratedV2RigManifest['combat'];
   private generatedBodyScale = 0;
   private generatedBodyOriginY = 1;
+  private generatedCombatMuzzleLocal = new Phaser.Math.Vector2(54, -30);
 
   private readonly worldWidth = 2400;
   private readonly worldHeight = 1400;
@@ -530,6 +531,11 @@ export class WardrobeLabScene extends Phaser.Scene {
   private readonly projectileSpeed = 520;
   private readonly projectileLifetimeMs = 1100;
   private readonly fireIntervalMs = 240;
+  private readonly arenaBodyCoreRadius = 34;
+  private readonly arenaScrapeRadius = 44;
+  private readonly arenaHeadRadius = 20;
+  private readonly arenaWeaponRadius = 16;
+  private readonly projectileMinVisibleMs = 34;
   private characterDefinitions = WARDROBE_CHARACTER_DEFINITIONS;
   private readonly mobileCharacterDefinitions = WARDROBE_CHARACTER_DEFINITIONS.filter(
     (definition) => definition.source === 'generated' || definition.source === 'arena',
@@ -1021,11 +1027,52 @@ export class WardrobeLabScene extends Phaser.Scene {
   private getGeneratedCombatMuzzleWorldPoint() {
     const sprite = this.generatedCombatOverlay?.visible ? this.generatedCombatOverlay : this.previewSprite;
     if (this.generatedCombatOverlay?.visible) {
-      const muzzleDistance = 54 * (this.generatedBodyScale || 1);
-      return new Phaser.Math.Vector2(
-        this.character.x + Math.cos(this.aim.angle()) * muzzleDistance,
-        this.character.y + Math.sin(this.aim.angle()) * muzzleDistance - 30 * (this.generatedBodyScale || 1),
-      );
+      // The combat atlas is the same authoritative weapon presentation used by
+      // the generated player. Derive the muzzle from the authored pixels inside
+      // the actual 176×192 frame, then apply the exact sprite transform. This
+      // removes the old world-space "54 / -30" approximation and gives the
+      // generated player the same body → weapon → muzzle → projectile contract
+      // as the Arena reference rig.
+      const frame = this.generatedCombatOverlay.frame;
+      const source = this.generatedCombatOverlay.texture.getSourceImage() as CanvasImageSource;
+      const canvas = document.createElement('canvas');
+      canvas.width = frame.width;
+      canvas.height = frame.height;
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      if (context) {
+        context.drawImage(source, frame.cutX, frame.cutY, frame.width, frame.height, 0, 0, frame.width, frame.height);
+        const pixels = context.getImageData(0, 0, frame.width, frame.height).data;
+        const cropX = 82;
+        const cropY = 34;
+        const cropRight = Math.min(frame.width - 1, cropX + 94 - 1);
+        let maxX = cropX - 1;
+        let sumY = 0;
+        let count = 0;
+        for (let y = cropY; y < Math.min(frame.height, cropY + 128); y += 1) {
+          for (let x = cropX; x <= cropRight; x += 1) {
+            if (pixels[(y * frame.width + x) * 4 + 3] > 12) {
+              if (x > maxX) {
+                maxX = x;
+                sumY = y;
+                count = 1;
+              } else if (x >= maxX - 2) {
+                sumY += y;
+                count += 1;
+              }
+            }
+          }
+        }
+        if (maxX >= cropX) {
+          const scale = this.generatedBodyScale || 1;
+          const localX = (maxX - frame.width * this.generatedCombatOverlay.originX) * scale;
+          const localY = ((sumY / Math.max(1, count)) - frame.height * this.generatedCombatOverlay.originY) * scale;
+          const angle = this.generatedCombatOverlay.rotation;
+          const rotatedX = localX * Math.cos(angle) - localY * Math.sin(angle);
+          const rotatedY = localX * Math.sin(angle) + localY * Math.cos(angle);
+          this.generatedCombatMuzzleLocal.set(rotatedX, rotatedY);
+          return new Phaser.Math.Vector2(this.character.x + rotatedX, this.character.y + rotatedY);
+        }
+      }
     }
     const frame = sprite.frame;
     const source = sprite.texture.getSourceImage() as CanvasImageSource;
@@ -1296,9 +1343,12 @@ export class WardrobeLabScene extends Phaser.Scene {
     if (def.source === 'generated') {
       origin = this.getGeneratedCombatMuzzleWorldPoint();
     } else {
+      // Match the Arena reference rig's weapon muzzle: local (42, 0) rotated
+      // by the current aim vector around the player body origin.
+      const angle = this.aim.angle();
       origin = new Phaser.Math.Vector2(
-        this.character.x + this.aim.x * 42,
-        this.character.y,
+        this.character.x + Math.cos(angle) * 42,
+        this.character.y + Math.sin(angle) * 42,
       );
     }
     const velocity = this.aim.clone().normalize().scale(this.projectileSpeed);
@@ -1333,38 +1383,102 @@ export class WardrobeLabScene extends Phaser.Scene {
       shot.graphics.setPosition(shot.position.x, shot.position.y);
       shot.ageMs += delta;
 
+      // Arena uses swept projectile collision so a paintball cannot tunnel
+      // through a target between Phaser frames. Wardrobe uses the same rule.
       const segment = new Phaser.Geom.Line(previous.x, previous.y, shot.position.x, shot.position.y);
 
-      if (this.covers.some((cover) => Phaser.Geom.Intersects.LineToRectangle(segment, cover))) {
+      const coverHit = this.covers.some((cover) => Phaser.Geom.Intersects.LineToRectangle(segment, cover));
+      if (coverHit) {
         this.showCombatMessage('COVER BLOCKED', '#e8c95c');
-        this.removeShot(index);
-        continue;
-      }
-
-      const head = new Phaser.Geom.Circle(this.target.x, this.target.y - 82, 12);
-      const body = new Phaser.Geom.Circle(this.target.x, this.target.y - 45, 18);
-
-      if (Phaser.Geom.Intersects.LineToCircle(segment, head)) {
-        this.showCombatMessage('HEADSHOT · INSTANT', '#f0dfb6');
-        this.targetBodyHits = 0;
-        this.resetTargetSoon(520);
-        this.removeShot(index);
-        continue;
-      }
-
-      if (Phaser.Geom.Intersects.LineToCircle(segment, body)) {
-        this.targetBodyHits += 1;
-        const hits = this.targetBodyHits;
-        this.showCombatMessage(hits >= 2 ? 'BODY HIT · ELIMINATED' : 'BODY HIT · ONE MORE', '#e06a3d');
-        if (hits >= 2) this.resetTargetSoon(520);
         this.removeShot(index);
         continue;
       }
 
       if (shot.ageMs >= this.projectileLifetimeMs) {
         this.removeShot(index);
+        continue;
+      }
+
+      if (this.targetDown) continue;
+
+      // Keep the same Arena ordering: weapon → head → body → scrape, with the
+      // nearest clean hit winning. These are fixed world-space combat radii;
+      // visual sprite size never manufactures a larger hitbox.
+      const head = new Phaser.Geom.Circle(this.target.x, this.target.y - 82, this.arenaHeadRadius);
+      const body = new Phaser.Geom.Circle(this.target.x, this.target.y - 45, this.arenaBodyCoreRadius);
+      const weaponPoint = this.getTargetWeaponPoint();
+      const weapon = new Phaser.Geom.Circle(weaponPoint.x, weaponPoint.y, this.arenaWeaponRadius);
+      const headScrape = new Phaser.Geom.Circle(this.target.x, this.target.y - 82, this.arenaScrapeRadius);
+      const bodyScrape = new Phaser.Geom.Circle(this.target.x, this.target.y - 45, this.arenaScrapeRadius);
+
+      const nearest = (hits: Array<{ kind: string; circle: Phaser.Geom.Circle }>) => hits
+        .map(({ kind, circle }) => {
+          const point = new Phaser.Math.Vector2();
+          if (!Phaser.Geom.Intersects.LineToCircle(segment, circle, point)) return null;
+          return { kind, x: point.x, y: point.y, distance: Phaser.Math.Distance.Between(previous.x, previous.y, point.x, point.y) };
+        })
+        .filter(Boolean)
+        .sort((a, b) => a!.distance - b!.distance)[0] ?? null;
+
+      const clean = nearest([
+        { kind: 'weapon', circle: weapon },
+        { kind: 'head', circle: head },
+        { kind: 'body', circle: body },
+      ]);
+      if (clean) {
+        if (clean.kind === 'head') {
+          this.showCombatMessage('HEADSHOT · INSTANT', '#f0dfb6');
+          this.targetBodyHits = 0;
+          this.resetTargetSoon(520);
+        } else if (clean.kind === 'body') {
+          this.targetBodyHits += 1;
+          const hits = this.targetBodyHits;
+          this.showCombatMessage(hits >= 2 ? 'BODY HIT · ELIMINATED' : 'BODY HIT · ONE MORE', '#e06a3d');
+          if (hits >= 2) this.resetTargetSoon(520);
+        } else {
+          this.showCombatMessage('GUN HIT · GUN DOWN', '#e8c95c');
+          this.addWardrobeImpact(clean.x, clean.y, '#e8c95c');
+        }
+        this.removeShot(index);
+        continue;
+      }
+
+      const scrape = nearest([
+        { kind: 'head-scrape', circle: headScrape },
+        { kind: 'body-scrape', circle: bodyScrape },
+      ]);
+      if (scrape) {
+        this.showCombatMessage('SCRAPE', '#9fbda8');
+        this.addWardrobeImpact(scrape.x, scrape.y, '#9fbda8');
+        this.removeShot(index);
       }
     }
+  }
+
+  private getTargetWeaponPoint() {
+    // The training target is an armed sprite. Keep its exposed weapon marker
+    // off the centreline, matching the Arena weapon-hit contract rather than
+    // allowing every centre-mass projectile to become a gun hit.
+    const towardPlayer = new Phaser.Math.Vector2(
+      this.character.x - this.target.x,
+      this.character.y - this.target.y,
+    ).normalize();
+    const lateral = new Phaser.Math.Vector2(-towardPlayer.y, towardPlayer.x);
+    return new Phaser.Math.Vector2(
+      this.target.x + towardPlayer.x * 10 + lateral.x * 24,
+      this.target.y + towardPlayer.y * 10 + lateral.y * 24 + 4,
+    );
+  }
+
+  private addWardrobeImpact(x: number, y: number, color: string) {
+    const impact = this.add.circle(x, y, 5, Phaser.Display.Color.HexStringToColor(color).color, 0.82).setDepth(140);
+    this.tweens.add({
+      targets: impact,
+      scale: 1.8,
+      alpha: 0,
+      duration: this.projectileMinVisibleMs,
+      onComplete: () => impact.destroy(),
+    });
   }
 
   private resetTargetSoon(delay: number) {
