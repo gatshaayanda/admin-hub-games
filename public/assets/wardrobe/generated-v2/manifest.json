@@ -92,5 +92,5 @@
       }
     }
   },
-  "note": "Generated production candidate. Movement uses the authored directional frames from 3.jpg. Runtime combat uses the transparent arms/weapon/muzzle layers with the manifest attachment geometry; the projectile origin is derived from the same muzzle point. 1.jpg / player-combat-atlas.png remains reference/audit artwork and is not cropped or continuously rotated at runtime."
+  "note": "Generated production candidate. Movement uses the authored armed directional frames from 3.jpg; weapon-bearing presentation uses authored integrated combat frames from 1.jpg. Extracted arms/weapon/muzzle crops remain audit outputs and are not rendered as runtime overlays."
 }
