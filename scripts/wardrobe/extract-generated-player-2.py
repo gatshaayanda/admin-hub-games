@@ -4,7 +4,6 @@ import json
 
 SOURCE = Path("public/assets/wardrobe/incoming/3.jpg")
 COMBAT_SOURCE = Path("public/assets/wardrobe/incoming/1.jpg")
-COMBAT_SOURCE = Path("public/assets/wardrobe/incoming/1.jpg")
 OUT = Path("public/assets/wardrobe/generated-v2")
 CELL_W, CELL_H = 172, 192
 COLS, ROWS = 8, 4
