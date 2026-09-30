@@ -1349,10 +1349,8 @@ export class WardrobeLabScene extends Phaser.Scene {
     if (aiming) {
       this.previewSprite.setAlpha(1);
       this.previewSprite.setTint(0xffffff);
-      this.updateGeneratedCombatOverlay();
-    } else {
-      this.generatedCombatOverlay?.setVisible(false);
     }
+    this.generatedCombatOverlay?.setVisible(false);
 
     const action = this.generatedAction;
     const hitState = action === 'hit' || action === 'headshot';
@@ -1463,7 +1461,6 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.generatedAction = 'shoot';
     this.generatedActionUntil = 130;
     this.updateWeaponLayer();
-    this.updateGeneratedCombatOverlay();
 
     if (this.currentDefinition().source === 'robot') {
       const shootKey = this.spriteKey(this.currentDefinition(), this.direction, 'shoot');
