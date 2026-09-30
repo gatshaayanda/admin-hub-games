@@ -468,6 +468,7 @@ export class WardrobeLabScene extends Phaser.Scene {
   private direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT' = 'DOWN';
   private playerFacing = 1;
   private previewSprite!: Phaser.GameObjects.Sprite;
+  private generatedCombatOverlay!: Phaser.GameObjects.Sprite;
   private bodySprite!: Phaser.GameObjects.Sprite;
   private armsSprite!: Phaser.GameObjects.Sprite;
   private weaponSprite!: Phaser.GameObjects.Sprite;
@@ -518,7 +519,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.load.spritesheet(
       'wardrobe-generated-player-atlas',
       '/assets/wardrobe/generated-v2/player-body-atlas.png',
-      { frameWidth: 176, frameHeight: 192 },
+      { frameWidth: 172, frameHeight: 192 },
     );
     this.load.image('wardrobe-generated-v2-arms', '/assets/wardrobe/generated-v2/player-arms.png');
     this.load.image('wardrobe-generated-v2-weapon', '/assets/wardrobe/generated-v2/player-weapon.png');
@@ -613,6 +614,10 @@ export class WardrobeLabScene extends Phaser.Scene {
       this.previewSprite.setVisible(true);
     }
     this.bodySprite = this.previewSprite;
+    this.generatedCombatOverlay = this.add.sprite(0, 0, 'wardrobe-generated-combat-atlas', 11)
+      .setVisible(false)
+      .setOrigin(0.5, 1);
+    this.character.add(this.generatedCombatOverlay);
     // Generated combat is one authored silhouette; these legacy layer slots
     // remain hidden for compatibility and are never rendered.
     this.armsSprite = this.add.sprite(0, 0, 'wardrobe-generated-player-atlas', 0).setVisible(false);
@@ -944,8 +949,30 @@ export class WardrobeLabScene extends Phaser.Scene {
     }
   }
 
+  private updateGeneratedCombatOverlay() {
+    if (!this.generatedCombatOverlay || !this.generatedRig) return;
+    const firing = this.muzzleUntil > 0 || this.generatedAction === 'shoot' ||
+      this.generatedAction === 'muzzle' || this.generatedAction === 'recoil';
+    const frame = firing ? this.generatedRig.combat.fireFrame : this.generatedRig.combat.aimFrame;
+    this.generatedCombatOverlay.setFrame(frame);
+    this.generatedCombatOverlay.setScale(this.generatedBodyScale || 1);
+    this.generatedCombatOverlay.setOrigin(0.5, this.generatedBodyOriginY || 1);
+    this.generatedCombatOverlay.setCrop(82, 34, 94, 128);
+    this.generatedCombatOverlay.setRotation(this.aim.lengthSq() > 0.0025 ? this.aim.angle() : 0);
+    this.generatedCombatOverlay.setFlipX(false);
+    this.generatedCombatOverlay.setVisible(true);
+    this.generatedCombatOverlay.setAlpha(1);
+  }
+
   private getGeneratedCombatMuzzleWorldPoint() {
-    const sprite = this.previewSprite;
+    const sprite = this.generatedCombatOverlay?.visible ? this.generatedCombatOverlay : this.previewSprite;
+    if (this.generatedCombatOverlay?.visible) {
+      const muzzleDistance = 54 * (this.generatedBodyScale || 1);
+      return new Phaser.Math.Vector2(
+        this.character.x + Math.cos(this.aim.angle()) * muzzleDistance,
+        this.character.y + Math.sin(this.aim.angle()) * muzzleDistance - 30 * (this.generatedBodyScale || 1),
+      );
+    }
     const frame = sprite.frame;
     const source = sprite.texture.getSourceImage() as CanvasImageSource;
     const canvas = document.createElement('canvas');
@@ -1112,26 +1139,18 @@ export class WardrobeLabScene extends Phaser.Scene {
     }
     flipX = false;
 
-    // Weapon-bearing presentation is a single authored combat silhouette.
     const aiming = this.pointerAimActive || this.fireHeld ||
       this.generatedAction === 'aim' || this.generatedAction === 'shoot' ||
       this.generatedAction === 'muzzle' || this.generatedAction === 'recoil';
+    // Keep the 3.jpg body animation authoritative even while aiming. The authored
+    // 1.jpg combat silhouette is now an upper-body presentation layer instead of
+    // replacing the walking body, so movement direction and aim direction can differ.
     if (aiming) {
-      const key = 'wardrobe-generated-combat-atlas';
-      const frame = this.muzzleUntil > 0 || this.generatedAction === 'shoot' ||
-        this.generatedAction === 'muzzle' ? this.generatedRig.combat.fireFrame : this.generatedRig.combat.aimFrame;
-      if (this.previewSprite.texture.key !== key) {
-        this.previewSprite.setTexture(key, frame);
-        this.fitGeneratedCombatSprite(this.previewSprite);
-      } else {
-        this.previewSprite.setFrame(frame);
-      }
-      this.previewSprite.setFlipX(this.aim.x < 0);
-      this.previewSprite.setRotation(0);
-      this.armsSprite.setVisible(false);
-      this.weaponSprite.setVisible(false);
-      this.muzzleSprite.setVisible(false);
-      return;
+      this.previewSprite.setAlpha(1);
+      this.previewSprite.setTint(0xffffff);
+      this.updateGeneratedCombatOverlay();
+    } else {
+      this.generatedCombatOverlay?.setVisible(false);
     }
 
     const action = this.generatedAction;
@@ -1204,7 +1223,6 @@ export class WardrobeLabScene extends Phaser.Scene {
       return;
     }
 
-    // One authored silhouette: body + natural arms/hands + gun.
     this.armsSprite.setVisible(false);
     this.weaponSprite.setVisible(false);
     this.muzzleSprite.setVisible(false);
@@ -1212,20 +1230,8 @@ export class WardrobeLabScene extends Phaser.Scene {
     const aiming = this.pointerAimActive || this.fireHeld ||
       this.generatedAction === 'aim' || this.generatedAction === 'shoot' ||
       this.generatedAction === 'muzzle' || this.generatedAction === 'recoil';
-
-    if (aiming) {
-      const key = 'wardrobe-generated-combat-atlas';
-      const frame = this.muzzleUntil > 0 || this.generatedAction === 'shoot' ||
-        this.generatedAction === 'muzzle' ? 12 : 11;
-      if (this.previewSprite.texture.key !== key) {
-        this.previewSprite.setTexture(key, frame);
-        this.fitGeneratedCombatSprite(this.previewSprite);
-      } else {
-        this.previewSprite.setFrame(frame);
-      }
-      this.previewSprite.setFlipX(this.aim.x < 0);
-      this.previewSprite.setRotation(0);
-    }
+    if (aiming) this.updateGeneratedCombatOverlay();
+    else this.generatedCombatOverlay?.setVisible(false);
   }
 
   private fireShot() {
@@ -1252,6 +1258,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.generatedAction = 'shoot';
     this.generatedActionUntil = 130;
     this.updateWeaponLayer();
+    this.updateGeneratedCombatOverlay();
 
     if (this.currentDefinition().source === 'robot') {
       const shootKey = this.spriteKey(this.currentDefinition(), this.direction, 'shoot');
