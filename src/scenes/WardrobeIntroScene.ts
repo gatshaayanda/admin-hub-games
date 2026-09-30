@@ -1183,19 +1183,23 @@ export class WardrobeLabScene extends Phaser.Scene {
     let animation = 'DOWN';
     let flipX = false;
 
-    // 3.jpg provides four authored movement directions only:
-    // DOWN, UP, RIGHT, LEFT. Diagonal input uses the dominant axis so we
-    // never fake a missing diagonal pose by rotating or inventing artwork.
-    if (Math.abs(vx) > Math.abs(vy) && Math.abs(vx) > 0.35) {
-      animation = vx < 0 ? 'LEFT' : 'RIGHT';
-    } else if (Math.abs(vy) > 0.35) {
-      animation = vy < 0 ? 'UP' : 'DOWN';
-    }
-    flipX = false;
-
     const aiming = this.pointerAimActive || this.fireHeld ||
       this.generatedAction === 'aim' || this.generatedAction === 'shoot' ||
       this.generatedAction === 'muzzle' || this.generatedAction === 'recoil';
+
+    // 3.jpg provides four authored body directions only. While moving, the
+    // body follows movement so move-and-shoot remains mechanically independent.
+    // While stationary and aiming, the body follows the aim vector instead of
+    // retaining the last movement direction. This prevents the exact failure
+    // where the player faces the screen while the weapon fires sideways/backward.
+    const facingX = aiming && !walking ? this.aim.x : vx;
+    const facingY = aiming && !walking ? this.aim.y : vy;
+    if (Math.abs(facingX) > Math.abs(facingY) && Math.abs(facingX) > 0.35) {
+      animation = facingX < 0 ? 'LEFT' : 'RIGHT';
+    } else if (Math.abs(facingY) > 0.35) {
+      animation = facingY < 0 ? 'UP' : 'DOWN';
+    }
+    flipX = false;
     // Keep the 3.jpg body animation authoritative even while aiming. The 1.jpg
     // combat artwork is an authored horizontal upper-body presentation layer;
     // it is intentionally not rotated for arbitrary aim angles.
