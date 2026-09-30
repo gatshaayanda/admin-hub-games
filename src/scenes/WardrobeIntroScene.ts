@@ -83,7 +83,7 @@ export class WardrobeIntroScene extends Phaser.Scene {
     this.load.spritesheet(
       'wardrobe-generated-player-atlas',
       '/assets/wardrobe/generated-v2/player-body-atlas.png',
-      { frameWidth: 176, frameHeight: 192 },
+      { frameWidth: 172, frameHeight: 192 },
     );
     this.load.spritesheet(
       'wardrobe-generated-combat-atlas',
@@ -986,12 +986,10 @@ export class WardrobeLabScene extends Phaser.Scene {
     }
 
     const generatedAnimations: Array<[string, number, number]> = [
-      ['DOWN', 0, 3],
-      ['UP', 4, 7],
-      ['LEFT', 8, 11],
-      ['RIGHT', 12, 15],
-      ['DOWN-RIGHT', 16, 19],
-      ['UP-RIGHT', 24, 27],
+      ['DOWN', 0, 7],
+      ['UP', 8, 15],
+      ['RIGHT', 16, 23],
+      ['LEFT', 24, 31],
     ];
     const atlasKey = 'wardrobe-generated-player-atlas';
     for (const def of this.characterDefinitions.filter((entry) => entry.source === 'generated')) {
@@ -1055,20 +1053,18 @@ export class WardrobeLabScene extends Phaser.Scene {
     }
 
     const atlasKey = 'wardrobe-generated-player-atlas';
-    const diagonal = walking && Math.abs(vx) > 0.35 && Math.abs(vy) > 0.35;
     let animation = 'DOWN';
     let flipX = false;
 
-    if (diagonal) {
-      animation = vy < 0 ? 'UP-RIGHT' : 'DOWN-RIGHT';
-      flipX = vx < 0;
-    } else if (this.direction === 'UP') {
-      animation = 'UP';
-    } else if (this.direction === 'LEFT') {
-      animation = 'LEFT';
-    } else if (this.direction === 'RIGHT') {
-      animation = 'RIGHT';
+    // 3.jpg provides four authored movement directions only:
+    // DOWN, UP, RIGHT, LEFT. Diagonal input uses the dominant axis so we
+    // never fake a missing diagonal pose by rotating or inventing artwork.
+    if (Math.abs(vx) > Math.abs(vy) && Math.abs(vx) > 0.35) {
+      animation = vx < 0 ? 'LEFT' : 'RIGHT';
+    } else if (Math.abs(vy) > 0.35) {
+      animation = vy < 0 ? 'UP' : 'DOWN';
     }
+    flipX = false;
 
     // Weapon-bearing presentation is a single authored combat silhouette.
     const aiming = this.pointerAimActive || this.fireHeld ||
@@ -1119,8 +1115,7 @@ export class WardrobeLabScene extends Phaser.Scene {
         UP: 4,
         LEFT: 8,
         RIGHT: 12,
-        'DOWN-RIGHT': 16,
-        'UP-RIGHT': 24,
+
       };
       this.previewSprite.stop();
       this.previewSprite.setFrame(idleFrames[animation] ?? 0);

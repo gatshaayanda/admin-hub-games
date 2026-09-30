@@ -2,16 +2,16 @@ from pathlib import Path
 from PIL import Image
 import json
 
-SOURCE = Path("public/assets/wardrobe/incoming/2.jpg")
+SOURCE = Path("public/assets/wardrobe/incoming/3.jpg")
 COMBAT_SOURCE = Path("public/assets/wardrobe/incoming/1.jpg")
 COMBAT_SOURCE = Path("public/assets/wardrobe/incoming/1.jpg")
 OUT = Path("public/assets/wardrobe/generated-v2")
-CELL_W, CELL_H = 176, 192
+CELL_W, CELL_H = 172, 192
 COLS, ROWS = 8, 4
 
-# The Gemini sheet is a fixed 8x4 contact sheet at 1408x768 (176x192 cells).
+# The armed movement sheet is an 8x4 contact sheet at 1376x768 (172x192 cells).
 # The production step deliberately converts the JPG's baked checkerboard into real alpha.
-BODY_CELLS = list(range(16)) + [16, 17, 18, 19, 24, 25, 26, 27]
+BODY_CELLS = list(range(COLS * ROWS))
 REGIONS = {
     "arms": (4 * CELL_W, 2 * CELL_H, 6 * CELL_W, 3 * CELL_H),
     "weapon": (6 * CELL_W, 2 * CELL_H, 8 * CELL_W, 3 * CELL_H),
@@ -30,7 +30,8 @@ def foreground_mask(im):
             # saturated/dark artwork and discard pale neutral source pixels.
             neutral = max(c) - min(c) < 52
             pale = min(c) > 108
-            if not (neutral and pale):
+            magenta = c[0] > 135 and c[2] > 135 and c[1] < 125 and c[0] - c[1] > 45 and c[2] - c[1] > 45
+            if not magenta and not (neutral and pale):
                 out[x, y] = 1
     return mask
 
@@ -154,7 +155,7 @@ def main():
     muzzle_y = grip_y
 
     manifest = {
-        "source": "public/assets/wardrobe/incoming/2.jpg",
+        "source": "public/assets/wardrobe/incoming/3.jpg",
         "grid": {"columns": COLS, "rows": ROWS, "cellWidth": CELL_W, "cellHeight": CELL_H},
         "bodyCells": BODY_CELLS,
         "layers": {k: f"player-{k}.png" for k in REGIONS},
@@ -187,7 +188,7 @@ def main():
                 "origin": {"x": 0, "y": 0.5}
             }
         },
-        "note": "Generated production candidate. Movement uses 2.jpg body artwork; weapon-bearing presentation uses authored integrated combat frames from 1.jpg. Extracted arms/weapon/muzzle crops remain audit outputs and are not rendered as runtime overlays."
+        "note": "Generated production candidate. Movement uses the authored armed directional frames from 3.jpg; weapon-bearing presentation uses authored integrated combat frames from 1.jpg. Extracted arms/weapon/muzzle crops remain audit outputs and are not rendered as runtime overlays."
     }
     (OUT / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
