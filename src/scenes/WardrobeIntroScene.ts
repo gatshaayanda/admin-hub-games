@@ -3,12 +3,21 @@ import { installShootersTriggerMobileControls } from '../shooters-trigger-mobile
 
 type GeneratedV2RigManifest = {
   source: string;
-  rig: {
-    body: {
-      armsAnchor: { x: number; y: number };
-      weaponGripAnchor: { x: number; y: number };
-    };
-    combat: {
+  grid: {
+    columns: number;
+    rows: number;
+    cellWidth: number;
+    cellHeight: number;
+  };
+  bodyCells: number[];
+  layers: {
+    arms: string;
+    weapon: string;
+    muzzle: string;
+  };
+  combat: {
+    source: string;
+    atlas: string;
     frameWidth: number;
     frameHeight: number;
     aimFrame: number;
@@ -16,7 +25,12 @@ type GeneratedV2RigManifest = {
     readyFrame: number;
     recoilFrame: number;
   };
-  weapon: {
+  rig: {
+    body: {
+      armsAnchor: { x: number; y: number };
+      weaponGripAnchor: { x: number; y: number };
+    };
+    weapon: {
       sourceWidth: number;
       sourceHeight: number;
       displayWidth: number;
@@ -496,6 +510,7 @@ export class WardrobeLabScene extends Phaser.Scene {
   }> = [];
   private cleanupMobileControls?: () => void;
   private generatedRig!: GeneratedV2RigManifest['rig'];
+  private generatedCombat!: GeneratedV2RigManifest['combat'];
   private generatedBodyScale = 0;
   private generatedBodyOriginY = 1;
 
@@ -573,6 +588,14 @@ export class WardrobeLabScene extends Phaser.Scene {
       throw new Error('Wardrobe generated-v2 attachment manifest is missing');
     }
     this.generatedRig = generatedManifest.rig;
+    this.generatedCombat = generatedManifest.combat;
+    if (
+      !this.generatedCombat ||
+      this.generatedCombat.frameWidth !== 176 ||
+      this.generatedCombat.frameHeight !== 192
+    ) {
+      throw new Error('Wardrobe generated-v2 combat contract is missing or has invalid dimensions');
+    }
 
     this.cameras.main.setBackgroundColor('#6f984b');
     this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
@@ -953,10 +976,12 @@ export class WardrobeLabScene extends Phaser.Scene {
     if (!this.generatedCombatOverlay || !this.generatedRig) return;
     const firing = this.muzzleUntil > 0 || this.generatedAction === 'shoot' ||
       this.generatedAction === 'muzzle' || this.generatedAction === 'recoil';
-    const frame = firing ? this.generatedRig.combat.fireFrame : this.generatedRig.combat.aimFrame;
-    this.generatedCombatOverlay.setFrame(frame);
+    const frame = firing ? this.generatedCombat.fireFrame : this.generatedCombat.aimFrame;
+    this.generatedCombatOverlay.setFrame(frame, false, false);
     this.generatedCombatOverlay.setScale(this.generatedBodyScale || 1);
     this.generatedCombatOverlay.setOrigin(0.5, this.generatedBodyOriginY || 1);
+    // The combat atlas frame is 176×192. Keep the crop inside that frame;
+    // Phaser's crop coordinates are frame-local and are validated by the renderer.
     this.generatedCombatOverlay.setCrop(82, 34, 94, 128);
     this.generatedCombatOverlay.setRotation(this.aim.lengthSq() > 0.0025 ? this.aim.angle() : 0);
     this.generatedCombatOverlay.setFlipX(false);
