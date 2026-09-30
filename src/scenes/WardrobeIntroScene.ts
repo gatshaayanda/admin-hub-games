@@ -542,6 +542,10 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   preload() {
+    const touchDevice =
+      window.matchMedia('(pointer: coarse)').matches ||
+      navigator.maxTouchPoints > 0;
+
     this.load.spritesheet(
       'wardrobe-generated-player-atlas',
       '/assets/wardrobe/generated-v2/player-body-atlas.png',
