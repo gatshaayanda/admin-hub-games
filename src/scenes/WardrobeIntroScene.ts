@@ -102,6 +102,14 @@ export class WardrobeIntroScene extends Phaser.Scene {
   }
 
   preload() {
+    const touchDevice =
+      window.matchMedia('(pointer: coarse)').matches ||
+      navigator.maxTouchPoints > 0;
+
+    // Phone-first: the generated player and Arena reference are the only
+    // characters needed to inspect this lab. Do not make a phone download,
+    // decode and texture-upload every comparison pack before the player can
+    // see the actual character.
     this.load.spritesheet(
       'wardrobe-generated-player-atlas',
       '/assets/wardrobe/generated-v2/player-body-atlas.png',
@@ -522,7 +530,10 @@ export class WardrobeLabScene extends Phaser.Scene {
   private readonly projectileSpeed = 520;
   private readonly projectileLifetimeMs = 1100;
   private readonly fireIntervalMs = 240;
-  private readonly characterDefinitions = WARDROBE_CHARACTER_DEFINITIONS;
+  private characterDefinitions = WARDROBE_CHARACTER_DEFINITIONS;
+  private readonly mobileCharacterDefinitions = WARDROBE_CHARACTER_DEFINITIONS.filter(
+    (definition) => definition.source === 'generated' || definition.source === 'arena',
+  );
   private readonly targetVisibleCharacterHeight = 60;
   private readonly targetDefinition = WARDROBE_TARGET_DEFINITION;
 
@@ -539,6 +550,12 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.load.image('wardrobe-generated-v2-arms', '/assets/wardrobe/generated-v2/player-arms.png');
     this.load.image('wardrobe-generated-v2-weapon', '/assets/wardrobe/generated-v2/player-weapon.png');
     this.load.image('wardrobe-generated-v2-muzzle', '/assets/wardrobe/generated-v2/player-muzzle.png');
+    this.load.spritesheet(
+      'wardrobe-generated-combat-atlas',
+      '/assets/wardrobe/generated-v2/player-combat-atlas.png',
+      { frameWidth: 176, frameHeight: 192 },
+    );
+    this.load.json('wardrobe-generated-v2-manifest', '/assets/wardrobe/generated-v2/manifest.json');
     for (const direction of ['DOWN', 'UP', 'LEFT', 'RIGHT'] as const) {
       this.load.spritesheet(
         this.spriteKey(this.targetDefinition, direction),
@@ -546,7 +563,8 @@ export class WardrobeLabScene extends Phaser.Scene {
         { frameWidth: this.targetDefinition.frameWidth, frameHeight: this.targetDefinition.frameHeight },
       );
     }
-    for (const def of this.characterDefinitions) {
+    const definitionsToLoad = touchDevice ? this.mobileCharacterDefinitions : this.characterDefinitions;
+    for (const def of definitionsToLoad) {
       for (const direction of ['DOWN', 'UP', 'LEFT', 'RIGHT'] as const) {
         if (def.source === 'generated' || def.source === 'arena') continue;
         if (def.source === 'gegx') {
@@ -581,6 +599,13 @@ export class WardrobeLabScene extends Phaser.Scene {
 
   create() {
     const { width, height } = this.scale;
+
+    if (
+      window.matchMedia('(pointer: coarse)').matches ||
+      navigator.maxTouchPoints > 0
+    ) {
+      this.characterDefinitions = this.mobileCharacterDefinitions;
+    }
 
     this.prepareGeneratedCharacterTextures();
     const generatedManifest = this.cache.json.get('wardrobe-generated-v2-manifest') as GeneratedV2RigManifest | undefined;
@@ -1057,6 +1082,7 @@ export class WardrobeLabScene extends Phaser.Scene {
       for (const direction of ['DOWN', 'UP', 'LEFT', 'RIGHT'] as const) {
         if (def.source === 'generated') continue;
         const walkKey = this.spriteKey(def, direction, 'walk');
+        if (!this.textures.exists(walkKey)) continue;
         if (!this.anims.exists(walkKey)) {
           const texture = this.textures.get(walkKey);
           const frameCount = Math.max(1, texture.frameTotal - 1);
@@ -1069,6 +1095,7 @@ export class WardrobeLabScene extends Phaser.Scene {
         }
         if (def.source === 'robot') {
           const shootKey = this.spriteKey(def, direction, 'shoot');
+          if (!this.textures.exists(shootKey)) continue;
           if (!this.anims.exists(shootKey)) {
             const texture = this.textures.get(shootKey);
             const frameCount = Math.max(1, texture.frameTotal - 1);
