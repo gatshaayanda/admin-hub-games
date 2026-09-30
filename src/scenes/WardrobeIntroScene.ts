@@ -1336,10 +1336,13 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.muzzleFlash.clear();
     if (generated && aiming && this.muzzleUntil > 0) {
       const angle = this.aim.lengthSq() > 0.0025 ? this.aim.angle() : 0;
+      const muzzle = generated
+        ? this.getGeneratedCombatMuzzleLocalPoint()
+        : new Phaser.Math.Vector2(Math.cos(angle) * 42, Math.sin(angle) * 42);
       this.muzzleFlash
         .fillStyle(0xf0dfb6, 0.72)
         .fillCircle(0, 0, 3)
-        .setPosition(Math.cos(angle) * 42, Math.sin(angle) * 42)
+        .setPosition(muzzle.x, muzzle.y)
         .setVisible(true);
     } else {
       this.muzzleFlash.setVisible(false);
@@ -1347,13 +1350,18 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   private fireShot() {
-    // Match the Arena reference rig's muzzle contract for every player:
-    // one body, one visible weapon, one projectile origin 42px along aim.
+    // The generated 3.jpg atlas has its weapon embedded in the artwork.
+    // Use the generated rig's authored grip/muzzle geometry for the shot
+    // origin, rather than the Arena reference's 42px muzzle point.
+    // Arena keeps its original 42px mechanical contract.
+    const generated = this.currentDefinition().source === 'generated';
     const angle = this.aim.lengthSq() > 0.0025 ? this.aim.angle() : 0;
-    const origin = new Phaser.Math.Vector2(
-      this.character.x + Math.cos(angle) * 42,
-      this.character.y + Math.sin(angle) * 42,
-    );
+    const origin = generated
+      ? this.getGeneratedCombatMuzzleWorldPoint()
+      : new Phaser.Math.Vector2(
+          this.character.x + Math.cos(angle) * 42,
+          this.character.y + Math.sin(angle) * 42,
+        );
     // fireShot and the rendered muzzle now share the exact same local
     // attachment point. This removes the old center-origin projectile mismatch.
     const velocity = this.aim.clone().normalize().scale(this.projectileSpeed);
