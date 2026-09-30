@@ -1,9 +1,9 @@
 {
-  "source": "public/assets/wardrobe/incoming/2.jpg",
+  "source": "public/assets/wardrobe/incoming/3.jpg",
   "grid": {
     "columns": 8,
     "rows": 4,
-    "cellWidth": 176,
+    "cellWidth": 172,
     "cellHeight": 192
   },
   "bodyCells": [
@@ -27,10 +27,18 @@
     17,
     18,
     19,
+    20,
+    21,
+    22,
+    23,
     24,
     25,
     26,
-    27
+    27,
+    28,
+    29,
+    30,
+    31
   ],
   "layers": {
     "arms": "player-arms.png",
@@ -61,28 +69,28 @@
       }
     },
     "weapon": {
-      "sourceWidth": 234,
-      "sourceHeight": 118,
+      "sourceWidth": 110,
+      "sourceHeight": 146,
       "displayWidth": 50,
       "grip": {
-        "x": 51.48,
-        "y": 61.36,
+        "x": 24.2,
+        "y": 75.92,
         "units": "sourcePixels"
       },
       "muzzle": {
-        "x": 234.0,
-        "y": 61.36,
+        "x": 110.0,
+        "y": 75.92,
         "units": "sourcePixels"
       }
     },
     "muzzleLayer": {
-      "sourceWidth": 66,
-      "sourceHeight": 49,
+      "sourceWidth": 113,
+      "sourceHeight": 147,
       "origin": {
         "x": 0,
         "y": 0.5
       }
     }
   },
-  "note": "Generated production candidate. Movement uses 2.jpg body artwork; weapon-bearing presentation uses authored integrated combat frames from 1.jpg. Extracted arms/weapon/muzzle crops remain audit outputs and are not rendered as runtime overlays."
+  "note": "Generated production candidate. Movement uses the authored armed directional frames from 3.jpg; weapon-bearing presentation uses authored integrated combat frames from 1.jpg. Extracted arms/weapon/muzzle crops remain audit outputs and are not rendered as runtime overlays."
 }
