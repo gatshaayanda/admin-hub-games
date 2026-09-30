@@ -1138,7 +1138,25 @@ export class WardrobeLabScene extends Phaser.Scene {
     const vx = this.visualMove.x;
     const vy = this.visualMove.y;
 
-    this.previewSprite.setVisible(true);
+    // Hard visual isolation: exactly one body rig may be visible at a time.
+    // Generated = 3.jpg body only. Arena = Arena body + Arena weapon rig.
+    if (def.source === 'generated') {
+      this.arenaPoseA.setVisible(false);
+      this.arenaPoseB.setVisible(false);
+      this.arenaArms.setVisible(false);
+      this.arenaWeapon.setVisible(false);
+      this.arenaMuzzle.setVisible(false);
+      this.previewSprite.setVisible(true);
+    } else if (def.source !== 'arena') {
+      this.arenaPoseA.setVisible(false);
+      this.arenaPoseB.setVisible(false);
+      this.arenaArms.setVisible(false);
+      this.arenaWeapon.setVisible(false);
+      this.arenaMuzzle.setVisible(false);
+      this.previewSprite.setVisible(true);
+    } else {
+      this.previewSprite.setVisible(false);
+    }
 
     if (def.source === 'arena') {
       // Exact Arena animation contract: 120ms while moving, 650ms while idle.
@@ -1286,11 +1304,33 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.generatedWeaponLayer?.setVisible(false);
     this.generatedMuzzleLayer?.setVisible(false);
 
-    // The Arena reference rig remains authoritative for the Arena character
-    // only. Generated shots use the same 42px muzzle contract mechanically.
-    this.arenaArms?.setVisible(false);
-    this.arenaWeapon?.setVisible(false);
-    this.arenaMuzzle?.setVisible(false);
+    // Keep the two visual contracts completely isolated:
+    // - GENERATED: the armed 3.jpg atlas is the only visible player artwork.
+    // - ARENA: the structural Arena body + weapon rig is the only visible
+    //   reference artwork.
+    // Phaser projectile/collision mechanics remain shared.
+    if (generated) {
+      this.arenaPoseA?.setVisible(false);
+      this.arenaPoseB?.setVisible(false);
+      this.arenaArms?.setVisible(false);
+      this.arenaWeapon?.setVisible(false);
+      this.arenaMuzzle?.setVisible(false);
+      this.previewSprite?.setVisible(true);
+    } else if (this.currentDefinition().source === 'arena') {
+      this.previewSprite?.setVisible(false);
+      this.generatedArmsLayer?.setVisible(false);
+      this.generatedWeaponLayer?.setVisible(false);
+      this.generatedMuzzleLayer?.setVisible(false);
+      this.arenaArms?.setVisible(true);
+      this.arenaWeapon?.setVisible(true);
+      this.arenaMuzzle?.setVisible(this.muzzleUntil > 0);
+    } else {
+      this.arenaPoseA?.setVisible(false);
+      this.arenaPoseB?.setVisible(false);
+      this.arenaArms?.setVisible(false);
+      this.arenaWeapon?.setVisible(false);
+      this.arenaMuzzle?.setVisible(false);
+    }
 
     this.weaponLayer.clear().setVisible(false);
     this.muzzleFlash.clear();
