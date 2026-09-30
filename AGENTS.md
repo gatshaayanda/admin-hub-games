@@ -5277,3 +5277,42 @@ If the next rendered result is still detached, STOP and inspect the authored com
 ### Verification note — integrated combat atlas
 
 The generated-v2 asset workflow successfully produced `player-combat-atlas.png` from the existing 1.jpg authored combat frames. The current main checkpoint contains that atlas and the Wardrobe scene consumes it as a single sprite. The earlier asset-workflow push rejection was a concurrent-main race; the workflow now has a branch-scoped concurrency group so generated asset commits cannot race each other.
+
+
+## Wardrobe Generated Player — Character Pipeline Contract (2026-09-30)
+
+The generated Shooters Trigger player is a single character presentation system, not a collection of interchangeable full-body poses.
+
+### Current authoritative assets
+- 3.jpg is the authoritative generated movement/body source: 8 columns × 4 rows, 172×192 cells.
+- 1.jpg is the authoritative authored combat reference for natural arms, hands and rifle presentation.
+- public/assets/wardrobe/generated-v2/manifest.json is the runtime contract and must agree with the source dimensions.
+- Extracted arms/weapon/muzzle files are audit/reference outputs unless the implementation explicitly proves that they preserve natural anatomy.
+
+### Required visual architecture
+- Movement owns the lower-body direction: DOWN / UP / LEFT / RIGHT from 3.jpg.
+- Aim owns the upper-body/weapon presentation.
+- Movement and aim must not be represented by swapping the whole character between a walking body and a baked standing combat silhouette during normal gameplay.
+- The player must be able to move in one cardinal direction while aiming independently.
+- The feet/ground anchor must remain stable across movement, idle, aim and fire states.
+- Projectile origin must follow the authoritative weapon/muzzle transform used by the rendered character.
+- Do not compensate for a wrong frame size, wrong origin or wrong artwork with arbitrary per-state offsets. Fix the source/loader/rig contract first.
+
+### Implementation order
+1. Keep the 3.jpg frame contract exact at 172×192 everywhere.
+2. Stabilize the four-direction movement body and its foot anchor.
+3. Build aim/fire presentation as an upper-body/weapon layer over the movement body where the artwork permits; do not duplicate authored arms/hands.
+4. Keep 1.jpg integrated combat frames as the visual reference/fallback for states that cannot yet be decomposed cleanly.
+5. Do not generate another replacement character merely to solve an assembly/rig problem.
+6. Verify Wardrobe in-browser after implementation, then build and checkpoint main.
+
+### Acceptance
+A Wardrobe checkpoint is not complete merely because TypeScript/build passes. Verify:
+- four-way movement does not crop or drift frames;
+- idle/walk feet stay grounded;
+- movement can continue while aim is active;
+- aim direction can differ from movement direction;
+- fire/muzzle/projectile origin agree;
+- the character does not visibly double-arm or float a weapon;
+- the existing Wardrobe target/combat test still works;
+- Hall and unrelated game flows remain untouched.
