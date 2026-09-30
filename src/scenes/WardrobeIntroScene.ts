@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { adminHubAudio } from '../audio';
 import { installShootersTriggerMobileControls } from '../shooters-trigger-mobile-controls';
 
 type GeneratedV2RigManifest = {
@@ -649,9 +650,11 @@ export class WardrobeLabScene extends Phaser.Scene {
       0.28,
     );
 
-    // Keep the generic overlay hidden. The Arena reference gets its own exact
-    // fighter rig below; the generated v2 operator uses the real separated
-    // arms / weapon / muzzle artwork loaded above.
+    // Keep the generic drawing layers hidden. The Arena reference gets its own
+    // exact fighter rig below; the generated v2 operator uses the authored
+    // separated arms / weapon / muzzle artwork so aiming behaves like the Arena:
+    // the 3.jpg body keeps its limited four-direction movement while only the
+    // weapon-bearing upper layers rotate toward the aim vector.
     this.weaponLayer = this.add.graphics().setVisible(false);
     this.muzzleFlash = this.add.graphics().setVisible(false);
     this.character.add([this.shadow]);
@@ -672,17 +675,27 @@ export class WardrobeLabScene extends Phaser.Scene {
       this.previewSprite.setVisible(true);
     }
     this.bodySprite = this.previewSprite;
+    // 1.jpg remains loaded as the authored combat audit/reference, but it is
+    // no longer rendered over the walking body. Rendering the whole 1.jpg
+    // combat silhouette was the visual split: the artwork rotated away from
+    // the 3.jpg body whenever aim changed. The runtime rig below instead uses
+    // the extracted authored layers against the same grounded body.
     this.generatedCombatOverlay = this.add.sprite(0, 0, 'wardrobe-generated-combat-atlas', 11)
       .setVisible(false)
       .setOrigin(0.5, 1);
     this.character.add(this.generatedCombatOverlay);
-    // Generated combat is one authored silhouette; these legacy layer slots
-    // remain hidden for compatibility and are never rendered.
-    this.armsSprite = this.add.sprite(0, 0, 'wardrobe-generated-player-atlas', 0).setVisible(false);
-    this.weaponSprite = this.add.sprite(0, 0, 'wardrobe-generated-player-atlas', 0).setVisible(false);
-    this.muzzleSprite = this.add.sprite(0, 0, 'wardrobe-generated-player-atlas', 0).setVisible(false);
+
+    this.armsSprite = this.add.sprite(0, 0, 'wardrobe-generated-v2-arms')
+      .setVisible(false)
+      .setOrigin(0.5, 0.5);
+    this.weaponSprite = this.add.sprite(0, 0, 'wardrobe-generated-v2-weapon')
+      .setVisible(false);
+    this.muzzleSprite = this.add.sprite(0, 0, 'wardrobe-generated-v2-muzzle')
+      .setVisible(false)
+      .setOrigin(0, 0.5);
 
     this.character.add([this.previewSprite, this.armsSprite, this.weaponSprite, this.muzzleSprite]);
+    this.configureGeneratedWeaponLayers();
 
     // The Arena reference rig must always be part of the character container.
     // It is hidden for other characters and revealed when PREV/NEXT selects it.
@@ -753,6 +766,10 @@ export class WardrobeLabScene extends Phaser.Scene {
 
     this.createCharacterSelector();
     this.cleanupMobileControls = installShootersTriggerMobileControls();
+    // Keep the global Admin Hub music alive when entering the lab. Browsers may
+    // suspend Web Audio until the first gesture; the shared audio unlock hooks
+    // and mobile controls resume it on that gesture.
+    adminHubAudio.start();
 
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.input.keyboard?.on('keydown-R', () => this.resetCharacter());
@@ -1007,6 +1024,68 @@ export class WardrobeLabScene extends Phaser.Scene {
     }
   }
 
+  private configureGeneratedWeaponLayers() {
+    if (!this.armsSprite || !this.weaponSprite || !this.muzzleSprite) return;
+
+    const weapon = this.generatedRig?.weapon;
+    if (weapon) {
+      const sourceWidth = weapon.sourceWidth || 110;
+      const sourceHeight = weapon.sourceHeight || 146;
+      this.weaponSprite
+        .setScale((weapon.displayWidth / sourceWidth) * (this.generatedBodyScale || 1))
+        .setOrigin(
+          Phaser.Math.Clamp(weapon.grip.x / sourceWidth, 0, 1),
+          Phaser.Math.Clamp(weapon.grip.y / sourceHeight, 0, 1),
+        );
+    }
+
+    this.armsSprite.setScale(this.generatedBodyScale || 1).setOrigin(0.5, 0.5);
+    this.muzzleSprite.setScale(this.generatedBodyScale || 1).setOrigin(
+      this.generatedRig.muzzleLayer.origin.x,
+      this.generatedRig.muzzleLayer.origin.y,
+    );
+  }
+
+  private updateGeneratedSeparatedWeaponPose() {
+    if (!this.generatedRig || !this.armsSprite || !this.weaponSprite || !this.muzzleSprite) return;
+
+    const angle = this.aim.lengthSq() > 0.0025 ? this.aim.angle() : 0;
+    const bodyScale = this.generatedBodyScale || 1;
+    const armsAnchor = this.generatedRig.body.armsAnchor;
+    const weaponAnchor = this.generatedRig.body.weaponGripAnchor;
+
+    // These anchors are authored in bodyScale units. The body never rotates;
+    // only the weapon-bearing layers do, matching the geometric Arena rig.
+    this.armsSprite
+      .setPosition(armsAnchor.x * bodyScale, armsAnchor.y * bodyScale)
+      .setRotation(angle)
+      .setScale(bodyScale);
+
+    const weaponScale = (this.generatedRig.weapon.displayWidth / this.generatedRig.weapon.sourceWidth) * bodyScale;
+    this.weaponSprite
+      .setPosition(weaponAnchor.x * bodyScale, weaponAnchor.y * bodyScale)
+      .setRotation(angle)
+      .setScale(weaponScale);
+
+    const gripX = this.generatedRig.weapon.grip.x;
+    const gripY = this.generatedRig.weapon.grip.y;
+    const muzzleX = this.generatedRig.weapon.muzzle.x;
+    const muzzleY = this.generatedRig.weapon.muzzle.y;
+    const weaponLocalScale = this.generatedRig.weapon.displayWidth / this.generatedRig.weapon.sourceWidth;
+    const localMuzzleX = (muzzleX - gripX) * weaponLocalScale * bodyScale;
+    const localMuzzleY = (muzzleY - gripY) * weaponLocalScale * bodyScale;
+    const rotatedMuzzleX = localMuzzleX * Math.cos(angle) - localMuzzleY * Math.sin(angle);
+    const rotatedMuzzleY = localMuzzleX * Math.sin(angle) + localMuzzleY * Math.cos(angle);
+
+    this.muzzleSprite
+      .setPosition(
+        weaponAnchor.x * bodyScale + rotatedMuzzleX,
+        weaponAnchor.y * bodyScale + rotatedMuzzleY,
+      )
+      .setRotation(angle)
+      .setScale(bodyScale);
+  }
+
   private updateGeneratedCombatOverlay() {
     if (!this.generatedCombatOverlay || !this.generatedRig) return;
     const firing = this.muzzleUntil > 0 || this.generatedAction === 'shoot' ||
@@ -1025,6 +1104,25 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   private getGeneratedCombatMuzzleWorldPoint() {
+    if (this.currentDefinition().source === 'generated' && this.armsSprite.visible && this.weaponSprite.visible) {
+      const bodyScale = this.generatedBodyScale || 1;
+      const angle = this.aim.lengthSq() > 0.0025 ? this.aim.angle() : 0;
+      const weaponAnchor = this.generatedRig.body.weaponGripAnchor;
+      const gripX = this.generatedRig.weapon.grip.x;
+      const gripY = this.generatedRig.weapon.grip.y;
+      const muzzleX = this.generatedRig.weapon.muzzle.x;
+      const muzzleY = this.generatedRig.weapon.muzzle.y;
+      const weaponLocalScale = this.generatedRig.weapon.displayWidth / this.generatedRig.weapon.sourceWidth;
+      const localMuzzleX = (muzzleX - gripX) * weaponLocalScale * bodyScale;
+      const localMuzzleY = (muzzleY - gripY) * weaponLocalScale * bodyScale;
+      const rotatedMuzzleX = localMuzzleX * Math.cos(angle) - localMuzzleY * Math.sin(angle);
+      const rotatedMuzzleY = localMuzzleX * Math.sin(angle) + localMuzzleY * Math.cos(angle);
+      return new Phaser.Math.Vector2(
+        this.character.x + weaponAnchor.x * bodyScale + rotatedMuzzleX,
+        this.character.y + weaponAnchor.y * bodyScale + rotatedMuzzleY,
+      );
+    }
+
     const sprite = this.generatedCombatOverlay?.visible ? this.generatedCombatOverlay : this.previewSprite;
     if (this.generatedCombatOverlay?.visible) {
       // The combat atlas is the same authoritative weapon presentation used by
@@ -1306,6 +1404,7 @@ export class WardrobeLabScene extends Phaser.Scene {
       this.armsSprite.setVisible(false);
       this.weaponSprite.setVisible(false);
       this.muzzleSprite.setVisible(false);
+      this.generatedCombatOverlay?.setVisible(false);
       this.arenaArms.setVisible(true);
       this.arenaWeapon.setVisible(true);
       this.arenaMuzzle.setVisible(this.muzzleUntil > 0);
@@ -1318,6 +1417,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.arenaMuzzle?.setVisible(false);
     this.weaponLayer.clear().setVisible(false);
     this.muzzleFlash.clear().setVisible(false);
+    this.generatedCombatOverlay?.setVisible(false);
 
     if (def.source !== 'generated') {
       this.armsSprite.setVisible(false);
@@ -1326,15 +1426,14 @@ export class WardrobeLabScene extends Phaser.Scene {
       return;
     }
 
-    this.armsSprite.setVisible(false);
-    this.weaponSprite.setVisible(false);
-    this.muzzleSprite.setVisible(false);
-
     const aiming = this.pointerAimActive || this.fireHeld ||
       this.generatedAction === 'aim' || this.generatedAction === 'shoot' ||
       this.generatedAction === 'muzzle' || this.generatedAction === 'recoil';
-    if (aiming) this.updateGeneratedCombatOverlay();
-    else this.generatedCombatOverlay?.setVisible(false);
+
+    this.armsSprite.setVisible(aiming);
+    this.weaponSprite.setVisible(aiming);
+    this.muzzleSprite.setVisible(aiming && this.muzzleUntil > 0);
+    if (aiming) this.updateGeneratedSeparatedWeaponPose();
   }
 
   private fireShot() {
