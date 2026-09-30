@@ -1073,19 +1073,65 @@ export class WardrobeLabScene extends Phaser.Scene {
       ['LEFT', 24, 31],
     ];
     const atlasKey = 'wardrobe-generated-player-atlas';
+    const validFrames = new Set(
+      Array.from({ length: 32 }, (_, frameIndex) => frameIndex)
+        .filter((frameIndex) => this.generatedBodyFrameHasVisiblePixels(frameIndex)),
+    );
+
     for (const def of this.characterDefinitions.filter((entry) => entry.source === 'generated')) {
       for (const [direction, start, end] of generatedAnimations) {
         const key = this.generatedKey(def, direction);
         if (!this.anims.exists(key)) {
+          const frames = Array.from({ length: end - start + 1 }, (_, offset) => start + offset)
+            .filter((frameIndex) => validFrames.has(frameIndex));
+
+          // A bad/empty generated frame must never make the player disappear.
+          // If an authored directional row is entirely empty, keep its first
+          // atlas frame as a defensive visual fallback.
           this.anims.create({
             key,
-            frames: this.anims.generateFrameNumbers(atlasKey, { start, end }),
+            frames: frames.length > 0
+              ? frames.map((frame) => ({ key: atlasKey, frame }))
+              : [{ key: atlasKey, frame: start }],
             frameRate: 8,
             repeat: -1,
           });
         }
       }
     }
+  }
+
+  private generatedBodyFrameHasVisiblePixels(frameIndex: number) {
+    const texture = this.textures.get('wardrobe-generated-player-atlas');
+    const source = texture.getSourceImage() as CanvasImageSource;
+    const frame = texture.get(frameIndex);
+    if (!frame || frame.width !== 172 || frame.height !== 192) return false;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = frame.width;
+    canvas.height = frame.height;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (!context) return true;
+
+    context.clearRect(0, 0, frame.width, frame.height);
+    context.drawImage(
+      source,
+      frame.cutX,
+      frame.cutY,
+      frame.width,
+      frame.height,
+      0,
+      0,
+      frame.width,
+      frame.height,
+    );
+
+    const pixels = context.getImageData(0, 0, frame.width, frame.height).data;
+    for (let index = 3; index < pixels.length; index += 4) {
+      if (pixels[index] > 12) return true;
+    }
+    return false;
+  }
   }
 
   private playCharacterAnimation(walking: boolean) {
@@ -1200,6 +1246,29 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.generatedActionUntil = duration;
   }
 
+  private getGeneratedCombatRigScale() {
+    return this.generatedBodyScale || 1;
+  }
+
+  private getGeneratedCombatMuzzleLocalPoint() {
+    const scale = this.getGeneratedCombatRigScale();
+    const weaponScale = scale * (50 / 110);
+    const angle = this.aim.lengthSq() > 0.0025 ? this.aim.angle() : 0;
+    const muzzleDistance = 110 * weaponScale;
+    return new Phaser.Math.Vector2(
+      7 * scale + Math.cos(angle) * muzzleDistance,
+      -37 * scale + Math.sin(angle) * muzzleDistance,
+    );
+  }
+
+  private getGeneratedCombatMuzzleWorldPoint() {
+    const local = this.getGeneratedCombatMuzzleLocalPoint();
+    return new Phaser.Math.Vector2(
+      this.character.x + local.x,
+      this.character.y + local.y,
+    );
+  }
+
   private updateWeaponLayer() {
     const generated = this.currentDefinition().source === 'generated';
     const aiming = this.pointerAimActive || this.fireHeld || this.muzzleUntil > 0 ||
@@ -1208,27 +1277,27 @@ export class WardrobeLabScene extends Phaser.Scene {
 
     if (generated && aiming) {
       const angle = this.aim.lengthSq() > 0.0025 ? this.aim.angle() : 0;
-      const scale = this.generatedBodyScale || 1;
-      const weaponScale = scale * (50 / 110);
-      const muzzleDistance = 110 * weaponScale;
+      const scale = this.getGeneratedCombatRigScale();
 
-      // All three transparent layers share the player's Container transform.
-      // Arms and weapon rotate together around their authored attachment
-      // points. The muzzle sits at the manifest's exact weapon muzzle point.
+      // One attachment contract drives both presentation and projectile
+      // origin. The weapon grip and muzzle are never independently guessed.
       this.generatedArmsLayer
         .setPosition(-7 * scale, -40 * scale)
         .setScale(scale)
         .setRotation(angle)
         .setFlipX(false)
         .setVisible(true);
+
       this.generatedWeaponLayer
         .setPosition(7 * scale, -37 * scale)
-        .setScale(weaponScale)
+        .setScale(scale * (50 / 110))
         .setRotation(angle)
         .setFlipX(false)
         .setVisible(true);
+
+      const muzzle = this.getGeneratedCombatMuzzleLocalPoint();
       this.generatedMuzzleLayer
-        .setPosition(7 * scale + Math.cos(angle) * muzzleDistance, -37 * scale + Math.sin(angle) * muzzleDistance)
+        .setPosition(muzzle.x, muzzle.y)
         .setScale(scale)
         .setRotation(angle)
         .setVisible(this.muzzleUntil > 0);
@@ -1262,6 +1331,8 @@ export class WardrobeLabScene extends Phaser.Scene {
         this.character.y + Math.sin(angle) * 42,
       );
     }
+    // fireShot and the rendered muzzle now share the exact same local
+    // attachment point. This removes the old center-origin projectile mismatch.
     const velocity = this.aim.clone().normalize().scale(this.projectileSpeed);
     const graphics = this.add.circle(origin.x, origin.y, 4, 0xf0dfb6, 1).setDepth(60);
     this.shots.push({
