@@ -1219,7 +1219,7 @@ export class WardrobeLabScene extends Phaser.Scene {
         .setPosition(-7 * scale, -40 * scale)
         .setScale(scale)
         .setRotation(angle)
-        .setFlipX(this.aim.x < 0)
+        .setFlipX(false)
         .setVisible(true);
       this.generatedWeaponLayer
         .setPosition(7 * scale, -37 * scale)
