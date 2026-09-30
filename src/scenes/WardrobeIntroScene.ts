@@ -326,16 +326,16 @@ const WARDROBE_PLAYER_DEFINITION: WardrobeCharacterDefinition = {
   basePath: '/assets/wardrobe/generated-v2',
   displaySize: 80,
   targetVisibleHeight: 60,
-  frameWidth: 176,
+  frameWidth: 172,
   frameHeight: 192,
   originY: 1,
-  embeddedWeapon: false,
+  embeddedWeapon: true,
 };
 
 const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
   {
     id: 'arena_player',
-    name: 'SHOOTERS TRIGGER PLAYER · GENERATED PLAYER · V2 · 2.JPG',
+    name: 'SHOOTERS TRIGGER PLAYER · GENERATED PLAYER · 3.JPG MOVEMENT',
     source: 'generated',
     basePath: '/assets/wardrobe/generated-v2',
     displaySize: 80,
@@ -658,7 +658,7 @@ export class WardrobeLabScene extends Phaser.Scene {
       fontStyle: 'bold',
       color: '#f4f1df',
     }).setScrollFactor(0).setDepth(101);
-    this.add.text(18, 42, 'ONE AUTHORITATIVE PLAYER · 2.JPG SOURCE MATERIAL · DATA-DRIVEN AIM / FIRE RIG', {
+    this.add.text(18, 42, 'ONE AUTHORITATIVE PLAYER · 3.JPG MOVEMENT + 1.JPG COMBAT · DATA-DRIVEN PRESENTATION', {
       fontFamily: 'monospace',
       fontSize: '7px',
       fontStyle: 'bold',
@@ -1346,7 +1346,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     makeButton(width / 2 - sideOffset, '‹ PREV', -1);
     makeButton(width / 2 + sideOffset, 'NEXT ›', 1);
 
-    this.add.text(width / 2, y + (compact ? 44 : 22), compact ? 'SWIPE/TOUCH TO COMPARE SPRITES' : 'OTHER SPRITES = VISUAL GAME TESTS · PLAYER = 1.JPG PIPELINE', {
+    this.add.text(width / 2, y + (compact ? 44 : 22), compact ? 'SWIPE/TOUCH TO COMPARE SPRITES' : 'OTHER SPRITES = VISUAL GAME TESTS · PLAYER = 3.JPG MOVEMENT / 1.JPG COMBAT', {
       fontFamily: 'monospace',
       fontSize: compact ? '5px' : '6px',
       color: '#8fb39b',
