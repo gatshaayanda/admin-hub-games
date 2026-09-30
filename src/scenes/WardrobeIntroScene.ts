@@ -91,12 +91,12 @@ export class WardrobeIntroScene extends Phaser.Scene {
     this.load.spritesheet(
       'wardrobe-generated-player-atlas',
       '/assets/wardrobe/generated-v2/player-body-atlas.png',
-      { frameWidth: 176, frameHeight: 192 },
+      { frameWidth: 172, frameHeight: 192 },
     );
     this.load.spritesheet(
       'wardrobe-generated-combat-atlas',
       '/assets/wardrobe/generated-v2/player-combat-atlas.png',
-      { frameWidth: 172, frameHeight: 192 },
+      { frameWidth: 176, frameHeight: 192 },
     );
     this.load.json('wardrobe-generated-v2-manifest', '/assets/wardrobe/generated-v2/manifest.json');
   }
