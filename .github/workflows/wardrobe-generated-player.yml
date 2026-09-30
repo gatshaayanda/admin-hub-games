@@ -1,5 +1,6 @@
 name: Build Wardrobe Generated Player Assets
 # Keep this workflow independently triggerable after installation on main.
+# The workflow rebuilds the generated-v2 atlas on every main push so source-sheet changes cannot leave stale PNGs.
 
 on:
   push:
