@@ -5368,3 +5368,18 @@ After each generated-art change, verify on a real phone:
 7. confirm Arena reference still matches its established mechanical contract.
 
 Unexpected visual result = STOP → inspect the actual asset/frame/crop/transform before changing mechanics.
+
+
+## Wardrobe / Generated Player — Layered Combat Rig Checkpoint
+
+- The generated body atlas remains authoritative for movement: `3.jpg` -> `public/assets/wardrobe/generated-v2/player-body-atlas.png`, 8 columns x 4 rows, 172x192 cells, 32 body frames.
+- The generated v2 manifest's `arms`, `weapon`, and `muzzle` files are transparent extracted layers with explicit source dimensions and attachment geometry. They are now valid runtime artwork, not merely audit outputs.
+- Runtime generated combat architecture is: **3.jpg body + transparent arms + transparent weapon + transparent muzzle**. These children live in the same Phaser Container as the body, so their local transforms follow the player while their aim rig rotates independently.
+- Manifest anchors are authoritative: body arms anchor (-7,-40), weapon grip anchor (7,-37), weapon grip (24.2,75.92) and muzzle (110,75.92) in weapon source pixels. Weapon display width is 50px, so the runtime weapon scale derives from the manifest rather than arbitrary offsets.
+- The projectile contract remains unchanged: generated shots originate 42px along the normalized aim vector, projectile speed 520, lifetime 1100ms, swept collision and Arena hit ordering remain authoritative.
+- `1.jpg` / `player-combat-atlas.png` remains valuable authored combat reference artwork, but the integrated silhouette must not be cropped and continuously rotated as a substitute for independent layers. It can be revisited later for precomposed directional states if inspection proves a frame safe.
+- Arena geometric arms/weapon/muzzle remain the mechanical and visual fallback/reference for the Arena character only. Do not render Arena geometry simultaneously with generated transparent combat layers.
+- Phaser Containers are appropriate for this composition because child positions are relative to the player and parent transforms propagate to children. Keep the hierarchy shallow for mobile performance.
+- If additional generated combat states are needed, prefer adding/authoring independent transparent directional layers or precomposed atlas frames. Do not compensate for missing artwork with random world-space offsets, enlarged hitboxes, or arbitrary rotation of integrated full-character artwork.
+- Verification after this checkpoint must cover: generated DOWN/UP/LEFT/RIGHT movement, movement while aiming, all four cardinal aim directions, diagonal aim, move one direction while firing another, left/right mirroring, visible muzzle vs projectile origin, no duplicate body, no spinning/detached weapon, and Arena reference unchanged.
+- Unexpected result = **STOP -> inspect the actual frame/layer/anchor/transform -> then change one controlled thing**.
