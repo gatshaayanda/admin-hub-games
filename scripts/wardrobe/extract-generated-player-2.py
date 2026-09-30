@@ -122,13 +122,19 @@ def main():
     if not COMBAT_SOURCE.exists():
         raise SystemExit(f"Missing combat source: {COMBAT_SOURCE}")
     combat_sheet = Image.open(COMBAT_SOURCE).convert("RGB")
-    if combat_sheet.size != (COLS * CELL_W, ROWS * CELL_H):
-        raise SystemExit(f"Unexpected combat sheet size {combat_sheet.size}; expected {(COLS*CELL_W, ROWS*CELL_H)}")
+    COMBAT_CELL_W = 176
+    COMBAT_COLS = 8
+    COMBAT_ROWS = 4
+    if combat_sheet.size != (COMBAT_COLS * COMBAT_CELL_W, COMBAT_ROWS * CELL_H):
+        raise SystemExit(f"Unexpected combat sheet size {combat_sheet.size}; expected {(COMBAT_COLS*COMBAT_CELL_W, COMBAT_ROWS*CELL_H)}")
     combat_atlas = Image.new("RGBA", combat_sheet.size, (0, 0, 0, 0))
-    for i in range(COLS * ROWS):
-        frame = clean_cell(combat_sheet, i)
-        x = (i % COLS) * CELL_W
-        y = (i // COLS) * CELL_H
+    for i in range(COMBAT_COLS * COMBAT_ROWS):
+        x = (i % COMBAT_COLS) * COMBAT_CELL_W
+        y = (i // COMBAT_COLS) * CELL_H
+        combat_cell = combat_sheet.crop((x, y, x + COMBAT_CELL_W, y + CELL_H)).convert("RGB")
+        alpha, bbox = largest_central_component(foreground_mask(combat_cell))
+        frame = combat_cell.convert("RGBA")
+        frame.putalpha(alpha)
         combat_atlas.alpha_composite(frame, (x, y))
     combat_atlas.save(OUT / "player-combat-atlas.png", optimize=True)
 
@@ -158,11 +164,10 @@ def main():
         "grid": {"columns": COLS, "rows": ROWS, "cellWidth": CELL_W, "cellHeight": CELL_H},
         "bodyCells": BODY_CELLS,
         "layers": {k: f"player-{k}.png" for k in REGIONS},
-    "combat": {"source": "public/assets/wardrobe/incoming/1.jpg", "atlas": "player-combat-atlas.png", "frameWidth": 176, "frameHeight": 192, "aimFrame": 11, "fireFrame": 12, "readyFrame": 13, "recoilFrame": 15},
         "combat": {
             "source": "public/assets/wardrobe/incoming/1.jpg",
             "atlas": "player-combat-atlas.png",
-            "frameWidth": CELL_W,
+            "frameWidth": COMBAT_CELL_W,
             "frameHeight": CELL_H,
             "aimFrame": 11,
             "fireFrame": 12,
