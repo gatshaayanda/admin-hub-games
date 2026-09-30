@@ -43,7 +43,9 @@ function startHall() {
     registerPwa();
 
     const config: Phaser.Types.Core.GameConfig = {
-      type: Phaser.AUTO,
+      type: (window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0)
+        ? Phaser.CANVAS
+        : Phaser.AUTO,
       parent: 'app',
       width: 960,
       height: 540,
