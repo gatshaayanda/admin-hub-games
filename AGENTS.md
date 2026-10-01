@@ -5521,3 +5521,15 @@ Do not remove the existing Wardrobe character choices merely because the generat
 
 If mobile performance requires a reduced preload set, treat that as a separate, explicitly verified performance decision. The comparison roster should be restored when the performance constraint is no longer necessary.
 
+
+
+## Current Wardrobe 4.jpg Runtime Checkpoint
+
+- **Current source of truth:** `3.jpg` remains the generated player's four-way movement body; `4.jpg` now supplies the independent eight-way weapon/arms aim layer.
+- **4.jpg layout:** 8 columns × 5 rows of 172×192 cells. Rows 0–3 are the four-way body atlas; row 4 contains authored weapon/arms poses in this order: DOWN, DOWN-RIGHT, RIGHT, UP-RIGHT, UP, UP-LEFT, LEFT, DOWN-LEFT.
+- **Runtime:** the bottom row is extracted in-browser into transparent Phaser canvas textures. Background removal is edge-connected flood fill so enclosed marker details are preserved.
+- **Mechanical contract:** movement direction controls the body only; aim direction controls the weapon layer only. Movement and aim are independent. Projectile velocity remains the true aim vector.
+- **Projectile origin:** the active 4.jpg weapon frame's visible pixels determine the muzzle point. The same derived muzzle point is used for the visible muzzle flash and projectile spawn, so the shot cannot originate from an unrelated fixed offset.
+- **Legacy assets:** `player-combat-atlas.png`, `player-arms.png`, `player-weapon.png`, and `player-muzzle.png` remain available as audit/reference assets. They are not the active generated aim presentation.
+- **Arena reference:** the geometric Arena rig remains unchanged and is still the structural comparison baseline.
+- **Mobile:** the Wardrobe comparison roster remains intact; generated and Arena reference remain available on touch devices. No keyboard-only dependency is introduced.
