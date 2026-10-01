@@ -1382,13 +1382,15 @@ export class WardrobeLabScene extends Phaser.Scene {
     const def = this.currentDefinition();
     const vx = this.visualMove.x;
     const vy = this.visualMove.y;
-    const facingX = this.pointerAimActive || this.fireHeld ? this.aim.x : vx;
-    const facingY = this.pointerAimActive || this.fireHeld ? this.aim.y : vy;
-    let direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT' = 'DOWN';
-    if (Math.abs(facingX) > Math.abs(facingY) && Math.abs(facingX) > 0.35) {
-      direction = facingX < 0 ? 'LEFT' : 'RIGHT';
-    } else if (Math.abs(facingY) > 0.35) {
-      direction = facingY < 0 ? 'UP' : 'DOWN';
+    // 4.jpg BODY is clean movement artwork. Aim must never turn the body.
+    // Keep movement/facing as the body contract even while the player aims.
+    let direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT' = this.direction;
+    if (Math.abs(vx) > 0.08 || Math.abs(vy) > 0.08) {
+      if (Math.abs(vx) > Math.abs(vy) && Math.abs(vx) > 0.35) {
+        direction = vx < 0 ? 'LEFT' : 'RIGHT';
+      } else if (Math.abs(vy) > 0.35) {
+        direction = vy < 0 ? 'UP' : 'DOWN';
+      }
     }
 
     this.previewSprite.setVisible(true).setRotation(0).setFlipX(false).setTint(0xffffff);
