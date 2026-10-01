@@ -869,9 +869,82 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   private prepareGeneratedCharacterTextures() {
-    // Generated v2 body remains the authoritative four-way movement atlas.
-    // fitCharacterSprite() measures the actual visible alpha bounds so every
-    // frame shares a grounded baseline.
+    const source = this.textures.get('wardrobe-generated-v2-atlas-4')?.getSourceImage() as HTMLImageElement | undefined;
+    if (!source || source.width < 1376 || source.height < 960) {
+      throw new Error('Wardrobe generated character 4.jpg must contain an 8x5 172x192 atlas');
+    }
+
+    // 4.jpg is now the visual source of truth. Its top four rows become the
+    // body atlas, replacing the old 3.jpg-derived armed body so the independent
+    // weapon layer cannot double-render a second marker.
+    const canvas = document.createElement('canvas');
+    canvas.width = 1376;
+    canvas.height = 768;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (!context) throw new Error('Unable to prepare generated body canvas');
+
+    context.drawImage(source, 0, 0, 1376, 768, 0, 0, 1376, 768);
+
+    for (let row = 0; row < 4; row += 1) {
+      for (let column = 0; column < 8; column += 1) {
+        this.keyOutGeneratedCell(context, column * 172, row * 192, 172, 192);
+      }
+    }
+
+    if (this.textures.exists('wardrobe-generated-player-atlas')) {
+      this.textures.remove('wardrobe-generated-player-atlas');
+    }
+    this.textures.addCanvas('wardrobe-generated-player-atlas', canvas);
+  }
+
+  private keyOutGeneratedCell(
+    context: CanvasRenderingContext2D,
+    startX: number,
+    startY: number,
+    width: number,
+    height: number,
+  ) {
+    const image = context.getImageData(startX, startY, width, height);
+    const pixels = image.data;
+    const bg = [pixels[0], pixels[1], pixels[2]];
+    const visited = new Uint8Array(width * height);
+    const queue: number[] = [];
+    const tolerance = 34;
+    const similar = (offset: number) =>
+      Math.abs(pixels[offset] - bg[0]) <= tolerance &&
+      Math.abs(pixels[offset + 1] - bg[1]) <= tolerance &&
+      Math.abs(pixels[offset + 2] - bg[2]) <= tolerance;
+
+    const push = (x: number, y: number) => {
+      if (x < 0 || x >= width || y < 0 || y >= height) return;
+      const index = y * width + x;
+      if (visited[index]) return;
+      visited[index] = 1;
+      if (!similar(index * 4)) return;
+      queue.push(index);
+    };
+
+    for (let x = 0; x < width; x += 1) {
+      push(x, 0);
+      push(x, height - 1);
+    }
+    for (let y = 0; y < height; y += 1) {
+      push(0, y);
+      push(width - 1, y);
+    }
+
+    while (queue.length) {
+      const index = queue.pop()!;
+      const x = index % width;
+      const y = Math.floor(index / width);
+      pixels[index * 4 + 3] = 0;
+      push(x - 1, y);
+      push(x + 1, y);
+      push(x, y - 1);
+      push(x, y + 1);
+    }
+
+    context.putImageData(image, startX, startY);
   }
 
   private prepareGeneratedWeaponTextures() {
@@ -1435,9 +1508,8 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.generatedMuzzleLayer?.setVisible(false);
 
     // Keep the two visual contracts completely isolated:
-    // - GENERATED: the armed 3.jpg atlas is the only visible player artwork.
-    // - ARENA: the structural Arena body + weapon rig is the only visible
-    //   reference artwork.
+    // - GENERATED: 4.jpg body + active 4.jpg eight-way weapon frame.
+    // - ARENA: structural Arena body + weapon rig reference.
     // Phaser projectile/collision mechanics remain shared.
     if (generated) {
       this.arenaPoseA?.setVisible(false);
