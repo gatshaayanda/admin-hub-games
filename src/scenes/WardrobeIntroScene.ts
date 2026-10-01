@@ -1273,12 +1273,29 @@ export class WardrobeLabScene extends Phaser.Scene {
 
   private getGeneratedCombatMuzzleLocalPoint() {
     const scale = this.getGeneratedCombatRigScale();
-    const weaponScale = scale * (50 / 110);
-    const angle = this.aim.lengthSq() > 0.0025 ? this.aim.angle() : 0;
-    const muzzleDistance = 110 * weaponScale;
+    // 3.jpg contains the weapon in every directional movement frame. The
+    // manifest gives the authored weapon grip and muzzle in source pixels:
+    // 85.8px apart on a 110px-wide weapon displayed at 50px. That is a
+    // 39px muzzle offset from the grip, before bodyScale is applied.
+    const muzzleDistance = (110 - 24.2) * (50 / 110) * scale;
+    const gripX = 7 * scale;
+    const gripY = -37 * scale;
+
+    // The artwork itself is only authored in four cardinal gun directions.
+    // Aim can be arbitrary, but it must never rotate the muzzle anchor around
+    // the body. The projectile may travel diagonally; its visible origin stays
+    // attached to the gun in the exact directional frame being rendered.
+    const direction = this.direction;
+    const muzzleDirection = {
+      DOWN: new Phaser.Math.Vector2(0, 1),
+      UP: new Phaser.Math.Vector2(0, -1),
+      RIGHT: new Phaser.Math.Vector2(1, 0),
+      LEFT: new Phaser.Math.Vector2(-1, 0),
+    }[direction];
+
     return new Phaser.Math.Vector2(
-      7 * scale + Math.cos(angle) * muzzleDistance,
-      -37 * scale + Math.sin(angle) * muzzleDistance,
+      gripX + muzzleDirection.x * muzzleDistance,
+      gripY + muzzleDirection.y * muzzleDistance,
     );
   }
 
