@@ -5521,3 +5521,16 @@ Do not remove the existing Wardrobe character choices merely because the generat
 
 If mobile performance requires a reduced preload set, treat that as a separate, explicitly verified performance decision. The comparison roster should be restored when the performance constraint is no longer necessary.
 
+
+## Wardrobe / 4.jpg Runtime Checkpoint — 2026-10-01
+
+- The actual 4.jpg was inspected directly before runtime wiring.
+- Verified image geometry is 1408x768 = 8 columns x 6 rows of 176x128 cells.
+- Rows 0-3 are the 32 body frames. Their authored direction order is DOWN, RIGHT, UP, LEFT.
+- Rows 4-5 contain 16 isolated arms + paintball-marker poses. They are not a fifth body row and must not be treated as 172x192 or 176x192 frames.
+- Runtime now registers explicit named frames from the mixed-layout source instead of loading 4.jpg as a uniform spritesheet.
+- Generated body uses the first 32 4.jpg frames. Aim is independent: an isolated arms/marker frame rotates around its inspected grip anchor while the body remains movement-driven.
+- Projectile origin is derived from the same transformed weapon/muzzle geometry used by the visible weapon presentation.
+- The old 3.jpg armed-body runtime is no longer authoritative for the generated character. Its extracted/reference assets remain available and are not deleted.
+- Build and Verify GitHub Actions both passed for commit 81d46955c7fd0af466c8d747c9cab0d52850d52d.
+- Required verification discipline: after any future artwork change, inspect the actual image dimensions/layout first; never trust a generator's claimed grid. Then implement, build, and visually inspect before calling the change stable.
