@@ -1,6 +1,25 @@
 import Phaser from 'phaser';
 import { installShootersTriggerMobileControls } from '../shooters-trigger-mobile-controls';
 
+type Generated4Manifest = {
+  id: string;
+  source: { filename: string; url: string; sha: string; width: number; height: number };
+  grid: { columns: number; rows: number; cellWidth: number; cellHeight: number };
+  body: {
+    frameCount: number;
+    groups: Record<'DOWN' | 'UP' | 'LEFT' | 'RIGHT', number[]>;
+    interpretation: string;
+  };
+  combat: {
+    frameCount: number;
+    frameIndices: number[];
+    groups: { RIGHT_PRESENTATION: number[]; LEFT_PRESENTATION: number[] };
+    interpretation: string;
+    runtime: 'audit-only';
+  };
+  anchors: { bodyGrounding: string; combatGrip: null; muzzle: null };
+};
+
 type GeneratedV2RigManifest = {
   source: string;
   grid: {
@@ -110,6 +129,8 @@ export class WardrobeIntroScene extends Phaser.Scene {
     // characters needed to inspect this lab. Do not make a phone download,
     // decode and texture-upload every comparison pack before the player can
     // see the actual character.
+    this.load.json('wardrobe-generated-4-manifest', '/assets/wardrobe/generated-4/manifest.json');
+    this.load.image('wardrobe-generated-4-atlas', WARDROBE_GENERATED4_SOURCE_URL);
     this.load.spritesheet(
       'wardrobe-generated-player-atlas',
       '/assets/wardrobe/generated-v2/player-body-atlas.png',
@@ -333,7 +354,7 @@ export class WardrobeIntroScene extends Phaser.Scene {
   }
 }
 
-type WardrobeCharacterSource = 'gegx' | 'soldier' | 'robot' | 'generated' | 'arena';
+type WardrobeCharacterSource = 'gegx' | 'soldier' | 'robot' | 'generated' | 'generated4' | 'arena';
 
 type WardrobeCharacterDefinition = {
   id: string;
@@ -349,6 +370,9 @@ type WardrobeCharacterDefinition = {
   robotColor?: 'Blue' | 'Red';
 };
 
+const WARDROBE_GENERATED4_SOURCE_URL =
+  'https://raw.githubusercontent.com/gatshaayanda/admin-hub-games/9a1973c5977dc4a68fabd549f02f56a0dd902701/public/assets/wardrobe/generated-v2/4.jpg';
+
 const WARDROBE_PLAYER_DEFINITION: WardrobeCharacterDefinition = {
   id: 'arena_player',
   name: 'SHOOTERS TRIGGER PLAYER · GENERATED PLAYER',
@@ -363,6 +387,18 @@ const WARDROBE_PLAYER_DEFINITION: WardrobeCharacterDefinition = {
 };
 
 const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
+  {
+    id: 'generated_4',
+    name: 'SHOOTERS TRIGGER PLAYER · 4.JPG · STRUCTURAL CONTRACT',
+    source: 'generated4',
+    basePath: '/assets/wardrobe/generated-4',
+    displaySize: 80,
+    targetVisibleHeight: 60,
+    frameWidth: 176,
+    frameHeight: 128,
+    originY: 1,
+    embeddedWeapon: false,
+  },
   {
     id: 'arena_player',
     name: 'SHOOTERS TRIGGER PLAYER · GENERATED PLAYER · 3.JPG MOVEMENT',
@@ -518,6 +554,7 @@ export class WardrobeLabScene extends Phaser.Scene {
   }> = [];
   private cleanupMobileControls?: () => void;
   private generatedRig!: GeneratedV2RigManifest['rig'];
+  private generated4Manifest!: Generated4Manifest;
   private generatedCombat!: GeneratedV2RigManifest['combat'];
   private generatedBodyScale = 0;
   private generatedBodyOriginY = 1;
@@ -620,6 +657,11 @@ export class WardrobeLabScene extends Phaser.Scene {
     }
 
     this.prepareGeneratedCharacterTextures();
+    this.prepareGenerated4TextureFrames();
+    this.generated4Manifest = this.cache.json.get('wardrobe-generated-4-manifest') as Generated4Manifest;
+    if (!this.generated4Manifest?.body || this.generated4Manifest.grid.cellWidth !== 176 || this.generated4Manifest.grid.cellHeight !== 128) {
+      throw new Error('Wardrobe 4.jpg manifest is missing or has invalid body dimensions');
+    }
     const generatedManifest = this.cache.json.get('wardrobe-generated-v2-manifest') as GeneratedV2RigManifest | undefined;
     if (!generatedManifest?.rig) {
       throw new Error('Wardrobe generated-v2 attachment manifest is missing');
@@ -865,6 +907,17 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.updateLabels();
   }
 
+  private prepareGenerated4TextureFrames() {
+    const texture = this.textures.get('wardrobe-generated-4-atlas');
+    if (!texture || texture.frameTotal > 48) return;
+    texture.firstFrame = 0;
+    for (let index = 0; index < 48; index += 1) {
+      const x = (index % 8) * 176;
+      const y = Math.floor(index / 8) * 128;
+      texture.add(index, 0, x, y, 176, 128);
+    }
+  }
+
   private prepareGeneratedCharacterTextures() {
     // Generated v2 is a real RGBA spritesheet. fitCharacterSprite() measures
     // the actual visible alpha bounds so every frame shares a grounded baseline.
@@ -1066,6 +1119,23 @@ export class WardrobeLabScene extends Phaser.Scene {
       }
     }
 
+    if (this.textures.exists('wardrobe-generated-4-atlas')) {
+      for (const def of this.characterDefinitions.filter((entry) => entry.source === 'generated4')) {
+        for (const direction of ['DOWN', 'UP', 'LEFT', 'RIGHT'] as const) {
+          const key = this.generatedKey(def, direction);
+          if (!this.anims.exists(key)) {
+            const frames = this.generated4Manifest.body.groups[direction];
+            this.anims.create({
+              key,
+              frames: frames.map((frame) => ({ key: 'wardrobe-generated-4-atlas', frame })),
+              frameRate: 8,
+              repeat: -1,
+            });
+          }
+        }
+      }
+    }
+
     const generatedAnimations: Array<[string, number, number]> = [
       ['DOWN', 0, 7],
       ['UP', 8, 15],
@@ -1140,6 +1210,11 @@ export class WardrobeLabScene extends Phaser.Scene {
 
     // Hard visual isolation: exactly one body rig may be visible at a time.
     // Generated = 3.jpg body only. Arena = Arena body + Arena weapon rig.
+    if (def.source === 'generated4') {
+      this.playGenerated4CharacterAnimation(walking);
+      return;
+    }
+
     if (def.source === 'generated') {
       this.arenaPoseA.setVisible(false);
       this.arenaPoseB.setVisible(false);
@@ -1261,6 +1336,37 @@ export class WardrobeLabScene extends Phaser.Scene {
 
   }
 
+  private playGenerated4CharacterAnimation(walking: boolean) {
+    const def = this.currentDefinition();
+    const vx = this.visualMove.x;
+    const vy = this.visualMove.y;
+    const facingX = this.pointerAimActive || this.fireHeld ? this.aim.x : vx;
+    const facingY = this.pointerAimActive || this.fireHeld ? this.aim.y : vy;
+    let direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT' = 'DOWN';
+    if (Math.abs(facingX) > Math.abs(facingY) && Math.abs(facingX) > 0.35) {
+      direction = facingX < 0 ? 'LEFT' : 'RIGHT';
+    } else if (Math.abs(facingY) > 0.35) {
+      direction = facingY < 0 ? 'UP' : 'DOWN';
+    }
+
+    this.previewSprite.setVisible(true).setRotation(0).setFlipX(false).setTint(0xffffff);
+    const key = this.generatedKey(def, direction);
+    if (walking) {
+      this.previewSprite.play(key, true);
+    } else {
+      this.previewSprite.stop();
+      const frames = this.generated4Manifest.body.groups[direction];
+      this.previewSprite.setFrame(frames[0]);
+    }
+    this.fitCharacterSprite(this.previewSprite, def);
+
+    // 4.jpg combat cells are deliberately audit-only. Never stack them onto
+    // the body during gameplay until their pivots and aim semantics are authored.
+    this.generatedArmsLayer?.setVisible(false);
+    this.generatedWeaponLayer?.setVisible(false);
+    this.generatedMuzzleLayer?.setVisible(false);
+  }
+
   private triggerGeneratedAction(action: 'aim' | 'shoot' | 'muzzle' | 'recoil' | 'hit' | 'headshot' | 'death' | 'dodge' | 'respawn', duration: number) {
     if (this.currentDefinition().source !== 'generated') return;
     this.generatedAction = action;
@@ -1323,7 +1429,7 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   private updateWeaponLayer() {
-    const generated = this.currentDefinition().source === 'generated';
+    const generated = this.currentDefinition().source === 'generated' || this.currentDefinition().source === 'generated4';
     const aiming = this.pointerAimActive || this.fireHeld || this.muzzleUntil > 0 ||
       this.generatedAction === 'aim' || this.generatedAction === 'shoot' ||
       this.generatedAction === 'muzzle' || this.generatedAction === 'recoil';
@@ -1366,6 +1472,12 @@ export class WardrobeLabScene extends Phaser.Scene {
 
     this.weaponLayer.clear().setVisible(false);
     this.muzzleFlash.clear();
+    if (this.currentDefinition().source === 'generated4') {
+      // 4.jpg lower combat cells are audit-only; do not invent a muzzle anchor.
+      this.weaponLayer.setVisible(false);
+      this.muzzleFlash.setVisible(false);
+      return;
+    }
     if (generated && aiming && this.muzzleUntil > 0) {
       const angle = this.aim.lengthSq() > 0.0025 ? this.aim.angle() : 0;
       const muzzle = generated
@@ -1387,6 +1499,11 @@ export class WardrobeLabScene extends Phaser.Scene {
     // origin, rather than the Arena reference's 42px muzzle point.
     // Arena keeps its original 42px mechanical contract.
     const generated = this.currentDefinition().source === 'generated';
+    if (this.currentDefinition().source === 'generated4') {
+      // 4.jpg has no verified muzzle anchor. Keep the audit character out of the
+      // projectile test rather than firing from an invented offset.
+      return;
+    }
     const angle = this.aim.lengthSq() > 0.0025 ? this.aim.angle() : 0;
     const origin = generated
       ? this.getGeneratedCombatMuzzleWorldPoint()
