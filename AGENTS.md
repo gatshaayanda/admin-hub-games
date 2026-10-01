@@ -5702,3 +5702,60 @@ If a generated character looks wrong:
 **STOP → identify the exact frame/layer/pivot/anchor that is wrong → inspect the source artwork → correct the asset contract → retest.**
 
 Do not respond to visual failures by stacking another sprite, adding random offsets, enlarging hitboxes, continuously rotating an integrated character crop, or changing Arena mechanics.
+
+
+## Wardrobe / 4.jpg Exact Cell Contract — 2026-10-01
+
+The archived 4.jpg was inspected at pixel level, not by trusting the generator description.
+
+### Exact source geometry
+
+- 1408 × 768 pixels
+- 8 columns × 6 rows
+- every cell is exactly 176 × 128
+- cells 0–31 are BODY
+- cells 32–47 are isolated ARMS + paintball-marker artwork
+
+### BODY semantic layout
+
+The 32 body cells are four directional groups of eight animation frames:
+
+- DOWN: 0,1,2,3,16,17,18,19
+- UP: 4,5,6,7,20,21,22,23
+- RIGHT: 8–15
+- LEFT: 24–31
+
+Rows 0 and 2 each contain four DOWN/front frames followed by four UP/back frames. Row 1 is the eight-frame RIGHT walking sequence. Row 3 is the eight-frame LEFT walking sequence.
+
+This is a materially better contract than the previous assumption that each complete row represented one direction.
+
+### Lower 16 frames: exact conclusion
+
+The lower 16 cells are **not 16 aim sectors**.
+
+- row 4 / frames 32–39 = eight isolated arms + marker poses in the right-side presentation family;
+- row 5 / frames 40–47 = eight isolated arms + marker poses in the left-side presentation family;
+- barrel directions repeat within each row;
+- the frames are not ordered monotonically by angle;
+- there is no verified common grip pivot/muzzle anchor shared by all 16 frames.
+
+Therefore they are classified as **combat audit artwork**, not a runtime aim atlas.
+
+Do not continuously rotate these raster frames. Phaser can rotate Game Objects and Containers, but the source artwork does not provide the semantic/pivot contract required to make arbitrary rotation visually correct. See the Phaser Texture/Frame, Container and Origin documentation when changing this contract.
+
+### 4.jpg runtime rule
+
+4.jpg body artwork is approved for Wardrobe movement testing.
+
+4.jpg lower combat artwork is displayed only as an audit set until a future generated asset supplies:
+- named aim sectors;
+- verified sector ordering;
+- per-frame grip anchor;
+- per-frame muzzle anchor;
+- clear fire/recoil relationship.
+
+The Shooter Trigger mechanical contract remains unchanged.
+
+### Immutable source note
+
+The exact inspected 4.jpg currently exists in the archived 4.jpg attempt commit. The Wardrobe manifest records its immutable source URL and blob SHA so the visual lab can inspect the exact artifact without asking the user to re-upload it. When the asset is formally promoted into the repository asset tree, the manifest source can be changed to the local asset without changing its semantic contract.
