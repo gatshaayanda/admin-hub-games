@@ -5521,14 +5521,3 @@ Do not remove the existing Wardrobe character choices merely because the generat
 
 If mobile performance requires a reduced preload set, treat that as a separate, explicitly verified performance decision. The comparison roster should be restored when the performance constraint is no longer necessary.
 
-
-
-## Current Wardrobe 4.jpg Runtime Checkpoint
-
-- **Verified asset reality:** `public/assets/wardrobe/generated-v2/4.jpg` is **1408×768**, i.e. **8 columns × 4 rows of 176×192**. The repository file does **not** contain the planned fifth row of eight independent weapon poses.
-- **Current runtime contract:** `4.jpg` is used as the generated body / embedded-weapon movement atlas. The runtime must match the actual 8×4 / 176×192 file and must never assume an 8×5 layout.
-- **Blank-screen failure already fixed:** the previous runtime assumed 8×5 / 172×192 and threw during Wardrobe scene creation. That assumption is explicitly prohibited until a real 8×5 asset is checked into the repository.
-- **Aim work:** the independent 8-way weapon layer is **not claimed complete** from `4.jpg`. Existing `1.jpg` combat artwork and extracted arm/weapon/muzzle assets remain audit/reference material until an actual independent-aim source is verified.
-- **Mechanical contract:** movement direction controls the body; when an independently authored weapon layer is actually present, aim direction must control that layer only. Projectile velocity remains the true aim vector.
-- **Arena reference:** the geometric Arena rig remains unchanged and is the structural comparison baseline.
-- **Mobile:** Wardrobe remains phone-first. No keyboard-only dependency may be introduced.
