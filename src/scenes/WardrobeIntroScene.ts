@@ -712,6 +712,11 @@ export class WardrobeLabScene extends Phaser.Scene {
       this.previewSprite = this.add.sprite(0, 0, 'wardrobe-generated-player-atlas', 0)
         .setOrigin(0.5, 1)
         .setVisible(false);
+    } else if (current.source === 'generated4') {
+      this.previewSprite = this.add.sprite(0, 0, 'wardrobe-generated-4-atlas', 0)
+        .setOrigin(0.5, current.originY);
+      this.fitCharacterSprite(this.previewSprite, current);
+      this.previewSprite.setVisible(true);
     } else {
       this.previewSprite = this.add.sprite(0, 0, this.spriteKey(current, 'DOWN'), 0)
         .setOrigin(0.5, current.originY);
