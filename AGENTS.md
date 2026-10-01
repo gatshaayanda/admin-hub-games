@@ -5392,3 +5392,132 @@ Unexpected visual result = STOP → inspect the actual asset/frame/crop/transfor
 - Phaser/Arena contract: generated shots use the same simple Arena muzzle geometry: projectile origin is exactly 42px from the player body along the aim vector, with the generated muzzle flash using that same local point. No independently rotated full-character combat overlay is used.
 - Aim while moving: when the generated player is aiming/firing, its four-direction body animation follows the aim direction rather than adding a second rotating weapon/body copy. Movement animation continues underneath that directional choice.
 - Do not regress: no duplicate player, spinning combat copy, detached weapon, enlarged hitboxes, or changed Arena combat mechanics. If shooting visuals fail again, inspect the generated body + aim-direction contract first rather than adding another full-character overlay.
+
+## Gemini Artwork Generation Protocol — Text-Only Briefs
+
+When requesting new artwork from Gemini, assume **Gemini does not have access to the repository, the existing images, the local Downloads folder, or the user's previous image-generation conversations**.
+
+Therefore, never write a Gemini prompt that says or implies:
+- "use the image I uploaded";
+- "look at 3.jpg";
+- "match the attached image";
+- "inspect the existing atlas";
+- "use the repository asset";
+- "continue from the previous generated image";
+- or any other instruction that requires Gemini to see an asset it has not actually been given.
+
+The user should not have to repeatedly upload project artwork just so Gemini can understand the task.
+
+### Required Gemini prompt method
+
+Every new Gemini artwork prompt must be **self-contained and text-only**.
+
+The prompt must explicitly describe, as applicable:
+
+1. **Character identity**
+   - who/what the character is;
+   - body type/proportions;
+   - clothing;
+   - colours;
+   - hairstyle/headwear;
+   - weapon/equipment;
+   - overall art style.
+
+2. **Camera and game context**
+   - top-down / side / isometric / etc.;
+   - mobile/game scale;
+   - intended Phaser/game use;
+   - required silhouette/readability.
+
+3. **Existing artwork that must be preserved**
+   - describe the established character rather than referring to an unseen image;
+   - explicitly state what must NOT change;
+   - distinguish completion of the existing character from creation of a replacement character.
+
+4. **Exact technical layout**
+   - atlas dimensions;
+   - frame dimensions;
+   - rows/columns;
+   - frame counts;
+   - exact direction order;
+   - animation order;
+   - transparent-layer requirements.
+
+5. **Runtime architecture**
+   - explain which artwork belongs to the body;
+   - explain which artwork is an independent arms/weapon/muzzle layer;
+   - explain how movement and aiming are independent;
+   - explain any required attachment/grip/muzzle relationship.
+
+6. **Deliverables**
+   - state exactly what Gemini must produce;
+   - separate body, weapon, arms, muzzle, fire/recoil assets when required;
+   - require transparent backgrounds for independent layers.
+
+7. **Negative constraints**
+   - explicitly prohibit duplicate bodies;
+   - prohibit floating weapons;
+   - prohibit redesigned characters;
+   - prohibit unwanted backgrounds/effects;
+   - prohibit missing directions;
+   - prohibit incompatible art structures.
+
+8. **Acceptance checklist**
+   - state how we will judge whether the generated artwork is complete;
+   - include all required directions and frames;
+   - include attachment consistency and mobile readability.
+
+### Current Shooters Trigger generated-character example
+
+For the current generated Shooters Trigger character, the known text specification is:
+
+- adult Black African male;
+- grounded athletic recreational-paintball/tactical-outdoor appearance;
+- dark green tactical/outdoor clothing;
+- dark trousers and sturdy dark boots;
+- dark cap or short dark hair;
+- compact recreational paintball marker;
+- polished readable top-down game-sprite style;
+- mobile-first readability;
+- four-direction body movement;
+- eight-frame walking cycle per body direction;
+- body atlas: 8 columns × 4 rows, 172×192 pixels per frame, 32 frames;
+- body directions: DOWN, UP, RIGHT, LEFT;
+- independent eight-direction weapon aiming: DOWN, DOWN-RIGHT, RIGHT, UP-RIGHT, UP, UP-LEFT, LEFT, DOWN-LEFT;
+- separate transparent arms/hands + weapon aiming artwork;
+- separate transparent muzzle/fire artwork where useful;
+- no second body in the weapon layer;
+- hands must visibly grip the same weapon;
+- weapon grip and muzzle must remain spatially stable between directional poses;
+- the muzzle is the visible projectile-origin point;
+- movement direction and weapon aim direction must be independently usable;
+- the character must be able to walk one direction while aiming/firing another;
+- preserve the established character identity rather than inventing a replacement.
+
+The current generated body already has four authored movement directions. The missing visual capability is **independent diagonal/360-degree weapon aiming**, not permission to redesign the character.
+
+### Prompt-writing rule
+
+Do not make the user translate project terminology into an image-generation prompt.
+
+ChatGPT is responsible for converting the inspected project state into a complete Gemini-ready text specification.
+
+Before producing the prompt, inspect the actual repository/assets/AGENTS.md and resolve:
+- what already exists;
+- what is missing;
+- what must remain unchanged;
+- exact dimensions and frame ordering;
+- whether a new layer, atlas, or complete replacement is actually required.
+
+Then give Gemini one self-contained prompt that can be pasted directly into a fresh Gemini session with **zero project files attached**.
+
+If the generated result requires multiple assets, describe every asset and its relationship in the same prompt.
+
+### Do not repeatedly remove useful Wardrobe test characters
+
+Wardrobe is also a visual comparison/testing lab. Existing selectable characters are useful because they let the product owner compare movement, aiming, firing, scaling and controls against different sprite constructions.
+
+Do not remove the existing Wardrobe character choices merely because the generated character is being developed.
+
+If mobile performance requires a reduced preload set, treat that as a separate, explicitly verified performance decision. The comparison roster should be restored when the performance constraint is no longer necessary.
+
