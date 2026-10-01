@@ -3,7 +3,7 @@
   "grid": {
     "columns": 8,
     "rows": 4,
-    "cellWidth": 176,
+    "cellWidth": 172,
     "cellHeight": 192
   },
   "bodyCells": [
@@ -92,5 +92,5 @@
       }
     }
   },
-  "note": "Verified repository asset 4.jpg is 1408x768: an 8x4 atlas of 176x192 frames. It is currently the generated body/embedded-weapon source. The planned 8x5 independent-weapon row is not present in this file, so runtime must not assume it exists."
+  "note": "Generated production candidate. Movement uses the authored armed directional frames from 3.jpg; weapon-bearing presentation uses authored integrated combat frames from 1.jpg. Extracted arms/weapon/muzzle crops remain audit outputs and are not rendered as runtime overlays."
 }
