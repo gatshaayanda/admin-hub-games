@@ -505,6 +505,7 @@ export class WardrobeLabScene extends Phaser.Scene {
   private generatedAction: 'ready' | 'aim' | 'shoot' | 'muzzle' | 'recoil' | 'hit' | 'headshot' | 'death' | 'dodge' | 'respawn' = 'ready';
   private generatedActionUntil = 0;
   private visualMove = new Phaser.Math.Vector2(0, 1);
+  private generatedAnimTime = 0;
   private targetBodyHits = 0;
   private targetDown = false;
   private pointerId = -1;
@@ -814,13 +815,9 @@ export class WardrobeLabScene extends Phaser.Scene {
     if (dx || dy) {
       walking = true;
       this.visualMove.set(dx, dy).normalize();
-      if (Math.abs(dx) > 0.08) {
-        this.direction = dx < 0 ? 'LEFT' : 'RIGHT';
-        if (this.currentDefinition().source === 'arena') {
-          this.playerFacing = dx < 0 ? -1 : 1;
-        }
-      } else if (Math.abs(dy) > 0.08) {
-        this.direction = dy < 0 ? 'UP' : 'DOWN';
+      this.updateBodyDirection(dx, dy);
+      if (this.currentDefinition().source === 'arena' && Math.abs(dx) > 0.08) {
+        this.playerFacing = dx < 0 ? -1 : 1;
       }
 
       const length = Math.hypot(dx, dy) || 1;
@@ -846,6 +843,11 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.fireCooldown = Math.max(0, this.fireCooldown - delta);
     this.muzzleUntil = Math.max(0, this.muzzleUntil - delta);
     this.generatedActionUntil = Math.max(0, this.generatedActionUntil - delta);
+    if (this.currentDefinition().source === 'generated') {
+      this.generatedAnimTime += walking ? delta : 0;
+    } else {
+      this.generatedAnimTime = 0;
+    }
     // Arena's animation clock never stops; only its cadence changes between
     // moving (120ms) and idle (650ms). This mirrors ShootersTriggerArenaScene.
     if (this.currentDefinition().source === 'arena') this.arenaAnimTime += delta;
@@ -994,9 +996,34 @@ export class WardrobeLabScene extends Phaser.Scene {
       sprite.setDisplaySize(def.displaySize, def.displaySize).setOrigin(0.5, def.originY);
       return;
     }
+    let groundMaxY = maxY;
+    if (sprite === this.previewSprite && sprite.texture.key === 'wardrobe-generated-player-atlas') {
+      const texture = sprite.texture;
+      const source = texture.getSourceImage() as CanvasImageSource;
+      const scan = document.createElement('canvas');
+      scan.width = frame.width;
+      scan.height = frame.height;
+      const scanContext = scan.getContext('2d', { willReadFrequently: true });
+      if (scanContext) {
+        for (let frameIndex = 0; frameIndex < 32; frameIndex += 1) {
+          const candidate = texture.get(frameIndex);
+          if (!candidate) continue;
+          scanContext.clearRect(0, 0, candidate.width, candidate.height);
+          scanContext.drawImage(source, candidate.cutX, candidate.cutY, candidate.width, candidate.height, 0, 0, candidate.width, candidate.height);
+          const pixels = scanContext.getImageData(0, 0, candidate.width, candidate.height).data;
+          for (let y = candidate.height - 1; y >= 0; y -= 1) {
+            let rowHasPixels = false;
+            for (let x = 0; x < candidate.width; x += 1) {
+              if (pixels[(y * candidate.width + x) * 4 + 3] > 12) { rowHasPixels = true; break; }
+            }
+            if (rowHasPixels) { groundMaxY = Math.max(groundMaxY, y); break; }
+          }
+        }
+      }
+    }
     const visibleHeight = maxY - minY + 1;
     const scale = this.targetVisibleCharacterHeight / visibleHeight;
-    const originY = (maxY + 1) / frame.height;
+    const originY = (groundMaxY + 1) / frame.height;
     sprite.setScale(scale);
     sprite.setOrigin(0.5, originY);
 
@@ -1133,6 +1160,32 @@ export class WardrobeLabScene extends Phaser.Scene {
     return false;
   }
 
+  private updateBodyDirection(dx: number, dy: number) {
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
+    if (absX < 0.08 && absY < 0.08) return;
+
+    // 3.jpg has four authored cardinal body strips, not diagonal artwork.
+    // Resolve diagonals to the nearest stable cardinal strip. A small
+    // hysteresis band prevents mobile-stick flicker around 45 degrees.
+    const horizontal = absX > absY;
+    const dominant = Math.abs(absX - absY) > 0.08;
+    if (!dominant) return;
+
+    const nextDirection: typeof this.direction =
+      horizontal ? (dx < 0 ? 'LEFT' : 'RIGHT') : (dy < 0 ? 'UP' : 'DOWN');
+
+    if (nextDirection === this.direction) return;
+
+    const currentHorizontal = this.direction === 'LEFT' || this.direction === 'RIGHT';
+    const currentAxisMagnitude = currentHorizontal ? absX : absY;
+    const nextAxisMagnitude = horizontal ? absX : absY;
+
+    if (currentHorizontal === horizontal || nextAxisMagnitude > currentAxisMagnitude * 1.12) {
+      this.direction = nextDirection;
+    }
+  }
+
   private playCharacterAnimation(walking: boolean) {
     const def = this.currentDefinition();
     const vx = this.visualMove.x;
@@ -1200,31 +1253,12 @@ export class WardrobeLabScene extends Phaser.Scene {
     let animation = 'DOWN';
     let flipX = false;
 
-    const aiming = this.pointerAimActive || this.fireHeld ||
-      this.generatedAction === 'aim' || this.generatedAction === 'shoot' ||
-      this.generatedAction === 'muzzle' || this.generatedAction === 'recoil';
-
-    // 3.jpg is an armed movement atlas, so it already contains the gun.
-    // There must be exactly one visible weapon presentation. While aiming,
-    // the generated body follows the aim direction even while moving; this
-    // keeps the embedded gun and projectile direction visually coherent
-    // instead of introducing a second independently rotating character rig.
-    const facingX = aiming ? this.aim.x : vx;
-    const facingY = aiming ? this.aim.y : vy;
-    if (Math.abs(facingX) > Math.abs(facingY) && Math.abs(facingX) > 0.35) {
-      animation = facingX < 0 ? 'LEFT' : 'RIGHT';
-    } else if (Math.abs(facingY) > 0.35) {
-      animation = facingY < 0 ? 'UP' : 'DOWN';
-    }
+    // Body facing is movement state. Aim is a separate combat state and never
+    // selects the body strip. Move RIGHT + aim LEFT still renders RIGHT.
+    animation = this.direction;
     flipX = false;
-    // Keep the 3.jpg body animation authoritative even while aiming. The 1.jpg
-    // combat artwork is an authored horizontal upper-body presentation layer;
-    // it is intentionally not rotated for arbitrary aim angles.
-    if (aiming) {
-      this.previewSprite.setAlpha(1);
-      this.previewSprite.setTint(0xffffff);
-    }
-    this.generatedCombatOverlay?.setVisible(false);
+    this.previewSprite.setAlpha(1);
+    this.previewSprite.setTint(0xffffff);
 
     const action = this.generatedAction;
     const hitState = action === 'hit' || action === 'headshot';
@@ -1245,18 +1279,21 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.previewSprite.setRotation(0);
     this.previewSprite.setTint(hitState ? 0xffd8c8 : 0xffffff);
 
+    const directionStart: Record<string, number> = {
+      DOWN: 0,
+      UP: 8,
+      RIGHT: 16,
+      LEFT: 24,
+    };
+    const start = directionStart[animation] ?? 0;
     if (walking) {
-      this.previewSprite.play(this.generatedKey(def, animation), true);
-    } else {
-      const idleFrames: Record<string, number> = {
-        DOWN: 0,
-        UP: 4,
-        LEFT: 8,
-        RIGHT: 12,
-
-      };
+      const frame = start + Math.floor(this.generatedAnimTime / 120) % 8;
       this.previewSprite.stop();
-      this.previewSprite.setFrame(idleFrames[animation] ?? 0);
+      this.previewSprite.setFrame(frame);
+    } else {
+      this.generatedAnimTime = 0;
+      this.previewSprite.stop();
+      this.previewSprite.setFrame(start);
     }
 
   }
@@ -1281,32 +1318,10 @@ export class WardrobeLabScene extends Phaser.Scene {
     const gripX = 7 * scale;
     const gripY = -37 * scale;
 
-    // The artwork itself is only authored in four cardinal gun directions.
-    // Aim can be arbitrary, but it must never rotate the muzzle anchor around
-    // the body. The projectile may travel diagonally; its visible origin stays
-    // attached to the gun in the exact directional frame being rendered.
-    // The visible 3.jpg frame follows aim while aiming, even if the player
-    // is moving in another direction. The muzzle origin must use that exact
-    // same cardinal frame choice; otherwise the gun can visually point one
-    // way while the projectile starts from the old movement direction.
-    const aiming = this.pointerAimActive || this.fireHeld ||
-      this.generatedAction === 'aim' || this.generatedAction === 'shoot' ||
-      this.generatedAction === 'muzzle' || this.generatedAction === 'recoil';
-    const facingX = aiming ? this.aim.x : this.visualMove.x;
-    const facingY = aiming ? this.aim.y : this.visualMove.y;
-    let direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT' = 'DOWN';
-    if (Math.abs(facingX) > Math.abs(facingY) && Math.abs(facingX) > 0.35) {
-      direction = facingX < 0 ? 'LEFT' : 'RIGHT';
-    } else if (Math.abs(facingY) > 0.35) {
-      direction = facingY < 0 ? 'UP' : 'DOWN';
-    }
-
-    const muzzleDirection = {
-      DOWN: new Phaser.Math.Vector2(0, 1),
-      UP: new Phaser.Math.Vector2(0, -1),
-      RIGHT: new Phaser.Math.Vector2(1, 0),
-      LEFT: new Phaser.Math.Vector2(-1, 0),
-    }[direction];
+    // Muzzle origin belongs to the authored body pose. Projectile direction
+    // belongs to the independent aim vector. Move RIGHT + aim UP starts from
+    // the RIGHT body's gun attachment but travels UP.
+    const direction = this.direction;
 
     return new Phaser.Math.Vector2(
       gripX + muzzleDirection.x * muzzleDistance,
