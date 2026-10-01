@@ -1,8 +1,8 @@
 {
-  "source": "public/assets/wardrobe/incoming/3.jpg",
+  "source": "public/assets/wardrobe/generated-v2/4.jpg",
   "grid": {
     "columns": 8,
-    "rows": 4,
+    "rows": 5,
     "cellWidth": 172,
     "cellHeight": 192
   },
@@ -78,7 +78,7 @@
         "units": "sourcePixels"
       },
       "muzzle": {
-        "x": 110.0,
+        "x": 110,
         "y": 75.92,
         "units": "sourcePixels"
       }
