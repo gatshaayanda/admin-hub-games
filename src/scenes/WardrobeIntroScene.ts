@@ -895,6 +895,17 @@ export class WardrobeLabScene extends Phaser.Scene {
       this.textures.remove('wardrobe-generated-player-atlas');
     }
     this.textures.addCanvas('wardrobe-generated-player-atlas', canvas);
+    const atlas = this.textures.get('wardrobe-generated-player-atlas');
+    for (let frame = 0; frame < 32; frame += 1) {
+      atlas.add(
+        frame,
+        0,
+        (frame % 8) * 172,
+        Math.floor(frame / 8) * 192,
+        172,
+        192,
+      );
+    }
   }
 
   private keyOutGeneratedCell(
