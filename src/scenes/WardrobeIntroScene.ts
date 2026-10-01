@@ -364,7 +364,7 @@ const WARDROBE_PLAYER_DEFINITION: WardrobeCharacterDefinition = {
   displaySize: 80,
   targetVisibleHeight: 60,
   frameWidth: 176,
-  frameHeight: 192,
+  frameHeight: 128,
   originY: 1,
   embeddedWeapon: false,
 };
@@ -377,10 +377,10 @@ const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
     basePath: '/assets/wardrobe/generated-v2',
     displaySize: 80,
     targetVisibleHeight: 60,
-    frameWidth: 172,
-    frameHeight: 192,
+    frameWidth: 176,
+    frameHeight: 128,
     originY: 1,
-    embeddedWeapon: true,
+    embeddedWeapon: false,
   },
   {
     id: 'arena_reference',
@@ -672,7 +672,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.createArenaReferenceRig();
 
     if (arenaReference) {
-      this.previewSprite = this.add.sprite(0, 0, 'wardrobe-generated-player-atlas', 0)
+      this.previewSprite = this.add.sprite(0, 0, 'wardrobe-generated-4-atlas', '4-body-0')
         .setOrigin(0.5, 1)
         .setVisible(false);
     } else {
@@ -880,15 +880,15 @@ export class WardrobeLabScene extends Phaser.Scene {
     const texture = this.textures.get('wardrobe-generated-4-atlas');
     if (!texture || texture.has('4-body-0')) return;
 
-    // Verified 4.jpg geometry: 32 body frames (8x4 at 176x192)
-    // followed by 16 independent weapon/arms frames (8x2 at 176x128).
+    // Verified 4.jpg geometry: 8 columns x 6 rows at 176x128.
+    // Rows 0-3 are the 32 body frames; rows 4-5 are 16 arms/weapon frames.
     for (let frame = 0; frame < 32; frame += 1) {
       const column = frame % 8;
       const row = Math.floor(frame / 8);
-      texture.add('4-body-' + frame, 0, column * 176, row * 192, 176, 192);
+      texture.add('4-body-' + frame, 0, column * 176, row * 128, 176, 128);
     }
-    texture.add('4-weapon-aim', 0, 3 * 176, 4 * 192, 176, 128);
-    texture.add('4-weapon-fire', 0, 4 * 176, 4 * 192, 176, 128);
+    texture.add('4-weapon-aim', 0, 3 * 176, 4 * 128, 176, 128);
+    texture.add('4-weapon-fire', 0, 4 * 176, 4 * 128, 176, 128);
   }
 
   private prepareGeneratedCharacterTextures() {
@@ -1029,7 +1029,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     // The generated body establishes the authoritative player footprint.
     // Combat frames use that exact scale/grounding so the authored combat
     // silhouette can change pose without making the player grow or jump.
-    if (sprite === this.previewSprite && sprite.texture.key === 'wardrobe-generated-player-atlas') {
+    if (sprite === this.previewSprite && sprite.texture.key === 'wardrobe-generated-4-atlas') {
       this.generatedBodyScale = scale;
       this.generatedBodyOriginY = originY;
     }
@@ -1132,7 +1132,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     const texture = this.textures.get('wardrobe-generated-player-atlas');
     const source = texture.getSourceImage() as CanvasImageSource;
     const frame = texture.get('4-body-' + frameIndex);
-    if (!frame || frame.width !== 176 || frame.height !== 192) return false;
+    if (!frame || frame.width !== 176 || frame.height !== 128) return false;
 
     const canvas = document.createElement('canvas');
     canvas.width = frame.width;
