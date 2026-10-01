@@ -1,0 +1,47 @@
+{
+  "id": "generated-4",
+  "source": {
+    "filename": "4.jpg",
+    "url": "https://raw.githubusercontent.com/gatshaayanda/admin-hub-games/9a1973c5977dc4a68fabd549f02f56a0dd902701/public/assets/wardrobe/generated-v2/4.jpg",
+    "sha": "d838e6e45a6758fb4a2b18a5ff681b7161b98b93",
+    "width": 1408,
+    "height": 768
+  },
+  "grid": {
+    "columns": 8,
+    "rows": 6,
+    "cellWidth": 176,
+    "cellHeight": 128
+  },
+  "body": {
+    "frameCount": 32,
+    "groups": {
+      "DOWN": [0,1,2,3,16,17,18,19],
+      "UP": [4,5,6,7,20,21,22,23],
+      "RIGHT": [8,9,10,11,12,13,14,15],
+      "LEFT": [24,25,26,27,28,29,30,31]
+    },
+    "interpretation": "Rows 0 and 2 contain four DOWN/front frames followed by four UP/back frames. Row 1 is the eight-frame RIGHT walk. Row 3 is the eight-frame LEFT walk."
+  },
+  "combat": {
+    "frameCount": 16,
+    "frameIndices": [32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47],
+    "groups": {
+      "RIGHT_PRESENTATION": [32,33,34,35,36,37,38,39],
+      "LEFT_PRESENTATION": [40,41,42,43,44,45,46,47]
+    },
+    "interpretation": "These are isolated arms plus paintball-marker artwork, eight poses per row. They are NOT sixteen unique aim sectors: barrel directions visibly repeat within each row, and the frames do not form a monotonic angular sequence.",
+    "runtime": "audit-only",
+    "reason": "The artwork supplies isolated combat poses but does not provide a reliable one-frame-per-angle contract or a verified common grip pivot. Do not continuously rotate these raster poses. Wardrobe displays them for visual audit until a future authored manifest supplies semantic aim sectors and attachment pivots."
+  },
+  "anchors": {
+    "bodyGrounding": "derive per body frame from visible alpha; do not hard-code a single pixel offset",
+    "combatGrip": null,
+    "muzzle": null
+  },
+  "acceptance": {
+    "bodyRuntime": true,
+    "combatRuntime": false,
+    "nextRequiredArtifact": "authored combat manifest with named aim sectors plus grip and muzzle anchors"
+  }
+}
