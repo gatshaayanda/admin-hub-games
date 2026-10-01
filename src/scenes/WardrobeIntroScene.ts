@@ -1134,7 +1134,7 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   private generatedBodyFrameHasVisiblePixels(frameIndex: number) {
-    const texture = this.textures.get('wardrobe-generated-player-atlas');
+    const texture = this.textures.get('wardrobe-generated-4-atlas');
     const source = texture.getSourceImage() as CanvasImageSource;
     const frame = texture.get('4-body-' + frameIndex);
     if (!frame || frame.width !== 176 || frame.height !== 128) return false;
@@ -1171,7 +1171,8 @@ export class WardrobeLabScene extends Phaser.Scene {
     const vy = this.visualMove.y;
 
     // Hard visual isolation: exactly one body rig may be visible at a time.
-    // Generated = 3.jpg body only. Arena = Arena body + Arena weapon rig.
+    // Generated = 4.jpg body + its independent arms/weapon layer.
+    // Arena = Arena body + Arena weapon rig.
     if (def.source === 'generated') {
       this.arenaPoseA.setVisible(false);
       this.arenaPoseB.setVisible(false);
@@ -1228,7 +1229,7 @@ export class WardrobeLabScene extends Phaser.Scene {
       return;
     }
 
-    const atlasKey = 'wardrobe-generated-player-atlas';
+    const atlasKey = 'wardrobe-generated-4-atlas';
     let animation = 'DOWN';
     let flipX = false;
 
@@ -1236,11 +1237,8 @@ export class WardrobeLabScene extends Phaser.Scene {
       this.generatedAction === 'aim' || this.generatedAction === 'shoot' ||
       this.generatedAction === 'muzzle' || this.generatedAction === 'recoil';
 
-    // 3.jpg is an armed movement atlas, so it already contains the gun.
-    // There must be exactly one visible weapon presentation. While aiming,
-    // the generated body follows the aim direction even while moving; this
-    // keeps the embedded gun and projectile direction visually coherent
-    // instead of introducing a second independently rotating character rig.
+    // 4.jpg separates the four-direction body from an isolated arms/marker
+    // layer. The body follows movement; the weapon layer follows aim.
     const facingX = aiming ? this.aim.x : vx;
     const facingY = aiming ? this.aim.y : vy;
     if (Math.abs(facingX) > Math.abs(facingY) && Math.abs(facingX) > 0.35) {
@@ -1249,9 +1247,8 @@ export class WardrobeLabScene extends Phaser.Scene {
       animation = facingY < 0 ? 'UP' : 'DOWN';
     }
     flipX = false;
-    // Keep the 3.jpg body animation authoritative even while aiming. The 1.jpg
-    // combat artwork is an authored horizontal upper-body presentation layer;
-    // it is intentionally not rotated for arbitrary aim angles.
+    // Keep the 4.jpg body animation authoritative while the isolated weapon
+    // layer rotates independently around its grip.
     if (aiming) {
       this.previewSprite.setAlpha(1);
       this.previewSprite.setTint(0xffffff);
