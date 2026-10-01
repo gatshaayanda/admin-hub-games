@@ -5521,3 +5521,184 @@ Do not remove the existing Wardrobe character choices merely because the generat
 
 If mobile performance requires a reduced preload set, treat that as a separate, explicitly verified performance decision. The comparison roster should be restored when the performance constraint is no longer necessary.
 
+
+
+## Wardrobe — Reusable Character Production Pipeline (2026-10-01)
+
+Wardrobe is now treated as the **character asset proving ground** for Shooters Trigger. The objective is not to rewrite Phaser combat for every generated character. The objective is:
+
+```
+GEMINI ART
+   ↓
+STRUCTURAL INSPECTION
+   ↓
+NORMALISE / EXTRACT
+   ↓
+CHARACTER MANIFEST
+   ↓
+WARDROBE VISUAL LAB
+   ↓
+PHASER CHARACTER ADAPTER
+   ↓
+ONLY THEN → SHOOTERS TRIGGER
+```
+
+### Source-of-truth separation
+
+**Gameplay truth**
+- Arena movement, aim vectors, fire timing, projectile speed/lifetime, collision and hit ordering remain authoritative.
+- Generated artwork must adapt to that contract.
+- Never change gameplay mechanics to compensate for a bad sprite sheet, wrong pivot, missing frame or bad crop.
+
+**Artwork truth**
+- The generated asset determines what can be rendered cleanly.
+- A contact sheet is not automatically a rig.
+- Separate layers are only valid when the artwork was actually authored as independent layers.
+- An integrated full-character combat frame must not be cropped and continuously rotated as though it were a clean weapon/arm sprite.
+
+### Canonical generated-character contract
+
+Every future generated character must declare a machine-readable manifest covering:
+- source image(s);
+- exact atlas dimensions and cell dimensions;
+- body frame groups and direction order;
+- animation frame counts;
+- combat/aim frame groups, if supplied;
+- whether arms/weapon/muzzle are truly independent;
+- stable ground/feet anchor;
+- body anchor for upper-body attachments;
+- weapon grip anchor;
+- visible muzzle/projectile-origin anchor;
+- intended display scale;
+- fallback states where artwork is not available.
+
+Runtime code must consume this manifest instead of embedding character-specific pixel coordinates in gameplay logic.
+
+### 3.jpg current baseline
+
+The current known-good generated movement baseline remains:
+- source: `3.jpg`;
+- 8 columns × 4 rows;
+- 172 × 192 cells;
+- 32 body frames;
+- DOWN / UP / RIGHT / LEFT movement coverage;
+- armed movement presentation remains the current visual baseline.
+
+Do not replace this baseline merely because a newer generated sheet exists.
+
+### 4.jpg candidate structure
+
+The inspected 4.jpg candidate is **not the same grid as 3.jpg**:
+- source size: 1408 × 768;
+- 8 columns × 6 rows;
+- 176 × 128 cells;
+- rows 0–3: 32 body frames;
+- rows 4–5: 16 isolated arms/paintball-marker frames.
+
+The 16 lower-row frames must **not** be assumed to be 16 aim sectors. Their semantic ordering must be established from the actual artwork before runtime mapping. The previous attempt failed because the isolated artwork was treated as something Phaser could simply rotate continuously; technical transform support does not make arbitrary pixel art visually correct.
+
+For 4.jpg the correct first question is:
+
+> Are the 16 isolated frames authored as directional aim poses, animation phases, or another sequence?
+
+Only after that is known may they be mapped to discrete aim sectors or another presentation strategy.
+
+### Phaser rig rule
+
+Use a shallow Phaser `Container` when independent artwork genuinely exists:
+
+```
+Character
+├── BODY
+├── ARMS
+├── WEAPON
+└── MUZZLE
+```
+
+Child transforms are local to the character. The body remains movement-facing/grounded while the combat presentation follows the independent aim contract.
+
+For pixel-art characters:
+- gameplay aim may remain a continuous vector;
+- visual aim should normally use authored discrete sectors when the artwork provides discrete directional poses;
+- continuous rotation is appropriate only for artwork explicitly authored to support it;
+- weapon grip and muzzle are attachment points, not arbitrary world-space offsets;
+- projectile origin must equal the rendered muzzle transform;
+- recoil must move the weapon along its local barrel axis.
+
+Phaser supports fixed-cell sprite sheets, per-sprite origins and Containers, but those APIs do not solve incorrect artwork or incorrect pivots. See the official Phaser documentation when implementing loader/origin/container behavior.
+
+### Character compiler / validator gate
+
+Before a generated character is allowed into Shooter Trigger, the asset pipeline must answer automatically:
+1. Is the source image the declared size?
+2. Does the declared grid divide it exactly?
+3. Are the frame dimensions correct?
+4. Are the expected body/combat frame counts present?
+5. Are output PNGs actually transparent where transparency is required?
+6. Do body frames have a stable visible-height range?
+7. Do body frames have a stable feet/ground baseline?
+8. Are independent layers actually separate rather than containing a second body?
+9. Are grip and muzzle anchors present?
+10. Does the manifest match the generated files?
+11. Which requirements are direct artwork, reconstructed artwork, safe mirroring, or unavailable?
+
+A structural pass does **not** certify visual quality. Wardrobe browser QA remains mandatory.
+
+### Wardrobe acceptance matrix
+
+Every candidate must be tested before production integration:
+
+**Movement**
+- DOWN / UP / LEFT / RIGHT;
+- diagonal movement;
+- idle → walk transitions;
+- feet remain grounded.
+
+**Aim**
+- stationary cardinal aim;
+- stationary diagonal aim;
+- movement direction different from aim direction;
+- no body rotation caused by aim.
+
+**Fire**
+- repeated fire;
+- weapon direction agrees with projectile direction;
+- visible muzzle agrees with projectile origin;
+- recoil follows barrel direction;
+- no duplicate body, extra arm, floating weapon or spinning integrated silhouette.
+
+**Mobile**
+- touch movement;
+- drag-to-aim;
+- hold-fire;
+- resize/orientation;
+- no keyboard dependency.
+
+**Regression**
+- Arena geometric reference remains unchanged;
+- Hall remains unchanged;
+- existing Wardrobe comparison characters remain available unless a separately verified performance decision requires otherwise.
+
+### Fast future-character workflow
+
+For each new character:
+1. Put the source artwork in the incoming asset area.
+2. Inspect dimensions/grid/frame semantics before writing Phaser code.
+3. Generate/normalise transparent assets.
+4. Generate the manifest.
+5. Run the structural validator.
+6. Load the character in Wardrobe only.
+7. Pass the full movement/aim/fire/mobile matrix.
+8. Only then integrate the character into Shooter Trigger.
+9. If artwork fails, fix the artwork/manifest/adapter—not Arena mechanics.
+
+**One character = one manifest + one adapter configuration.**
+
+The next character should require data changes and asset preparation, not a new combat implementation.
+
+### Recovery rule for generated artwork
+
+If a generated character looks wrong:
+**STOP → identify the exact frame/layer/pivot/anchor that is wrong → inspect the source artwork → correct the asset contract → retest.**
+
+Do not respond to visual failures by stacking another sprite, adding random offsets, enlarging hitboxes, continuously rotating an integrated character crop, or changing Arena mechanics.
