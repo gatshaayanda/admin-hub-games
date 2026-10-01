@@ -1285,7 +1285,22 @@ export class WardrobeLabScene extends Phaser.Scene {
     // Aim can be arbitrary, but it must never rotate the muzzle anchor around
     // the body. The projectile may travel diagonally; its visible origin stays
     // attached to the gun in the exact directional frame being rendered.
-    const direction = this.direction;
+    // The visible 3.jpg frame follows aim while aiming, even if the player
+    // is moving in another direction. The muzzle origin must use that exact
+    // same cardinal frame choice; otherwise the gun can visually point one
+    // way while the projectile starts from the old movement direction.
+    const aiming = this.pointerAimActive || this.fireHeld ||
+      this.generatedAction === 'aim' || this.generatedAction === 'shoot' ||
+      this.generatedAction === 'muzzle' || this.generatedAction === 'recoil';
+    const facingX = aiming ? this.aim.x : this.visualMove.x;
+    const facingY = aiming ? this.aim.y : this.visualMove.y;
+    let direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT' = 'DOWN';
+    if (Math.abs(facingX) > Math.abs(facingY) && Math.abs(facingX) > 0.35) {
+      direction = facingX < 0 ? 'LEFT' : 'RIGHT';
+    } else if (Math.abs(facingY) > 0.35) {
+      direction = facingY < 0 ? 'UP' : 'DOWN';
+    }
+
     const muzzleDirection = {
       DOWN: new Phaser.Math.Vector2(0, 1),
       UP: new Phaser.Math.Vector2(0, -1),
