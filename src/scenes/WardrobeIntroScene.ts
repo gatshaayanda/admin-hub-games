@@ -113,7 +113,7 @@ export class WardrobeIntroScene extends Phaser.Scene {
     this.load.spritesheet(
       'wardrobe-generated-player-atlas',
       '/assets/wardrobe/generated-v2/player-body-atlas.png',
-      { frameWidth: 172, frameHeight: 192 },
+      { frameWidth: 176, frameHeight: 192 },
     );
     this.load.spritesheet(
       'wardrobe-generated-combat-atlas',
@@ -370,7 +370,7 @@ const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
     basePath: '/assets/wardrobe/generated-v2',
     displaySize: 80,
     targetVisibleHeight: 60,
-    frameWidth: 172,
+    frameWidth: 176,
     frameHeight: 192,
     originY: 1,
     embeddedWeapon: true,
@@ -870,24 +870,26 @@ export class WardrobeLabScene extends Phaser.Scene {
 
   private prepareGeneratedCharacterTextures() {
     const source = this.textures.get('wardrobe-generated-v2-atlas-4')?.getSourceImage() as HTMLImageElement | undefined;
-    if (!source || source.width < 1376 || source.height < 960) {
-      throw new Error('Wardrobe generated character 4.jpg must contain an 8x5 172x192 atlas');
+    // The actual checked-in 4.jpg is 1408x768: 8 columns x 4 rows of 176x192.
+    // Do not invent a fifth row at runtime. A previous 8x5 assumption caused the
+    // Wardrobe scene to throw during create() and left the phone on a blank screen.
+    if (!source || source.width < 1408 || source.height < 768) {
+      throw new Error('Wardrobe generated character 4.jpg must contain the actual 8x4 176x192 atlas');
     }
 
-    // 4.jpg is now the visual source of truth. Its top four rows become the
-    // body atlas, replacing the old 3.jpg-derived armed body so the independent
-    // weapon layer cannot double-render a second marker.
+    const cellWidth = 176;
+    const cellHeight = 192;
     const canvas = document.createElement('canvas');
-    canvas.width = 1376;
+    canvas.width = 1408;
     canvas.height = 768;
     const context = canvas.getContext('2d', { willReadFrequently: true });
     if (!context) throw new Error('Unable to prepare generated body canvas');
 
-    context.drawImage(source, 0, 0, 1376, 768, 0, 0, 1376, 768);
+    context.drawImage(source, 0, 0, 1408, 768, 0, 0, 1408, 768);
 
     for (let row = 0; row < 4; row += 1) {
       for (let column = 0; column < 8; column += 1) {
-        this.keyOutGeneratedCell(context, column * 172, row * 192, 172, 192);
+        this.keyOutGeneratedCell(context, column * cellWidth, row * cellHeight, cellWidth, cellHeight);
       }
     }
 
@@ -900,10 +902,10 @@ export class WardrobeLabScene extends Phaser.Scene {
       atlas.add(
         frame,
         0,
-        (frame % 8) * 172,
-        Math.floor(frame / 8) * 192,
-        172,
-        192,
+        (frame % 8) * cellWidth,
+        Math.floor(frame / 8) * cellHeight,
+        cellWidth,
+        cellHeight,
       );
     }
   }
@@ -959,104 +961,11 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   private prepareGeneratedWeaponTextures() {
-    const source = this.textures.get('wardrobe-generated-v2-atlas-4')?.getSourceImage() as HTMLImageElement | undefined;
-    if (!source || source.width < 1376 || source.height < 960) {
-      throw new Error('Wardrobe generated character 4.jpg must contain an 8x5 172x192 atlas');
-    }
-
-    const cellWidth = 172;
-    const cellHeight = 192;
-    const weaponY = source.height - cellHeight;
-    const directions = [
-      new Phaser.Math.Vector2(0, 1),
-      new Phaser.Math.Vector2(1, 1).normalize(),
-      new Phaser.Math.Vector2(1, 0),
-      new Phaser.Math.Vector2(1, -1).normalize(),
-      new Phaser.Math.Vector2(0, -1),
-      new Phaser.Math.Vector2(-1, -1).normalize(),
-      new Phaser.Math.Vector2(-1, 0),
-      new Phaser.Math.Vector2(-1, 1).normalize(),
-    ];
-
+    // 4.jpg was verified from the repository as 1408x768 (8x4). It does not
+    // contain the planned fifth row of eight independent weapon poses.
+    // Keep the generated weapon layer disabled until an actual 8x5 asset exists;
+    // the embedded 4.jpg body/weapon artwork remains the visible presentation.
     this.generatedWeaponMuzzles = [];
-
-    for (let index = 0; index < directions.length; index += 1) {
-      const canvas = document.createElement('canvas');
-      canvas.width = cellWidth;
-      canvas.height = cellHeight;
-      const context = canvas.getContext('2d', { willReadFrequently: true });
-      if (!context) throw new Error('Unable to prepare generated weapon canvas');
-
-      context.drawImage(source, index * cellWidth, weaponY, cellWidth, cellHeight, 0, 0, cellWidth, cellHeight);
-
-      const image = context.getImageData(0, 0, cellWidth, cellHeight);
-      const pixels = image.data;
-      const bg = [pixels[0], pixels[1], pixels[2]];
-      const visited = new Uint8Array(cellWidth * cellHeight);
-      const queue: number[] = [];
-      const tolerance = 34;
-      const similar = (offset: number) =>
-        Math.abs(pixels[offset] - bg[0]) <= tolerance &&
-        Math.abs(pixels[offset + 1] - bg[1]) <= tolerance &&
-        Math.abs(pixels[offset + 2] - bg[2]) <= tolerance;
-
-      const push = (x: number, y: number) => {
-        if (x < 0 || x >= cellWidth || y < 0 || y >= cellHeight) return;
-        const pixelIndex = y * cellWidth + x;
-        if (visited[pixelIndex]) return;
-        visited[pixelIndex] = 1;
-        const offset = pixelIndex * 4;
-        if (!similar(offset)) return;
-        queue.push(pixelIndex);
-      };
-
-      for (let x = 0; x < cellWidth; x += 1) {
-        push(x, 0);
-        push(x, cellHeight - 1);
-      }
-      for (let y = 0; y < cellHeight; y += 1) {
-        push(0, y);
-        push(cellWidth - 1, y);
-      }
-
-      while (queue.length) {
-        const pixelIndex = queue.pop()!;
-        const x = pixelIndex % cellWidth;
-        const y = Math.floor(pixelIndex / cellWidth);
-        pixels[pixelIndex * 4 + 3] = 0;
-        push(x - 1, y);
-        push(x + 1, y);
-        push(x, y - 1);
-        push(x, y + 1);
-      }
-
-      context.putImageData(image, 0, 0);
-      const key = 'wardrobe-generated-v2-aim-' + index;
-      if (this.textures.exists(key)) this.textures.remove(key);
-      this.textures.addCanvas(key, canvas);
-
-      let bestProjection = -Infinity;
-      let bestX = cellWidth / 2;
-      let bestY = cellHeight * this.generatedBodyOriginY;
-      for (let y = 0; y < cellHeight; y += 1) {
-        for (let x = 0; x < cellWidth; x += 1) {
-          const alpha = pixels[(y * cellWidth + x) * 4 + 3];
-          if (alpha < 24) continue;
-          const localX = x - cellWidth / 2;
-          const localY = y - cellHeight * this.generatedBodyOriginY;
-          const projection = localX * directions[index].x + localY * directions[index].y;
-          if (projection > bestProjection) {
-            bestProjection = projection;
-            bestX = x;
-            bestY = y;
-          }
-        }
-      }
-      this.generatedWeaponMuzzles.push(new Phaser.Math.Vector2(
-        bestX - cellWidth / 2,
-        bestY - cellHeight * this.generatedBodyOriginY,
-      ));
-    }
   }
 
   private generatedKey(def: WardrobeCharacterDefinition, action: string) {
