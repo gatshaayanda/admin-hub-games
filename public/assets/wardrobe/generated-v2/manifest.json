@@ -78,7 +78,7 @@
         "units": "sourcePixels"
       },
       "muzzle": {
-        "x": 110,
+        "x": 110.0,
         "y": 75.92,
         "units": "sourcePixels"
       }
@@ -92,25 +92,5 @@
       }
     }
   },
-  "note": "Current runtime checkpoint: 3.jpg-derived body owns movement direction and grounding; 4.jpg bottom-row authored arms/marker owns eight-way aim; projectile origin follows the visible active aim frame muzzle. Legacy 1.jpg combat atlas and extracted v2 layers remain audit/reference assets.",
-  "generatedAim": {
-    "source": "4.jpg",
-    "atlasColumns": 8,
-    "atlasRows": 5,
-    "frameWidth": 172,
-    "frameHeight": 192,
-    "weaponRow": 4,
-    "frames": [
-      "DOWN",
-      "DOWN-RIGHT",
-      "RIGHT",
-      "UP-RIGHT",
-      "UP",
-      "UP-LEFT",
-      "LEFT",
-      "DOWN-LEFT"
-    ],
-    "runtime": "bottom row is extracted in-browser into transparent canvas textures; movement body remains the 3.jpg-derived four-way atlas",
-    "muzzle": "derived from visible pixels in the active authored aim frame"
-  }
+  "note": "Generated production candidate. Movement uses the authored armed directional frames from 3.jpg; weapon-bearing presentation uses authored integrated combat frames from 1.jpg. Extracted arms/weapon/muzzle crops remain audit outputs and are not rendered as runtime overlays."
 }
