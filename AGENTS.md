@@ -237,6 +237,24 @@ Reset Local Game Data clears the local name/private Gamebook only. It must not d
 
 Existing World Note ownership/moderation rules remain authoritative. Do not weaken Firestore security rules to solve a UI problem.
 
+## Wardrobe Lab Player Contract
+
+The Wardrobe generated-player baseline is the pre-4.jpg 3.jpg/1.jpg production candidate. Do not replace it with 4.jpg audit artwork.
+
+For generated Wardrobe movement:
+- physical movement uses a normalized input vector, so diagonal travel has the same speed as cardinal travel;
+- body facing is driven by movement only and uses the four authored cardinal strips from 3.jpg;
+- diagonal input resolves to the nearest stable cardinal presentation because 3.jpg does not contain authored diagonal body frames;
+- mobile-stick direction selection must use hysteresis so near-45-degree input does not flicker between strips;
+- generated movement cadence follows the Arena contract at 120ms per moving frame and a stable first frame while idle;
+- the body has one authoritative ground point across the full generated atlas so frame padding/foot differences do not visually lift or sink the player;
+- aim is an independent vector and must never change the movement body strip;
+- generated muzzle origin is attached to the currently rendered body-facing gun pose, while projectile velocity follows the independent aim vector;
+- do not rotate the raster body to fake arbitrary aim directions;
+- compare generated Wardrobe behavior against the geometric Arena reference for movement, diagonal speed, body/aim independence, grounding and projectile origin before changing the artwork contract.
+
+Unexpected movement/aim/grounding behavior = STOP → inspect the actual Wardrobe and Arena state → then act.
+
 ## Verification
 
 For a meaningful checkpoint:
