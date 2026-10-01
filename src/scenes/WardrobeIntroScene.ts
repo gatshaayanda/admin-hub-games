@@ -1312,8 +1312,11 @@ export class WardrobeLabScene extends Phaser.Scene {
     // 3.jpg remains the movement body. 4.jpg supplies the independent
     // eight-way arms + marker layer, so aiming can now change the weapon
     // direction without changing the lower-body movement direction.
-    const facingX = aiming ? this.aim.x : vx;
-    const facingY = aiming ? this.aim.y : vy;
+    // Lower body follows movement only. Aim is owned by the independent 4.jpg
+    // weapon layer, so moving one way while aiming another no longer rotates
+    // the whole generated character.
+    const facingX = vx;
+    const facingY = vy;
     if (Math.abs(facingX) > Math.abs(facingY) && Math.abs(facingX) > 0.35) {
       animation = facingX < 0 ? 'LEFT' : 'RIGHT';
     } else if (Math.abs(facingY) > 0.35) {
@@ -1382,7 +1385,13 @@ export class WardrobeLabScene extends Phaser.Scene {
   private getGeneratedCombatMuzzleLocalPoint() {
     const scale = this.getGeneratedCombatRigScale();
     const muzzle = this.generatedWeaponMuzzles[this.getGeneratedAimFrameIndex()];
-    if (muzzle) return muzzle.clone().scale(scale);
+    if (muzzle) {
+      const local = muzzle.clone();
+      // Muzzle extraction is measured from a cell-bottom origin. Rebase it to
+      // the exact grounded origin established by the authoritative body frame.
+      local.y += 192 * (1 - this.generatedBodyOriginY);
+      return local.scale(scale);
+    }
 
     const fallback = this.generatedRig?.weapon;
     if (fallback) {
