@@ -561,6 +561,9 @@ export class WardrobeLabScene extends Phaser.Scene {
   private generatedArmsLayer!: Phaser.GameObjects.Sprite;
   private generatedWeaponLayer!: Phaser.GameObjects.Sprite;
   private generatedMuzzleLayer!: Phaser.GameObjects.Sprite;
+  private generated4AuditSprite!: Phaser.GameObjects.Sprite;
+  private generated4AuditLabel!: Phaser.GameObjects.Text;
+  private generated4AuditClock = 0;
 
   private readonly worldWidth = 2400;
   private readonly worldHeight = 1400;
@@ -577,7 +580,7 @@ export class WardrobeLabScene extends Phaser.Scene {
   private readonly projectileMinVisibleMs = 34;
   private characterDefinitions = WARDROBE_CHARACTER_DEFINITIONS;
   private readonly mobileCharacterDefinitions = WARDROBE_CHARACTER_DEFINITIONS.filter(
-    (definition) => definition.source === 'generated' || definition.source === 'arena',
+    (definition) => definition.source === 'generated' || definition.source === 'generated4' || definition.source === 'arena',
   );
   private readonly targetVisibleCharacterHeight = 60;
   private readonly targetDefinition = WARDROBE_TARGET_DEFINITION;
@@ -788,6 +791,21 @@ export class WardrobeLabScene extends Phaser.Scene {
       align: 'right',
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(101);
 
+    this.generated4AuditSprite = this.add.sprite(width / 2, height - 116, 'wardrobe-generated-4-atlas', 32)
+      .setDisplaySize(132, 96)
+      .setVisible(false)
+      .setScrollFactor(0)
+      .setDepth(104);
+    this.generated4AuditLabel = this.add.text(width / 2, height - 58,
+      '4.JPG COMBAT AUDIT · ISOLATED ARMS + MARKER · FRAME 32',
+      {
+        fontFamily: 'monospace',
+        fontSize: '7px',
+        fontStyle: 'bold',
+        color: '#f4f1df',
+        align: 'center',
+      }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(105).setVisible(false);
+
     this.directionLabel = this.add.text(width - 18, 42, '', {
       fontFamily: 'monospace',
       fontSize: '7px',
@@ -901,6 +919,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     }
 
     this.updateShots(delta);
+    this.updateGenerated4Audit(delta);
     this.updateTargetFacing();
     this.playCharacterAnimation(walking);
     this.updateWeaponLayer();
@@ -993,6 +1012,24 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.arenaMuzzle.setVisible(this.muzzleUntil > 0);
   }
 
+
+  private updateGenerated4Audit(delta: number) {
+    const active = this.currentDefinition().source === 'generated4';
+    this.generated4AuditSprite?.setVisible(active);
+    this.generated4AuditLabel?.setVisible(active);
+    if (!active) return;
+
+    this.generated4AuditClock += delta;
+    const combatFrames = this.generated4Manifest?.combat?.frameIndices || [];
+    if (!combatFrames.length) return;
+    const slot = Math.floor(this.generated4AuditClock / 700) % combatFrames.length;
+    const frame = combatFrames[slot];
+    this.generated4AuditSprite.setFrame(frame);
+    this.generated4AuditLabel.setText(
+      '4.JPG COMBAT AUDIT · ISOLATED ARMS + MARKER · FRAME ' + frame +
+      ' · NOT RUNTIME AIM DATA'
+    );
+  }
 
   private currentDefinition() {
     return this.characterDefinitions[this.selectedCharacterIndex];
