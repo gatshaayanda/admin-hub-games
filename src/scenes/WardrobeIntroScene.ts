@@ -781,7 +781,7 @@ export class WardrobeLabScene extends Phaser.Scene {
       fontStyle: 'bold',
       color: '#f4f1df',
     }).setScrollFactor(0).setDepth(101);
-    this.add.text(18, 42, 'ONE AUTHORITATIVE PLAYER · 3.JPG MOVEMENT + 1.JPG COMBAT · DATA-DRIVEN PRESENTATION', {
+    this.add.text(18, 42, 'ONE AUTHORITATIVE PLAYER · DATA-DRIVEN CHARACTER CONTRACT LAB', {
       fontFamily: 'monospace',
       fontSize: '7px',
       fontStyle: 'bold',
@@ -796,12 +796,12 @@ export class WardrobeLabScene extends Phaser.Scene {
       align: 'right',
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(101);
 
-    this.generated4AuditSprite = this.add.sprite(width / 2, height - 116, 'wardrobe-generated-4-atlas', 32)
+    this.generated4AuditSprite = this.add.sprite(width / 2, height - 245, 'wardrobe-generated-4-atlas', 32)
       .setDisplaySize(132, 96)
       .setVisible(false)
       .setScrollFactor(0)
       .setDepth(104);
-    this.generated4AuditLabel = this.add.text(width / 2, height - 58,
+    this.generated4AuditLabel = this.add.text(width / 2, height - 188,
       '4.JPG COMBAT AUDIT · ISOLATED ARMS + MARKER · FRAME 32',
       {
         fontFamily: 'monospace',
@@ -1827,8 +1827,10 @@ export class WardrobeLabScene extends Phaser.Scene {
       ' · AIM VECTOR ' + Math.round(Phaser.Math.RadToDeg(Math.atan2(this.aim.y, this.aim.x))) + '°',
     );
     this.combatLabel?.setText(
-      'TARGET · ' + (this.targetDown ? 'DOWN' : 'LIVE') +
-      ' · BODY HITS ' + this.targetBodyHits + '/2 · HEADSHOT = INSTANT',
+      def.source === 'generated4'
+        ? '4.JPG COMBAT · AUDIT ONLY · LOWER 16 HAVE NO VERIFIED AIM/PIVOT CONTRACT'
+        : 'TARGET · ' + (this.targetDown ? 'DOWN' : 'LIVE') +
+          ' · BODY HITS ' + this.targetBodyHits + '/2 · HEADSHOT = INSTANT',
     );
   }
 
@@ -1852,7 +1854,7 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   public isFireAvailable() {
-    return true;
+    return this.currentDefinition().source !== 'generated4';
   }
 
   public isPhoneSession() {
