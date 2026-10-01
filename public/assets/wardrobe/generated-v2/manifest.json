@@ -1,5 +1,5 @@
 {
-  "source": "public/assets/wardrobe/generated-v2/4.jpg",
+  "source": "public/assets/wardrobe/incoming/3.jpg",
   "grid": {
     "columns": 8,
     "rows": 4,
@@ -92,5 +92,5 @@
       }
     }
   },
-  "note": "4.jpg is the active generated runtime source. Rows 0-3 are the four-direction body movement atlas (8 frames per direction); rows 4-5 are independent arms/paintball-marker poses. Runtime uses the body rows plus an isolated weapon pose rotated around its grip. The older 3.jpg and 1.jpg-derived assets remain available as reference/fallback data."
+  "note": "Generated production candidate. Movement uses the authored armed directional frames from 3.jpg; weapon-bearing presentation uses authored integrated combat frames from 1.jpg. Extracted arms/weapon/muzzle crops remain audit outputs and are not rendered as runtime overlays."
 }
