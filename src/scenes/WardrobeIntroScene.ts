@@ -110,6 +110,13 @@ export class WardrobeIntroScene extends Phaser.Scene {
     // characters needed to inspect this lab. Do not make a phone download,
     // decode and texture-upload every comparison pack before the player can
     // see the actual character.
+    // 4.jpg is a verified mixed-layout production sheet:
+    // rows 0-3 are 176x192 body frames; rows 4-5 are 176x128
+    // independent arms/weapon frames. It must not be loaded as a uniform grid.
+    this.load.image(
+      'wardrobe-generated-4-atlas',
+      '/assets/wardrobe/generated-v2/4.jpg',
+    );
     this.load.spritesheet(
       'wardrobe-generated-player-atlas',
       '/assets/wardrobe/generated-v2/player-body-atlas.png',
@@ -356,10 +363,10 @@ const WARDROBE_PLAYER_DEFINITION: WardrobeCharacterDefinition = {
   basePath: '/assets/wardrobe/generated-v2',
   displaySize: 80,
   targetVisibleHeight: 60,
-  frameWidth: 172,
+  frameWidth: 176,
   frameHeight: 192,
   originY: 1,
-  embeddedWeapon: true,
+  embeddedWeapon: false,
 };
 
 const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
@@ -619,6 +626,7 @@ export class WardrobeLabScene extends Phaser.Scene {
       this.characterDefinitions = this.mobileCharacterDefinitions;
     }
 
+    this.prepareGenerated4TextureFrames();
     this.prepareGeneratedCharacterTextures();
     const generatedManifest = this.cache.json.get('wardrobe-generated-v2-manifest') as GeneratedV2RigManifest | undefined;
     if (!generatedManifest?.rig) {
@@ -678,12 +686,15 @@ export class WardrobeLabScene extends Phaser.Scene {
     // layers with attachment coordinates. Use those layers as the reusable
     // directional combat rig; the integrated 1.jpg atlas remains a reference
     // asset and is not cropped/rotated at runtime.
-    this.generatedArmsLayer = this.add.sprite(-7, -40, 'wardrobe-generated-v2-arms')
-      .setOrigin(0.5, 0.5).setVisible(false);
-    this.generatedWeaponLayer = this.add.sprite(7, -37, 'wardrobe-generated-v2-weapon')
-      .setOrigin(24.2 / 110, 75.92 / 146).setVisible(false);
-    this.generatedMuzzleLayer = this.add.sprite(57, -37, 'wardrobe-generated-v2-muzzle')
-      .setOrigin(0, 0.5).setVisible(false);
+    // 4.jpg supplies the first independent combat layer: arms + marker
+    // without a second body. The right-facing authored pose is the neutral
+    // source and rotates around its inspected grip anchor.
+    this.generatedArmsLayer = this.add.sprite(0, 0, 'wardrobe-generated-4-atlas', '4-weapon-aim')
+      .setOrigin(88 / 176, 80 / 128).setVisible(false);
+    this.generatedWeaponLayer = this.add.sprite(0, 0, 'wardrobe-generated-4-atlas', '4-weapon-aim')
+      .setOrigin(88 / 176, 80 / 128).setVisible(false);
+    this.generatedMuzzleLayer = this.add.sprite(0, 0, 'wardrobe-generated-4-atlas', '4-weapon-fire')
+      .setOrigin(88 / 176, 80 / 128).setVisible(false);
     this.character.add([this.previewSprite, this.generatedArmsLayer, this.generatedWeaponLayer, this.generatedMuzzleLayer]);
 
     // The Arena reference rig must always be part of the character container.
@@ -865,9 +876,24 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.updateLabels();
   }
 
+  private prepareGenerated4TextureFrames() {
+    const texture = this.textures.get('wardrobe-generated-4-atlas');
+    if (!texture || texture.has('4-body-0')) return;
+
+    // Verified 4.jpg geometry: 32 body frames (8x4 at 176x192)
+    // followed by 16 independent weapon/arms frames (8x2 at 176x128).
+    for (let frame = 0; frame < 32; frame += 1) {
+      const column = frame % 8;
+      const row = Math.floor(frame / 8);
+      texture.add('4-body-' + frame, 0, column * 176, row * 192, 176, 192);
+    }
+    texture.add('4-weapon-aim', 0, 3 * 176, 4 * 192, 176, 128);
+    texture.add('4-weapon-fire', 0, 4 * 176, 4 * 192, 176, 128);
+  }
+
   private prepareGeneratedCharacterTextures() {
-    // Generated v2 is a real RGBA spritesheet. fitCharacterSprite() measures
-    // the actual visible alpha bounds so every frame shares a grounded baseline.
+    // The existing 3.jpg-derived atlas remains loaded as a fallback/reference.
+    // 4.jpg is the active generated body + independent weapon source.
   }
 
   private generatedKey(def: WardrobeCharacterDefinition, action: string) {
@@ -1066,13 +1092,14 @@ export class WardrobeLabScene extends Phaser.Scene {
       }
     }
 
+    // 4.jpg body rows are authored as DOWN, RIGHT, UP, LEFT.
     const generatedAnimations: Array<[string, number, number]> = [
       ['DOWN', 0, 7],
-      ['UP', 8, 15],
-      ['RIGHT', 16, 23],
+      ['RIGHT', 8, 15],
+      ['UP', 16, 23],
       ['LEFT', 24, 31],
     ];
-    const atlasKey = 'wardrobe-generated-player-atlas';
+    const atlasKey = 'wardrobe-generated-4-atlas';
     const validFrames = new Set(
       Array.from({ length: 32 }, (_, frameIndex) => frameIndex)
         .filter((frameIndex) => this.generatedBodyFrameHasVisiblePixels(frameIndex)),
@@ -1104,8 +1131,8 @@ export class WardrobeLabScene extends Phaser.Scene {
   private generatedBodyFrameHasVisiblePixels(frameIndex: number) {
     const texture = this.textures.get('wardrobe-generated-player-atlas');
     const source = texture.getSourceImage() as CanvasImageSource;
-    const frame = texture.get(frameIndex);
-    if (!frame || frame.width !== 172 || frame.height !== 192) return false;
+    const frame = texture.get('4-body-' + frameIndex);
+    if (!frame || frame.width !== 176 || frame.height !== 192) return false;
 
     const canvas = document.createElement('canvas');
     canvas.width = frame.width;
@@ -1248,15 +1275,14 @@ export class WardrobeLabScene extends Phaser.Scene {
     if (walking) {
       this.previewSprite.play(this.generatedKey(def, animation), true);
     } else {
-      const idleFrames: Record<string, number> = {
-        DOWN: 0,
-        UP: 4,
-        LEFT: 8,
-        RIGHT: 12,
-
+      const idleFrames: Record<string, string> = {
+        DOWN: '4-body-0',
+        RIGHT: '4-body-8',
+        UP: '4-body-16',
+        LEFT: '4-body-24',
       };
       this.previewSprite.stop();
-      this.previewSprite.setFrame(idleFrames[animation] ?? 0);
+      this.previewSprite.setFrame(idleFrames[animation] ?? '4-body-0');
     }
 
   }
@@ -1273,45 +1299,13 @@ export class WardrobeLabScene extends Phaser.Scene {
 
   private getGeneratedCombatMuzzleLocalPoint() {
     const scale = this.getGeneratedCombatRigScale();
-    // 3.jpg contains the weapon in every directional movement frame. The
-    // manifest gives the authored weapon grip and muzzle in source pixels:
-    // 85.8px apart on a 110px-wide weapon displayed at 50px. That is a
-    // 39px muzzle offset from the grip, before bodyScale is applied.
-    const muzzleDistance = (110 - 24.2) * (50 / 110) * scale;
-    const gripX = 7 * scale;
-    const gripY = -37 * scale;
-
-    // The artwork itself is only authored in four cardinal gun directions.
-    // Aim can be arbitrary, but it must never rotate the muzzle anchor around
-    // the body. The projectile may travel diagonally; its visible origin stays
-    // attached to the gun in the exact directional frame being rendered.
-    // The visible 3.jpg frame follows aim while aiming, even if the player
-    // is moving in another direction. The muzzle origin must use that exact
-    // same cardinal frame choice; otherwise the gun can visually point one
-    // way while the projectile starts from the old movement direction.
-    const aiming = this.pointerAimActive || this.fireHeld ||
-      this.generatedAction === 'aim' || this.generatedAction === 'shoot' ||
-      this.generatedAction === 'muzzle' || this.generatedAction === 'recoil';
-    const facingX = aiming ? this.aim.x : this.visualMove.x;
-    const facingY = aiming ? this.aim.y : this.visualMove.y;
-    let direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT' = 'DOWN';
-    if (Math.abs(facingX) > Math.abs(facingY) && Math.abs(facingX) > 0.35) {
-      direction = facingX < 0 ? 'LEFT' : 'RIGHT';
-    } else if (Math.abs(facingY) > 0.35) {
-      direction = facingY < 0 ? 'UP' : 'DOWN';
-    }
-
-    const muzzleDirection = {
-      DOWN: new Phaser.Math.Vector2(0, 1),
-      UP: new Phaser.Math.Vector2(0, -1),
-      RIGHT: new Phaser.Math.Vector2(1, 0),
-      LEFT: new Phaser.Math.Vector2(-1, 0),
-    }[direction];
-
-    return new Phaser.Math.Vector2(
-      gripX + muzzleDirection.x * muzzleDistance,
-      gripY + muzzleDirection.y * muzzleDistance,
-    );
+    // Inspected 4.jpg right-facing weapon pose: grip ~= (88,80),
+    // muzzle ~= (157,70) in the 176x128 weapon cell.
+    const muzzleLocal = new Phaser.Math.Vector2(69 * scale, -10 * scale);
+    const angle = this.aim.lengthSq() > 0.0025 ? this.aim.angle() : 0;
+    muzzleLocal.rotate(angle);
+    const grip = new Phaser.Math.Vector2(7 * scale, -37 * scale);
+    return grip.add(muzzleLocal);
   }
 
   private getGeneratedCombatMuzzleWorldPoint() {
@@ -1328,10 +1322,6 @@ export class WardrobeLabScene extends Phaser.Scene {
       this.generatedAction === 'aim' || this.generatedAction === 'shoot' ||
       this.generatedAction === 'muzzle' || this.generatedAction === 'recoil';
 
-    // 3.jpg is already the complete armed player presentation. The extracted
-    // arms/weapon layers remain in the manifest for audit/reference, but they
-    // must not be rendered on top of the armed body or the player becomes a
-    // split/double character when the independent layer rotates.
     this.generatedArmsLayer?.setVisible(false);
     this.generatedWeaponLayer?.setVisible(false);
     this.generatedMuzzleLayer?.setVisible(false);
@@ -1348,6 +1338,19 @@ export class WardrobeLabScene extends Phaser.Scene {
       this.arenaWeapon?.setVisible(false);
       this.arenaMuzzle?.setVisible(false);
       this.previewSprite?.setVisible(true);
+
+      if (aiming) {
+        const angle = this.aim.lengthSq() > 0.0025 ? this.aim.angle() : 0;
+        const weapon = this.muzzleUntil > 0
+          ? this.generatedMuzzleLayer
+          : this.generatedWeaponLayer;
+        weapon
+          ?.setFrame(this.muzzleUntil > 0 ? '4-weapon-fire' : '4-weapon-aim')
+          .setPosition(7 * this.getGeneratedCombatRigScale(), -37 * this.getGeneratedCombatRigScale())
+          .setScale(this.getGeneratedCombatRigScale())
+          .setRotation(angle)
+          .setVisible(true);
+      }
     } else if (this.currentDefinition().source === 'arena') {
       this.previewSprite?.setVisible(false);
       this.generatedArmsLayer?.setVisible(false);
