@@ -248,8 +248,9 @@ For generated Wardrobe movement:
 - mobile-stick direction selection must use hysteresis so near-45-degree input does not flicker between strips;
 - generated movement cadence follows the Arena contract at 120ms per moving frame and a stable first frame while idle;
 - the body has one authoritative ground point across the full generated atlas so frame padding/foot differences do not visually lift or sink the player;
-- aim is an independent vector and must never change the movement body strip;
-- generated muzzle origin is attached to the currently rendered body-facing gun pose, while projectile velocity follows the independent aim vector;
+- aim is an independent vector for projectile mechanics; it must not change locomotion state or physical movement;
+- while combat is active, the generated player may switch from the 3.jpg locomotion strip to the authored 1.jpg combat pose selected from the aim sector so the visible gun actually points toward the aimed sector;
+- generated muzzle origin is attached to the currently rendered authored combat gun pose, while projectile velocity follows the independent aim vector;
 - do not rotate the raster body to fake arbitrary aim directions;
 - compare generated Wardrobe behavior against the geometric Arena reference for movement, diagonal speed, body/aim independence, grounding and projectile origin before changing the artwork contract.
 
