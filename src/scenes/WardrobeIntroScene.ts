@@ -1161,9 +1161,9 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   private getGeneratedCombatPose() {
-    const angle = Phaser.Math.Angle.Normalize(this.aim.angle());
-    const deg = Phaser.Math.RadToDeg(angle);
-    const a = deg < 0 ? deg + 360 : deg;
+    let angle = this.aim.angle();
+    if (angle < 0) angle += Math.PI * 2;
+    const a = Phaser.Math.RadToDeg(angle);
 
     // 1.jpg authored combat sectors:
     // 0 DOWN, 1 DOWN-RIGHT, 2 RIGHT (used only as source reference),
