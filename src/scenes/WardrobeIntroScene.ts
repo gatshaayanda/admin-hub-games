@@ -1160,6 +1160,24 @@ export class WardrobeLabScene extends Phaser.Scene {
     return false;
   }
 
+  private getGeneratedCombatPose() {
+    const angle = Phaser.Math.Angle.Normalize(this.aim.angle());
+    const deg = Phaser.Math.RadToDeg(angle);
+    const a = deg < 0 ? deg + 360 : deg;
+
+    // 1.jpg authored combat sectors:
+    // 0 DOWN, 1 DOWN-RIGHT, 2 RIGHT (used only as source reference),
+    // 3 UP-RIGHT, 8 LEFT, 11 AIM/READY.
+    if (a >= 337.5 || a < 22.5) return { frame: 11, flipX: false };
+    if (a < 67.5) return { frame: 1, flipX: false };
+    if (a < 112.5) return { frame: 0, flipX: false };
+    if (a < 157.5) return { frame: 1, flipX: true };
+    if (a < 202.5) return { frame: 8, flipX: false };
+    if (a < 247.5) return { frame: 3, flipX: true };
+    if (a < 292.5) return { frame: 3, flipX: false };
+    return { frame: 3, flipX: false };
+  }
+
   private updateBodyDirection(dx: number, dy: number) {
     const absX = Math.abs(dx);
     const absY = Math.abs(dy);
@@ -1250,13 +1268,19 @@ export class WardrobeLabScene extends Phaser.Scene {
     }
 
     const atlasKey = 'wardrobe-generated-player-atlas';
-    let animation = 'DOWN';
+    const combatAtlasKey = 'wardrobe-generated-combat-atlas';
+    let animation = this.direction;
     let flipX = false;
 
-    // Body facing is movement state. Aim is a separate combat state and never
-    // selects the body strip. Move RIGHT + aim LEFT still renders RIGHT.
-    animation = this.direction;
-    flipX = false;
+    // 3.jpg owns locomotion. 1.jpg owns the authored combat presentation.
+    // The combat sheet gives us real DOWN, DOWN-RIGHT, RIGHT and UP-RIGHT gun
+    // poses; mirror those poses for the left side. This is the artwork-backed
+    // equivalent of the Arena weapon aiming contract, rather than firing a
+    // free-floating bullet from the player's feet.
+    const combatActive = this.pointerAimActive || this.fireHeld || this.muzzleUntil > 0 ||
+      this.generatedAction === 'aim' || this.generatedAction === 'shoot' ||
+      this.generatedAction === 'muzzle' || this.generatedAction === 'recoil';
+
     this.previewSprite.setAlpha(1);
     this.previewSprite.setTint(0xffffff);
 
@@ -1270,31 +1294,44 @@ export class WardrobeLabScene extends Phaser.Scene {
       this.previewSprite.setAlpha(1);
     }
 
-    if (this.previewSprite.texture.key !== atlasKey) {
-      this.previewSprite.setTexture(atlasKey, 0);
-      this.fitCharacterSprite(this.previewSprite, def);
-    }
+    if (combatActive) {
+      const combatPose = this.getGeneratedCombatPose();
+      if (this.previewSprite.texture.key !== combatAtlasKey) {
+        this.previewSprite.setTexture(combatAtlasKey, combatPose.frame, false, false);
+      } else {
+        this.previewSprite.setFrame(combatPose.frame, false, false);
+      }
+      this.previewSprite.setScale(this.generatedBodyScale || 1);
+      this.previewSprite.setOrigin(0.5, this.generatedBodyOriginY);
+      this.previewSprite.setFlipX(combatPose.flipX);
+      this.previewSprite.stop();
+    } else {
+      if (this.previewSprite.texture.key !== atlasKey) {
+        this.previewSprite.setTexture(atlasKey, 0, false, false);
+      }
+      this.previewSprite.setScale(this.generatedBodyScale || 1);
+      this.previewSprite.setOrigin(0.5, this.generatedBodyOriginY);
+      this.previewSprite.setFlipX(false);
 
-    this.previewSprite.setFlipX(flipX);
+      const directionStart: Record<string, number> = {
+        DOWN: 0,
+        UP: 8,
+        RIGHT: 16,
+        LEFT: 24,
+      };
+      const start = directionStart[animation] ?? 0;
+      if (walking) {
+        const frame = start + Math.floor(this.generatedAnimTime / 120) % 8;
+        this.previewSprite.stop();
+        this.previewSprite.setFrame(frame, false, false);
+      } else {
+        this.generatedAnimTime = 0;
+        this.previewSprite.stop();
+        this.previewSprite.setFrame(start, false, false);
+      }
+    }
     this.previewSprite.setRotation(0);
     this.previewSprite.setTint(hitState ? 0xffd8c8 : 0xffffff);
-
-    const directionStart: Record<string, number> = {
-      DOWN: 0,
-      UP: 8,
-      RIGHT: 16,
-      LEFT: 24,
-    };
-    const start = directionStart[animation] ?? 0;
-    if (walking) {
-      const frame = start + Math.floor(this.generatedAnimTime / 120) % 8;
-      this.previewSprite.stop();
-      this.previewSprite.setFrame(frame);
-    } else {
-      this.generatedAnimTime = 0;
-      this.previewSprite.stop();
-      this.previewSprite.setFrame(start);
-    }
 
   }
 
@@ -1310,24 +1347,26 @@ export class WardrobeLabScene extends Phaser.Scene {
 
   private getGeneratedCombatMuzzleLocalPoint() {
     const scale = this.getGeneratedCombatRigScale();
-    // 3.jpg contains the weapon in every directional movement frame. The
-    // manifest gives the authored weapon grip and muzzle in source pixels:
-    // 85.8px apart on a 110px-wide weapon displayed at 50px. That is a
-    // 39px muzzle offset from the grip, before bodyScale is applied.
-    const muzzleDistance = (110 - 24.2) * (50 / 110) * scale;
-    const gripX = 7 * scale;
-    const gripY = -37 * scale;
 
-    // Muzzle origin belongs to the authored body pose. Projectile direction
-    // belongs to the independent aim vector. Move RIGHT + aim UP starts from
-    // the RIGHT body's gun attachment but travels UP.
-    const direction = this.direction;
-
-    return new Phaser.Math.Vector2(
-      gripX + muzzleDirection.x * muzzleDistance,
-      gripY + muzzleDirection.y * muzzleDistance,
-    );
+    // The old contract extrapolated a 39px muzzle from the manifest grip and
+    // put DOWN shots at roughly y=+2 local to the grounded player. That is why
+    // the paint appeared to come from the character's lower body.
+    //
+    // These anchors are tied to the actual authored gun positions in 1.jpg.
+    // They are local to the same grounded player origin used by the body.
+    const pose = this.getGeneratedCombatPose();
+    const anchors: Record<number, Phaser.Math.Vector2> = {
+      0: new Phaser.Math.Vector2(27, -20),  // DOWN
+      1: new Phaser.Math.Vector2(28, -25),  // DOWN-RIGHT
+      3: new Phaser.Math.Vector2(29, -34),  // UP-RIGHT
+      8: new Phaser.Math.Vector2(-30, -27), // LEFT
+      11: new Phaser.Math.Vector2(30, -27),// RIGHT / AIM
+    };
+    const anchor = anchors[pose.frame] ?? new Phaser.Math.Vector2(28, -27);
+    const x = pose.flipX ? -anchor.x : anchor.x;
+    return new Phaser.Math.Vector2(x * scale, anchor.y * scale);
   }
+
 
   private getGeneratedCombatMuzzleWorldPoint() {
     const local = this.getGeneratedCombatMuzzleLocalPoint();
