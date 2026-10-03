@@ -30,6 +30,9 @@ jobs:
       - name: Extract transparent Phaser assets
         run: python scripts/wardrobe/extract-generated-player-2.py
 
+      - name: Validate generated Wardrobe combat contract
+        run: python scripts/wardrobe/inspect-generated-character.py --source public/assets/wardrobe/generated-v2/player-combat-atlas.png 8 4 176 192 --manifest public/assets/wardrobe/generated-v2/manifest.json
+
       - name: Commit generated assets
         run: |
           git config user.name "github-actions[bot]"
