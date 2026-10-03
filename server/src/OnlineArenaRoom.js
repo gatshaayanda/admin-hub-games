@@ -1,5 +1,5 @@
 import { Room } from "colyseus";
-import { OnlineState } from "./state.js";
+import { OnlinePlayer, OnlineState } from "./state.js";
 
 const WORLD_WIDTH = 2400;
 const WORLD_HEIGHT = 1400;
@@ -82,7 +82,7 @@ export class OnlineArenaRoom extends Room {
     }
 
     const slot = this.state.players.size;
-    const player = new OnlineArenaRoomPlayer();
+    const player = new OnlinePlayer();
     player.name = String(options?.name || "PLAYER").trim().slice(0, 24) || "PLAYER";
     player.color = slot === 0 ? 0x2f6b4e : 0x9b3f3f;
     player.x = slot === 0 ? 360 : 2040;
@@ -169,18 +169,3 @@ export class OnlineArenaRoom extends Room {
   }
 }
 
-// Keep the room's state class local to the server bundle. The frontend receives
-// the schema definition during the initial handshake.
-class OnlineArenaRoomPlayer {
-  constructor() {
-    this.name = "";
-    this.color = 0;
-    this.x = 0;
-    this.y = 0;
-    this.facing = 1;
-    this.moving = false;
-    this.alive = true;
-    this.score = 0;
-    this.bodyHits = 0;
-  }
-}
