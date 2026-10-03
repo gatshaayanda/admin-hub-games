@@ -1036,13 +1036,45 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   private fitGeneratedCombatSprite(sprite: Phaser.GameObjects.Sprite) {
-    if (this.generatedBodyScale > 0) {
-      sprite.setScale(this.generatedBodyScale);
-      sprite.setOrigin(0.5, this.generatedBodyOriginY);
+    const source = sprite.texture.getSourceImage() as CanvasImageSource;
+    const frame = sprite.frame;
+    const canvas = document.createElement('canvas');
+    canvas.width = frame.width;
+    canvas.height = frame.height;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (!context) {
+      sprite.setScale(this.generatedBodyScale || 1);
+      sprite.setOrigin(0.5, this.generatedBodyOriginY || 1);
       return;
     }
-    // Defensive fallback: establish the body contract before combat is shown.
-    this.fitCharacterSprite(sprite, this.currentDefinition());
+    context.clearRect(0, 0, frame.width, frame.height);
+    context.drawImage(source, frame.cutX, frame.cutY, frame.width, frame.height, 0, 0, frame.width, frame.height);
+    const pixels = context.getImageData(0, 0, frame.width, frame.height).data;
+    let minY = frame.height;
+    let maxY = -1;
+    let minX = frame.width;
+    let maxX = -1;
+    for (let y = 0; y < frame.height; y += 1) {
+      for (let x = 0; x < frame.width; x += 1) {
+        if (pixels[(y * frame.width + x) * 4 + 3] > 12) {
+          minY = Math.min(minY, y);
+          maxY = Math.max(maxY, y);
+          minX = Math.min(minX, x);
+          maxX = Math.max(maxX, x);
+        }
+      }
+    }
+    if (maxY < 0) {
+      sprite.setScale(this.generatedBodyScale || 1);
+      sprite.setOrigin(0.5, this.generatedBodyOriginY || 1);
+      return;
+    }
+    const visibleHeight = maxY - minY + 1;
+    const scale = this.targetVisibleCharacterHeight / visibleHeight;
+    // Every combat pose is independently bottom-grounded from its actual alpha
+    // bounds. This prevents pose swaps from moving the player's world origin.
+    sprite.setScale(scale);
+    sprite.setOrigin(0.5, (maxY + 1) / frame.height);
   }
 
   private spriteKey(
