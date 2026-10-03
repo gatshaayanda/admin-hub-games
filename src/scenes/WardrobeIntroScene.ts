@@ -647,6 +647,12 @@ export class WardrobeLabScene extends Phaser.Scene {
     }
     this.generatedRig = generatedManifest.rig;
     this.generatedCombat = generatedManifest.combat;
+    // Prewarm every authored combat pose before the player can interact.
+    // The alpha-bottom fit is intentionally paid once during scene creation,
+    // never on the first aim/fire input. On mobile, doing a 176x192
+    // getImageData scan during pointer input can stall the render loop and
+    // look like a shooting crash. The manifest owns the finite pose set, so
+    // this is bounded and deterministic.
     if (
       !this.generatedCombat ||
       this.generatedCombat.frameWidth !== 176 ||
@@ -700,6 +706,7 @@ export class WardrobeLabScene extends Phaser.Scene {
     // rotated weapon. The manifest owns pose selection and muzzle anchors.
     this.generatedCombatSprite = this.add.sprite(0, 0, 'wardrobe-generated-combat-atlas', 0)
       .setVisible(false);
+    this.prewarmGeneratedCombatFits();
     this.fitGeneratedCombatSprite(this.generatedCombatSprite);
     // Keep the old extracted layers available for audit only. They are never
     // stacked on top of the generated character.
@@ -1038,6 +1045,16 @@ export class WardrobeLabScene extends Phaser.Scene {
     // Kept as a compatibility shim for older scene call sites. The active
     // generated combat presentation is now the transparent layered rig.
     this.generatedCombatOverlay?.setVisible(false);
+  }
+
+  private prewarmGeneratedCombatFits() {
+    const frames = [...new Set(Object.values(this.generatedCombat.poses).map((pose) => pose.frame))];
+    const originalFrame = this.generatedCombatSprite.frame.name;
+    for (const frame of frames) {
+      this.generatedCombatSprite.setFrame(frame, false, false);
+      this.fitGeneratedCombatSprite(this.generatedCombatSprite);
+    }
+    this.generatedCombatSprite.setFrame(originalFrame, false, false);
   }
 
   private fitGeneratedCombatSprite(sprite: Phaser.GameObjects.Sprite) {
