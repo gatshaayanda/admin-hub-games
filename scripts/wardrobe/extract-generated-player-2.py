@@ -11,6 +11,30 @@ COLS, ROWS = 8, 4
 # The armed movement sheet is an 8x4 contact sheet at 1376x768 (172x192 cells).
 # The production step deliberately converts the JPG's baked checkerboard into real alpha.
 BODY_CELLS = list(range(COLS * ROWS))
+# 1.jpg is a full-body authored combat sheet. The anchors below were established
+# by cell-by-cell visual inspection of the actual source sheet. They are source
+# pixel coordinates inside the 176x192 cell. Projectile direction remains the
+# continuous gameplay aim vector; these anchors only bind the rendered muzzle.
+COMBAT_POSES = {
+    "DOWN": {"frame": 0, "muzzle": {"x": 158, "y": 145}},
+    "DOWN_RIGHT": {"frame": 1, "muzzle": {"x": 159, "y": 139}},
+    "RIGHT": {"frame": 11, "muzzle": {"x": 165, "y": 106}},
+    "UP_RIGHT": {"frame": 3, "muzzle": {"x": 158, "y": 108}},
+    "LEFT": {"frame": 8, "muzzle": {"x": 16, "y": 121}},
+}
+
+AIM_SECTORS = [
+    {"name": "DOWN", "minDeg": 67.5, "maxDeg": 112.5, "pose": "DOWN", "mirror": False},
+    {"name": "DOWN_RIGHT", "minDeg": 22.5, "maxDeg": 67.5, "pose": "DOWN_RIGHT", "mirror": False},
+    {"name": "RIGHT", "minDeg": -22.5, "maxDeg": 22.5, "pose": "RIGHT", "mirror": False},
+    {"name": "UP_RIGHT", "minDeg": -67.5, "maxDeg": -22.5, "pose": "UP_RIGHT", "mirror": False},
+    {"name": "UP", "minDeg": -112.5, "maxDeg": -67.5, "pose": "UP_RIGHT", "mirror": False},
+    {"name": "UP_LEFT", "minDeg": -157.5, "maxDeg": -112.5, "pose": "UP_RIGHT", "mirror": True},
+    {"name": "LEFT", "minDeg": 157.5, "maxDeg": 180, "pose": "LEFT", "mirror": False},
+    {"name": "LEFT_NEGATIVE", "minDeg": -180, "maxDeg": -157.5, "pose": "LEFT", "mirror": False},
+    {"name": "DOWN_LEFT", "minDeg": 112.5, "maxDeg": 157.5, "pose": "DOWN_RIGHT", "mirror": True},
+]
+
 REGIONS = {
     "arms": (4 * CELL_W, 2 * CELL_H, 6 * CELL_W, 3 * CELL_H),
     "weapon": (6 * CELL_W, 2 * CELL_H, 8 * CELL_W, 3 * CELL_H),
