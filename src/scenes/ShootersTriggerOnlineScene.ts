@@ -333,7 +333,7 @@ export class ShootersTriggerOnlineScene extends Phaser.Scene {
       fontFamily: 'monospace', fontSize: '10px', fontWeight: '900',
       touchAction: 'manipulation',
     });
-    button.addEventListener('pointerdown', (event) => {
+    button.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
       onClick();
