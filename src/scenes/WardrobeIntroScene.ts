@@ -537,6 +537,11 @@ export class WardrobeLabScene extends Phaser.Scene {
   private generatedCombat!: GeneratedV2RigManifest['combat'];
   private generatedBodyScale = 0;
   private generatedBodyOriginY = 1;
+  // Cache the expensive alpha measurement per authored combat frame. Re-reading
+  // a 176x192 frame every render tick can stall the browser during continuous fire.
+  private readonly generatedCombatFitCache = new Map<string, { scale: number; originY: number }>();
+  private generatedCombatAppliedFrame = -1;
+  private generatedCombatAppliedMirror = false;
   private generatedArmsLayer!: Phaser.GameObjects.Sprite;
   private generatedWeaponLayer!: Phaser.GameObjects.Sprite;
   private generatedMuzzleLayer!: Phaser.GameObjects.Sprite;
@@ -1036,45 +1041,68 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   private fitGeneratedCombatSprite(sprite: Phaser.GameObjects.Sprite) {
-    const source = sprite.texture.getSourceImage() as CanvasImageSource;
     const frame = sprite.frame;
+    const cacheKey = sprite.texture.key + ':' + frame.cutX + ':' + frame.cutY + ':' + frame.width + ':' + frame.height;
+    const cached = this.generatedCombatFitCache.get(cacheKey);
+    if (cached) {
+      sprite.setScale(cached.scale);
+      sprite.setOrigin(0.5, cached.originY);
+      return;
+    }
+
+    const source = sprite.texture.getSourceImage() as CanvasImageSource;
     const canvas = document.createElement('canvas');
     canvas.width = frame.width;
     canvas.height = frame.height;
     const context = canvas.getContext('2d', { willReadFrequently: true });
     if (!context) {
-      sprite.setScale(this.generatedBodyScale || 1);
-      sprite.setOrigin(0.5, this.generatedBodyOriginY || 1);
+      const fallback = {
+        scale: this.generatedBodyScale || 1,
+        originY: this.generatedBodyOriginY || 1,
+      };
+      this.generatedCombatFitCache.set(cacheKey, fallback);
+      sprite.setScale(fallback.scale);
+      sprite.setOrigin(0.5, fallback.originY);
       return;
     }
-    context.clearRect(0, 0, frame.width, frame.height);
-    context.drawImage(source, frame.cutX, frame.cutY, frame.width, frame.height, 0, 0, frame.width, frame.height);
+
+    context.drawImage(
+      source,
+      frame.cutX,
+      frame.cutY,
+      frame.width,
+      frame.height,
+      0,
+      0,
+      frame.width,
+      frame.height,
+    );
     const pixels = context.getImageData(0, 0, frame.width, frame.height).data;
     let minY = frame.height;
     let maxY = -1;
-    let minX = frame.width;
-    let maxX = -1;
+
     for (let y = 0; y < frame.height; y += 1) {
       for (let x = 0; x < frame.width; x += 1) {
         if (pixels[(y * frame.width + x) * 4 + 3] > 12) {
           minY = Math.min(minY, y);
           maxY = Math.max(maxY, y);
-          minX = Math.min(minX, x);
-          maxX = Math.max(maxX, x);
         }
       }
     }
-    if (maxY < 0) {
-      sprite.setScale(this.generatedBodyScale || 1);
-      sprite.setOrigin(0.5, this.generatedBodyOriginY || 1);
-      return;
-    }
-    const visibleHeight = maxY - minY + 1;
-    const scale = this.targetVisibleCharacterHeight / visibleHeight;
-    // Every combat pose is independently bottom-grounded from its actual alpha
-    // bounds. This prevents pose swaps from moving the player's world origin.
-    sprite.setScale(scale);
-    sprite.setOrigin(0.5, (maxY + 1) / frame.height);
+
+    const fit = maxY < 0
+      ? {
+          scale: this.generatedBodyScale || 1,
+          originY: this.generatedBodyOriginY || 1,
+        }
+      : {
+          scale: this.targetVisibleCharacterHeight / (maxY - minY + 1),
+          originY: (maxY + 1) / frame.height,
+        };
+
+    this.generatedCombatFitCache.set(cacheKey, fit);
+    sprite.setScale(fit.scale);
+    sprite.setOrigin(0.5, fit.originY);
   }
 
   private spriteKey(
@@ -1338,9 +1366,17 @@ export class WardrobeLabScene extends Phaser.Scene {
 
   private applyGeneratedCombatPose() {
     const { sector, pose } = this.getGeneratedCombatPose();
-    this.generatedCombatSprite.setFrame(pose.frame, false, false);
-    this.fitGeneratedCombatSprite(this.generatedCombatSprite);
-    this.generatedCombatSprite.setFlipX(sector.mirror);
+    const changed = this.generatedCombatAppliedFrame !== pose.frame ||
+      this.generatedCombatAppliedMirror !== sector.mirror;
+
+    if (changed) {
+      this.generatedCombatSprite.setFrame(pose.frame, false, false);
+      this.fitGeneratedCombatSprite(this.generatedCombatSprite);
+      this.generatedCombatSprite.setFlipX(sector.mirror);
+      this.generatedCombatAppliedFrame = pose.frame;
+      this.generatedCombatAppliedMirror = sector.mirror;
+    }
+
     this.generatedCombatSprite.setAlpha(1);
     this.generatedCombatSprite.setTint(0xffffff);
   }
@@ -1439,6 +1475,10 @@ export class WardrobeLabScene extends Phaser.Scene {
     // fireShot and the rendered muzzle now share the exact same local
     // attachment point. This removes the old center-origin projectile mismatch.
     const velocity = this.aim.clone().normalize().scale(this.projectileSpeed);
+    if (!Number.isFinite(origin.x) || !Number.isFinite(origin.y) ||
+      !Number.isFinite(velocity.x) || !Number.isFinite(velocity.y)) {
+      return;
+    }
     const graphics = this.add.circle(origin.x, origin.y, 4, 0xf0dfb6, 1).setDepth(60);
     this.shots.push({
       graphics,
@@ -1668,6 +1708,8 @@ export class WardrobeLabScene extends Phaser.Scene {
     this.selectedCharacterIndex = (index + count) % count;
     this.generatedAction = 'ready';
     this.generatedActionUntil = 0;
+    this.generatedCombatAppliedFrame = -1;
+    this.generatedCombatAppliedMirror = false;
     this.fireHeld = false;
     this.pointerAimActive = false;
     this.clearShots();

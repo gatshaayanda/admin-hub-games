@@ -5915,3 +5915,11 @@ two-player Arena
 The implementation follows the current Colyseus room model: `create()` creates a room, `joinById()` joins the specific room, and the server owns room state. Phaser remains responsible for presentation, input and local rendering; authoritative multiplayer state belongs to Colyseus.
 
 Do not fake a second player locally when the room has only one client. Do not treat the lobby staying open as a successful connection. The visible room code and WAITING state are the proof that room creation succeeded; LIVE is the proof that the second client joined.
+
+## Wardrobe / Combat Freeze Fix — 2026-10-03
+
+The generated 1.jpg combat path had a runtime performance hazard: fitGeneratedCombatSprite performed a full Canvas getImageData alpha scan across every 176x192 combat frame every Phaser update tick while aiming/firing. Continuous firing therefore repeated canvas allocation, pixel readback and JavaScript scanning. The movement path is the accepted baseline and must not be changed.
+
+The combat adapter now caches measured scale/origin per authored combat frame and only re-fits when the selected frame or mirror changes. Projectile mechanics remain unchanged. fireShot also rejects non-finite muzzle/velocity values so a malformed manifest cannot poison the update loop.
+
+This is a Wardrobe presentation/performance fix only. Do not modify Shooter Trigger Arena projectile speed, continuous aim, swept collision or hit ordering to compensate for this issue.
