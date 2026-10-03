@@ -5759,3 +5759,43 @@ The Shooter Trigger mechanical contract remains unchanged.
 ### Immutable source note
 
 The exact inspected 4.jpg currently exists in the archived 4.jpg attempt commit. The Wardrobe manifest records its immutable source URL and blob SHA so the visual lab can inspect the exact artifact without asking the user to re-upload it. When the asset is formally promoted into the repository asset tree, the manifest source can be changed to the local asset without changing its semantic contract.
+
+## Wardrobe / 1.jpg Combat Contract — 2026-10-03
+
+The generated combat attempt after the 24807712 checkpoint was inspected against the actual 1.jpg and 3.jpg artwork and has been rolled back. The rollback target is 24807712ef3eaf2dcf92bf8f55e7270899caf13a, whose Build and Verify workflows both passed.
+
+### Exact 1.jpg finding
+
+1.jpg is a labeled 8×4 combat/reference sheet, not a continuously rotatable weapon layer.
+
+Its authored cells include:
+
+- top row: DOWN, DOWN-RIGHT, RIGHT, UP-RIGHT, then RUN variants;
+- second row: LEFT, DOWN, LEFT, AIM / READY, SHOOT + RECOIL, READY, MUZZLE FLASH, RECOIL;
+- lower rows: HIT, HEADSHOT, death/eliminated, DODGE, RESPAWN and related combat states.
+
+The weapon is integrated into the full character pixels in these combat poses.
+
+### Runtime conclusion
+
+Do not solve Wardrobe combat by blindly swapping the entire 3.jpg locomotion sprite to a 1.jpg frame and treating the combat frame as the final character rig.
+
+The target is:
+
+3.jpg locomotion body
+        +
+authored combat presentation where the artwork genuinely supports it
+        +
+continuous aim vector
+        +
+authoritative muzzle transform
+        +
+the same projectile/collision mechanics as the geometric Arena reference
+
+If clean independent arms/weapon artwork can be extracted without duplicating the body, use the shallow Phaser BODY → ARMS → WEAPON → MUZZLE rig. If the source cannot provide clean independent layers, the combat adapter must use authored full-body combat frames deliberately, preserve one authoritative ground point, and derive the firing point from the actual rendered combat pose rather than a guessed world offset.
+
+### Rollback lesson
+
+The reverted combat attempt used hard-coded pose numbers and hard-coded muzzle coordinates from 1.jpg. Those coordinates were not established from a verified per-frame grip/muzzle contract. The next implementation must inspect and label the actual combat frames first, establish their grounding and attachment geometry, then bind Phaser presentation and projectile origin to that contract.
+
+Do not change Shooter Trigger Arena mechanics to compensate for Wardrobe artwork.
