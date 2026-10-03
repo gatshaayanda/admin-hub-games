@@ -5935,3 +5935,7 @@ The Online Arena lobby is a DOM overlay above the Phaser canvas. Its action cont
 - The overlay and buttons must explicitly accept pointer events.
 - A CREATE/JOIN activation must immediately update the visible Online Arena status before any asynchronous Colyseus import or connection work begins.
 - Never leave a user with a silent button press.
+
+## Wardrobe Shooting Freeze — second pass — 2026-10-03
+
+The first freeze fix correctly removed per-tick combat alpha scans, but shooting still freezes in the browser. The projectile path has therefore been audited against the proven Shooter Trigger Arena implementation. Wardrobe must use the same swept Line/Circle and Line/Rectangle collision structure; only the projectile origin is artwork/manifest-driven. A finite-value guard and a bounded 12-shot list are defensive protections, not gameplay changes. Do not change the accepted 3.jpg movement baseline or Arena projectile speed/collision contract to compensate for artwork.

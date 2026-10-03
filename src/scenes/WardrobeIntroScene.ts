@@ -1479,6 +1479,10 @@ export class WardrobeLabScene extends Phaser.Scene {
       !Number.isFinite(velocity.x) || !Number.isFinite(velocity.y)) {
       return;
     }
+    // Prevent a held input from creating an unbounded projectile list if a
+    // browser stalls for a moment. Arena itself is likewise bounded by cooldown.
+    if (this.shots.length >= 12) return;
+
     const graphics = this.add.circle(origin.x, origin.y, 4, 0xf0dfb6, 1).setDepth(60);
     this.shots.push({
       graphics,
@@ -1502,55 +1506,90 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   private updateShots(delta: number) {
+    // Keep the Wardrobe projectile loop structurally aligned with the proven
+    // Shooter Trigger Arena implementation. The artwork changes the muzzle
+    // origin only; projectile motion and collision stay Arena-compatible.
     for (let index = this.shots.length - 1; index >= 0; index -= 1) {
       const shot = this.shots[index];
+      if (!shot?.graphics?.active || !shot.position || !shot.velocity) {
+        this.removeShot(index);
+        continue;
+      }
+
       const previous = shot.position.clone();
-      shot.position.add(shot.velocity.clone().scale(delta / 1000));
-      shot.graphics.setPosition(shot.position.x, shot.position.y);
+      shot.position.x += shot.velocity.x * delta / 1000;
+      shot.position.y += shot.velocity.y * delta / 1000;
       shot.ageMs += delta;
 
-      // Arena uses swept projectile collision so a paintball cannot tunnel
-      // through a target between Phaser frames. Wardrobe uses the same rule.
-      const segment = new Phaser.Geom.Line(previous.x, previous.y, shot.position.x, shot.position.y);
+      if (
+        !Number.isFinite(shot.position.x) ||
+        !Number.isFinite(shot.position.y) ||
+        !Number.isFinite(shot.velocity.x) ||
+        !Number.isFinite(shot.velocity.y)
+      ) {
+        this.removeShot(index);
+        continue;
+      }
 
-      const coverHit = this.covers.some((cover) => Phaser.Geom.Intersects.LineToRectangle(segment, cover));
-      if (coverHit) {
+      shot.graphics.setPosition(shot.position.x, shot.position.y);
+
+      const segment = new Phaser.Geom.Line(
+        previous.x,
+        previous.y,
+        shot.position.x,
+        shot.position.y,
+      );
+
+      // First use the same cover test as Arena. It is intentionally performed
+      // before fighter damage so cover cannot be bypassed by the visual muzzle.
+      const coverDistance = this.getFirstCoverIntersectionDistance(segment);
+      if (coverDistance !== null) {
         this.showCombatMessage('COVER BLOCKED', '#e8c95c');
         this.removeShot(index);
         continue;
       }
 
-      if (shot.ageMs >= this.projectileLifetimeMs) {
+      if (
+        shot.ageMs >= this.projectileLifetimeMs ||
+        shot.position.x < 0 ||
+        shot.position.x > this.worldWidth ||
+        shot.position.y < 0 ||
+        shot.position.y > this.worldHeight
+      ) {
         this.removeShot(index);
         continue;
       }
 
       if (this.targetDown) continue;
 
-      // Keep the same Arena ordering: weapon → head → body → scrape, with the
-      // nearest clean hit winning. These are fixed world-space combat radii;
-      // visual sprite size never manufactures a larger hitbox.
-      const head = new Phaser.Geom.Circle(this.target.x, this.target.y - 82, this.arenaHeadRadius);
-      const body = new Phaser.Geom.Circle(this.target.x, this.target.y - 45, this.arenaBodyCoreRadius);
+      const head = this.getSegmentCircleHit(
+        segment,
+        this.target.x,
+        this.target.y - 82,
+        this.arenaHeadRadius,
+      );
+      const body = this.getSegmentCircleHit(
+        segment,
+        this.target.x,
+        this.target.y - 45,
+        this.arenaBodyCoreRadius,
+      );
       const weaponPoint = this.getTargetWeaponPoint();
-      const weapon = new Phaser.Geom.Circle(weaponPoint.x, weaponPoint.y, this.arenaWeaponRadius);
-      const headScrape = new Phaser.Geom.Circle(this.target.x, this.target.y - 82, this.arenaScrapeRadius);
-      const bodyScrape = new Phaser.Geom.Circle(this.target.x, this.target.y - 45, this.arenaScrapeRadius);
+      const weapon = this.getSegmentCircleHit(
+        segment,
+        weaponPoint.x,
+        weaponPoint.y,
+        this.arenaWeaponRadius,
+      );
 
-      const nearest = (hits: Array<{ kind: string; circle: Phaser.Geom.Circle }>) => hits
-        .map(({ kind, circle }) => {
-          const point = new Phaser.Math.Vector2();
-          if (!Phaser.Geom.Intersects.LineToCircle(segment, circle, point)) return null;
-          return { kind, x: point.x, y: point.y, distance: Phaser.Math.Distance.Between(previous.x, previous.y, point.x, point.y) };
-        })
+      const clean = [
+        weapon ? { kind: 'weapon' as const, hit: weapon } : null,
+        head ? { kind: 'head' as const, hit: head } : null,
+        body ? { kind: 'body' as const, hit: body } : null,
+      ]
         .filter(Boolean)
-        .sort((a, b) => a!.distance - b!.distance)[0] ?? null;
+        .sort((a, b) => a!.hit.distance - b!.hit.distance)[0] ?? null;
 
-      const clean = nearest([
-        { kind: 'weapon', circle: weapon },
-        { kind: 'head', circle: head },
-        { kind: 'body', circle: body },
-      ]);
       if (clean) {
         if (clean.kind === 'head') {
           this.showCombatMessage('HEADSHOT · INSTANT', '#f0dfb6');
@@ -1559,20 +1598,36 @@ export class WardrobeLabScene extends Phaser.Scene {
         } else if (clean.kind === 'body') {
           this.targetBodyHits += 1;
           const hits = this.targetBodyHits;
-          this.showCombatMessage(hits >= 2 ? 'BODY HIT · ELIMINATED' : 'BODY HIT · ONE MORE', '#e06a3d');
+          this.showCombatMessage(
+            hits >= 2 ? 'BODY HIT · ELIMINATED' : 'BODY HIT · ONE MORE',
+            '#e06a3d',
+          );
           if (hits >= 2) this.resetTargetSoon(520);
         } else {
           this.showCombatMessage('GUN HIT · GUN DOWN', '#e8c95c');
-          this.addWardrobeImpact(clean.x, clean.y, '#e8c95c');
+          this.addWardrobeImpact(clean.hit.x, clean.hit.y, '#e8c95c');
         }
         this.removeShot(index);
         continue;
       }
 
-      const scrape = nearest([
-        { kind: 'head-scrape', circle: headScrape },
-        { kind: 'body-scrape', circle: bodyScrape },
-      ]);
+      const scrape = [
+        this.getSegmentCircleHit(
+          segment,
+          this.target.x,
+          this.target.y - 82,
+          this.arenaScrapeRadius,
+        ),
+        this.getSegmentCircleHit(
+          segment,
+          this.target.x,
+          this.target.y - 45,
+          this.arenaScrapeRadius,
+        ),
+      ]
+        .filter(Boolean)
+        .sort((a, b) => a!.distance - b!.distance)[0] ?? null;
+
       if (scrape) {
         this.showCombatMessage('SCRAPE', '#9fbda8');
         this.addWardrobeImpact(scrape.x, scrape.y, '#9fbda8');
@@ -1580,6 +1635,50 @@ export class WardrobeLabScene extends Phaser.Scene {
       }
     }
   }
+
+  private getSegmentCircleHit(
+    line: Phaser.Geom.Line,
+    centerX: number,
+    centerY: number,
+    radius: number,
+  ) {
+    const nearest = new Phaser.Math.Vector2();
+    const circle = new Phaser.Geom.Circle(centerX, centerY, radius);
+    if (!Phaser.Geom.Intersects.LineToCircle(line, circle, nearest)) return null;
+
+    const distance = Phaser.Math.Distance.Between(
+      line.x1,
+      line.y1,
+      nearest.x,
+      nearest.y,
+    );
+
+    return Number.isFinite(distance) && Number.isFinite(nearest.x) && Number.isFinite(nearest.y)
+      ? { x: nearest.x, y: nearest.y, distance }
+      : null;
+  }
+
+  private getFirstCoverIntersectionDistance(line: Phaser.Geom.Line) {
+    let nearest = Number.POSITIVE_INFINITY;
+
+    for (const cover of this.covers) {
+      const intersections = Phaser.Geom.Intersects.GetLineToRectangle(line, cover);
+      for (const point of intersections) {
+        const distance = Phaser.Math.Distance.Between(
+          line.x1,
+          line.y1,
+          point.x,
+          point.y,
+        );
+        if (Number.isFinite(distance)) nearest = Math.min(nearest, distance);
+      }
+
+      if (cover.contains(line.x1, line.y1)) nearest = 0;
+    }
+
+    return Number.isFinite(nearest) ? nearest : null;
+  }
+
 
   private getTargetWeaponPoint() {
     // The training target is an armed sprite. Keep its exposed weapon marker
