@@ -202,7 +202,7 @@ export class ShootersTriggerOnlineScene extends Phaser.Scene {
   private installLobbyModal() {
     const modal = document.createElement('div');
     Object.assign(modal.style, {
-      position: 'fixed', inset: '0', zIndex: '1500', display: 'grid', placeItems: 'center',
+      position: 'fixed', inset: '0', zIndex: '1500', display: 'grid', placeItems: 'center', pointerEvents: 'auto',
       padding: 'max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left))', background: 'rgba(12,18,14,.78)', fontFamily: 'monospace', touchAction: 'manipulation', overflowY: 'auto',
     });
 
@@ -338,13 +338,24 @@ export class ShootersTriggerOnlineScene extends Phaser.Scene {
       background: primary ? '#e8c95c' : '#102018',
       color: primary ? '#151a16' : '#f4f1df',
       fontFamily: 'monospace', fontSize: '10px', fontWeight: '900',
-      touchAction: 'manipulation',
+      touchAction: 'manipulation', pointerEvents: 'auto', cursor: 'pointer',
+      WebkitTapHighlightColor: 'transparent',
     });
-    button.addEventListener('click', (event) => {
+
+    let firedAt = 0;
+    const activate = (event: Event) => {
       event.preventDefault();
       event.stopPropagation();
+      const now = Date.now();
+      if (now - firedAt < 350) return;
+      firedAt = now;
       onClick();
-    });
+    };
+
+    // Pointerdown is the primary activation path for the Phaser DOM overlay.
+    // Click remains as the keyboard/accessibility fallback.
+    button.addEventListener('pointerdown', activate);
+    button.addEventListener('click', activate);
     return button;
   }
 
