@@ -5778,3 +5778,56 @@ The Shooter Trigger mechanical contract remains unchanged.
 ### Immutable source note
 
 The exact inspected 4.jpg currently exists in the archived 4.jpg attempt commit. The Wardrobe manifest records its immutable source URL and blob SHA so the visual lab can inspect the exact artifact without asking the user to re-upload it. When the asset is formally promoted into the repository asset tree, the manifest source can be changed to the local asset without changing its semantic contract.
+
+
+## Shooters Trigger — First Online Two-Player Checkpoint — October 3, 2026
+
+The Online Arena now has a real two-player client/server foundation instead of a fake preview.
+
+### Identity
+
+- The player's name is captured once in the existing Shooter Setup scene.
+- Online Arena reads that same stored name; it does NOT ask for a second name.
+- Player 1 uses the established green fighter colour.
+- Player 2 uses the contrasting red fighter colour.
+- Each fighter displays the name supplied by the existing game identity.
+
+### Online flow
+
+HOME FIELD → ONLINE ARENA → CREATE MATCH or JOIN MATCH → shared room → two fighters on the same 2400×1400 battlefield.
+
+- Create Match creates a private two-seat Colyseus room.
+- Join Match accepts the room ID as the room code.
+- Maximum room size is two.
+- The same Arena world vocabulary is used: trees, bunkers, tire stacks and the 2400×1400 coordinate space.
+- Mobile movement/aim/fire controls are reused.
+- The first checkpoint synchronizes movement, identity, colours and a server-side body-hit/first-to-3 test.
+
+### Server architecture
+
+- Online server lives under server/ as a separate long-running Node/Colyseus service.
+- Current server dependency target is Colyseus 0.18.9 with @colyseus/schema 5.0.35.
+- The frontend loads the Colyseus browser SDK at runtime and uses VITE_COLYSEUS_URL for the server endpoint; local development defaults to http://localhost:2567.
+- Do not replace this with Firebase/Firestore realtime combat.
+- The next combat checkpoint should move the room to the full 0.18 prediction-ready input contract: fixed authoritative timestep, client prediction/reconciliation, remote interpolation and lag-compensated hit resolution.
+- Full parity with offline Arena's head/body/scrape/cover/CQE rules is NOT claimed by this first online checkpoint. The current online server deliberately keeps the combat test small.
+
+### Deployment truth
+
+- The online server source is committed, but a public production Colyseus endpoint has not yet been provisioned.
+- Until VITE_COLYSEUS_URL points at a deployed WebSocket-capable Colyseus service, the Online Arena cannot be tested between two separate phones over the public internet.
+- Do not describe the public two-device connection as live until that server endpoint is actually deployed and tested.
+
+### Acceptance for this checkpoint
+
+1. Start Shooter Trigger and enter a name once.
+2. Reach Home Field → Online Arena.
+3. Create Match; confirm the existing name appears and a room ID is shown.
+4. On a second device, enter its own already-stored Shooter name and join using the room ID.
+5. Confirm both names and different fighter colours.
+6. Confirm both fighters occupy the same Arena world and movement synchronizes.
+7. Confirm server-side body-hit/first-to-3 test works before expanding combat parity.
+
+Product principle remains:
+
+ONLINE ARENA = THE SAME COMBAT WORLD WITH A HUMAN ON THE OTHER END.
