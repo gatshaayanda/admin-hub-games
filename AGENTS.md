@@ -5939,3 +5939,10 @@ The Online Arena lobby is a DOM overlay above the Phaser canvas. Its action cont
 ## Wardrobe Shooting Freeze — second pass — 2026-10-03
 
 The first freeze fix correctly removed per-tick combat alpha scans, but shooting still freezes in the browser. The projectile path has therefore been audited against the proven Shooter Trigger Arena implementation. Wardrobe must use the same swept Line/Circle and Line/Rectangle collision structure; only the projectile origin is artwork/manifest-driven. A finite-value guard and a bounded 12-shot list are defensive protections, not gameplay changes. Do not change the accepted 3.jpg movement baseline or Arena projectile speed/collision contract to compensate for artwork.
+
+
+## Wardrobe Shooting Freeze — third pass — 2026-10-03
+- The projectile/collision path passed CI but shooting still froze in live interaction testing.
+- Root cause targeted in this pass: authored 1.jpg combat grounding used canvas `getImageData` alpha scans when a combat pose was first entered; touch aiming can change sectors during the firing gesture, making those scans occur on the interaction path.
+- `WardrobeLabScene` now prewarms every unique manifest combat pose's fit during scene creation. Runtime combat pose changes must consume the cache only; no pixel scan belongs on the fire/aim path.
+- Preserve the accepted 3.jpg movement contract and the manifest muzzle/projectile contract.
