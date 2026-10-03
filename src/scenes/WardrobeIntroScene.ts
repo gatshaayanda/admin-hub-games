@@ -1297,9 +1297,9 @@ export class WardrobeLabScene extends Phaser.Scene {
     if (combatActive) {
       const combatPose = this.getGeneratedCombatPose();
       if (this.previewSprite.texture.key !== combatAtlasKey) {
-        this.previewSprite.setTexture(combatAtlasKey, combatPose.frame, false, false);
+        this.previewSprite.setTexture(combatAtlasKey, combatPose.frame);
       } else {
-        this.previewSprite.setFrame(combatPose.frame, false, false);
+        this.previewSprite.setFrame(combatPose.frame);
       }
       this.previewSprite.setScale(this.generatedBodyScale || 1);
       this.previewSprite.setOrigin(0.5, this.generatedBodyOriginY);
@@ -1307,7 +1307,7 @@ export class WardrobeLabScene extends Phaser.Scene {
       this.previewSprite.stop();
     } else {
       if (this.previewSprite.texture.key !== atlasKey) {
-        this.previewSprite.setTexture(atlasKey, 0, false, false);
+        this.previewSprite.setTexture(atlasKey, 0);
       }
       this.previewSprite.setScale(this.generatedBodyScale || 1);
       this.previewSprite.setOrigin(0.5, this.generatedBodyOriginY);
