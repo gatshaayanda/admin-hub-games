@@ -20,10 +20,25 @@ type GeneratedV2RigManifest = {
     atlas: string;
     frameWidth: number;
     frameHeight: number;
-    aimFrame: number;
-    fireFrame: number;
-    readyFrame: number;
-    recoilFrame: number;
+    poses: Record<string, {
+      frame: number;
+      muzzle: { x: number; y: number };
+    }>;
+    aimSectors: Array<{
+      name: string;
+      minDeg: number;
+      maxDeg: number;
+      pose: string;
+      mirror: boolean;
+    }>;
+    states: {
+      aim: number;
+      fire: number;
+      ready: number;
+      muzzleFlash: number;
+      recoil: number;
+    };
+    contract: string;
   };
   rig: {
     body: {
@@ -491,6 +506,7 @@ export class WardrobeLabScene extends Phaser.Scene {
   private playerFacing = 1;
   private previewSprite!: Phaser.GameObjects.Sprite;
   private generatedCombatOverlay!: Phaser.GameObjects.Sprite;
+  private generatedCombatSprite!: Phaser.GameObjects.Sprite;
   private bodySprite!: Phaser.GameObjects.Sprite;
   private armsSprite!: Phaser.GameObjects.Sprite;
   private weaponSprite!: Phaser.GameObjects.Sprite;
@@ -674,17 +690,21 @@ export class WardrobeLabScene extends Phaser.Scene {
       this.previewSprite.setVisible(true);
     }
     this.bodySprite = this.previewSprite;
-    // The generated v2 manifest contains real transparent arm/weapon/muzzle
-    // layers with attachment coordinates. Use those layers as the reusable
-    // directional combat rig; the integrated 1.jpg atlas remains a reference
-    // asset and is not cropped/rotated at runtime.
+    // 1.jpg is authored full-body combat artwork. It is rendered as a
+    // grounded combat presentation, never as a second body or a continuously
+    // rotated weapon. The manifest owns pose selection and muzzle anchors.
+    this.generatedCombatSprite = this.add.sprite(0, 0, 'wardrobe-generated-combat-atlas', 0)
+      .setVisible(false);
+    this.fitGeneratedCombatSprite(this.generatedCombatSprite);
+    // Keep the old extracted layers available for audit only. They are never
+    // stacked on top of the generated character.
     this.generatedArmsLayer = this.add.sprite(-7, -40, 'wardrobe-generated-v2-arms')
       .setOrigin(0.5, 0.5).setVisible(false);
     this.generatedWeaponLayer = this.add.sprite(7, -37, 'wardrobe-generated-v2-weapon')
       .setOrigin(24.2 / 110, 75.92 / 146).setVisible(false);
     this.generatedMuzzleLayer = this.add.sprite(57, -37, 'wardrobe-generated-v2-muzzle')
       .setOrigin(0, 0.5).setVisible(false);
-    this.character.add([this.previewSprite, this.generatedArmsLayer, this.generatedWeaponLayer, this.generatedMuzzleLayer]);
+    this.character.add([this.previewSprite, this.generatedCombatSprite, this.generatedArmsLayer, this.generatedWeaponLayer, this.generatedMuzzleLayer]);
 
     // The Arena reference rig must always be part of the character container.
     // It is hidden for other characters and revealed when PREV/NEXT selects it.
@@ -1201,28 +1221,29 @@ export class WardrobeLabScene extends Phaser.Scene {
     let flipX = false;
 
     const aiming = this.pointerAimActive || this.fireHeld ||
+      this.muzzleUntil > 0 ||
       this.generatedAction === 'aim' || this.generatedAction === 'shoot' ||
       this.generatedAction === 'muzzle' || this.generatedAction === 'recoil';
 
-    // 3.jpg is an armed movement atlas, so it already contains the gun.
-    // There must be exactly one visible weapon presentation. While aiming,
-    // the generated body follows the aim direction even while moving; this
-    // keeps the embedded gun and projectile direction visually coherent
-    // instead of introducing a second independently rotating character rig.
-    const facingX = aiming ? this.aim.x : vx;
-    const facingY = aiming ? this.aim.y : vy;
+    // Movement remains the body/ground contract. Combat is a separate authored
+    // full-body presentation selected from 1.jpg; the world position never
+    // changes when the presentation switches.
+    const facingX = vx;
+    const facingY = vy;
     if (Math.abs(facingX) > Math.abs(facingY) && Math.abs(facingX) > 0.35) {
       animation = facingX < 0 ? 'LEFT' : 'RIGHT';
     } else if (Math.abs(facingY) > 0.35) {
       animation = facingY < 0 ? 'UP' : 'DOWN';
     }
     flipX = false;
-    // Keep the 3.jpg body animation authoritative even while aiming. The 1.jpg
-    // combat artwork is an authored horizontal upper-body presentation layer;
-    // it is intentionally not rotated for arbitrary aim angles.
+
     if (aiming) {
-      this.previewSprite.setAlpha(1);
-      this.previewSprite.setTint(0xffffff);
+      this.previewSprite.setVisible(false);
+      this.generatedCombatSprite.setVisible(true);
+      this.applyGeneratedCombatPose();
+    } else {
+      this.generatedCombatSprite.setVisible(false);
+      this.previewSprite.setVisible(true);
     }
     this.generatedCombatOverlay?.setVisible(false);
 
@@ -1271,46 +1292,35 @@ export class WardrobeLabScene extends Phaser.Scene {
     return this.generatedBodyScale || 1;
   }
 
+  private getGeneratedCombatPose() {
+    const angle = Phaser.Math.Angle.Normalize(this.aim.angle());
+    let degrees = Phaser.Math.RadToDeg(angle);
+    if (degrees > 180) degrees -= 360;
+    const sector = this.generatedCombat.aimSectors.find((entry) => {
+      if (entry.minDeg <= entry.maxDeg) return degrees >= entry.minDeg && degrees < entry.maxDeg;
+      return degrees >= entry.minDeg || degrees < entry.maxDeg;
+    }) ?? this.generatedCombat.aimSectors[0];
+    const pose = this.generatedCombat.poses[sector.pose];
+    return { sector, pose };
+  }
+
+  private applyGeneratedCombatPose() {
+    const { sector, pose } = this.getGeneratedCombatPose();
+    this.generatedCombatSprite.setFrame(pose.frame, false, false);
+    this.generatedCombatSprite.setFlipX(sector.mirror);
+    this.generatedCombatSprite.setAlpha(1);
+    this.generatedCombatSprite.setTint(0xffffff);
+  }
+
   private getGeneratedCombatMuzzleLocalPoint() {
-    const scale = this.getGeneratedCombatRigScale();
-    // 3.jpg contains the weapon in every directional movement frame. The
-    // manifest gives the authored weapon grip and muzzle in source pixels:
-    // 85.8px apart on a 110px-wide weapon displayed at 50px. That is a
-    // 39px muzzle offset from the grip, before bodyScale is applied.
-    const muzzleDistance = (110 - 24.2) * (50 / 110) * scale;
-    const gripX = 7 * scale;
-    const gripY = -37 * scale;
-
-    // The artwork itself is only authored in four cardinal gun directions.
-    // Aim can be arbitrary, but it must never rotate the muzzle anchor around
-    // the body. The projectile may travel diagonally; its visible origin stays
-    // attached to the gun in the exact directional frame being rendered.
-    // The visible 3.jpg frame follows aim while aiming, even if the player
-    // is moving in another direction. The muzzle origin must use that exact
-    // same cardinal frame choice; otherwise the gun can visually point one
-    // way while the projectile starts from the old movement direction.
-    const aiming = this.pointerAimActive || this.fireHeld ||
-      this.generatedAction === 'aim' || this.generatedAction === 'shoot' ||
-      this.generatedAction === 'muzzle' || this.generatedAction === 'recoil';
-    const facingX = aiming ? this.aim.x : this.visualMove.x;
-    const facingY = aiming ? this.aim.y : this.visualMove.y;
-    let direction: 'DOWN' | 'UP' | 'LEFT' | 'RIGHT' = 'DOWN';
-    if (Math.abs(facingX) > Math.abs(facingY) && Math.abs(facingX) > 0.35) {
-      direction = facingX < 0 ? 'LEFT' : 'RIGHT';
-    } else if (Math.abs(facingY) > 0.35) {
-      direction = facingY < 0 ? 'UP' : 'DOWN';
-    }
-
-    const muzzleDirection = {
-      DOWN: new Phaser.Math.Vector2(0, 1),
-      UP: new Phaser.Math.Vector2(0, -1),
-      RIGHT: new Phaser.Math.Vector2(1, 0),
-      LEFT: new Phaser.Math.Vector2(-1, 0),
-    }[direction];
-
+    const { sector, pose } = this.getGeneratedCombatPose();
+    const x = sector.mirror ? this.generatedCombat.frameWidth - pose.muzzle.x : pose.muzzle.x;
+    const y = pose.muzzle.y;
+    const originX = this.generatedCombatSprite.originX * this.generatedCombat.frameWidth;
+    const originY = this.generatedCombatSprite.originY * this.generatedCombat.frameHeight;
     return new Phaser.Math.Vector2(
-      gripX + muzzleDirection.x * muzzleDistance,
-      gripY + muzzleDirection.y * muzzleDistance,
+      (x - originX) * this.generatedCombatSprite.scaleX,
+      (y - originY) * this.generatedCombatSprite.scaleY,
     );
   }
 
@@ -1328,10 +1338,8 @@ export class WardrobeLabScene extends Phaser.Scene {
       this.generatedAction === 'aim' || this.generatedAction === 'shoot' ||
       this.generatedAction === 'muzzle' || this.generatedAction === 'recoil';
 
-    // 3.jpg is already the complete armed player presentation. The extracted
-    // arms/weapon layers remain in the manifest for audit/reference, but they
-    // must not be rendered on top of the armed body or the player becomes a
-    // split/double character when the independent layer rotates.
+    // The combat sprite is the single generated combat presentation. Extracted
+    // arms/weapon/muzzle crops remain audit outputs and are never stacked on it.
     this.generatedArmsLayer?.setVisible(false);
     this.generatedWeaponLayer?.setVisible(false);
     this.generatedMuzzleLayer?.setVisible(false);
@@ -1347,7 +1355,8 @@ export class WardrobeLabScene extends Phaser.Scene {
       this.arenaArms?.setVisible(false);
       this.arenaWeapon?.setVisible(false);
       this.arenaMuzzle?.setVisible(false);
-      this.previewSprite?.setVisible(true);
+      this.previewSprite?.setVisible(!aiming);
+      this.generatedCombatSprite?.setVisible(aiming);
     } else if (this.currentDefinition().source === 'arena') {
       this.previewSprite?.setVisible(false);
       this.generatedArmsLayer?.setVisible(false);
@@ -1382,9 +1391,9 @@ export class WardrobeLabScene extends Phaser.Scene {
   }
 
   private fireShot() {
-    // The generated 3.jpg atlas has its weapon embedded in the artwork.
-    // Use the generated rig's authored grip/muzzle geometry for the shot
-    // origin, rather than the Arena reference's 42px muzzle point.
+    // Wardrobe uses the exact muzzle anchor from the currently rendered 1.jpg
+    // combat pose. Projectile velocity remains the continuous Arena aim vector;
+    // only the origin is supplied by the authored combat contract.
     // Arena keeps its original 42px mechanical contract.
     const generated = this.currentDefinition().source === 'generated';
     const angle = this.aim.lengthSq() > 0.0025 ? this.aim.angle() : 0;
