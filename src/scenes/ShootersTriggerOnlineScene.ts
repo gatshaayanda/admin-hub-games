@@ -310,7 +310,14 @@ export class ShootersTriggerOnlineScene extends Phaser.Scene {
         color: '#4fc3b1',
       });
 
-      card.append(code, instruction, waiting);
+      const firstButton = card.querySelector('button');
+      if (firstButton) {
+        card.insertBefore(code, firstButton);
+        card.insertBefore(instruction, firstButton);
+        card.insertBefore(waiting, firstButton);
+      } else {
+        card.append(code, instruction, waiting);
+      }
     } else if (state === 'LIVE') {
       const waiting = card.querySelector('[data-room-waiting]') as HTMLElement | null;
       if (waiting) waiting.textContent = 'PLAYER 2 JOINED · MATCH LIVE';
