@@ -5831,3 +5831,31 @@ HOME FIELD → ONLINE ARENA → CREATE MATCH or JOIN MATCH → shared room → t
 Product principle remains:
 
 ONLINE ARENA = THE SAME COMBAT WORLD WITH A HUMAN ON THE OTHER END.
+
+
+## Shooters Trigger — Online Arena Landscape & Guidance — October 3, 2026
+
+The Online Arena is the same 2400×1400 two-player battlefield and must retain the existing gameplay mechanics/collision contract. Landscape improvements are presentation-only.
+
+### Online visual contract
+- Keep the existing cover/bunker/tire placement and gameplay geometry unchanged.
+- The landscape should read as an outdoor southern-African paintball field: dry grass variation, dusty travel lane, sparse bush, thorn-tree character, simple perimeter fencing and field markers.
+- Visual scenery must never be added to authoritative movement/combat geometry unless the combat contract is explicitly changed and verified.
+- Player 1 remains green and Player 2 remains red; names remain visible above fighters.
+- Start zones and the central duel zone are visual orientation markers only.
+
+### Online phase guidance
+- Reuse the existing player name from Shooter Setup. Never ask for the name again.
+- Before connection: clearly offer CREATE MATCH or JOIN MATCH.
+- Waiting phase: show the room code and make the next action obvious: share the code, then have Player 2 join.
+- Live phase: clearly identify MATCH LIVE and FIRST TO 3.
+- Finished phase: identify MATCH COMPLETE and provide the route back to the field.
+- Keep guidance concise and mobile-readable; do not cover the active fighters or controls.
+- Do not replace the online two-player connection flow with a fake local multiplayer simulation.
+
+### Vercel build contract
+- Phaser 4.2.1 APIs must be checked against the installed TypeScript definitions before committing.
+- setTexture/setFrame calls must use the installed Phaser 4 signature; do not carry Phaser 3-era extra boolean arguments into production code.
+- A successful online feature checkpoint also requires tsc && vite build to pass.
+
+Unexpected visual or collision change = STOP → inspect the actual Online Arena and Arena reference geometry → then act.
