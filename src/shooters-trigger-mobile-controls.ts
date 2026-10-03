@@ -23,6 +23,7 @@ const SCENES = [
   'ShootersTriggerTrainingScene',
   'ShootersTriggerEvasionScene',
   'ShootersTriggerArenaScene',
+  'ShootersTriggerOnlineScene',
   'WardrobeLabScene',
 ];
 

@@ -1,0 +1,15 @@
+{
+  "name": "shooters-trigger-online-server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "colyseus": "^0.18.9",
+    "@colyseus/schema": "^5.0.35"
+  }
+}

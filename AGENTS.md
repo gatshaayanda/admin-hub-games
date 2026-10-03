@@ -5799,3 +5799,17 @@ If clean independent arms/weapon artwork can be extracted without duplicating th
 The reverted combat attempt used hard-coded pose numbers and hard-coded muzzle coordinates from 1.jpg. Those coordinates were not established from a verified per-frame grip/muzzle contract. The next implementation must inspect and label the actual combat frames first, establish their grounding and attachment geometry, then bind Phaser presentation and projectile origin to that contract.
 
 Do not change Shooter Trigger Arena mechanics to compensate for Wardrobe artwork.
+
+
+## Shooters Trigger — Online Arena Mobile & Public Endpoint Contract — October 3, 2026
+
+- Online Arena is phone-first. The Create Match / Join Match menu must fit the real mobile viewport, including safe-area insets; use bounded responsive width, max-height and internal scrolling rather than allowing controls below the viewport.
+- Reuse the existing Shooter Setup player name. Never ask for a second name.
+- Keep the 2400×1400 Online Arena coordinate space and existing movement/combat geometry unchanged. Presentation-only landscape changes must not alter collision geometry.
+- **Production must never fall back to `http://localhost:2567`.** A public HTTPS game falling back to localhost can trigger the browser's loopback/local-device permission prompt and is not a valid production connection path.
+- Localhost is allowed only when the page itself is running on localhost for local development.
+- If `VITE_COLYSEUS_URL` is absent in production, show a truthful server-not-configured state and make no localhost request.
+- A production Online Arena requires a public HTTPS/WSS-capable Colyseus endpoint supplied through `VITE_COLYSEUS_URL`.
+- Browser prompts about accessing other apps/services on the device are browser Local Network/loopback security controls, not a game feature and not required for normal public Online Arena play.
+- Never instruct players to Allow that prompt to make production Online Arena work.
+- The current online checkpoint remains deliberately limited to two-player connection, synchronized movement and server-side body-hit/first-to-3; full offline Arena combat parity remains a later checkpoint.
