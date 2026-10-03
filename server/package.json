@@ -7,8 +7,8 @@
     "start": "node build/index.js"
   },
   "dependencies": {
-    "@colyseus/schema": "^3.0.34",
-    "colyseus": "^0.17.27"
+    "@colyseus/schema": "^5.0.35",
+    "colyseus": "^0.18.9"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
