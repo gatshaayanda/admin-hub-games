@@ -1,15 +1,17 @@
 {
-  "name": "shooters-trigger-online-server",
+  "name": "admin-hub-games-online-server",
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node src/index.js"
-  },
-  "engines": {
-    "node": ">=20"
+    "build": "tsc",
+    "start": "node build/index.js"
   },
   "dependencies": {
-    "colyseus": "^0.18.9",
-    "@colyseus/schema": "^5.0.35"
+    "@colyseus/schema": "^3.0.34",
+    "colyseus": "^0.17.27"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^6.0.2"
   }
 }
