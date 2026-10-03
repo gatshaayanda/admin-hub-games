@@ -5856,3 +5856,62 @@ Phaser implementation follows the documented Sprite frame/origin behavior and Co
 ### Protected boundary
 
 Shooters Trigger Arena projectile speed, continuous aim, swept collision, hit ordering and mobile mechanics remain the source of truth. Wardrobe artwork must adapt to that contract; Arena mechanics must not be changed to compensate for generated-artwork problems.
+
+
+## Shooters Trigger — Online Room Entry Contract — October 3, 2026
+
+The Online Arena lobby is a real two-player handoff, not a second gameplay name screen.
+
+### Required flow
+
+```
+PLAYER 1
+existing game name
+  ↓
+Online Arena
+  ↓
+CREATE MATCH
+  ↓
+room is created by Colyseus
+  ↓
+room code remains visible in the lobby
+  ↓
+share code
+  ↓
+PLAYER 2
+existing game name on their own device
+  ↓
+Online Arena
+  ↓
+enter room code
+  ↓
+JOIN MATCH / Enter
+  ↓
+same Colyseus room
+  ↓
+two-player Arena
+```
+
+### Keyboard / desktop contract
+
+- Room-code input must accept normal laptop keyboard typing.
+- Pressing **Enter** while the room-code input is focused must trigger JOIN MATCH.
+- Lobby buttons must work through normal keyboard activation as well as pointer/touch activation.
+- Do not require a second name entry to join a room.
+- CREATE MATCH must visibly transition from the create/join menu to a waiting state containing the actual Colyseus room ID.
+- The room code is the actual room ID used by `joinById(roomId, options)`; do not invent a separate code that the server cannot resolve.
+
+### Endpoint contract
+
+- `VITE_COLYSEUS_URL` must be read and used when configured.
+- Production HTTPS pages must never silently fall back to localhost.
+- Localhost fallback is permitted only when the page itself is served from localhost/127.0.0.1.
+- If no public endpoint is configured in production, show a truthful server-not-configured state.
+- A successful frontend build does not prove that the Colyseus server exists or is reachable.
+- The public Colyseus server must be deployed separately as a long-running WebSocket-capable Node service before two-device production multiplayer can work.
+
+### Colyseus / Phaser reference boundary
+
+The implementation follows the current Colyseus room model: `create()` creates a room, `joinById()` joins the specific room, and the server owns room state. Phaser remains responsible for presentation, input and local rendering; authoritative multiplayer state belongs to Colyseus.
+
+Do not fake a second player locally when the room has only one client. Do not treat the lobby staying open as a successful connection. The visible room code and WAITING state are the proof that room creation succeeded; LIVE is the proof that the second client joined.
