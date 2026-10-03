@@ -92,13 +92,29 @@ def inspect_sheet(path: Path, columns: int, rows: int, cell_width: int, cell_hei
 
 def inspect_manifest(path: Path):
     data = json.loads(path.read_text(encoding="utf-8"))
+    combat = data.get("combat") or {}
+    poses = combat.get("poses") or {}
+    failures = []
+    frame_w = int(combat.get("frameWidth", 0) or 0)
+    frame_h = int(combat.get("frameHeight", 0) or 0)
+    for name, pose in poses.items():
+        frame = pose.get("frame")
+        muzzle = pose.get("muzzle") or {}
+        if not isinstance(frame, int) or frame < 0:
+            failures.append(f"combat pose {name}: invalid frame")
+        if not (0 <= float(muzzle.get("x", -1)) <= frame_w and 0 <= float(muzzle.get("y", -1)) <= frame_h):
+            failures.append(f"combat pose {name}: muzzle outside frame")
+    sectors = combat.get("aimSectors") or []
+    if len(sectors) < 5:
+        failures.append("combat contract: fewer than five visual aim sectors")
     return {
         "path": str(path),
         "grid": data.get("grid"),
         "bodyCells": len(data.get("bodyCells", [])),
         "layers": data.get("layers"),
-        "combat": data.get("combat"),
+        "combat": combat,
         "rig": data.get("rig"),
+        "combatContractFailures": failures,
     }
 
 
@@ -129,6 +145,8 @@ def main():
         summary = sheet.get("summary")
         if summary and summary["nonEmptyFrames"] == 0:
             failures.append(f"{sheet['path']}: all frames are empty")
+    for failure in report.get("manifest", {}).get("combatContractFailures", []):
+        failures.append(f"manifest: {failure}")
 
     if failures:
         print("\nFAIL")
