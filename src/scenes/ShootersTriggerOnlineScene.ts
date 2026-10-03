@@ -35,6 +35,7 @@ export class ShootersTriggerOnlineScene extends Phaser.Scene {
   private lastRoomId = '';
   private name = 'PLAYER';
   private animClock = 0;
+  private phaseGuide?: Phaser.GameObjects.Container;
 
   constructor() {
     super('ShootersTriggerOnlineScene');
@@ -53,6 +54,8 @@ export class ShootersTriggerOnlineScene extends Phaser.Scene {
       color: '#fff4d4', backgroundColor: '#2b2118',
       padding: { left: 12, right: 12, top: 8, bottom: 8 },
     }).setOrigin(.5).setScrollFactor(0).setDepth(200);
+
+    this.drawOnlinePhaseGuide();
 
     this.scoreHud = this.add.text(this.scale.width / 2, 22, '', {
       fontFamily: 'monospace', fontSize: '12px', fontStyle: 'bold',
@@ -359,10 +362,114 @@ export class ShootersTriggerOnlineScene extends Phaser.Scene {
     this.drawTireStack(1900, 650);
     this.drawTireStack(730, 1170);
 
+    this.drawOnlineLandscape();
+
     this.add.text(1180, 118, 'ONLINE ARENA · TWO PLAYER FIELD', {
       fontFamily: 'monospace', fontSize: '16px', fontStyle: 'bold',
       color: '#fff4d4', stroke: '#2d5d35', strokeThickness: 5,
     }).setOrigin(.5).setDepth(10);
+  }
+
+  private drawOnlineLandscape() {
+    // Presentation only. Existing movement/combat geometry remains unchanged.
+    const ground = this.add.graphics().setDepth(1);
+    ground.fillStyle(0x8f754d, 0.18).fillEllipse(1180, 710, 760, 180);
+    ground.fillStyle(0x5f7445, 0.14).fillEllipse(1180, 710, 1100, 360);
+
+    this.drawDirtTrack(1180, 0, 1400);
+    this.drawBush(170, 470, 1.2);
+    this.drawBush(430, 260, 0.8);
+    this.drawBush(2190, 470, 1.1);
+    this.drawBush(2280, 900, 0.85);
+    this.drawBush(250, 880, 0.95);
+    this.drawBush(1160, 1260, 1.1);
+    this.drawBush(1330, 220, 0.7);
+
+    this.drawFenceLine(120, 190, 520);
+    this.drawFenceLine(1760, 190, 520);
+    this.drawFenceLine(120, 1210, 520);
+    this.drawFenceLine(1760, 1210, 520);
+
+    this.drawStartMarker(360, 1040, 0x2f6b4e, 'PLAYER 1');
+    this.drawStartMarker(2040, 430, 0x9b3f3f, 'PLAYER 2');
+    this.drawCenterMarker(1200, 700);
+  }
+
+  private drawDirtTrack(x: number, y: number, height: number) {
+    const g = this.add.graphics().setDepth(1);
+    g.fillStyle(0xb69a68, 0.18).fillRoundedRect(x - 62, y, 124, height, 62);
+    g.lineStyle(2, 0xd8bf8a, 0.18);
+    for (let offset = 70; offset < height; offset += 120) {
+      g.lineBetween(x - 38, offset, x - 18, offset + 26);
+      g.lineBetween(x + 22, offset + 34, x + 42, offset + 62);
+    }
+  }
+
+  private drawBush(x: number, y: number, scale: number) {
+    const g = this.add.graphics().setDepth(2);
+    g.fillStyle(0x56633e, 0.72)
+      .fillCircle(x, y, 22 * scale)
+      .fillCircle(x - 18 * scale, y + 5 * scale, 16 * scale)
+      .fillCircle(x + 20 * scale, y + 7 * scale, 18 * scale);
+    g.fillStyle(0x6f7b4b, 0.5).fillCircle(x - 3 * scale, y - 10 * scale, 13 * scale);
+  }
+
+  private drawFenceLine(x: number, y: number, width: number) {
+    const g = this.add.graphics().setDepth(2);
+    g.lineStyle(2, 0x725f43, 0.45);
+    g.lineBetween(x, y, x + width, y);
+    for (let post = x; post <= x + width; post += 65) {
+      g.fillStyle(0x725f43, 0.7).fillRect(post - 2, y - 12, 4, 24);
+    }
+  }
+
+  private drawStartMarker(x: number, y: number, color: number, label: string) {
+    const g = this.add.graphics().setDepth(5);
+    g.lineStyle(3, color, 0.72).strokeCircle(x, y, 48);
+    g.lineStyle(1, 0xf4f1df, 0.35).strokeCircle(x, y, 62);
+    this.add.text(x, y + 66, label, {
+      fontFamily: 'monospace', fontSize: '7px', fontStyle: 'bold',
+      color: '#fff4d4', stroke: '#493526', strokeThickness: 3,
+    }).setOrigin(.5).setDepth(7);
+  }
+
+  private drawCenterMarker(x: number, y: number) {
+    const g = this.add.graphics().setDepth(5);
+    g.lineStyle(2, 0xf4f1df, 0.24).strokeCircle(x, y, 72);
+    g.lineStyle(1, 0xf4f1df, 0.18).strokeCircle(x, y, 90);
+    this.add.text(x, y + 96, 'DUEL ZONE', {
+      fontFamily: 'monospace', fontSize: '7px', fontStyle: 'bold',
+      color: '#fff4d4', stroke: '#493526', strokeThickness: 3,
+    }).setOrigin(.5).setDepth(7);
+  }
+
+  private drawOnlinePhaseGuide() {
+    const panel = this.add.rectangle(0, 0, 1, 1, 0x151a16, 0.92)
+      .setOrigin(.5).setStrokeStyle(1, 0x4fc3b1, 0.65);
+    const title = this.add.text(0, 0, '', {
+      fontFamily: 'monospace', fontSize: '9px', fontStyle: 'bold',
+      color: '#4fc3b1', align: 'center',
+    }).setOrigin(.5);
+    const steps = this.add.text(0, 0, '1 CREATE  ·  2 SHARE CODE  ·  3 FRIEND JOINS  ·  4 FIGHT', {
+      fontFamily: 'monospace', fontSize: '7px', fontStyle: 'bold',
+      color: '#f4f1df', align: 'center',
+    }).setOrigin(.5);
+    this.phaseGuide = this.add.container(this.scale.width / 2, 104, [panel, title, steps])
+      .setScrollFactor(0).setDepth(205);
+    const resize = () => {
+      const width = Math.min(this.scale.width - 24, 640);
+      panel.setSize(width, 58);
+      title.setPosition(0, -15);
+      steps.setPosition(0, 9);
+      steps.setWordWrapWidth(width - 24);
+    };
+    resize();
+    this.scale.on(Phaser.Scale.Events.RESIZE, resize);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off(Phaser.Scale.Events.RESIZE, resize);
+      this.phaseGuide?.destroy();
+      this.phaseGuide = undefined;
+    });
   }
 
   private drawTree(x: number, y: number, scale: number) {
@@ -394,14 +501,26 @@ export class ShootersTriggerOnlineScene extends Phaser.Scene {
     const others = [...this.players.entries()].filter(([id]) => id !== this.localSessionId);
     const opponent = others[0]?.[1];
     const opponentName = opponent?.label.text || 'WAITING';
-    const score = local?.body ? 0 : 0;
     this.scoreHud?.setText(
       this.roundState === 'FINISHED'
         ? 'MATCH FINISHED'
         : (this.roundState === 'LIVE' ? this.name + '  VS  ' + opponentName : this.name + '  ·  WAITING FOR PLAYER 2')
     );
-    if (this.roundState === 'LIVE') this.status?.setText('ONLINE ARENA · LIVE · FIRST TO 3');
-    if (this.roundState === 'WAITING') this.status?.setText('ONLINE ARENA · SHARE ROOM CODE · WAITING');
+    if (this.roundState === 'LIVE') {
+      this.status?.setText('ONLINE ARENA · LIVE · FIRST TO 3');
+    } else if (this.roundState === 'WAITING') {
+      this.status?.setText(this.lastRoomId
+        ? 'ROOM CODE · ' + this.lastRoomId + ' · WAITING FOR PLAYER 2'
+        : 'ONLINE ARENA · CREATE OR JOIN A MATCH');
+    }
+    const guideTitle = this.phaseGuide?.list?.[1] as Phaser.GameObjects.Text | undefined;
+    guideTitle?.setText(
+      this.roundState === 'LIVE'
+        ? 'PHASE 4 · MATCH LIVE · FIRST TO 3'
+        : this.roundState === 'FINISHED'
+          ? 'MATCH COMPLETE · RETURN TO FIELD'
+          : 'PHASE 2–3 · GET YOUR FRIEND INTO THE SAME ROOM'
+    );
   }
 
   private destroyRemote(player: RemotePlayer) {
