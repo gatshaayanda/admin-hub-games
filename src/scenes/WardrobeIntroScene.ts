@@ -1339,6 +1339,7 @@ export class WardrobeLabScene extends Phaser.Scene {
   private applyGeneratedCombatPose() {
     const { sector, pose } = this.getGeneratedCombatPose();
     this.generatedCombatSprite.setFrame(pose.frame, false, false);
+    this.fitGeneratedCombatSprite(this.generatedCombatSprite);
     this.generatedCombatSprite.setFlipX(sector.mirror);
     this.generatedCombatSprite.setAlpha(1);
     this.generatedCombatSprite.setTint(0xffffff);
