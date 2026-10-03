@@ -5813,3 +5813,46 @@ Do not change Shooter Trigger Arena mechanics to compensate for Wardrobe artwork
 - Browser prompts about accessing other apps/services on the device are browser Local Network/loopback security controls, not a game feature and not required for normal public Online Arena play.
 - Never instruct players to Allow that prompt to make production Online Arena work.
 - The current online checkpoint remains deliberately limited to two-player connection, synchronized movement and server-side body-hit/first-to-3; full offline Arena combat parity remains a later checkpoint.
+
+## Wardrobe / 1.jpg Combat Manifest Implemented — 2026-10-03
+
+The 1.jpg combat sheet was inspected cell-by-cell and is now consumed through the generated-v2 manifest.
+
+### Source-sheet contract
+
+- 1.jpg is 1408 × 768, an 8 × 4 sheet of 176 × 192 cells.
+- The upper-left combat cells provide authored DOWN, DOWN-RIGHT, RIGHT and UP-RIGHT presentations.
+- The second row provides LEFT plus authored AIM/READY, SHOOT+RECOIL, READY, MUZZLE FLASH and RECOIL states.
+- The remaining rows contain HIT, HEADSHOT, DEATH/ELIMINATED, DODGE and RESPAWN artwork.
+- These labels describe authored character/combat presentations; they are not proof that the gun barrel supplies eight exact aim sectors.
+
+### Runtime contract
+
+1.jpg is rendered as a single full-body combat presentation while generated combat is active. It is never stacked with the extracted arms/weapon/muzzle crops and is never continuously rotated.
+
+The manifest now owns:
+- combat frame selection;
+- visual aim-sector selection;
+- per-pose muzzle coordinates in source pixels;
+- authored fire/ready/muzzle-flash/recoil state frames;
+- the explicit continuous-projectile / discrete-visual contract.
+
+Combat pose grounding is derived from the actual transparent frame alpha bounds on every frame. The character world position therefore remains the feet/ground point when switching between 3.jpg locomotion and 1.jpg combat presentation.
+
+The projectile contract remains continuous: the projectile velocity is the exact normalized aim vector used by the Arena reference mechanics. Projectile origin is the transformed muzzle anchor belonging to the currently rendered combat pose. The muzzle flash uses that same transformed point.
+
+### Coverage limitation that must remain explicit
+
+1.jpg does not contain a verified pure UP combat pose or a verified eight-sector authored aim set. The manifest therefore uses the nearest available authored pose for uncovered visual sectors and uses horizontal mirroring only where the artwork supports it. The projectile still follows the exact requested aim vector.
+
+Do not describe the manifest's visual sectors as eight authored barrel directions. They are presentation sectors backed by actual 1.jpg cells.
+
+### Verification gate
+
+`scripts/wardrobe/inspect-generated-character.py` now validates combat frame IDs, muzzle-anchor bounds and minimum visual-sector coverage in addition to the existing structural checks.
+
+Phaser implementation follows the documented Sprite frame/origin behavior and Container transform model. See the official Phaser Game Objects / Origin documentation when changing this adapter.
+
+### Protected boundary
+
+Shooters Trigger Arena projectile speed, continuous aim, swept collision, hit ordering and mobile mechanics remain the source of truth. Wardrobe artwork must adapt to that contract; Arena mechanics must not be changed to compensate for generated-artwork problems.
