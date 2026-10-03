@@ -141,9 +141,9 @@ export class ShootersTriggerOnlineScene extends Phaser.Scene {
       this.localSessionId = this.room.sessionId;
       this.lastRoomId = this.room.id;
       this.roundState = this.room.state.status || 'WAITING';
-      this.modal?.remove();
-      this.modal = undefined;
+      this.lastRoomId = String(this.room.state.roomCode || this.room.id || '');
       this.status?.setText('ONLINE ARENA · WAITING FOR OPPONENT');
+      this.updateRoomLobby(this.roundState);
       const localPlayer = this.createWorldPlayerIfNeeded(this.localSessionId);
       this.cameras.main.startFollow(localPlayer.body, true, 0.12, 0.12);
       this.cameras.main.setDeadzone(Math.min(this.scale.width * .28, 320), Math.min(this.scale.height * .22, 150));
@@ -151,6 +151,8 @@ export class ShootersTriggerOnlineScene extends Phaser.Scene {
 
       this.room.onStateChange((state: any) => {
         this.roundState = state.status || 'WAITING';
+        this.lastRoomId = String(state.roomCode || this.room.id || this.lastRoomId);
+        this.updateRoomLobby(state.status || 'WAITING');
         for (const [id, player] of state.players) {
           const remote = this.players.get(id) ?? this.createWorldPlayerIfNeeded(id);
           if (!remote) continue;
@@ -186,7 +188,8 @@ export class ShootersTriggerOnlineScene extends Phaser.Scene {
   }
 
   private serverUrl() {
-    const configured = (import.meta as ImportMeta & { env?: Record<string, string> }).env?.VITE_COLYSEUS_URL;
+    const configured = (import.meta as ImportMeta & { env?: Record<string, string> }).env?.VITE_COLYSEUS_URL?.trim();
+    if (configured) return configured.replace(/\/$/, '');
     const host = window.location.hostname;
     return host === 'localhost' || host === '127.0.0.1' ? 'http://localhost:2567' : '';
   }
@@ -245,6 +248,12 @@ export class ShootersTriggerOnlineScene extends Phaser.Scene {
       }
       void this.connect(false, input.value);
     });
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        join.click();
+      }
+    });
 
     const back = this.makeButton('BACK TO FIELD', false, () => this.scene.start('ShootersTriggerLobbyScene'));
 
@@ -252,6 +261,71 @@ export class ShootersTriggerOnlineScene extends Phaser.Scene {
     modal.appendChild(card);
     document.body.appendChild(modal);
     this.modal = modal;
+  }
+
+  private updateRoomLobby(state: string) {
+    if (!this.modal || !this.lastRoomId) return;
+    const card = this.modal.firstElementChild as HTMLDivElement | null;
+    if (!card) return;
+
+    if (state === 'WAITING') {
+      const existing = card.querySelector('[data-room-code]') as HTMLDivElement | null;
+      if (existing) {
+        existing.textContent = this.lastRoomId;
+        return;
+      }
+
+      const code = document.createElement('div');
+      code.dataset.roomCode = 'true';
+      Object.assign(code.style, {
+        margin: '14px 0 8px',
+        padding: '12px 10px',
+        border: '2px solid #e8c95c',
+        borderRadius: '10px',
+        background: '#102018',
+        color: '#e8c95c',
+        font: '900 clamp(18px, 6vw, 26px) monospace',
+        letterSpacing: '2px',
+        userSelect: 'all',
+      });
+      code.textContent = this.lastRoomId;
+
+      const instruction = document.createElement('div');
+      instruction.dataset.roomInstruction = 'true';
+      instruction.textContent = 'SHARE THIS ROOM CODE WITH PLAYER 2';
+      Object.assign(instruction.style, {
+        margin: '0 0 8px',
+        fontSize: '9px',
+        lineHeight: '1.4',
+        opacity: '.82',
+      });
+
+      const waiting = document.createElement('div');
+      waiting.dataset.roomWaiting = 'true';
+      waiting.textContent = 'WAITING FOR PLAYER 2…';
+      Object.assign(waiting.style, {
+        margin: '8px 0 12px',
+        fontSize: '10px',
+        fontWeight: '900',
+        color: '#4fc3b1',
+      });
+
+      const firstButton = card.querySelector('button');
+      if (firstButton) {
+        card.insertBefore(code, firstButton);
+        card.insertBefore(instruction, firstButton);
+        card.insertBefore(waiting, firstButton);
+      } else {
+        card.append(code, instruction, waiting);
+      }
+    } else if (state === 'LIVE') {
+      const waiting = card.querySelector('[data-room-waiting]') as HTMLElement | null;
+      if (waiting) waiting.textContent = 'PLAYER 2 JOINED · MATCH LIVE';
+      const instruction = card.querySelector('[data-room-instruction]') as HTMLElement | null;
+      if (instruction) instruction.textContent = 'BOTH PLAYERS ARE CONNECTED';
+      this.modal.remove();
+      this.modal = undefined;
+    }
   }
 
   private makeButton(label: string, primary: boolean, onClick: () => void) {
@@ -266,7 +340,7 @@ export class ShootersTriggerOnlineScene extends Phaser.Scene {
       fontFamily: 'monospace', fontSize: '10px', fontWeight: '900',
       touchAction: 'manipulation',
     });
-    button.addEventListener('pointerdown', (event) => {
+    button.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
       onClick();
