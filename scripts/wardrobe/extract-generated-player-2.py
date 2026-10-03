@@ -193,10 +193,16 @@ def main():
             "atlas": "player-combat-atlas.png",
             "frameWidth": COMBAT_CELL_W,
             "frameHeight": CELL_H,
-            "aimFrame": 11,
-            "fireFrame": 12,
-            "readyFrame": 13,
-            "recoilFrame": 15
+            "poses": COMBAT_POSES,
+            "aimSectors": AIM_SECTORS,
+            "states": {
+                "aim": 11,
+                "fire": 12,
+                "ready": 13,
+                "muzzleFlash": 14,
+                "recoil": 15
+            },
+            "contract": "full-body authored combat presentation; alpha-bottom grounding; per-pose muzzle anchors; continuous projectile aim"
         },
         "rig": {
             "body": {
