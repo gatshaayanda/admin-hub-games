@@ -134,7 +134,10 @@ export class ShootersTriggerOnlineScene extends Phaser.Scene {
       this.modal?.remove();
       this.modal = undefined;
       this.status?.setText('ONLINE ARENA · WAITING FOR OPPONENT');
-      this.createWorldPlayerIfNeeded(this.localSessionId);
+      const localPlayer = this.createWorldPlayerIfNeeded(this.localSessionId);
+      this.cameras.main.startFollow(localPlayer.body, true, 0.12, 0.12);
+      this.cameras.main.setDeadzone(Math.min(this.scale.width * .28, 320), Math.min(this.scale.height * .22, 150));
+      this.status?.setText('ROOM CODE · ' + this.lastRoomId + ' · SHARE THIS CODE');
 
       this.room.onStateChange((state: any) => {
         this.roundState = state.status || 'WAITING';
