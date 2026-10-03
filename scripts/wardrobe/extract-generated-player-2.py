@@ -202,6 +202,11 @@ def main():
                 "muzzleFlash": 14,
                 "recoil": 15
             },
+            "grounding": {
+                "method": "alphaBottomPerFrame",
+                "visibleHeightTarget": 60,
+                "sourceUnits": "cellPixels"
+            },
             "contract": "full-body authored combat presentation; alpha-bottom grounding; per-pose muzzle anchors; continuous projectile aim"
         },
         "rig": {
