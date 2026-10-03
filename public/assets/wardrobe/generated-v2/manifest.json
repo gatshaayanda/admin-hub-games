@@ -50,10 +50,116 @@
     "atlas": "player-combat-atlas.png",
     "frameWidth": 176,
     "frameHeight": 192,
-    "aimFrame": 11,
-    "fireFrame": 12,
-    "readyFrame": 13,
-    "recoilFrame": 15
+    "poses": {
+      "DOWN": {
+        "frame": 0,
+        "muzzle": {
+          "x": 158,
+          "y": 145
+        }
+      },
+      "DOWN_RIGHT": {
+        "frame": 1,
+        "muzzle": {
+          "x": 159,
+          "y": 139
+        }
+      },
+      "RIGHT": {
+        "frame": 11,
+        "muzzle": {
+          "x": 165,
+          "y": 106
+        }
+      },
+      "UP_RIGHT": {
+        "frame": 3,
+        "muzzle": {
+          "x": 158,
+          "y": 108
+        }
+      },
+      "LEFT": {
+        "frame": 8,
+        "muzzle": {
+          "x": 16,
+          "y": 121
+        }
+      }
+    },
+    "aimSectors": [
+      {
+        "name": "DOWN",
+        "minDeg": 67.5,
+        "maxDeg": 112.5,
+        "pose": "DOWN",
+        "mirror": false
+      },
+      {
+        "name": "DOWN_RIGHT",
+        "minDeg": 22.5,
+        "maxDeg": 67.5,
+        "pose": "DOWN_RIGHT",
+        "mirror": false
+      },
+      {
+        "name": "RIGHT",
+        "minDeg": -22.5,
+        "maxDeg": 22.5,
+        "pose": "RIGHT",
+        "mirror": false
+      },
+      {
+        "name": "UP_RIGHT",
+        "minDeg": -67.5,
+        "maxDeg": -22.5,
+        "pose": "UP_RIGHT",
+        "mirror": false
+      },
+      {
+        "name": "UP",
+        "minDeg": -112.5,
+        "maxDeg": -67.5,
+        "pose": "UP_RIGHT",
+        "mirror": false
+      },
+      {
+        "name": "UP_LEFT",
+        "minDeg": -157.5,
+        "maxDeg": -112.5,
+        "pose": "UP_RIGHT",
+        "mirror": true
+      },
+      {
+        "name": "LEFT",
+        "minDeg": 157.5,
+        "maxDeg": 180,
+        "pose": "LEFT",
+        "mirror": false
+      },
+      {
+        "name": "LEFT_NEGATIVE",
+        "minDeg": -180,
+        "maxDeg": -157.5,
+        "pose": "LEFT",
+        "mirror": false
+      },
+      {
+        "name": "DOWN_LEFT",
+        "minDeg": 112.5,
+        "maxDeg": 157.5,
+        "pose": "DOWN_RIGHT",
+        "mirror": true
+      }
+    ],
+    "states": {
+      "aim": 11,
+      "fire": 12,
+      "ready": 13,
+      "muzzleFlash": 14,
+      "recoil": 15
+    },
+    "contract": "full-body authored combat presentation; alpha-bottom grounding; per-pose muzzle anchors; continuous projectile aim"
   },
   "rig": {
     "body": {
