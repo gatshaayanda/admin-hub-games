@@ -5923,3 +5923,15 @@ The generated 1.jpg combat path had a runtime performance hazard: fitGeneratedCo
 The combat adapter now caches measured scale/origin per authored combat frame and only re-fits when the selected frame or mirror changes. Projectile mechanics remain unchanged. fireShot also rejects non-finite muzzle/velocity values so a malformed manifest cannot poison the update loop.
 
 This is a Wardrobe presentation/performance fix only. Do not modify Shooter Trigger Arena projectile speed, continuous aim, swept collision or hit ordering to compensate for this issue.
+
+
+## Shooters Trigger — Online Lobby Activation Hardening — October 3, 2026
+
+The Online Arena lobby is a DOM overlay above the Phaser canvas. Its action controls must remain directly interactive on desktop and touch devices.
+
+- Use `pointerdown` as the primary activation path for lobby actions because Phaser owns the underlying canvas input system.
+- Keep normal `click` as the keyboard/accessibility fallback.
+- Guard duplicate pointer/click activation so one physical press cannot create two rooms or two joins.
+- The overlay and buttons must explicitly accept pointer events.
+- A CREATE/JOIN activation must immediately update the visible Online Arena status before any asynchronous Colyseus import or connection work begins.
+- Never leave a user with a silent button press.
