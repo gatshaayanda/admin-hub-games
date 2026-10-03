@@ -43,6 +43,7 @@ export class OnlineArenaRoom extends Room {
   state = new OnlineState();
 
   onCreate() {
+    this.lastShotAt = new Map();
     this.state.status = "WAITING";
     this.state.winner = "";
     this.state.roomCode = this.roomId;
@@ -71,7 +72,12 @@ export class OnlineArenaRoom extends Room {
       }
 
       if (input?.fire) {
-        this.resolveShot(client.sessionId, Number(input.aimX) || 0, Number(input.aimY) || 0);
+        const now = Date.now();
+        const last = this.lastShotAt.get(client.sessionId) || 0;
+        if (now - last >= 280) {
+          this.lastShotAt.set(client.sessionId, now);
+          this.resolveShot(client.sessionId, Number(input.aimX) || 0, Number(input.aimY) || 0);
+        }
       }
     });
   }
@@ -100,6 +106,7 @@ export class OnlineArenaRoom extends Room {
   }
 
   onLeave(client) {
+    this.lastShotAt.delete(client.sessionId);
     this.state.players.delete(client.sessionId);
     if (this.state.players.size < 2 && this.state.status === "LIVE") {
       this.state.status = "WAITING";
