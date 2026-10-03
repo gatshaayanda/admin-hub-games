@@ -291,7 +291,7 @@ export class ShootersTriggerLobbyScene extends Phaser.Scene {
         this.scene.start('ShootersTriggerArenaScene');
         break;
       case 'online':
-        this.showOnlineArenaPreview();
+        this.scene.start('ShootersTriggerOnlineScene');
         break;
     }
   }
