@@ -5946,3 +5946,65 @@ The first freeze fix correctly removed per-tick combat alpha scans, but shooting
 - Root cause targeted in this pass: authored 1.jpg combat grounding used canvas `getImageData` alpha scans when a combat pose was first entered; touch aiming can change sectors during the firing gesture, making those scans occur on the interaction path.
 - `WardrobeLabScene` now prewarms every unique manifest combat pose's fit during scene creation. Runtime combat pose changes must consume the cache only; no pixel scan belongs on the fire/aim path.
 - Preserve the accepted 3.jpg movement contract and the manifest muzzle/projectile contract.
+
+## Shooters Trigger — Online Arena Architecture & StickFrag Research — October 10, 2026
+
+This section records lessons from inspecting the current Online Arena frontend/server branch and the supplied StickFrag public-site/product description. StickFrag is a product reference, not a source to copy: do not copy its code, artwork, maps, characters, wording, or branding. Translate useful product principles into Shooters Trigger's own paintball identity and existing Golden combat contract.
+
+### Product principles worth learning from StickFrag
+
+- **Room entry must be obvious:** reuse the existing nickname, create a real server room, display its actual room code, and let a friend join that exact code. Every press must visibly change state immediately; never leave a dead menu.
+- **Server-authoritative fairness:** the server validates movement, fire cadence, projectile simulation, collision, hits, damage, score and round completion. The client requests actions and renders authoritative outcomes; it must not award its own hits.
+- **Fast entry:** no mandatory account for a basic match. Keep guest play possible; do not introduce sign-up as a prerequisite for a casual room.
+- **Phone is a first-class target:** landscape-friendly play, left-side movement stick, drag-to-aim and large thumb-reachable FIRE/AIM/JUMP/DUCK/RELOAD controls. Test actual touch input and orientation, not just responsive layout.
+- **Readable combat:** show clear live/waiting/disconnected states, opponent identity, score/round state, hit/elimination feedback and a useful reconnect/retry path.
+- **Progression must be earned and fair:** XP, unlocks, cosmetics, leaderboards and limited events can create reasons to return, but never sell combat power or let rewards bypass skill. Keep progression separate from authoritative combat. Do not claim these systems exist until implemented and tested.
+- **Keep the first playable loop small:** create/join a private room, connect two real clients, move, aim, fire, resolve a hit, score the round, finish/restart and leave cleanly. Public matchmaking, bots, 14-player rooms, weapon variety, XP, cosmetics, events and leaderboards are future scope—not acceptance criteria for the first verified 1v1.
+- **Privacy by design:** collect only what the selected feature needs. A nickname-only room should not quietly become a player-tracking/profile system. If persistent rankings or analytics are later added, document data collected and retention.
+
+### Current Online Arena reality / hard boundary
+
+The frontend file is src/scenes/ShootersTriggerOnlineScene.ts. It dynamically loads the Colyseus SDK and expects room shooters_online, state status, roomCode, players, and player fields name, x, y, aimX, aimY, color, firing. It sends input messages with moveX, moveY, aimX, aimY, fire. Keep client/server contracts explicitly typed and tested; do not rely on undocumented accidental compatibility.
+
+The current server branch online-arena/colyseus-server contains a minimal Colyseus room foundation: two clients, WAITING/LIVE, room ID as room code, server-side movement, aim and firing flag. **This is not complete multiplayer combat.** A firing flag is not a shot. Do not claim online shooting, authoritative hits, scores or first-to-three until implemented on the server and verified by two independent clients.
+
+The branch diverged from main during inspection. Before merging it, reconcile with current main and inspect all changes. Never force-reset main or merge a preview merely because Vercel reports Ready.
+
+### Multiplayer release sequence
+
+1. Read current AGENTS.md, inspect current main, the server branch, frontend/client contract and CI.
+2. Reconcile branch changes against latest main; keep unrelated current-main fixes.
+3. Implement the authoritative server contract: validated inputs, bounded movement, fire-rate/ammunition rules, server-owned projectiles, swept collision consistent with the Golden Arena mechanics, deterministic hit ordering, damage/elimination, score, round reset and disconnect cleanup. Do not invent a second hit model or weaken collision rules to make online play appear to work.
+4. Add automated tests for message validation, room capacity/lifecycle, projectile/hit ordering, score and round transitions where the architecture permits.
+5. Build and test the server in its own server/ package. Document required Node version, install/build/start commands, health endpoint and hosting requirements.
+6. Deploy the server as a long-running WebSocket-capable Node service. Vercel frontend success alone does not deploy a Colyseus server.
+7. Set VITE_COLYSEUS_URL to the real public HTTPS/WSS-capable server endpoint in the actual Vercel project. Production must never fall back to localhost. Do not commit secrets or fabricate an endpoint.
+8. Verify health/room discovery and create/join from two independent browser sessions/devices. Confirm same room ID, synchronized movement, aim/fire, real hit, score/round completion, leave/rejoin, mobile touch and failure/retry states.
+9. Open a PR into current main, run CI/build/tests, review the diff, then merge only after the release gate passes.
+10. Verify Vercel production was built from the intended main commit and smoke-test the normal production URL. A Preview/Ready status proves only that a deployment built, not that a Colyseus server is live or gameplay works.
+
+### Deployment and branch discipline
+
+- Frontend Vercel deployment and Colyseus game-server deployment are two separate systems.
+- A feature-branch preview is not a production promotion and must not be treated as proof of working multiplayer.
+- GitHub main is the source-of-truth checkpoint. When the user asks to complete/checkpoint/push, do not strand finished documentation or implementation on an arbitrary branch; however, do not merge an unverified server or falsely claim end-to-end completion.
+- If Vercel project access/integration is unavailable to connected tooling, report that limitation precisely and verify through accessible GitHub/deployment evidence. Do not guess project IDs, environment variables, production branch settings, or live URLs.
+- Never tell the player to approve browser Local Network/localhost access for production play. Public multiplayer should use the configured public endpoint.
+
+### Online Arena acceptance gate
+
+A release is not accepted until all are true:
+- Create Room produces a real room and displays its actual join code.
+- A second client joins that exact room with no second nickname prompt.
+- WAITING changes to LIVE only when the second client is present.
+- Both clients see authoritative positions and the same combat result.
+- Client-side fire cannot award a hit without server validation.
+- The server enforces the existing Golden projectile/collision/hit-order rules; no client can manufacture hits by enlarging hitboxes or reporting collision results.
+- Disconnects clean up state; the remaining player sees a truthful state and can return/retry.
+- Keyboard/mouse and phone controls work; resize/orientation does not trap the lobby or controls.
+- No endpoint configuration means a clear error, not a silent button, localhost request or fake match.
+- Automated checks/build pass and the real two-client flow has been exercised. Report which checks were automated and which were manually verified.
+
+### Scope guard
+
+StickFrag demonstrates useful patterns such as low-friction entry, room codes, mobile controls, server-authoritative combat, fair progression and clear updates. It does not justify copying its FPS format, 14-player capacity, bots, weapon catalogue, maps or economy into Shooters Trigger. Preserve Shooters Trigger's top-down paintball identity, existing Golden Playthrough and Arena collision contract. Add future systems only after the two-player authoritative loop is reliable.
