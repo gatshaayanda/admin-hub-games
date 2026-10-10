@@ -6008,3 +6008,20 @@ A release is not accepted until all are true:
 ### Scope guard
 
 StickFrag demonstrates useful patterns such as low-friction entry, room codes, mobile controls, server-authoritative combat, fair progression and clear updates. It does not justify copying its FPS format, 14-player capacity, bots, weapon catalogue, maps or economy into Shooters Trigger. Preserve Shooters Trigger's top-down paintball identity, existing Golden Playthrough and Arena collision contract. Add future systems only after the two-player authoritative loop is reliable.
+### Follow-up inspection findings — October 10, 2026
+
+The current main branch already has a JavaScript server implementation at server/src/OnlineArenaRoom.js and schema at server/src/state.js. Do not confuse that existing implementation with the newer TypeScript server branch. Inspect both before choosing which to retain.
+
+Current main server behavior observed in source:
+- two-player Colyseus room, WAITING/LIVE/FINISHED, room ID as code;
+- bounded movement with a cover-blocking check;
+- server-side fire cooldown of 280 ms;
+- server-side aim-ray distance test against the opponent, a cover-segment check, two body hits per point, and first-to-three score;
+- no actual moving projectile simulation, no head/body distinction, and no lag compensation;
+- room/player schema includes facing, moving, alive, score, bodyHits, winner.
+
+Important contract gap: the current frontend expects/render-reads player fields name, x, y, aimX, aimY, color and firing, while the main server schema exposes name, color, x, y, facing, moving, alive, score and bodyHits. The client sends aimX/aimY/fire but the server does not synchronize aimX/aimY/firing into player state. The frontend's current HUD does not render authoritative score/winner, even though the server tracks them. This mismatch must be deliberately resolved and tested; do not merely add duplicate fields without defining their ownership and purpose.
+
+Important combat gap: the server resolves a ray-like body hit immediately when fire is held and the cooldown passes. It does not simulate a paintball travelling through time. This is a provisional server-side hit test, not full parity with the offline Arena projectile model. Before replacing it, inspect the actual offline Arena shot/collision code and preserve its continuous aim, swept collision, hit ordering and cover semantics. Do not assume Phaser Arcade Physics should replace the existing authoritative swept-segment model; Phaser's physics APIs are useful references, but the game’s existing combat contract is the source of truth.
+
+The server README says VITE_COLYSEUS_URL must point to a separately deployed, long-running Node/Colyseus host. No production endpoint or real two-device server test was established during this inspection. Therefore do not call Online Arena production-ready based on a Vercel frontend preview or successful commit status alone.
