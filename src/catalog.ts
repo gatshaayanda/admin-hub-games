@@ -1,7 +1,7 @@
 import { markInstallSurfaceReady } from './pwa';
 
 type GameMenuItem = {
-  id: 'hall' | 'presidents-shoes' | 'shooters-trigger' | 'wardrobe';
+  id: 'hall' | 'living-world' | 'presidents-shoes' | 'shooters-trigger' | 'wardrobe';
   title: string;
   description: string;
   status: 'PLAY NOW' | 'IN DEVELOPMENT';
@@ -14,6 +14,13 @@ const games: GameMenuItem[] = [
     title: 'HALL',
     description: 'The Admin Hub Games world. Explore, read, leave something behind and return.',
     status: 'PLAY NOW',
+    playable: true,
+  },
+  {
+    id: 'living-world',
+    title: 'LIVING WORLD',
+    description: 'A persistent animal-world simulation. Begin with the world clock and care; herding and 3D wildlife build on the same living ecosystem.',
+    status: 'IN DEVELOPMENT',
     playable: true,
   },
   {
@@ -83,7 +90,7 @@ export function renderCatalog(onPlay: (gameId: GameMenuItem['id']) => void) {
 
       <footer class="game-menu-footer">
         <span>ADMIN HUB × PHASER</span>
-        <span>2 RELEASED · 2 IN DEVELOPMENT</span>
+        <span>2 RELEASED · 3 IN DEVELOPMENT</span>
       </footer>
     </main>
   `);
