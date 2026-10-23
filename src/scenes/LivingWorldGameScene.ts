@@ -3,7 +3,7 @@ import { advanceWorld, createInitialWorld, summarizeReturn } from '../games/livi
 import { loadWorldState, saveWorldState } from '../games/living-world/save';
 import type { AnimalState, WorldEvent, WorldState } from '../games/living-world/types';
 
-const DAY_MS = 24 * 60 * 60 * 1000;
+const GAME_DAY_REAL_MS = 6 * 60 * 60 * 1000;
 
 export class LivingWorldGameScene extends Phaser.Scene {
   private world!: WorldState;
@@ -121,7 +121,7 @@ export class LivingWorldGameScene extends Phaser.Scene {
   }
 
   private advanceOneDay() {
-    const result = advanceWorld(this.world, this.world.lastSimulatedAt + DAY_MS);
+    const result = advanceWorld(this.world, this.world.lastSimulatedAt + GAME_DAY_REAL_MS);
     this.world = result.state;
     this.report = summarizeReturn(result);
     this.persist();
