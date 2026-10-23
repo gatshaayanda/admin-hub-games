@@ -12,13 +12,14 @@ describe('living-world elapsed-time simulation', () => {
     expect(world.lastSimulatedAt).toBe(1_000);
   });
 
-  it('advances needs, plant recovery, water and the world clock after one day', () => {
+  it('advances the clock, lets grazing sustain hunger, and consumes water after one day', () => {
     const world = createInitialWorld(1_000);
     const result = advanceWorld(world, 1_000 + DAY, { realMsPerGameDay: DAY });
     expect(result.elapsedGameDays).toBe(1);
     expect(result.state.day).toBe(2);
-    expect(result.state.animals[0].hunger).toBeGreaterThan(world.animals[0].hunger);
+    expect(result.state.animals[0].hunger).toBe(world.animals[0].hunger);
     expect(result.state.plantPatches[0].growth).toBeGreaterThan(world.plantPatches[0].growth);
+    expect(result.state.animals[0].thirst).toBe(world.animals[0].thirst);
     expect(result.state.waterSources[0].level).toBeLessThan(world.waterSources[0].level);
     expect(summarizeReturn(result)[0]).toContain('1 in-game day');
   });
