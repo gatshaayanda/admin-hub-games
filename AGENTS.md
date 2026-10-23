@@ -5939,3 +5939,72 @@ The Online Arena lobby is a DOM overlay above the Phaser canvas. Its action cont
 ## Wardrobe Shooting Freeze — second pass — 2026-10-03
 
 The first freeze fix correctly removed per-tick combat alpha scans, but shooting still freezes in the browser. The projectile path has therefore been audited against the proven Shooter Trigger Arena implementation. Wardrobe must use the same swept Line/Circle and Line/Rectangle collision structure; only the projectile origin is artwork/manifest-driven. A finite-value guard and a bounded 12-shot list are defensive protections, not gameplay changes. Do not change the accepted 3.jpg movement baseline or Arena projectile speed/collision contract to compensate for artwork.
+
+
+## Living World — Shared Simulation Foundation (NEW GAME FOUNDATION, NOT YET A RELEASE)
+
+**Product direction:** Build one persistent living-world simulation that can later power three related play styles: (1) Tamagotchi-style animal care, (2) goat/herd management, and (3) wildlife exploration/tracking/hunting. They are modes over shared world state, not three separate simulation engines.
+
+**Current status:** This is an approved product direction and implementation contract, not a claim that the game is playable or deployed. The living-world module is being prepared as a separate game. Do not label it PLAY NOW or put a non-functional placeholder in the production library. Add its library card only when a real playable foundation can be launched end-to-end; it may then be labelled IN DEVELOPMENT while the prototype grows.
+
+### First principle: world simulation before 3D gameplay
+
+Build the underlying world-state and time-progression layer first. The renderer and animal control are clients of this simulation, not the source of truth. The first implementation should be a small, testable TypeScript module with deterministic inputs and outputs before adding a large map, 3D physics, Firebase, or downloaded art.
+
+The simulation contract must cover:
+- world clock and last-simulated timestamp;
+- animal identity, species, age/life stage, needs, health/comfort, energy, personality, trust and location;
+- herd membership, leader/follower relationships, separation/cohesion and fear/stress;
+- food patches, grazing depletion/recovery, water stores, shelter/shade and farm resources;
+- plant growth stages, seasonal conditions, weather and habitat state;
+- breeding eligibility/cooldowns and offspring milestones when later enabled;
+- event log / return report explaining meaningful changes since last visit;
+- versioned save data, validation, migration strategy and recovery from malformed or older saves.
+
+### Offline progression is elapsed-time simulation, not background rendering
+
+Persist the last simulation timestamp and state. On resume, compute bounded elapsed time and advance the world in deterministic steps or analytically where appropriate. Never pretend the browser continues rendering while closed. Avoid double-applying elapsed time after repeated resume/reload. Handle clock rollback, long absences, corrupted saves and duplicate cloud reconciliation safely.
+
+Offline progress must be humane and understandable. Default care settings should not casually kill animals because a player missed a few days. Animals should autonomously seek available food, water, shade and safety where the model supports it. Severe outcomes must be condition-based, capped and tested, with an optional harder challenge setting later.
+
+### Three future modes share the same world data
+
+1. **Animal life/care:** bond with individual animals, feed, water, train, observe growth and relationships.
+2. **Herding/farm:** guide goats or a herding dog/herder, move a herd through gates, manage grazing/water/shelter and respond to individual animal behaviour.
+3. **Wildlife exploration:** use the same ecosystem, time, weather, plants, tracks, animal perception and fear/flight behaviour for observation, tracking and (if later approved) hunting.
+
+Do not duplicate species needs, growth, weather, world time or persistence per mode. A mode may add its own missions, controls, camera and progression, but shared ecological rules belong in the simulation layer.
+
+### Rendering, controls and physics direction
+
+- Do not use generic geometric placeholders as final animal art or spend time hand-drawing substitute animals before auditing available models.
+- First audit Vula's existing `game-assets/source-zips/` inventory, extract candidate packs outside production paths, and inspect actual models, skeletons, animation clips, scale, materials, texture sizes and licence files.
+- Target a coherent stylized 3D/2.5D art direction. Prototype a real animated animal and terrain before committing to a renderer or downloading a large library.
+- Keep the current Phaser 4/Vite/TypeScript hub intact. Evaluate a dedicated Three.js/WebGL scene for the 3D world without rewriting existing Phaser games; keep simulation and saves renderer-independent.
+- Use physical collision for player/terrain/fences/gates where appropriate, animation-aware locomotion for animals, and steering/AI behaviours for herd cohesion, separation, obstacle avoidance, wandering, grazing, following, fear and flight. Do not force every goat into rigid-body simulation if it produces unstable or expensive behaviour.
+- Mobile-first touch controls, readable camera, pause/resume and reduced-motion/performance fallbacks are release requirements.
+
+### Persistence and platform boundary
+
+- Local-first save is mandatory; core play must work offline after assets are cached.
+- Do not introduce Firebase or new server infrastructure for the first world simulation. Add cloud sync only after the local data model, conflict policy and offline behaviour are proven and a genuine product requirement exists.
+- Keep all living-world code, data, assets and tests inside a dedicated `src/games/living-world/` or similarly scoped module, plus dedicated scene files when needed.
+- Do not alter Hall, President's Shoes, Shooters Trigger, Wardrobe, shared catalog behaviour, PWA install/update handling or service-worker rules to accommodate this game unless a specific required integration is proven and separately verified.
+- Large model/texture/audio assets must be size-audited and explicitly added to the service-worker caching plan before claiming offline support.
+
+### Roadmap and acceptance gates
+
+1. Inspect asset inventory and current hub boundaries; record candidates/licences.
+2. Implement pure, versioned world-state types and deterministic elapsed-time simulation with unit tests.
+3. Implement local save/load, schema validation, migration, clock rollback and repeated-resume tests.
+4. Add seasonal vegetation/resource progression and a concise return report.
+5. Integrate a dedicated library entry only when the first end-to-end playable foundation exists.
+6. Add one genuine rigged/animated animal and compatible terrain/environment assets; no final geometric stand-ins.
+7. Implement animal movement and behaviour; QA mobile controls, collisions, fences, slopes and herd response.
+8. Add care/feeding/water interactions and one complete herding objective.
+9. Harden offline PWA caching, save recovery, performance and Android device behaviour.
+10. Expand into breeding, richer seasons, additional habitats and wildlife mode only after prior gates pass.
+
+For every gate: review the diff, run the relevant tests and production build, inspect the actual browser/device flow, preserve the existing games, commit a coherent checkpoint, and report exactly what was verified. A build passing alone does not prove gameplay or offline progression.
+
+See `docs/LIVING-WORLD-SIMULATION-ROADMAP.md` for the staged plan and `docs/LIVING-WORLD-ASSET-SHORTLIST.md` for candidate downloads and licence/QA notes.
