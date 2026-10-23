@@ -8,7 +8,7 @@ export class LivingWorldIntroScene extends Phaser.Scene {
   create() {
     const render = () => {
       const { width, height } = this.scale;
-      this.children.removeAll();
+      this.children.removeAll(true);
       this.cameras.main.setBackgroundColor('#172b22');
       this.add.text(width / 2, height * 0.18, 'LIVING WORLD', {
         fontFamily: 'Arial, sans-serif', fontSize: `${Math.max(30, Math.min(64, height * 0.11))}px`,
@@ -36,8 +36,9 @@ export class LivingWorldIntroScene extends Phaser.Scene {
         color: '#172b22', backgroundColor: '#d7bd79', padding: { x: 24, y: 17 },
       }).setOrigin(0.5).setInteractive({ useHandCursor: false });
       button.on('pointerdown', () => this.scene.start('LivingWorldSetupScene'));
-      this.input.keyboard?.once('keydown-ENTER', () => this.scene.start('LivingWorldSetupScene'));
     };
+    const enterSetup = () => this.scene.start('LivingWorldSetupScene');
+    this.input.keyboard?.once('keydown-ENTER', enterSetup);
     render();
     this.scale.on(Phaser.Scale.Events.RESIZE, render, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, render, this));
