@@ -6008,3 +6008,18 @@ Do not duplicate species needs, growth, weather, world time or persistence per m
 For every gate: review the diff, run the relevant tests and production build, inspect the actual browser/device flow, preserve the existing games, commit a coherent checkpoint, and report exactly what was verified. A build passing alone does not prove gameplay or offline progression.
 
 See `docs/LIVING-WORLD-SIMULATION-ROADMAP.md` for the staged plan and `docs/LIVING-WORLD-ASSET-SHORTLIST.md` for candidate downloads and licence/QA notes.
+
+## Living World — Jackie, Tiger and Percy (OWNER-PROVIDED IDENTITY CONTRACT)
+
+These are the three real dogs that anchor the first playable open world. Their real-world descriptions below are authoritative creative reference, not a request to infer exact DNA/breed. Keep them visually distinct and do not substitute goats or generic dogs for these named companions.
+
+- **Jackie:** small, lightweight, lean and agile female dog; short, smooth coat; predominantly white torso and legs with black patches across the back, black ears/face forming a possible mask, and a visible white blaze on the muzzle/possibly between the eyes. Jack Russell Terrier-like appearance.
+- **Percy:** adolescent/young dog, visibly taller/larger than Jackie but still youthful; slender, athletic build; white base coat, warm chestnut/tan-brown patches over the head and shoulders/torso, a solid brown head with a white muzzle, floppy ears, moderately long snout, white legs, and a brown patch at the base of the white tail. Likely Jack Russell/terrier-type mix; breed is uncertain. He is **not related to Tiger or Jackie**.
+- **Tiger:** the largest and heaviest-set of the three; solid brown coat; muscular, sturdy, powerful build and strong legs, distinctly bulkier than both Jackie and Percy. Described by the owner as a mixed Tswana dog of sorts; exact breed is unknown.
+
+**Relationship and scope:** Jackie and Tiger are mates in real life and have puppies/kids; Percy is unrelated to them. For the first playable release, include **only these three dogs**—do not add their real-life puppies, offspring, or additional animals yet. Their relationship may be represented in world lore/metadata, but do not implement breeding or puppies in this first slice.
+
+**First playable world loop:** a traversable open world with direct control of the player/companions; herding/returning the three dogs to a room-and-board/shelter area; dogs can seek food and water, hunt for nourishment, and drink from water sources. Integrate these activities with the existing persistent/offline world simulation rather than replacing it. Keep needs fair and readable; do not punish normal absences harshly.
+
+**Implementation guardrails:** preserve the existing world clock, season progression, save format/migration safety and simulation tests. Build the Three.js/WebGL world as a dedicated Living World module beside Phaser; do not rewrite the shared Phaser shell or Hall, Shooters, Wardrobe, President's Shoes, or other games. Load the committed GLB assets from `assets/living-world/` where appropriate, but do not use farm animals as substitutes for Jackie, Tiger, or Percy. Treat the descriptions above as the baseline for models/materials/scale until the owner provides better reference images. Mobile-first controls, physical world/fence collision, pause/resume and offline asset caching remain required.
+
