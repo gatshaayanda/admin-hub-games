@@ -2,7 +2,7 @@
 
 This directory is the isolated foundation for the Living World game. It starts with the shared simulation and persistence model, not the renderer or final animal assets.
 
-Current stage: foundation setup. The module is not yet registered in the Game Library and is not a playable or deployed game.
+Current stage: early IN DEVELOPMENT foundation. The Game Library entry launches an Intro → Setup → simulation dashboard with a local save, care actions and a time-advance test control. It is a management/simulation testbed, not the promised 3D animal game: there are no animated animal models, direct movement controls, herding AI or wildlife mode yet. Do not describe those as implemented.
 
 Planned initial files:
 - `types.ts` — versioned world and entity state.
