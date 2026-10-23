@@ -10,24 +10,24 @@ export class LivingWorldSetupScene extends Phaser.Scene {
       const { width, height } = this.scale;
       this.children.removeAll(true)
       this.cameras.main.setBackgroundColor('#f3edda');
-      this.add.text(width / 2, height * 0.17, 'YOUR HOME PADDOCK', {
+      this.add.text(width / 2, height * 0.17, 'WELCOME TO PAWS WORLD', {
         fontFamily: 'Arial, sans-serif', fontSize: `${Math.max(24, Math.min(42, height * 0.07))}px`,
         fontStyle: 'bold', color: '#233e30', align: 'center',
       }).setOrigin(0.5);
       this.add.text(width / 2, height * 0.30,
-        'A small starter world is ready. Three goats, three grazing patches,\none water trough, and a world clock that continues when you leave.',
+        'Jackie, Tiger and Percy are waiting on the home range.\nExplore the farm, find the pen on your map, and guide the flock.',
         {
           fontFamily: 'Arial, sans-serif', fontSize: `${Math.max(15, Math.min(20, height * 0.033))}px`,
           color: '#536b57', align: 'center', lineSpacing: 8,
           wordWrap: { width: width * 0.84 },
         }).setOrigin(0.5);
       this.add.text(width / 2, height * 0.52,
-        'FIRST FOUNDATION CHECKPOINT\n\n✓ Versioned world state\n✓ Offline elapsed-time progression\n✓ Local save validation\n✓ A shared simulation for future game modes',
+        'YOUR FIRST DAY\n\n✓ Switch between all three dogs\n✓ Move with the pad or tap the ground\n✓ Use HERD to guide sheep and goats\n✓ Use STALK to approach wildlife quietly',
         {
           fontFamily: 'monospace', fontSize: `${Math.max(12, Math.min(17, height * 0.027))}px`,
           color: '#233e30', align: 'center', lineSpacing: 7,
         }).setOrigin(0.5);
-      const button = this.add.text(width / 2, height * 0.83, 'OPEN WORLD DASHBOARD  →', {
+      const button = this.add.text(width / 2, height * 0.83, 'ENTER PAWS WORLD  →', {
         fontFamily: 'monospace', fontSize: '13px', fontStyle: 'bold',
         color: '#f3edda', backgroundColor: '#285440', padding: { x: 20, y: 16 },
       }).setOrigin(0.5).setInteractive({ useHandCursor: false });

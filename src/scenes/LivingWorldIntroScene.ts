@@ -10,7 +10,7 @@ export class LivingWorldIntroScene extends Phaser.Scene {
       const { width, height } = this.scale;
       this.children.removeAll(true);
       this.cameras.main.setBackgroundColor('#172b22');
-      this.add.text(width / 2, height * 0.18, 'LIVING WORLD', {
+      this.add.text(width / 2, height * 0.18, 'PAWS WORLD', {
         fontFamily: 'Arial, sans-serif', fontSize: `${Math.max(30, Math.min(64, height * 0.11))}px`,
         fontStyle: 'bold', color: '#f3edda', letterSpacing: 2, align: 'center',
       }).setOrigin(0.5);
@@ -19,12 +19,12 @@ export class LivingWorldIntroScene extends Phaser.Scene {
         color: '#d7bd79', letterSpacing: 2, align: 'center',
       }).setOrigin(0.5);
       const copy = [
-        'A living-world simulation foundation.',
-        'Animals need care. Grazing recovers. Water runs low.',
-        'Time moves forward while you are away.',
+        'A home range for Jackie, Tiger and Percy.',
+        'Explore a living farm, care for your dogs, and guide sheep and goats.',
+        'Move freely, read the range map, and learn how animals react.',
         '',
-        'This first build tests the world clock and persistence.',
-        '3D animals, herding and wildlife will build on this same world.',
+        'A 2D world with clear landmarks and phone-first controls.',
+        'Herding, stalking and teamwork begin here.',
       ].join('\n');
       this.add.text(width / 2, height * 0.49, copy, {
         fontFamily: 'Arial, sans-serif', fontSize: `${Math.max(15, Math.min(21, height * 0.034))}px`,

@@ -18,9 +18,9 @@ const games: GameMenuItem[] = [
   },
   {
     id: 'living-world',
-    title: 'LIVING WORLD',
-    description: 'A persistent animal-world simulation. Begin with the world clock and care; herding and 3D wildlife build on the same living ecosystem.',
-    status: 'IN DEVELOPMENT',
+    title: 'PAWS WORLD',
+    description: 'Explore a 2D living farm with Jackie, Tiger and Percy. Guide sheep and goats, care for your dogs, and stalk wildlife.',
+    status: 'PLAY NOW',
     playable: true,
   },
   {

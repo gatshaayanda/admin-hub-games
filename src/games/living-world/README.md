@@ -1,13 +1,11 @@
-# Living World module
+# Paws World
 
-This directory is the isolated foundation for the Living World game. It starts with the shared simulation and persistence model, not the renderer or final animal assets.
+Paws World is the dog-centred 2D/2.5D farm game inside Admin Hub Games.
 
-Current stage: early IN DEVELOPMENT foundation. The Game Library entry launches an Intro → Setup → simulation dashboard with a local save, care actions and a time-advance test control. It is a management/simulation testbed, not the promised 3D animal game: there are no animated animal models, direct movement controls, herding AI or wildlife mode yet. Do not describe those as implemented.
+The current renderer uses a phone-first canvas world with a follow camera, minimap, touch joystick, tap-to-move, selectable dogs, local dog-care state, flock movement, a safe pen, and stalking mode. Jackie, Tiger and Percy have separate coat and size designs based on the owner's identity contract.
 
-Planned initial files:
-- `types.ts` — versioned world and entity state.
-- `simulation.ts` — deterministic elapsed-time advancement.
-- `save.ts` — schema validation and local save/load (next gate).
-- tests — time progression, repeated resume, clock rollback, needs/resource boundaries and save recovery.
+- Jackie: small, lean, white with black patches and dark ears/head.
+- Tiger: largest, sturdy, solid brown.
+- Percy: young, taller than Jackie, white with chestnut patches and a brown head.
 
-Do not add placeholder geometry or route this module into the production catalog until it has a real end-to-end playable entry. Follow `docs/LIVING-WORLD-SIMULATION-ROADMAP.md` and `docs/LIVING-WORLD-ASSET-SHORTLIST.md`.
+The existing living-world simulation/save schema remains for offline time progression. Do not reintroduce the experimental Three.js geometry as the primary renderer. Future art should be 2D sprites with transparent backgrounds and a consistent three-quarter overhead perspective. Use licensed assets only and recolour/edit them to preserve each dog's distinct markings.
