@@ -1,37 +1,34 @@
-# Paws World — free dog sprite shortlist
+# Paws World — imported asset inventory and next art gate
 
-The current repository has 54 low-poly 3D farm/environment GLBs, including sheep, goats, dog house, barn, fences, trough and trees. It does **not** currently contain a fitting animated dog character model/sprite for Jackie, Tiger or Percy. Farm animal models should not be repurposed as dogs.
+## What has landed in the repository
 
-Use these free assets as animation bases, then recolour and edit the markings to match the real dogs. Inspect the pack preview and included license before adding files to the repo.
+The downloaded source pack collection is committed under `public/assets/imported-packs/` so it is available with the repository and can be audited without another manual upload.
 
-1. **Dog Spritesheets — OpenGameArt (CC0)**  
-   https://opengameart.org/content/dog-spritesheets  
-   Includes idle, walk, run, jump, fall and attack frames. Best first option to inspect for a usable base and recolour.
+- **96 files, approximately 71.0 MB** at the current inventory checkpoint.
+- 61 ZIP archives, 13 RAR archives, 1 7z archive, 19 PNG images, 1 DOCX guide and 1 PDF licence document.
+- Dog-focused candidates include `CatnDog.zip`, `dog.zip`, `dogcharacterbystyloo.zip`, `Dog_medium.png`, `spritesheet_black.png`, `spritesheet_brown.png` and `spritesheet_white.png`.
+- General animal packs include `kenney_animal-pack-remastered.zip` and `kenney_animalPackRedux.zip`.
+- Existing environment assets remain under `public/assets/living-world/` and include the farm props and GLB models already referenced by the project.
 
-2. **Dog Sprites — Shepardskin (CC0)**  
-   https://opengameart.org/content/dog-sprites  
-   A small animated dog sprite set with walk cycles and x1/x2/x4 sizes. Good fallback animation source.
+**Important:** the imported archives are source material, not runtime-ready assets. The contents, animation frame layouts, view angles, licences and attribution requirements have not yet all been audited. Do not wire an uninspected archive into gameplay or claim its characters are animated just because a pack filename suggests it.
 
-3. **Dog — inmenus (CC0, itch.io)**  
-   https://inmenus.itch.io/dog  
-   Six animations in a compact spritesheet. Pixel-art / side-view, so use only if its silhouette fits the chosen art direction.
+## Current playable direction
 
-4. **2D Dog Character — styloo (CC0, itch.io)**  
-   https://styloo.itch.io/dog2d  
-   Transparent PNG animation frames for idle, walk, run, sniff and other actions. Useful animation reference; check view angle before committing.
+Paws World is now being simplified to **one player-named dog**. The player should be able to name their companion, explore the farm, care for them, move around on touch or keyboard, and work sheep/goats toward the pen. Wildlife can react to the dog, and the dog should show a little life even while idle.
 
-5. **Kenney Animal Pack Remastered (CC0)**  
-   https://kenney.nl/assets/animal-pack-remastered  
-   Cohesive free 2D animal art for sheep, goats and general world animals. It is not a substitute for the three dogs' identity-specific art.
+The present canvas dog is still a procedural placeholder; the next visual gate is to inspect the imported dog PNGs and archive contents, choose a consistent overhead/three-quarter view, and replace the placeholder with correctly oriented animation frames. Do not stretch a side-view dog into a top-down character. Keep the archive and licence evidence with any selected production assets.
 
-6. **Kenney Animal Pack Redux (CC0)**  
-   https://opengameart.org/content/animal-pack-redux  
-   Cohesive set with dog and farm-animal variants. The dog is generic and may need recolouring/shape edits.
+## Immediate asset audit shortlist
 
-## Required edits for the three dogs
+1. Preview `spritesheet_black.png`, `spritesheet_brown.png`, `spritesheet_white.png` and `Dog_medium.png` to identify dimensions, frame arrangement, direction and animation states.
+2. Inspect `dog.zip`, `dogcharacterbystyloo.zip` and `CatnDog.zip`; extract only candidate art plus its readme/licence into a temporary audit area first.
+3. Compare the dog art against the Kenney animal pack style before mixing sprites with the existing low-poly farm GLBs.
+4. Record chosen source, exact licence, attribution and converted runtime paths in this document before shipping extracted art.
+5. Verify idle, walk, turn, interact and rest animations at mobile portrait and landscape sizes, then verify offline caching for the assets actually used.
 
-- **Jackie:** small/lean; white coat, distinct black patches on the back, dark ears/head and a visible white blaze.
-- **Tiger:** visibly the largest; sturdy, muscular silhouette and solid brown coat.
-- **Percy:** young and slender, taller than Jackie; white base, chestnut patches, brown head and white muzzle.
+## QA status
 
-Prefer a three-quarter overhead or top-down sprite sheet with at least 4-direction walk frames. If the downloaded pack is side-on, do not stretch it into an overhead view: use it as a visual reference and make matching 2D sprites with consistent proportions. Keep each asset's license file and credit/attribution requirements in the repo.
+- Repository asset import: committed.
+- One nameable dog: implementation checkpoint committed; verify on the deployed preview.
+- True imported dog sprites / frame animation: **not yet integrated**.
+- Phone-device controls, browser console, and airplane-mode/offline gameplay: **not yet physically QA-tested**.
