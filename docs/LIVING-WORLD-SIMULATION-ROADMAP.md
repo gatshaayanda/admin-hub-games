@@ -51,7 +51,7 @@ Start with a small number of entities, not hundreds. A first world may contain a
 
 ## Phase 2 — time and persistence
 
-- Store the last simulated timestamp and a schema version.
+- Store the last simulated timestamp and a schema version. The current prototype scale is 6 real hours per in-game day (four in-game days per real day); one season is 90 in-game days, so a season can turn in about 22.5 real days. Catch-up is bounded to 90 real days per resume to prevent pathological clock jumps.
 - On resume, compute elapsed time once and advance bounded simulation steps; persist the new timestamp only after a successful state update.
 - Avoid double-applying elapsed time on repeated refreshes/restarts.
 - Handle a device clock moving backwards, very long absence, malformed save data, migrations and duplicate sync safely.
