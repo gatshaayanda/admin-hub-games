@@ -15,7 +15,7 @@ export class LivingWorldSetupScene extends Phaser.Scene {
         fontStyle: 'bold', color: '#233e30', align: 'center',
       }).setOrigin(0.5);
       this.add.text(width / 2, height * 0.30,
-        'Jackie, Tiger and Percy are waiting on the home range.\nExplore the farm, find the pen on your map, and guide the flock.',
+        'Your dog is waiting on the home range. Give them a name, explore the farm, and guide the flock.',
         {
           fontFamily: 'Arial, sans-serif', fontSize: `${Math.max(15, Math.min(20, height * 0.033))}px`,
           color: '#536b57', align: 'center', lineSpacing: 8,
