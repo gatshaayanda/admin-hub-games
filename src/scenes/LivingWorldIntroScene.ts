@@ -19,7 +19,7 @@ export class LivingWorldIntroScene extends Phaser.Scene {
         color: '#d7bd79', letterSpacing: 2, align: 'center',
       }).setOrigin(0.5);
       const copy = [
-        'A home range for Jackie, Tiger and Percy.',
+        'Meet your own dog, give them a name, and explore together.',
         'Explore a living farm, care for your dogs, and guide sheep and goats.',
         'Move freely, read the range map, and learn how animals react.',
         '',
