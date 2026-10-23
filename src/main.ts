@@ -21,6 +21,9 @@ function startHall() {
       { ShootersTriggerArenaScene },
       { ShootersTriggerOnlineScene },
       { WardrobeIntroScene, WardrobeLabScene },
+      { LivingWorldIntroScene },
+      { LivingWorldSetupScene },
+      { LivingWorldGameScene },
     ] = await Promise.all([
       import('phaser'),
       import('./pwa'),
@@ -40,6 +43,9 @@ function startHall() {
       import('./scenes/ShootersTriggerArenaScene'),
       import('./scenes/ShootersTriggerOnlineScene'),
       import('./scenes/WardrobeIntroScene'),
+      import('./scenes/LivingWorldIntroScene'),
+      import('./scenes/LivingWorldSetupScene'),
+      import('./scenes/LivingWorldGameScene'),
     ]);
 
     registerPwa();
@@ -63,7 +69,7 @@ function startHall() {
         min: { width: 320, height: 180 },
         max: { width: 0, height: 0 },
       },
-      scene: [BootScene, PublisherIntroScene, NameEntryScene, HallIntroScene, GameShellScene, PresidentsShoesIntroScene, PresidentsShoesSetupScene, PresidentsShoesGameScene, ShootersTriggerIntroScene, ShootersTriggerSetupScene, ShootersTriggerTrainingScene, ShootersTriggerLobbyScene, ShootersTriggerMediaScene, ShootersTriggerArenaScene, ShootersTriggerOnlineScene, WardrobeIntroScene, WardrobeLabScene],
+      scene: [BootScene, PublisherIntroScene, NameEntryScene, HallIntroScene, GameShellScene, PresidentsShoesIntroScene, PresidentsShoesSetupScene, PresidentsShoesGameScene, ShootersTriggerIntroScene, ShootersTriggerSetupScene, ShootersTriggerTrainingScene, ShootersTriggerLobbyScene, ShootersTriggerMediaScene, ShootersTriggerArenaScene, ShootersTriggerOnlineScene, WardrobeIntroScene, WardrobeLabScene, LivingWorldIntroScene, LivingWorldSetupScene, LivingWorldGameScene],
     };
 
     const game = new Phaser.Game(config);
