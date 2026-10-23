@@ -1,8 +1,8 @@
 import type { AnimalState, Season, SimulationOptions, SimulationResult, WorldEvent, WorldState } from './types';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const DEFAULT_REAL_MS_PER_GAME_DAY = DAY_MS;
-const DEFAULT_MAX_ELAPSED_MS = 7 * DAY_MS;
+const DEFAULT_REAL_MS_PER_GAME_DAY = 6 * 60 * 60 * 1000; // Four in-game days per real day.
+const DEFAULT_MAX_ELAPSED_MS = 90 * DAY_MS; // Bound pathological clock jumps while allowing seasonal catch-up.
 const NEEDS_WARNING_THRESHOLD = 78;
 const PLANT_RECOVERY_PER_DAY = 7;
 const GRAZING_DEPLETION_PER_DAY = 3;
@@ -75,8 +75,8 @@ export function advanceWorld(
 
   const animals = current.animals.map((animal) => {
     if (!animal.alive) return { ...animal };
-    const hunger = clamp(animal.hunger + elapsedGameDays * 8);
-    const thirst = clamp(animal.thirst + elapsedGameDays * 11);
+    const hunger = clamp(animal.hunger + elapsedGameDays * 6);
+    const thirst = clamp(animal.thirst + elapsedGameDays * 6);
     const energy = clamp(animal.energy + elapsedGameDays * 10);
     const waterAvailable = current.waterSources.some((source) => source.level > 0);
     const grazingAvailable = current.plantPatches.some((patch) => patch.growth > 15);
@@ -85,8 +85,8 @@ export function advanceWorld(
       ...animal,
       ageDays: animal.ageDays + elapsedGameDays,
       lifeStage: stageForAge(animal.ageDays + elapsedGameDays),
-      hunger: grazingAvailable ? clamp(hunger - elapsedGameDays * 3) : hunger,
-      thirst: waterAvailable ? clamp(thirst - elapsedGameDays * 4) : thirst,
+      hunger: grazingAvailable ? clamp(hunger - elapsedGameDays * 6) : hunger,
+      thirst: waterAvailable ? clamp(thirst - elapsedGameDays * 6) : thirst,
       energy,
       comfort,
     };
