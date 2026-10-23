@@ -26,6 +26,27 @@ https://kenney.nl/assets/animal-pack-redux
 
 CC0 2D animal artwork. Use only if we deliberately decide to build a 2D/2.5D version or need UI/illustration assets; do not mix it into the 3D world as if it were an animated 3D animal.
 
+### A2. Rigged and animated goat — Blocky Goat by Sandial (paid prototype option)
+https://sandial.itch.io/blocky-goat
+
+Advertises a rigged low-poly goat with 8 clips: idle, walk, run, graze, jump, ram, hurt and death. The listing currently shows a small paid price. This is the most directly relevant animation-ready goat candidate found, but its blocky/voxel-like appearance may not match our final art direction. Preview it before buying; treat it as a prototype candidate, not the final visual commitment. Verify the downloaded licence/readme and import it into a Three.js test before use.
+
+### A3. Animated animal models — Gobkit Freebies (CC0)
+https://gobkit.com/freebies
+https://github.com/Ariescar/gobkit-free-assets
+
+A collection of rigged/animated GLB animals and nature props under CC0. The current listed animals include creatures such as dogs and birds rather than a goat. Useful later for a herding dog or wildlife species if the models fit the same art style. Inspect the current catalogue and actual animation tracks; do not assume its goat coverage.
+
+### A4. Animated Goat — Fab (premium-quality candidate)
+https://www.fab.com/listings/893a1d28-45b5-4f7f-9255-9a7f9ac1faa6
+
+The listing describes a rigged goat with 26 clips including walk, trot, run, graze, drink, flee, turn, sleep and idle. This is much closer to the animation set a believable animal simulator needs. The page's selectable licence and price need checking before acquisition; do not assume free or CC0. Compare visual quality and licence cost against the low-cost prototype option before spending.
+
+### A5. Low Poly Farm Pack — reodesuxz (props, gates and water)
+https://reodesuxz.itch.io/low-poly-farm-pack
+
+30 small 3D models including a barn, silo, fences, gate, hay, trough, feed sack, crops and countryside props, with GLB/FBX/OBJ/Blend formats. The listing permits personal/commercial use and prohibits reselling the raw files. It is a strong environment candidate alongside the animal pack above. Check the downloaded archive for its licence and use only if its flat-shaded style matches the selected goat.
+
 ## Environment and world assets
 
 ### E. Kenney Nature Kit
@@ -96,11 +117,13 @@ For each downloaded pack, record:
 
 ## First download order
 
-1. Download and inspect **Low Poly Farm Animals Pack**; confirm goat quality, rig and animation clips.
-2. Inspect Vula's existing farm/food/audio ZIPs.
-3. Download **Kenney Nature Kit** only if its style and scale fit the selected animal pack.
-4. Add only the missing ground materials/lighting from Poly Haven or ambientCG.
-5. Add animal-specific audio from Freesound only after verifying each individual licence.
-6. Put provenance in `docs/LIVING-WORLD-ASSET-REGISTER.md` and build the first asset preview sheet before implementation expands.
+1. Download and inspect **Low Poly Farm Animals Pack** plus **Low Poly Farm Pack** for goat and environment coverage.
+2. Decide whether to test the low-cost **Blocky Goat** animation pack or inspect the more detailed **Fab Animated Goat** listing; compare animation coverage, style and licence before paying.
+3. Inspect Vula's existing farm/food/audio ZIPs.
+4. Download **Kenney Nature Kit** only if its style and scale fit the selected animal pack.
+5. Consider Gobkit's animated animals later for dog/wildlife species if the style matches.
+6. Add only the missing ground materials/lighting from Poly Haven or ambientCG.
+7. Add animal-specific audio from Freesound only after verifying each individual licence.
+8. Put provenance in `docs/LIVING-WORLD-ASSET-REGISTER.md` and build the first asset preview sheet before implementation expands.
 
 The aim is not the largest asset library. It is the smallest consistent set that lets us build and QA a convincing living world quickly.
