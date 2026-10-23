@@ -1,5 +1,7 @@
 declare module 'three' {
   export type Object3D = any; export const Object3D: any;
+  export type Clock = any; export const Clock: any;
+  export type Vector3 = any; export const Vector3: any;
   export type Group = any; export const Group: any;
   export type Mesh = any; export const Mesh: any;
   export type Material = any; export type BufferGeometry = any;
