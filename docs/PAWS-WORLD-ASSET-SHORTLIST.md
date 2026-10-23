@@ -26,6 +26,16 @@ The present canvas dog is still a procedural placeholder; the next visual gate i
 4. Record chosen source, exact licence, attribution and converted runtime paths in this document before shipping extracted art.
 5. Verify idle, walk, turn, interact and rest animations at mobile portrait and landscape sizes, then verify offline caching for the assets actually used.
 
+## Selected dog sprite — integrated
+
+The production companion now uses the brown 96×80 pixel-art dog sheet from the imported pack, served as `/assets/paws-world/dog-brown.png`. The source sheet is six 16×16 frames across and five rows high; the renderer uses six frames in the first four rows as the directional movement cycles (down, left, right, up) and a two-frame idle variation. This frame-row mapping is a practical interpretation of the supplied sheet and needs owner visual QA; the source listing documents idle, walk, run, jump, fall and attack animations but does not publish a detailed row map.
+
+- Source: Jason of GDN, [Dog Spritesheets on OpenGameArt](https://opengameart.org/content/dog-spritesheets)
+- Licence: CC0, confirmed on the source page.
+- Selected file: `spritesheet_brown.png` (96×80, 6×5 cells at 16×16 pixels).
+- Runtime fallback: the existing canvas-drawn companion remains if the sprite fails to load.
+- Other uploaded archives remain unintegrated until their contents and licences are individually checked.
+
 ## Mobile HUD checkpoint
 
 The Paws World overlay now uses a responsive action grid with reserved space for the movement pad, viewport-safe-area padding, readable type scaling, keyboard focus states, and a short-landscape layout. The world renderer and simulation are intentionally unchanged by this layout pass. The source archives still require a binary-level audit before any dog sprite can be selected safely; filenames alone do not establish frame layout, viewpoint or licence.
