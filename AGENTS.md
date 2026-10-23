@@ -6032,3 +6032,22 @@ The dogs do **not** herd Jackie, Tiger and Percy back to a shelter. The working 
 - **World progression:** build the open world around these loops and integrate them into the existing world clock, seasonal progression, and save/migration safety. Do not replace the current simulation or make the existing goat-care dashboard the final gameplay.
 - **Scope:** only Jackie, Tiger, and Percy are player dogs for this first playable slice. Sheep, goats and wildlife are world animals/prey/herd targets—not additional controllable companion pets. No puppies/breeding in the first slice.
 
+
+
+## Paws World — latest playable-slice direction and imported asset checkpoint (2026-10-23)
+
+**This newer owner direction supersedes the earlier three-named-dog requirement for the current Paws World playable slice:** build around one player-named dog, not a selector for Jackie, Tiger and Percy. Let the player set and retain the companion's name. The core loop is care, open-range exploration, responsive wildlife, and positional herding of sheep/goats into the pen. Keep touch and keyboard movement, clear map landmarks, local save continuity and the existing offline/PWA foundation.
+
+### Imported asset source inventory
+
+The owner bulk-imported the Downloads/assets collection to `public/assets/imported-packs/` in commit `8a16e1e`. At the first remote inventory checkpoint it contains 96 files (~71.0 MB): 61 ZIPs, 13 RARs, one 7z, 19 PNGs, one DOCX and one PDF. Dog candidates include `CatnDog.zip`, `dog.zip`, `dogcharacterbystyloo.zip`, `Dog_medium.png`, and the black/brown/white spritesheet PNGs. Kenney animal archives are also present. These are **source archives/candidates**, not proof of production-ready integration; inspect contents, view angle, animation frames, licence and attribution before extracting into runtime assets. Preserve readmes/licences and never stretch side-view art to fake an overhead angle.
+
+The current Paws World dog drawing remains a procedural placeholder while the new archive set is audited. Do not describe imported dog animation as completed until a real selected spritesheet/model is integrated and its idle/walk/action frames are verified. See `docs/PAWS-WORLD-ASSET-SHORTLIST.md` for the imported inventory, audit order and explicit QA status.
+
+### Paws World checkpoint gates
+
+1. One player-named dog only; name and needs survive reload without breaking older local save recovery.
+2. Use mobile-first movement and actions; check portrait and landscape, touch targets, safe areas and small screens.
+3. Keep herd movement positional and observable; do not make the herd button teleport animals.
+4. Preserve the existing shared world simulation, save migration, PWA caching and every other game.
+5. Report build/deployment status separately from real-device and airplane-mode QA. Never claim the latter without actually performing it.
