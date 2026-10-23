@@ -6023,3 +6023,12 @@ These are the three real dogs that anchor the first playable open world. Their r
 
 **Implementation guardrails:** preserve the existing world clock, season progression, save format/migration safety and simulation tests. Build the Three.js/WebGL world as a dedicated Living World module beside Phaser; do not rewrite the shared Phaser shell or Hall, Shooters, Wardrobe, President's Shoes, or other games. Load the committed GLB assets from `assets/living-world/` where appropriate, but do not use farm animals as substitutes for Jackie, Tiger, or Percy. Treat the descriptions above as the baseline for models/materials/scale until the owner provides better reference images. Mobile-first controls, physical world/fence collision, pause/resume and offline asset caching remain required.
 
+### Living World — Expanded animal-work loop (owner clarification, 2026-10-23)
+
+The dogs do **not** herd Jackie, Tiger and Percy back to a shelter. The working loop is:
+- **Herding:** Jackie, Tiger and Percy work sheep and goats, and eventually other farm animals, moving stragglers and groups across the open world into a designated sleeping pen/shelter. The reference is trained dogs moving a flock of Dorper-style black-headed/white-bodied sheep into a corrugated-roof sleeping enclosure. Herding must be active positional work: flank, circle, pressure, gather stragglers, and guide the flock through the gate—not a single “herd” button that teleports animals.
+- **Predation/hunting:** when food is needed, the dogs may stalk, approach quietly, chase, and hunt herbivores. Support opportunistic solo hunting and occasional coordinated teamwork between dogs. Keep this as simulated wildlife behaviour with clear state/feedback, not gratuitous gore.
+- **Needs and water:** hunger and thirst persist through the existing offline simulation; dogs can drink at natural/man-made water sources and hunt for nourishment. The player should be able to observe or direct the dogs in the open world.
+- **World progression:** build the open world around these loops and integrate them into the existing world clock, seasonal progression, and save/migration safety. Do not replace the current simulation or make the existing goat-care dashboard the final gameplay.
+- **Scope:** only Jackie, Tiger, and Percy are player dogs for this first playable slice. Sheep, goats and wildlife are world animals/prey/herd targets—not additional controllable companion pets. No puppies/breeding in the first slice.
+
