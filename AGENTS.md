@@ -6042,7 +6042,7 @@ The dogs do **not** herd Jackie, Tiger and Percy back to a shelter. The working 
 
 The owner bulk-imported the Downloads/assets collection to `public/assets/imported-packs/` in commit `8a16e1e`. At the first remote inventory checkpoint it contains 96 files (~71.0 MB): 61 ZIPs, 13 RARs, one 7z, 19 PNGs, one DOCX and one PDF. Dog candidates include `CatnDog.zip`, `dog.zip`, `dogcharacterbystyloo.zip`, `Dog_medium.png`, and the black/brown/white spritesheet PNGs. Kenney animal archives are also present. These are **source archives/candidates**, not proof of production-ready integration; inspect contents, view angle, animation frames, licence and attribution before extracting into runtime assets. Preserve readmes/licences and never stretch side-view art to fake an overhead angle.
 
-The current Paws World dog drawing remains a procedural placeholder while the new archive set is audited. Do not describe imported dog animation as completed until a real selected spritesheet/model is integrated and its idle/walk/action frames are verified. See `docs/PAWS-WORLD-ASSET-SHORTLIST.md` for the imported inventory, audit order and explicit QA status.
+The brown CC0 dog spritesheet is integrated in Paws World with idle, movement/stalking and herding animation cycles, plus a procedural fallback. The row mapping is an informed interpretation and still requires owner visual QA. Other imported archives remain uninspected source material; do not integrate them until their contents, view angle, animation layout and licence are verified. See `docs/PAWS-WORLD-ASSET-SHORTLIST.md` for inventory and QA status.
 
 ### Paws World checkpoint gates
 

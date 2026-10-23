@@ -16,7 +16,7 @@ The downloaded source pack collection is committed under `public/assets/imported
 
 Paws World is now being simplified to **one player-named dog**. The player should be able to name their companion, explore the farm, care for them, move around on touch or keyboard, and work sheep/goats toward the pen. Wildlife can react to the dog, and the dog should show a little life even while idle.
 
-The present canvas dog is still a procedural placeholder; the next visual gate is to inspect the imported dog PNGs and archive contents, choose a consistent overhead/three-quarter view, and replace the placeholder with correctly oriented animation frames. Do not stretch a side-view dog into a top-down character. Keep the archive and licence evidence with any selected production assets.
+The brown CC0 dog spritesheet is now integrated at `/assets/paws-world/dog-brown.png`. It renders animated idle, walking/stalking, and herding movement cycles, with a procedural fallback if the image fails to load. The row mapping is a practical interpretation of the sheet and still needs owner visual QA. Remaining imported archives are still source material: audit their contents and licences before integrating additional assets.
 
 ## Immediate asset audit shortlist
 
@@ -44,5 +44,5 @@ The Paws World overlay now uses a responsive action grid with reserved space for
 
 - Repository asset import: committed.
 - One nameable dog: implementation checkpoint committed; verify on the deployed preview.
-- True imported dog sprites / frame animation: **not yet integrated**.
+- Imported dog sprite / frame animation: integrated; visual interpretation still needs owner QA.
 - Phone-device controls, browser console, and airplane-mode/offline gameplay: **not yet physically QA-tested**.
