@@ -26,6 +26,21 @@ The brown CC0 dog spritesheet is now integrated at `/assets/paws-world/dog-brown
 4. Record chosen source, exact licence, attribution and converted runtime paths in this document before shipping extracted art.
 5. Verify idle, walk, turn, interact and rest animations at mobile portrait and landscape sizes, then verify offline caching for the assets actually used.
 
+## Uploaded PNG visual audit (2026-10-23)
+
+All 19 PNG entries in `public/assets/imported-packs/` were visually previewed. This is a visual suitability audit, not a full archive/licence audit.
+
+- `spritesheet_brown.png`, `spritesheet_brown (1).png`, `spritesheet_black.png`, and `spritesheet_white.png`: compact six-column dog sprite sheets; brown is the chosen runtime sprite. The duplicated brown file is identical content.
+- `Dog_medium.png`: side-facing dog animation sheet. It does not match the current overhead/three-quarter view, so it is not stretched or substituted.
+- `WtbGHg.png`, `1DNf6A.png`, `2P2L_A.png`, `atcbw+.png`, and `be6RCX.png`: complete pixel-art map/world compositions, not isolated production-ready terrain tiles. Their palette and layouts differ from the current hand-built farm scene; do not use them as a scaled background without checking source/licence and tile resolution.
+- `AnimationSheet.png`: small humanoid/character animation sheet, not a dog.
+- `IsometricTRPGAssetPack_Entities.png`, `IsometricTRPGAssetPack_OutlinedEntities.png`, `IsometricTRPGAssetPack_MapIndicators.png`, `IsometricTRPGAssetPack_UI.png`, and `Isometric_MedievalFantasy_Tiles.png`: isometric fantasy/game UI assets, stylistically incompatible with the current top-down farm scene without a deliberate renderer/art-direction change.
+- `endangered_animals_ilaria_lazzartotto.png`: side-view endangered wildlife sprites, not suitable substitutes for the overhead flock and companion.
+- `assets_dungeon.png` and `desert-ruins.png`: dungeon/desert props unrelated to the farm setting.
+- `1DNf6A.png`, `2P2L_A.png`, `WtbGHg.png`, `atcbw+.png`, and `be6RCX.png` are best retained as visual references until their originating packs/licences and reusable source layers are confirmed.
+
+The ZIP/RAR/7z archives are still **not fully extracted or binary-audited** in this checkpoint. Their internal file lists, licences and attribution must be checked before integrating further assets. The production art improvement currently verified in source is the brown dog sprite; the rest of the farm and flock still use the existing canvas renderer. Do not describe the entire environment as asset-overhauled yet.
+
 ## Selected dog sprite — integrated
 
 The production companion now uses the brown 96×80 pixel-art dog sheet from the imported pack, served as `/assets/paws-world/dog-brown.png`. The source sheet is six 16×16 frames across and five rows high; the renderer uses row 0 for idle, row 1 for walking/stalking, and row 2 for faster herding movement. It mirrors the sheet when the dog moves left. A two-frame idle variation and six-frame movement cycles are used. This frame-row mapping is a practical interpretation of the supplied sheet and needs owner visual QA; the source listing documents idle, walk, run, jump, fall and attack animations but does not publish a detailed row map.
