@@ -28,7 +28,7 @@ The present canvas dog is still a procedural placeholder; the next visual gate i
 
 ## Selected dog sprite — integrated
 
-The production companion now uses the brown 96×80 pixel-art dog sheet from the imported pack, served as `/assets/paws-world/dog-brown.png`. The source sheet is six 16×16 frames across and five rows high; the renderer uses six frames in the first four rows as the directional movement cycles (down, left, right, up) and a two-frame idle variation. This frame-row mapping is a practical interpretation of the supplied sheet and needs owner visual QA; the source listing documents idle, walk, run, jump, fall and attack animations but does not publish a detailed row map.
+The production companion now uses the brown 96×80 pixel-art dog sheet from the imported pack, served as `/assets/paws-world/dog-brown.png`. The source sheet is six 16×16 frames across and five rows high; the renderer uses row 0 for idle, row 1 for walking/stalking, and row 2 for faster herding movement. It mirrors the sheet when the dog moves left. A two-frame idle variation and six-frame movement cycles are used. This frame-row mapping is a practical interpretation of the supplied sheet and needs owner visual QA; the source listing documents idle, walk, run, jump, fall and attack animations but does not publish a detailed row map.
 
 - Source: Jason of GDN, [Dog Spritesheets on OpenGameArt](https://opengameart.org/content/dog-spritesheets)
 - Licence: CC0, confirmed on the source page.
