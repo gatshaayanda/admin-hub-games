@@ -14,7 +14,7 @@ describe('living-world elapsed-time simulation', () => {
 
   it('advances needs, plant recovery, water and the world clock after one day', () => {
     const world = createInitialWorld(1_000);
-    const result = advanceWorld(world, 1_000 + DAY);
+    const result = advanceWorld(world, 1_000 + DAY, { realMsPerGameDay: DAY });
     expect(result.elapsedGameDays).toBe(1);
     expect(result.state.day).toBe(2);
     expect(result.state.animals[0].hunger).toBeGreaterThan(world.animals[0].hunger);
@@ -24,7 +24,7 @@ describe('living-world elapsed-time simulation', () => {
   });
 
   it('does not apply the same elapsed time twice when resumed at the saved timestamp', () => {
-    const first = advanceWorld(createInitialWorld(0), DAY);
+    const first = advanceWorld(createInitialWorld(0), DAY, { realMsPerGameDay: DAY });
     const second = advanceWorld(first.state, DAY);
     expect(second.elapsedGameDays).toBe(0);
     expect(second.state.animals).toEqual(first.state.animals);
@@ -39,7 +39,7 @@ describe('living-world elapsed-time simulation', () => {
   });
 
   it('caps a single offline resume to the configured maximum', () => {
-    const result = advanceWorld(createInitialWorld(0), 10 * DAY, { maxElapsedMs: 2 * DAY });
+    const result = advanceWorld(createInitialWorld(0), 10 * DAY, { maxElapsedMs: 2 * DAY, realMsPerGameDay: DAY });
     expect(result.elapsedGameDays).toBe(2);
     expect(result.state.lastSimulatedAt).toBe(10 * DAY);
   });
