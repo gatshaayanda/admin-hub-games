@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { advanceWorld, createInitialWorld, summarizeReturn } from '../games/living-world/simulation';
 import { loadWorldState, saveWorldState } from '../games/living-world/save';
-import type { AnimalState, WorldState } from '../games/living-world/types';
+import type { AnimalState, WorldEvent, WorldState } from '../games/living-world/types';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -62,19 +62,25 @@ export class LivingWorldGameScene extends Phaser.Scene {
       fontFamily: 'monospace', fontSize: '12px', fontStyle: 'bold', color: '#d7bd79',
     });
     const rowGap = Math.min(58, (cardHeight - 60) / Math.max(1, this.world.animals.length));
-    this.world.animals.forEach((animal, index) => {
+    this.world.animals.forEach((animal: AnimalState, index) => {
       const y = cardTop + 52 + index * rowGap;
       const need = Math.max(animal.hunger, animal.thirst);
       const status = need >= 78 ? 'NEEDS ATTENTION' : need >= 55 ? 'CHECK SOON' : 'SETTLED';
-      this.add.text(leftX + 18, y, `${animal.name}  ·  ${animal.lifeStage.toUpperCase()}`, {
-        fontFamily: 'Arial, sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#f3edda',
-      });
-      this.add.text(leftX + 18, y + 19,
-        `Hunger ${Math.round(animal.hunger)}  /  Thirst ${Math.round(animal.thirst)}  /  Trust ${Math.round(animal.trust)}`,
-        { fontFamily: 'monospace', fontSize: '10px', color: '#c4d2bd' });
-      this.add.text(width * 0.94, y + 8, status, {
-        fontFamily: 'monospace', fontSize: '9px', color: need >= 78 ? '#efb38b' : '#d7bd79',
-      }).setOrigin(1, 0.5);
+      if (compact || cardHeight < 220) {
+        this.add.text(leftX + 18, y + 2,
+          `${animal.name} · ${animal.lifeStage.toUpperCase()}   H ${Math.round(animal.hunger)}  T ${Math.round(animal.thirst)}`,
+          { fontFamily: 'monospace', fontSize: width < 400 ? '9px' : '10px', color: need >= 78 ? '#efb38b' : '#f3edda' });
+      } else {
+        this.add.text(leftX + 18, y, `${animal.name}  ·  ${animal.lifeStage.toUpperCase()}`, {
+          fontFamily: 'Arial, sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#f3edda',
+        });
+        this.add.text(leftX + 18, y + 19,
+          `Hunger ${Math.round(animal.hunger)}  /  Thirst ${Math.round(animal.thirst)}  /  Trust ${Math.round(animal.trust)}`,
+          { fontFamily: 'monospace', fontSize: '10px', color: '#c4d2bd' });
+        this.add.text(width * 0.94, y + 8, status, {
+          fontFamily: 'monospace', fontSize: '9px', color: need >= 78 ? '#efb38b' : '#d7bd79',
+        }).setOrigin(1, 0.5);
+      }
     });
 
     const lowerY = cardTop + cardHeight + 18;
@@ -126,7 +132,7 @@ export class LivingWorldGameScene extends Phaser.Scene {
     this.world = {
       ...this.world,
       animals: this.world.animals.map((animal: AnimalState) => ({ ...animal, hunger: Math.max(0, animal.hunger - 28), comfort: Math.min(100, animal.comfort + 5) })),
-      events: [...this.world.events, { id: `feed:${Date.now()}`, at: Date.now(), kind: 'needs-attention', message: 'You fed the herd. Hunger eased and comfort improved.' }].slice(-100),
+      events: [...this.world.events, { id: `feed:${Date.now()}`, at: Date.now(), kind: 'needs-attention', message: 'You fed the herd. Hunger eased and comfort improved.' } satisfies WorldEvent].slice(-100),
     };
     this.report = ['You fed the herd. Hunger eased and comfort improved.'];
     this.persist();
