@@ -38,7 +38,7 @@ The production companion now uses the brown 96×80 pixel-art dog sheet from the 
 
 ## Mobile HUD checkpoint
 
-The Paws World overlay now uses a responsive action grid with reserved space for the movement pad, viewport-safe-area padding, readable type scaling, keyboard focus states, and a short-landscape layout. The world renderer and simulation are intentionally unchanged by this layout pass. The source archives still require a binary-level audit before any dog sprite can be selected safely; filenames alone do not establish frame layout, viewpoint or licence.
+The Paws World overlay now uses a responsive action grid with reserved space for the movement pad, viewport-safe-area padding, readable type scaling, keyboard focus states, a short-landscape layout, and additional vertical separation between the name row and status cards on small portrait screens. The world renderer and simulation are intentionally unchanged by this layout pass. The source archives still require a binary-level audit before any dog sprite can be selected safely; filenames alone do not establish frame layout, viewpoint or licence.
 
 ## QA status
 
