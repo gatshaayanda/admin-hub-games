@@ -23,6 +23,14 @@ describe('living-world elapsed-time simulation', () => {
     expect(summarizeReturn(result)[0]).toContain('1 in-game day');
   });
 
+  it('advances seasons during a multi-week absence', () => {
+    const world = createInitialWorld(0);
+    const result = advanceWorld(world, 23 * DAY);
+    expect(result.state.day).toBeGreaterThan(world.day + 90);
+    expect(result.state.season).toBe('summer');
+    expect(result.state.lastSimulatedAt).toBe(23 * DAY);
+  });
+
   it('does not apply the same elapsed time twice when resumed at the saved timestamp', () => {
     const first = advanceWorld(createInitialWorld(0), DAY, { realMsPerGameDay: DAY });
     const second = advanceWorld(first.state, DAY);
