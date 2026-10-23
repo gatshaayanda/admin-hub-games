@@ -26,6 +26,10 @@ The present canvas dog is still a procedural placeholder; the next visual gate i
 4. Record chosen source, exact licence, attribution and converted runtime paths in this document before shipping extracted art.
 5. Verify idle, walk, turn, interact and rest animations at mobile portrait and landscape sizes, then verify offline caching for the assets actually used.
 
+## Mobile HUD checkpoint
+
+The Paws World overlay now uses a responsive action grid with reserved space for the movement pad, viewport-safe-area padding, readable type scaling, keyboard focus states, and a short-landscape layout. The world renderer and simulation are intentionally unchanged by this layout pass. The source archives still require a binary-level audit before any dog sprite can be selected safely; filenames alone do not establish frame layout, viewpoint or licence.
+
 ## QA status
 
 - Repository asset import: committed.

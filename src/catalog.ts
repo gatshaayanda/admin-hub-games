@@ -19,7 +19,7 @@ const games: GameMenuItem[] = [
   {
     id: 'living-world',
     title: 'PAWS WORLD',
-    description: 'Explore a 2D living farm with Jackie, Tiger and Percy. Guide sheep and goats, care for your dogs, and stalk wildlife.',
+    description: 'Name your own dog, explore the open range, care for your companion and guide sheep and goats into the safe pen.',
     status: 'PLAY NOW',
     playable: true,
   },
