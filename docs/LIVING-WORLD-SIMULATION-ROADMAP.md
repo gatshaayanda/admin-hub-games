@@ -1,6 +1,6 @@
 # Living World — Shared Simulation Roadmap
 
-**Status:** Approved direction and implementation roadmap. Not yet a playable game or production library entry.
+**Status:** Early IN DEVELOPMENT simulation dashboard is registered in the shared library. This is not yet the 3D animal game; direct animal control, animated models, herd AI and wildlife mode are not implemented.
 **Platform:** Admin Hub Games, `gatshaayanda/admin-hub-games`
 **Core decision:** Build one living-world simulation first. Animal care, goat herding/farm management, and wildlife exploration/tracking (with hunting considered later) are modes over the same persistent world.
 
@@ -77,7 +77,7 @@ Offline simulation does not animate every frame while the browser is closed. It 
 
 ## Phase 4 — first playable world integration
 
-Only after Phases 1–3 pass, add the game to the shared catalog with its own Intro → Setup → Gameplay flow. Until that point, do not publish a non-functional placeholder card. The first catalog entry must launch a real playable foundation, even if the content is intentionally small and marked IN DEVELOPMENT.
+The initial IN DEVELOPMENT catalog entry has been added as a real Intro → Setup → simulation dashboard to exercise the shared clock and local save; it is not presented as a finished 3D game. Keep this dashboard only as long as it remains useful for QA. Before expanding the catalog-facing promise, the minimum simulation, save/resume and automated-test gates must pass. Do not add a non-functional placeholder card.
 
 - Keep Hall, President's Shoes, Shooters Trigger and Wardrobe unchanged.
 - Register only the new game's scenes and catalog identifier needed for launch.
