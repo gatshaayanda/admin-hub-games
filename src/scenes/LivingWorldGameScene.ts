@@ -36,7 +36,7 @@ export class LivingWorldGameScene extends Phaser.Scene {
   }
 
   private render() {
-    this.children.removeAll();
+    this.children.removeAll(true);
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor('#172b22');
     const compact = width < 620;
