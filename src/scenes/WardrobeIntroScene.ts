@@ -379,32 +379,8 @@ const WARDROBE_PLAYER_DEFINITION: WardrobeCharacterDefinition = {
 
 const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
   {
-    id: 'arena_player',
-    name: 'SHOOTERS TRIGGER PLAYER · GENERATED PLAYER · 3.JPG MOVEMENT',
-    source: 'generated',
-    basePath: '/assets/wardrobe/generated-v2',
-    displaySize: 80,
-    targetVisibleHeight: 60,
-    frameWidth: 172,
-    frameHeight: 192,
-    originY: 1,
-    embeddedWeapon: true,
-  },
-  {
-    id: 'arena_reference',
-    name: 'SHOOTERS TRIGGER ARENA · REFERENCE COPY',
-    source: 'arena',
-    basePath: '',
-    displaySize: 80,
-    targetVisibleHeight: 60,
-    frameWidth: 1,
-    frameHeight: 1,
-    originY: 1,
-    embeddedWeapon: true,
-  },
-  {
     id: 'soldier_01',
-    name: 'Soldier 01 · CC BY · ARMED',
+    name: 'CANDIDATE 1 · SOLDIER 01 · ARMED DIRECTIONAL SPRITES',
     source: 'soldier',
     basePath: '/assets/wardrobe/free-packs/a/export_folder/soldier_01',
     displaySize: 80,
@@ -415,20 +391,8 @@ const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
     embeddedWeapon: true,
   },
   {
-    id: 'soldier_02',
-    name: 'Soldier 02 · CC BY · ARMED',
-    source: 'soldier',
-    basePath: '/assets/wardrobe/free-packs/a/export_folder/soldier_02',
-    displaySize: 80,
-    targetVisibleHeight: 60,
-    frameWidth: 16,
-    frameHeight: 16,
-    originY: 1,
-    embeddedWeapon: true,
-  },
-  {
     id: 'robot_blue',
-    name: 'Drone Robot · BLUE · CC0 · ARMED',
+    name: 'CANDIDATE 2 · LOWPOLYMANNY BLUE · 8-DIRECTION ROBOT',
     source: 'robot',
     basePath: '/assets/wardrobe/free-packs/b/Free8DirRobot',
     displaySize: 80,
@@ -440,34 +404,17 @@ const WARDROBE_CHARACTER_DEFINITIONS: WardrobeCharacterDefinition[] = [
     robotColor: 'Blue',
   },
   {
-    id: 'robot_red',
-    name: 'Drone Robot · RED · CC0 · ARMED',
-    source: 'robot',
-    basePath: '/assets/wardrobe/free-packs/b/Free8DirRobot',
+    id: 'arena_player',
+    name: 'CANDIDATE 3 · GENERATED FIELD OPERATOR · AUTHORED COMBAT',
+    source: 'generated',
+    basePath: '/assets/wardrobe/generated-v2',
     displaySize: 80,
     targetVisibleHeight: 60,
-    frameWidth: 256,
-    frameHeight: 256,
-    originY: 0.90,
-    embeddedWeapon: true,
-    robotColor: 'Red',
-  },
-  ...[
-    'police_officer', 'firefighter', 'mechanic', 'teacher', 'butcher',
-    'student', 'cook', 'priest', 'punk', 'biker', 'jogger', 'soldier',
-    'nurse', 'child', 'heavyset', 'runner', 'bruiser', 'old_man', 'businessman',
-  ].map((id) => ({
-    id,
-    name: id.replace(/_/g, ' ').replace(/\\b\\w/g, (letter) => letter.toUpperCase()),
-    source: 'gegx' as const,
-    basePath: '/assets/wardrobe/packs/x/gegx-free-walk-pixel-v1.1/' + id,
-    displaySize: 80,
-    targetVisibleHeight: 60,
-    frameWidth: 192,
+    frameWidth: 172,
     frameHeight: 192,
-    originY: 165 / 192,
-    embeddedWeapon: false,
-  })),
+    originY: 1,
+    embeddedWeapon: true,
+  },
 ];
 
 const WARDROBE_TARGET_DEFINITION: WardrobeCharacterDefinition = {
@@ -560,9 +507,8 @@ export class WardrobeLabScene extends Phaser.Scene {
   private readonly arenaWeaponRadius = 16;
   private readonly projectileMinVisibleMs = 34;
   private characterDefinitions = WARDROBE_CHARACTER_DEFINITIONS;
-  private readonly mobileCharacterDefinitions = WARDROBE_CHARACTER_DEFINITIONS.filter(
-    (definition) => definition.source === 'generated' || definition.source === 'arena',
-  );
+  // The three candidate bake-off is identical on desktop and phone.
+  private readonly mobileCharacterDefinitions = WARDROBE_CHARACTER_DEFINITIONS;
   private readonly targetVisibleCharacterHeight = 60;
   private readonly targetDefinition = WARDROBE_TARGET_DEFINITION;
 
