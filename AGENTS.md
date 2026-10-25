@@ -6051,3 +6051,104 @@ The brown CC0 dog spritesheet is integrated in Paws World with idle, movement/st
 3. Keep herd movement positional and observable; do not make the herd button teleport animals.
 4. Preserve the existing shared world simulation, save migration, PWA caching and every other game.
 5. Report build/deployment status separately from real-device and airplane-mode QA. Never claim the latter without actually performing it.
+
+---
+
+## Wardrobe / Shooters Trigger Asset Roadmap
+
+This roadmap preserves the product objective: **Wardrobe exists to turn the working geometric Shooters Trigger fighter into a real, animated character-driven shooter. It is not a disconnected dress-up demo.** The current implementation checkpoint is the three-candidate character bake-off. Keep this section organized and update its status at each meaningful main checkpoint; do not mark a stage complete until its acceptance criteria are verified.
+
+### Product and technical guardrails
+
+- Preserve the known-good Arena movement, aiming input, projectile simulation, hitboxes, combat resolution, rival AI, scoring, mobile controls, and game flow while changing character presentation.
+- Treat the actual Arena runtime as gameplay source of truth. Wardrobe is the visual/animation laboratory; do not claim its test shots prove Arena combat is correct.
+- Keep movement, facing, aim direction, authored animation pose, weapon/muzzle presentation, and projectile trajectory as separate concepts wherever the art supports it.
+- No cosmetic/asset change may silently change speed, hit radius, damage, projectile trajectory, cooldown, or rival behaviour.
+- Never invent animation states or claim a model is animated just because it exists in an archive. Verify source frames, animation files, pivots, license and browser loading.
+- Do not download or preload every asset pack on phones. Load only the selected candidate and the minimum required comparison/target assets. Handle asset-load errors visibly rather than crashing on a missing optional pack.
+- Keep the existing PWA/install contract protected. Do not alter installation behaviour to support Wardrobe or a game mode.
+- Preserve Hall and unrelated games. Avoid broad scene rewrites when a narrow presentation adapter will do.
+- Asset archives stored in Git LFS are a recoverable source library, not browser-ready runtime files. Extract only selected assets into the public asset pipeline, record provenance/licence, and validate production URLs and file sizes.
+- Do not claim deployment or mobile QA from a source commit/build alone. The product owner performs the real browser/device QA.
+
+### Stage 01 — Prove the real shooter character (CURRENT)
+
+**Goal:** Replace the geometric placeholder presentation with a real character without damaging the proven shooter.
+
+Wardrobe must expose exactly these three initial comparison candidates on desktop and mobile:
+
+1. **Candidate 1 — Soldier 01:** authored armed directional sprite sheets from `public/assets/wardrobe/free-packs/a/export_folder/soldier_01`.
+2. **Candidate 2 — LowPolyManny Blue:** eight-direction robot, with authored `WalkingShoot` and `StandingShoot` sequences under `public/assets/wardrobe/free-packs/b/Free8DirRobot`.
+3. **Candidate 3 — Generated Field Operator:** existing generated-v2 body/combat atlas and manifest under `public/assets/wardrobe/generated-v2`; preserve the audited authored combat-pose/muzzle contract.
+
+The Arena reference remains a diagnostic reference, not a fourth candidate. Do not turn the wider wardrobe catalogue into the current bake-off.
+
+**Required visual/gameplay checks:**
+- Compare the same character scale, ground contact and test environment.
+- Walk up/down/left/right and diagonally; no foot sliding beyond the authored animation's normal motion, unexplained hovering, or ground penetration.
+- Aim in all eight directions and move independently from aim direction where supported.
+- Fire repeatedly while stationary and moving; confirm the visible weapon/muzzle and projectile direction agree. Explicitly inspect diagonal fire and ensure bullets never appear behind/from the character's body.
+- Test hit, down/death and respawn presentation where supported by each candidate; unsupported states must degrade cleanly rather than showing a false animation.
+- Verify keyboard and touch interaction, resize, asset loading and console errors.
+- Confirm the Arena combat values and controls are unchanged.
+- Compare the three candidates in the lab, then record the product owner's chosen character before promoting any one to the Arena runtime.
+
+**Acceptance gate:** the product owner can switch among the three candidates in Wardrobe on a phone and desktop, understand which candidate is shown, observe movement/aim/fire, and report which art best fits. A successful build is not proof that the real Arena has adopted the selected character.
+
+### Stage 02 — Reusable character contract
+
+After Stage 01 QA chooses a candidate:
+- Create/maintain a versioned character manifest covering source/licence, frame dimensions, directional mapping, idle/walk/fire/hit/death/respawn support, ground/pivot anchor, weapon grip, per-pose muzzle anchor, and mirroring rules.
+- Validate all required frames and anchor bounds automatically where practical.
+- Keep a candidate-specific presentation adapter; do not force fundamentally different sprite rigs into one inaccurate rig.
+- Keep continuous aim/projectile direction independent from discrete animation direction. Only use pose mirroring when verified visually.
+- Add a regression checklist/test fixture for muzzle origin, diagonal aim, grounding and movement. Do not promote unverified offsets into production.
+
+### Stage 03 — Wardrobe customisation and progression
+
+Only after the selected character works in Arena:
+- Add a small set of verified outfits/palettes, helmets, masks, packs and team colours.
+- Use layered equipment only when source art has genuine separable layers and compatible pivots; otherwise use complete authored variants.
+- Add saved presets and preview controls without making cosmetics affect hitboxes or combat balance.
+- Weapon skins, sound, muzzle effects and reload/fire presentation may vary cosmetically; mechanics must remain explicit and balanced.
+- Research player response to meaningful choice, readable feedback and achievable challenge. Do not equate asset count with engagement.
+
+### Stage 04 — One coherent themed environment
+
+Build one complete, performant environment from the asset library before multiplying maps:
+- Candidate source packs include the pixel rooms/dungeons/RPG assets and Living World models (farm animals, barn, fences, crop rows, tractor, hay, trees and farm equipment).
+- First classify whether the target is a 2D Phaser map or a separate 3D scene. Do not assume GLB assets can be rendered directly in Phaser; the existing Vula racing scene uses a Three.js pipeline.
+- For a Phaser arena, use verified 2D art/tiles/props and deliberate collision, cover, concealment, navigation and line-of-sight rules.
+- For 3D Living World, validate GLB scale, materials, animation, performance and licence in an appropriate 3D renderer before proposing gameplay integration.
+- Keep scenery gameplay-relevant: cover and routes should be readable, mobile performance stable, and collision/AI paths tested.
+
+### Stage 05 — Separate 3D vehicle / flight prototypes
+
+Treat these as distinct prototypes, not automatic additions to the 2D shooter:
+- **Vehicle garage/racing:** Vula's existing asset preparation approach and Kenney Racing Kit/Racing Pack are candidates for real models to replace procedural placeholder cars. Validate each model and handling/camera setup before integration.
+- **Aircraft/space flight:** inspect Space Kit, Planets, Space Shooter Extension and Watercraft archives. Confirm actual aircraft versus spacecraft, licence and available animations; implement a separate flight/camera/physics loop.
+- **Dragons/fantasy flight:** the current asset inventory does not yet prove a rigged, animated dragon. Source a properly licensed rigged/animated model or deliberately scope a static/pose-based experience. A static GLB is not a flying creature.
+- Do not couple the 3D renderer to Phaser's 2D Arena. Reuse asset provenance, controls research and UI patterns, not incompatible rendering assumptions.
+
+### Further game opportunities from the asset library
+
+Maintain as ideas, not built features:
+- Farm-world exploration/animal care using the Living World models.
+- Tactical training maps built from dungeon, room, forest and shooter packs.
+- A character/weapon preview workshop and saved cosmetic loadouts.
+- A real 3D car garage and time-trial/racing environment based on validated Vula/Kenney assets.
+- A space flight or spacecraft combat prototype using verified Space Kit assets.
+- A fantasy exploration/dragon-riding prototype only after suitable animated assets are confirmed.
+- A reusable asset catalogue with previews, licence/provenance, file validation, runtime-ready status and intended renderer.
+
+### Roadmap checkpoint format
+
+At each stage update this section with:
+- **Status:** Not started / In progress / Awaiting owner QA / Accepted / Blocked.
+- **Main commit:** exact SHA.
+- **Evidence:** tests/build and actual browser/device checks performed.
+- **Owner QA:** feedback and chosen candidate/design decisions.
+- **Next gate:** one clearly defined next task.
+
+Current state: **Stage 01 — In progress; three candidate definitions are curated in Wardrobe. Awaiting code/build/runtime verification and owner QA.** No later stage is accepted yet.
+
