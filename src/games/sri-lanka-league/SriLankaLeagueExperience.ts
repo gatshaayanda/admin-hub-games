@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BALL_RADIUS, GOAL_LINE, createFootballBall, stepFootballBall, type FootballBall } from './physics';
+import { BALL_RADIUS, GOAL_LINE, cameraRelativeMove, createFootballBall, stepFootballBall, type FootballBall } from './physics';
 
 type PersonRig = { root: THREE.Group; leftArm: THREE.Group; rightArm: THREE.Group; leftLeg: THREE.Group; rightLeg: THREE.Group };
 type Spectator = { rig: PersonRig; phase: number; wave: number };
@@ -105,6 +105,9 @@ export class SriLankaLeagueExperience {
   private raf = 0;
   private goalTimer = 0;
   private kickPose = 0;
+  private trickPose = 0;
+  private trickCooldown = 0;
+  private stickPointerId: number | null = null;
   private toastTimer = 0;
   private winTimer = 0;
   private stick?: HTMLDivElement;
@@ -383,17 +386,22 @@ export class SriLankaLeagueExperience {
 
   private buildInterface() {
     const style = document.createElement('style');
-    style.textContent = '.sll-world{position:fixed;inset:0;z-index:40;overflow:hidden;background:#d9a56d;color:#fff8e9;font-family:Arial,sans-serif;touch-action:none;isolation:isolate}.sll-world canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}.sll-top{position:absolute;top:max(10px,env(safe-area-inset-top));left:10px;right:10px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;pointer-events:none}.sll-card{padding:10px 12px;border:1px solid #fff2d66b;border-radius:14px;background:#34271de8;box-shadow:0 5px 18px #38241440;backdrop-filter:blur(8px)}.sll-brand{font-size:clamp(11px,2.6vw,15px);font-weight:900;letter-spacing:.11em}.sll-sub{margin-top:4px;color:#f2d9b1;font-size:9px;letter-spacing:.08em}.sll-score{text-align:center;min-width:102px;font:900 20px/1 monospace}.sll-score small{display:block;margin-top:5px;color:#f2d9b1;font-size:8px;letter-spacing:.12em}.sll-menu-button{pointer-events:auto;min-width:44px;min-height:44px;border:1px solid #fff2d688;border-radius:12px;background:#34271de8;color:#fff8e9;font-weight:900}.sll-stick{position:absolute;left:max(12px,env(safe-area-inset-left));bottom:max(14px,env(safe-area-inset-bottom));width:104px;height:104px;border:2px solid #fff0d5a8;border-radius:50%;background:#34271d9c;touch-action:none;z-index:5}.sll-stick:after{content:\"\";position:absolute;inset:16%;border:1px solid #fff3d655;border-radius:50%}.sll-stick-knob{position:absolute;left:50%;top:50%;width:42px;height:42px;margin:-21px 0 0 -21px;border:2px solid #fff6e4;border-radius:50%;background:#e5b75f;box-shadow:0 4px 0 #392b20;pointer-events:none;transform:translate3d(0,0,0)}.sll-actions{position:absolute;right:max(12px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));display:flex;align-items:flex-end;gap:10px;z-index:5}.sll-action{min-width:70px;min-height:70px;padding:8px;border:2px solid #fff0d5;border-radius:50%;background:#34271de8;color:#fff8e9;font:900 10px/1.1 monospace;box-shadow:0 5px 0 #392b20a8;touch-action:manipulation}.sll-action:active,.sll-action.is-pressed{transform:translateY(3px);box-shadow:0 2px 0 #392b20a8}.sll-menu,.sll-win{position:absolute;inset:0;z-index:10;display:grid;place-items:center;padding:20px;background:#17130ed9}.sll-menu[hidden],.sll-win[hidden]{display:none}.sll-panel{width:min(92vw,420px);padding:26px;border:1px solid #e7c88777;border-radius:18px;background:#2d261f;color:#fff8e9;text-align:center;box-shadow:0 20px 70px #0008}.sll-panel h2{margin:0 0 10px;font-size:clamp(26px,7vw,38px);letter-spacing:-.04em}.sll-panel p{color:#e9d4b5;font-size:14px;line-height:1.6}.sll-panel button{display:block;width:100%;min-height:48px;margin-top:10px;border:1px solid #e7c887;border-radius:10px;background:#e7c887;color:#2d261f;font:900 11px monospace;letter-spacing:.08em}.sll-panel button.secondary{background:transparent;color:#fff8e9}.sll-fallback{position:absolute;inset:0;display:grid;align-content:center;justify-items:center;gap:12px;padding:28px;background:#30271f;text-align:center;color:#fff8e9}.sll-fallback span{max-width:320px;color:#e9d4b5;line-height:1.5}.sll-toast{position:absolute;left:50%;top:calc(82px + env(safe-area-inset-top));z-index:7;transform:translate(-50%,-8px);opacity:0;max-width:88vw;padding:10px 15px;border:1px solid #fff2d677;border-radius:999px;background:#34271de8;color:#fff8e9;font:900 10px monospace;letter-spacing:.08em;text-align:center;transition:opacity .18s,transform .18s;pointer-events:none}.sll-toast.is-visible{opacity:1;transform:translate(-50%,0)}@media(max-width:390px){.sll-stick{width:88px;height:88px}.sll-stick-knob{width:36px;height:36px;margin:-18px 0 0 -18px}.sll-action{min-width:62px;min-height:62px;font-size:9px}.sll-score{min-width:88px;font-size:17px}.sll-card{padding:8px 9px}}@media(max-height:430px) and (orientation:landscape){.sll-stick{width:72px;height:72px;bottom:8px}.sll-stick-knob{width:32px;height:32px;margin:-16px 0 0 -16px}.sll-action{min-width:56px;min-height:56px}.sll-actions{bottom:8px}.sll-top{top:6px}}';
+    style.textContent = '.sll-world{position:fixed;inset:0;z-index:40;overflow:hidden;background:#d9a56d;color:#fff8e9;font-family:Arial,sans-serif;touch-action:none;isolation:isolate}.sll-world canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}.sll-top{position:absolute;top:max(10px,env(safe-area-inset-top));left:10px;right:10px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;pointer-events:none}.sll-card{padding:10px 12px;border:1px solid #fff2d66b;border-radius:14px;background:#34271de8;box-shadow:0 5px 18px #38241440;backdrop-filter:blur(8px)}.sll-brand{font-size:clamp(11px,2.6vw,15px);font-weight:900;letter-spacing:.11em}.sll-sub{margin-top:4px;color:#f2d9b1;font-size:9px;letter-spacing:.08em}.sll-score{text-align:center;min-width:102px;font:900 20px/1 monospace}.sll-score small{display:block;margin-top:5px;color:#f2d9b1;font-size:8px;letter-spacing:.12em}.sll-menu-button{pointer-events:auto;min-width:44px;min-height:44px;border:1px solid #fff2d688;border-radius:12px;background:#34271de8;color:#fff8e9;font-weight:900}.sll-stick{position:absolute;left:max(12px,env(safe-area-inset-left));bottom:max(14px,env(safe-area-inset-bottom));width:104px;height:104px;border:2px solid #fff0d5a8;border-radius:50%;background:#34271d9c;touch-action:none;z-index:5}.sll-stick:after{content:\"\";position:absolute;inset:16%;border:1px solid #fff3d655;border-radius:50%}.sll-stick-knob{position:absolute;left:50%;top:50%;width:42px;height:42px;margin:-21px 0 0 -21px;border:2px solid #fff6e4;border-radius:50%;background:#e5b75f;box-shadow:0 4px 0 #392b20;pointer-events:none;transform:translate3d(0,0,0)}.sll-actions{position:absolute;right:max(12px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));display:flex;align-items:flex-end;gap:10px;z-index:5}.sll-action{min-width:70px;min-height:70px;padding:8px;border:2px solid #fff0d5;border-radius:50%;background:#34271de8;color:#fff8e9;font:900 10px/1.1 monospace;box-shadow:0 5px 0 #392b20a8;touch-action:manipulation}.sll-action:active,.sll-action.is-pressed{transform:translateY(3px);box-shadow:0 2px 0 #392b20a8}.sll-tricks{min-width:62px;min-height:62px;background:#77512e;border-color:#f0c879}.sll-menu,.sll-win{position:absolute;inset:0;z-index:10;display:grid;place-items:center;padding:20px;background:#17130ed9}.sll-menu[hidden],.sll-win[hidden]{display:none}.sll-panel{width:min(92vw,420px);padding:26px;border:1px solid #e7c88777;border-radius:18px;background:#2d261f;color:#fff8e9;text-align:center;box-shadow:0 20px 70px #0008}.sll-panel h2{margin:0 0 10px;font-size:clamp(26px,7vw,38px);letter-spacing:-.04em}.sll-panel p{color:#e9d4b5;font-size:14px;line-height:1.6}.sll-panel button{display:block;width:100%;min-height:48px;margin-top:10px;border:1px solid #e7c887;border-radius:10px;background:#e7c887;color:#2d261f;font:900 11px monospace;letter-spacing:.08em}.sll-panel button.secondary{background:transparent;color:#fff8e9}.sll-fallback{position:absolute;inset:0;display:grid;align-content:center;justify-items:center;gap:12px;padding:28px;background:#30271f;text-align:center;color:#fff8e9}.sll-fallback span{max-width:320px;color:#e9d4b5;line-height:1.5}.sll-toast{position:absolute;left:50%;top:calc(82px + env(safe-area-inset-top));z-index:7;transform:translate(-50%,-8px);opacity:0;max-width:88vw;padding:10px 15px;border:1px solid #fff2d677;border-radius:999px;background:#34271de8;color:#fff8e9;font:900 10px monospace;letter-spacing:.08em;text-align:center;transition:opacity .18s,transform .18s;pointer-events:none}.sll-toast.is-visible{opacity:1;transform:translate(-50%,0)}@media(max-width:390px){.sll-stick{width:88px;height:88px}.sll-stick-knob{width:36px;height:36px;margin:-18px 0 0 -18px}.sll-action{min-width:62px;min-height:62px;font-size:9px}.sll-score{min-width:88px;font-size:17px}.sll-card{padding:8px 9px}}@media(max-height:430px) and (orientation:landscape){.sll-stick{width:72px;height:72px;bottom:8px}.sll-stick-knob{width:32px;height:32px;margin:-16px 0 0 -16px}.sll-action{min-width:56px;min-height:56px}.sll-actions{bottom:8px}.sll-top{top:6px}}';
     this.root.appendChild(style);
-    this.root.insertAdjacentHTML('beforeend', '<div class="sll-top"><div class="sll-card"><div class="sll-brand">SRI LANKA LEAGUE</div><div class="sll-sub">BOTSWANA STREET FOOTBALL</div></div><div class="sll-card sll-score"><span id="sll-score">0 / 3</span><small>FIRST TO 3</small></div><button class="sll-menu-button" type="button" aria-label="Open match menu">Ⅱ</button></div><div class="sll-stick" aria-label="Movement joystick"><span class="sll-stick-knob"></span></div><div class="sll-actions"><button class="sll-action sll-sprint" type="button">RUN</button><button class="sll-action sll-kick" type="button">KICK</button></div><div class="sll-menu" hidden><div class="sll-panel"><h2>PAUSED</h2><p>Take a breather, Sri Lanka. The street is waiting.</p><button data-action="resume">RESUME MATCH</button><button class="secondary" data-action="restart">RESTART MATCH</button><button class="secondary" data-action="exit">RETURN TO GAME LIBRARY</button></div></div><div class="sll-win" hidden><div class="sll-panel"><h2>CHAMPION!</h2><p id="sll-win-copy">Sri Lanka wins the street challenge.</p><button data-action="again">PLAY AGAIN</button><button class="secondary" data-action="exit">RETURN TO GAME LIBRARY</button></div></div><div class="sll-toast" role="status"></div>');
+    this.root.insertAdjacentHTML('beforeend', '<div class="sll-top"><div class="sll-card"><div class="sll-brand">SRI LANKA LEAGUE</div><div class="sll-sub">BOTSWANA STREET FOOTBALL</div></div><div class="sll-card sll-score"><span id="sll-score">0 / 3</span><small>FIRST TO 3</small></div><button class="sll-menu-button" type="button" aria-label="Open match menu">Ⅱ</button></div><div class="sll-stick" aria-label="Movement joystick"><span class="sll-stick-knob"></span></div><div class="sll-actions"><button class="sll-action sll-sprint" type="button">RUN</button><button class="sll-action sll-tricks" type="button">TRICKS</button><button class="sll-action sll-kick" type="button">KICK</button></div><div class="sll-menu" hidden><div class="sll-panel"><h2>PAUSED</h2><p>Take a breather, Sri Lanka. The street is waiting.</p><button data-action="resume">RESUME MATCH</button><button class="secondary" data-action="restart">RESTART MATCH</button><button class="secondary" data-action="exit">RETURN TO GAME LIBRARY</button></div></div><div class="sll-win" hidden><div class="sll-panel"><h2>CHAMPION!</h2><p id="sll-win-copy">Sri Lanka wins the street challenge.</p><button data-action="again">PLAY AGAIN</button><button class="secondary" data-action="exit">RETURN TO GAME LIBRARY</button></div></div><div class="sll-toast" role="status"></div>');
     this.stick = this.root.querySelector<HTMLDivElement>('.sll-stick') ?? undefined;
     this.stickKnob = this.root.querySelector<HTMLSpanElement>('.sll-stick-knob') ?? undefined;
 
     this.stick?.addEventListener('pointerdown', this.onStickDown);
     this.stick?.addEventListener('pointermove', this.onStickMove);
     this.stick?.addEventListener('pointerup', this.onStickUp);
+    this.stick?.addEventListener('lostpointercapture', this.onStickUp);
     this.stick?.addEventListener('pointercancel', this.onStickUp);
     this.root.querySelector<HTMLButtonElement>('.sll-menu-button')?.addEventListener('click', () => this.toggleMenu());
+    this.root.querySelector<HTMLButtonElement>('.sll-tricks')?.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      this.performTrick();
+    });
     this.root.querySelector<HTMLButtonElement>('.sll-kick')?.addEventListener('pointerdown', (event) => {
       event.preventDefault();
       this.kickBall();
@@ -425,15 +433,21 @@ export class SriLankaLeagueExperience {
 
   private onStickDown = (event: PointerEvent) => {
     event.preventDefault();
+    if (this.stickPointerId !== null) return;
+    this.stickPointerId = event.pointerId;
     this.stick?.setPointerCapture(event.pointerId);
     this.moveStick(event);
   };
 
   private onStickMove = (event: PointerEvent) => {
-    if (this.stick?.hasPointerCapture(event.pointerId)) this.moveStick(event);
+    if (this.stickPointerId === event.pointerId && this.stick?.hasPointerCapture(event.pointerId)) this.moveStick(event);
   };
 
-  private onStickUp = () => this.resetStick();
+  private onStickUp = (event?: PointerEvent) => {
+    if (event && this.stickPointerId !== event.pointerId) return;
+    this.stickPointerId = null;
+    this.resetStick();
+  };
 
   private moveStick(event: PointerEvent) {
     if (!this.stick || !this.stickKnob) return;
@@ -453,6 +467,7 @@ export class SriLankaLeagueExperience {
   private resetStick() {
     this.controls.x = 0;
     this.controls.forward = 0;
+    this.stickPointerId = null;
     if (this.stickKnob) this.stickKnob.style.transform = 'translate3d(0,0,0)';
   }
 
@@ -462,7 +477,7 @@ export class SriLankaLeagueExperience {
     const dx = this.ball.x - playerPosition.x;
     const dz = this.ball.z - playerPosition.z;
     const distance = Math.hypot(dx, dz);
-    if (distance > 2.35 || this.ball.y > 1.65) {
+    if (distance > 3.25 || this.ball.y > 2.0) {
       this.setToast('GET CLOSER TO THE BALL');
       return;
     }
@@ -476,6 +491,28 @@ export class SriLankaLeagueExperience {
     this.ball.vy = Math.max(this.ball.vy, 2.0 + runPower * 0.35);
     this.kickPose = 0.34;
     this.setToast('NICE KICK!');
+  }
+
+  private performTrick() {
+    if (this.paused || this.finished || this.goalTimer > 0 || this.trickCooldown > 0) return;
+    this.trickPose = 0.62;
+    this.trickCooldown = 0.85;
+    const playerPosition = this.player.root.position;
+    const dx = this.ball.x - playerPosition.x;
+    const dz = this.ball.z - playerPosition.z;
+    const distance = Math.hypot(dx, dz);
+    if (distance <= 3.25 && this.ball.y < 2) {
+      const yaw = this.player.root.rotation.y;
+      const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+      const side = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+      const sideSign = Math.sign(dx * side.x + dz * side.z) || 1;
+      this.ball.vx += forward.x * 8.2 + side.x * sideSign * 2.8;
+      this.ball.vz += forward.z * 8.2 + side.z * sideSign * 2.8;
+      this.ball.vy = Math.max(this.ball.vy, 2.8);
+      this.setToast('SKILL MOVE! TOE FLICK');
+    } else {
+      this.setToast('STEP-OVER! GET TO THE BALL');
+    }
   }
 
   private setPaused(paused: boolean) {
@@ -509,6 +546,8 @@ export class SriLankaLeagueExperience {
     this.player.root.rotation.y = 0;
     this.playerVelocity.set(0, 0, 0);
     this.kickPose = 0;
+    this.trickPose = 0;
+    this.trickCooldown = 0;
     this.keys.clear();
     this.controls.sprint = false;
     this.resetBall();
@@ -564,8 +603,14 @@ export class SriLankaLeagueExperience {
       }
       const sprinting = this.controls.sprint || this.keys.has('shift');
       const maxSpeed = sprinting ? 8.2 : 5.1;
-      const targetX = moveX * maxSpeed;
-      const targetZ = -moveForward * maxSpeed;
+      const cameraForward = new THREE.Vector3();
+      this.camera.getWorldDirection(cameraForward);
+      cameraForward.y = 0;
+      if (cameraForward.lengthSq() < 0.0001) cameraForward.set(0, 0, -1);
+      cameraForward.normalize();
+      const worldMove = cameraRelativeMove(moveX, moveForward, cameraForward.x, cameraForward.z);
+      const targetX = worldMove.x * maxSpeed;
+      const targetZ = worldMove.z * maxSpeed;
       this.playerVelocity.x += (targetX - this.playerVelocity.x) * ease(11, dt);
       this.playerVelocity.z += (targetZ - this.playerVelocity.z) * ease(11, dt);
       if (magnitude < 0.05) {
@@ -597,8 +642,12 @@ export class SriLankaLeagueExperience {
       const stride = Math.min(1, this.playerVelocity.length() / 5.5);
       const swing = Math.sin(elapsed * (sprinting ? 12 : 9)) * stride * 0.68;
       this.kickPose = Math.max(0, this.kickPose - dt);
+      this.trickPose = Math.max(0, this.trickPose - dt);
+      this.trickCooldown = Math.max(0, this.trickCooldown - dt);
       this.player.leftLeg.rotation.x = swing;
       this.player.rightLeg.rotation.x = -swing - (this.kickPose / 0.34) * 0.95;
+      this.player.leftLeg.rotation.z = Math.sin(elapsed * 22) * (this.trickPose / 0.62) * 0.58;
+      this.player.rightLeg.rotation.z = -Math.sin(elapsed * 22) * (this.trickPose / 0.62) * 0.58;
       this.player.leftArm.rotation.x = -swing * 0.65;
       this.player.rightArm.rotation.x = swing * 0.65;
 
@@ -608,11 +657,11 @@ export class SriLankaLeagueExperience {
       const dx = this.ball.x - this.player.root.position.x;
       const dz = this.ball.z - this.player.root.position.z;
       const separation = Math.hypot(dx, dz);
-      if (separation < 0.72 && this.ball.y < 1.25) {
+      if (separation < 0.98 && this.ball.y < 1.35) {
         const nx = separation > 0.001 ? dx / separation : Math.sin(this.player.root.rotation.y);
         const nz = separation > 0.001 ? dz / separation : -Math.cos(this.player.root.rotation.y);
-        this.ball.x = this.player.root.position.x + nx * 0.73;
-        this.ball.z = this.player.root.position.z + nz * 0.73;
+        this.ball.x = this.player.root.position.x + nx * 0.94;
+        this.ball.z = this.player.root.position.z + nz * 0.94;
         const contact = Math.max(0, this.playerVelocity.x * nx + this.playerVelocity.z * nz);
         this.ball.vx += nx * (0.8 + contact * 0.75);
         this.ball.vz += nz * (0.8 + contact * 0.75);

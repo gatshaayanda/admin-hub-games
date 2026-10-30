@@ -7,6 +7,18 @@ const FIELD_Z_MIN = -21;
 const FIELD_Z_MAX = 22;
 const POST_X = [-3.2, 3.2] as const;
 
+export function cameraRelativeMove(inputX: number, inputForward: number, cameraForwardX: number, cameraForwardZ: number) {
+  const length = Math.hypot(cameraForwardX, cameraForwardZ) || 1;
+  const forwardX = cameraForwardX / length;
+  const forwardZ = cameraForwardZ / length;
+  const rightX = -forwardZ;
+  const rightZ = forwardX;
+  return {
+    x: rightX * inputX + forwardX * inputForward,
+    z: rightZ * inputX + forwardZ * inputForward,
+  };
+}
+
 export function createFootballBall(x = 0, y = BALL_RADIUS, z = 3): FootballBall {
   return { x, y, z, vx: 0, vy: 0, vz: 0 };
 }

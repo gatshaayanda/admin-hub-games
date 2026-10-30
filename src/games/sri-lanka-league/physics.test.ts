@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { BALL_RADIUS, GOAL_LINE, createFootballBall, stepFootballBall } from './physics';
+import { BALL_RADIUS, GOAL_LINE, cameraRelativeMove, createFootballBall, stepFootballBall } from './physics';
 
 describe('Sri Lanka League ball physics', () => {
+  it('maps joystick directions to the camera view after turning', () => {
+    expect(cameraRelativeMove(1, 0, 0, -1)).toEqual({ x: 1, z: 0 });
+    expect(cameraRelativeMove(0, 1, 0, -1)).toEqual({ x: 0, z: -1 });
+    expect(cameraRelativeMove(1, 0, 1, 0)).toEqual({ x: 0, z: 1 });
+    expect(cameraRelativeMove(0, 1, 1, 0)).toEqual({ x: 1, z: 0 });
+  });
   it('keeps the ball above the ground and damps its bounce', () => {
     const ball = createFootballBall(0, 1.4, 0);
     for (let frame = 0; frame < 180; frame += 1) stepFootballBall(ball, 1 / 60);
