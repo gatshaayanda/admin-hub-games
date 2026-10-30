@@ -27,7 +27,7 @@ export function stepFootballBall(ball: FootballBall, deltaSeconds: number): bool
     if (ball.vy < -0.65) ball.vy = -ball.vy * 0.43;
     else ball.vy = 0;
     if (Math.abs(ball.vy) < 0.8) ball.vy = 0;
-    const rollingDrag = Math.exp(-1.28 * dt);
+    const rollingDrag = Math.exp(-0.52 * dt);
     ball.vx *= rollingDrag;
     ball.vz *= rollingDrag;
   } else {

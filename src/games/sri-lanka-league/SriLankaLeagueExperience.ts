@@ -471,8 +471,8 @@ export class SriLankaLeagueExperience {
     const direction = forward.multiplyScalar(0.7).add(toBall.multiplyScalar(0.3)).normalize();
     const runPower = this.controls.sprint || this.keys.has('shift') ? 2.1 : 0;
     const runSpeed = Math.min(2.4, this.playerVelocity.length() * 0.35);
-    this.ball.vx += direction.x * (9.5 + runPower + runSpeed);
-    this.ball.vz += direction.z * (9.5 + runPower + runSpeed);
+    this.ball.vx += direction.x * (12.5 + runPower + runSpeed);
+    this.ball.vz += direction.z * (12.5 + runPower + runSpeed);
     this.ball.vy = Math.max(this.ball.vy, 2.0 + runPower * 0.35);
     this.kickPose = 0.34;
     this.setToast('NICE KICK!');

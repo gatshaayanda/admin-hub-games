@@ -21,6 +21,14 @@ describe('Sri Lanka League ball physics', () => {
     expect(stepFootballBall(ball, 0.02)).toBe(false);
   });
 
+  it('can roll from the kick-off spot into the goal mouth', () => {
+    const ball = createFootballBall(0, BALL_RADIUS, 3);
+    ball.vz = -12.5;
+    let scored = false;
+    for (let frame = 0; frame < 240 && !scored; frame += 1) scored = stepFootballBall(ball, 1 / 60);
+    expect(scored).toBe(true);
+  });
+
   it('reflects the ball from the street-side boundary', () => {
     const ball = createFootballBall(17.6, 0.3, 0);
     ball.vx = 8;
