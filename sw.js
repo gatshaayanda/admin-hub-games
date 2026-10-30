@@ -1,4 +1,4 @@
-const CACHE_NAME = 'admin-hub-games-v5';
+const CACHE_NAME = 'admin-hub-games-v51';
 const CORE_ASSETS = [
   '/',
   '/index.html',
