@@ -16,7 +16,7 @@ describe('Sri Lanka League ball physics', () => {
   });
 
   it('does not award a goal for a shot outside the goal mouth', () => {
-    const ball = createFootballBall(3.0, 0.45, GOAL_LINE + 0.15);
+    const ball = createFootballBall(2.8, 0.45, GOAL_LINE + 0.15);
     ball.vz = -18;
     expect(stepFootballBall(ball, 0.02)).toBe(false);
   });

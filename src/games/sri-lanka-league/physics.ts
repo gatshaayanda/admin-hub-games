@@ -55,22 +55,22 @@ export function stepFootballBall(ball: FootballBall, deltaSeconds: number): bool
   for (const postX of POST_X) {
     const dx = ball.x - postX;
     const dz = ball.z - GOAL_LINE;
-    if (Math.abs(dx) < 0.54 && Math.abs(dz) < 0.54 && ball.y < 0.44 + BALL_RADIUS) {
-      const pushX = 0.54 - Math.abs(dx);
-      const pushZ = 0.54 - Math.abs(dz);
+    if (Math.abs(dx) < 0.59 && Math.abs(dz) < 0.52 && ball.y < 0.44 + BALL_RADIUS) {
+      const pushX = 0.59 - Math.abs(dx);
+      const pushZ = 0.52 - Math.abs(dz);
       if (pushX < pushZ) {
         const side = Math.sign(dx || 1);
-        ball.x = postX + side * 0.54;
+        ball.x = postX + side * 0.59;
         ball.vx = side * Math.max(1.2, Math.abs(ball.vx) * 0.62);
       } else if (ball.vz < 0) {
-        ball.z = GOAL_LINE + 0.54;
+        ball.z = GOAL_LINE + 0.52;
         ball.vz = Math.max(1.2, Math.abs(ball.vz) * 0.62);
       } else {
-        ball.z = GOAL_LINE - 0.54;
+        ball.z = GOAL_LINE - 0.52;
         ball.vz = -Math.max(1.2, Math.abs(ball.vz) * 0.62);
       }
     }
   }
 
-  return previousZ > GOAL_LINE && ball.z <= GOAL_LINE && Math.abs(ball.x) < 2.86 && ball.y < 1.82;
+  return previousZ > GOAL_LINE && ball.z <= GOAL_LINE && Math.abs(ball.x) < 2.61 && ball.y < 1.82;
 }
