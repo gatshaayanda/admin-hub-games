@@ -86,3 +86,32 @@ export function stepFootballBall(ball: FootballBall, deltaSeconds: number): bool
 
   return previousZ > GOAL_LINE && ball.z <= GOAL_LINE && Math.abs(ball.x) < 2.61 && ball.y < 1.82;
 }
+
+
+/** Soft foot contact that carries player momentum into a nearby, grounded ball. */
+export function applyDribbleContact(
+  ball: FootballBall,
+  playerX: number,
+  playerZ: number,
+  playerVx: number,
+  playerVz: number,
+  playerYaw: number,
+  deltaSeconds: number,
+): boolean {
+  const dx = ball.x - playerX;
+  const dz = ball.z - playerZ;
+  const separation = Math.hypot(dx, dz);
+  if (separation >= 1.18 || ball.y >= 1.1) return false;
+
+  const nx = separation > 0.001 ? dx / separation : Math.sin(playerYaw);
+  const nz = separation > 0.001 ? dz / separation : -Math.cos(playerYaw);
+  ball.x = playerX + nx * 0.9;
+  ball.z = playerZ + nz * 0.9;
+
+  const targetVx = playerVx * 0.86 + nx * 0.85;
+  const targetVz = playerVz * 0.86 + nz * 0.85;
+  const touch = 1 - Math.exp(-8 * Math.max(0, Math.min(deltaSeconds, 0.04)));
+  ball.vx += (targetVx - ball.vx) * touch;
+  ball.vz += (targetVz - ball.vz) * touch;
+  return true;
+}

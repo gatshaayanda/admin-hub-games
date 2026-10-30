@@ -1,11 +1,11 @@
 import * as THREE from 'three';
-import { BALL_RADIUS, GOAL_LINE, cameraRelativeMove, createFootballBall, stepFootballBall, type FootballBall } from './physics';
+import { BALL_RADIUS, GOAL_LINE, applyDribbleContact, cameraRelativeMove, createFootballBall, stepFootballBall, type FootballBall } from './physics';
 
 type PersonRig = { root: THREE.Group; leftArm: THREE.Group; rightArm: THREE.Group; leftLeg: THREE.Group; rightLeg: THREE.Group };
 type Spectator = { rig: PersonRig; phase: number; wave: number };
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 const ease = (speed: number, dt: number) => 1 - Math.exp(-speed * dt);
-const toon = (color: string) => new THREE.MeshToonMaterial({ color, flatShading: true });
+const toon = (color: string) => new THREE.MeshToonMaterial({ color, flatShading: false });
 
 function box(parent: THREE.Object3D, size: [number, number, number], position: [number, number, number], material: THREE.Material, cast = true) {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(size[0], size[1], size[2]), material);
@@ -24,23 +24,25 @@ function makePerson(shirt: string, shorts: string, skin: string, hair: string): 
   const hairMat = toon(hair);
   const shoeMat = toon('#252a31');
 
-  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.78, 0.38), shirtMat);
-  torso.position.y = 1.12;
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.32, 0.43, 5, 16), shirtMat);
+  torso.position.y = 1.13;
+  torso.scale.set(1, 1, 0.72);
   torso.castShadow = true;
   root.add(torso);
 
-  const shortsMesh = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.34, 0.4), shortsMat);
-  shortsMesh.position.y = 0.59;
+  const shortsMesh = new THREE.Mesh(new THREE.SphereGeometry(0.34, 20, 14), shortsMat);
+  shortsMesh.position.y = 0.61;
+  shortsMesh.scale.set(1, 0.62, 0.72);
   shortsMesh.castShadow = true;
   root.add(shortsMesh);
 
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.255, 14, 12), skinMat);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.255, 24, 18), skinMat);
   head.position.y = 1.78;
   head.scale.set(0.92, 1.08, 0.94);
   head.castShadow = true;
   root.add(head);
 
-  const hairCap = new THREE.Mesh(new THREE.SphereGeometry(0.263, 12, 8), hairMat);
+  const hairCap = new THREE.Mesh(new THREE.SphereGeometry(0.263, 24, 16), hairMat);
   hairCap.position.set(0, 1.91, -0.015);
   hairCap.scale.set(1, 0.48, 1);
   hairCap.castShadow = true;
@@ -57,17 +59,18 @@ function makePerson(shirt: string, shorts: string, skin: string, hair: string): 
     const pivot = new THREE.Group();
     pivot.position.set(side * (arm ? 0.39 : 0.19), arm ? 1.42 : 0.62, 0);
     const length = 0.58;
-    const limb = new THREE.Mesh(new THREE.CylinderGeometry(arm ? 0.105 : 0.13, arm ? 0.12 : 0.145, length, 8), skinMat);
-    limb.position.y = -length / 2;
+    const limb = new THREE.Mesh(new THREE.CapsuleGeometry(arm ? 0.105 : 0.13, 0.36, 4, 12), skinMat);
+    limb.position.y = -0.28;
     limb.castShadow = true;
     pivot.add(limb);
     if (arm) {
-      const hand = new THREE.Mesh(new THREE.SphereGeometry(0.115, 8, 6), skinMat);
-      hand.position.y = -length - 0.015;
+      const hand = new THREE.Mesh(new THREE.SphereGeometry(0.115, 14, 10), skinMat);
+      hand.position.y = -0.55;
       pivot.add(hand);
     } else {
-      const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.27, 0.14, 0.38), shoeMat);
-      shoe.position.set(0, -length - 0.01, 0.075);
+      const shoe = new THREE.Mesh(new THREE.SphereGeometry(0.17, 16, 10), shoeMat);
+      shoe.scale.set(1, 0.48, 1.35);
+      shoe.position.set(0, -0.55, 0.075);
       shoe.castShadow = true;
       pivot.add(shoe);
     }
@@ -189,6 +192,9 @@ export class SriLankaLeagueExperience {
     this.ballVisual = this.makeBall();
     this.scene.add(this.ballVisual);
     this.resetBall();
+    // Start at the settled chase-camera position so the first rendered frame does not snap in from the origin.
+    this.camera.position.set(0, 4.8, 13.4);
+    this.camera.lookAt(0, 1.15, 1.7);
 
     this.buildInterface();
     this.onResize();
@@ -603,12 +609,9 @@ export class SriLankaLeagueExperience {
       }
       const sprinting = this.controls.sprint || this.keys.has('shift');
       const maxSpeed = sprinting ? 8.2 : 5.1;
-      const cameraForward = new THREE.Vector3();
-      this.camera.getWorldDirection(cameraForward);
-      cameraForward.y = 0;
-      if (cameraForward.lengthSq() < 0.0001) cameraForward.set(0, 0, -1);
-      cameraForward.normalize();
-      const worldMove = cameraRelativeMove(moveX, moveForward, cameraForward.x, cameraForward.z);
+      // Keep the control frame fixed to the street/camera view. Do not derive it from the
+      // camera's interpolated rotation: that creates a player→camera→input feedback loop.
+      const worldMove = cameraRelativeMove(moveX, moveForward, 0, -1);
       const targetX = worldMove.x * maxSpeed;
       const targetZ = worldMove.z * maxSpeed;
       this.playerVelocity.x += (targetX - this.playerVelocity.x) * ease(11, dt);
@@ -657,15 +660,15 @@ export class SriLankaLeagueExperience {
       const dx = this.ball.x - this.player.root.position.x;
       const dz = this.ball.z - this.player.root.position.z;
       const separation = Math.hypot(dx, dz);
-      if (separation < 0.98 && this.ball.y < 1.35) {
-        const nx = separation > 0.001 ? dx / separation : Math.sin(this.player.root.rotation.y);
-        const nz = separation > 0.001 ? dz / separation : -Math.cos(this.player.root.rotation.y);
-        this.ball.x = this.player.root.position.x + nx * 0.94;
-        this.ball.z = this.player.root.position.z + nz * 0.94;
-        const contact = Math.max(0, this.playerVelocity.x * nx + this.playerVelocity.z * nz);
-        this.ball.vx += nx * (0.8 + contact * 0.75);
-        this.ball.vz += nz * (0.8 + contact * 0.75);
-      }
+      applyDribbleContact(
+        this.ball,
+        this.player.root.position.x,
+        this.player.root.position.z,
+        this.playerVelocity.x,
+        this.playerVelocity.z,
+        this.player.root.rotation.y,
+        dt,
+      );
 
       if (this.goalTimer > 0) {
         this.goalTimer -= dt;
@@ -677,12 +680,12 @@ export class SriLankaLeagueExperience {
       }
     }
 
-    const yaw = this.player.root.rotation.y;
-    const offset = new THREE.Vector3(0, 4.8, 8.4).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-    const cameraPosition = this.player.root.position.clone().add(offset);
-    const cameraTarget = this.player.root.position.clone().add(new THREE.Vector3(0, 1.15, -3.3).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw));
-    this.camera.position.lerp(cameraPosition, ease(4.5, dt));
-    this.camera.lookAt(cameraTarget);
+    // Stable third-person view: follow the player across the pitch, but never orbit
+    // around their instantaneous facing direction. This removes camera/input oscillation.
+    const cameraPosition = this.player.root.position.clone().add(new THREE.Vector3(0, 4.8, 8.4));
+    this.camera.position.lerp(cameraPosition, ease(7.5, dt));
+    // Keep the viewing direction fixed relative to the camera itself; only its position follows.
+    this.camera.lookAt(this.camera.position.clone().add(new THREE.Vector3(0, -3.65, -11.7)));
 
     this.spectators.forEach((spectator) => {
       const wave = Math.sin(elapsed * 2.2 + spectator.phase) * 0.12;
