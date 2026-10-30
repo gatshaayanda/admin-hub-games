@@ -9,10 +9,10 @@ describe('Sri Lanka League ball physics', () => {
     expect(cameraRelativeMove(0, 1, 1, 0)).toEqual({ x: 1, z: 0 });
   });
   it('carries the ball with the player during a close dribble touch', () => {
-    const ball = createFootballBall(0, BALL_RADIUS, 0.9);
+    const ball = createFootballBall(0, BALL_RADIUS, -0.9);
     const touched = applyDribbleContact(ball, 0, 0, 0, -4, 0, 1 / 60);
     expect(touched).toBe(true);
-    expect(ball.z).toBeCloseTo(0.9, 5);
+    expect(ball.z).toBeCloseTo(-0.9, 5);
     expect(ball.vz).toBeLessThan(0);
     expect(Math.abs(ball.vz)).toBeLessThan(4);
   });

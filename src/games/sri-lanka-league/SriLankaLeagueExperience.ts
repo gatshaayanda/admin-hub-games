@@ -657,9 +657,6 @@ export class SriLankaLeagueExperience {
       const goal = stepFootballBall(this.ball, dt);
       if (goal && this.goalTimer <= 0) this.scoreGoal();
 
-      const dx = this.ball.x - this.player.root.position.x;
-      const dz = this.ball.z - this.player.root.position.z;
-      const separation = Math.hypot(dx, dz);
       applyDribbleContact(
         this.ball,
         this.player.root.position.x,
