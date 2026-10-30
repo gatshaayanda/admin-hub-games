@@ -11,12 +11,17 @@ declare module 'three' {
   export type HemisphereLight = any; export const HemisphereLight: any;
   export type DirectionalLight = any; export const DirectionalLight: any;
   export type MeshStandardMaterial = any; export const MeshStandardMaterial: any;
+  export type MeshToonMaterial = any; export const MeshToonMaterial: any;
+  export type MeshBasicMaterial = any; export const MeshBasicMaterial: any;
+  export type CanvasTexture = any; export const CanvasTexture: any;
   export type Color = any; export const Color: any;
   export type Fog = any; export const Fog: any;
   export const CapsuleGeometry: any; export const SphereGeometry: any;
   export const CylinderGeometry: any; export const ConeGeometry: any;
   export const BoxGeometry: any; export const PlaneGeometry: any;
+  export const CircleGeometry: any; export const TorusGeometry: any;
   export const SRGBColorSpace: any; export const PCFSoftShadowMap: any;
+  export const ACESFilmicToneMapping: any;
 }
 declare module 'three/addons/loaders/GLTFLoader.js' {
   export class GLTFLoader {

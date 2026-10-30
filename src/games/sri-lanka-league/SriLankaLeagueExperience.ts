@@ -669,12 +669,12 @@ export class SriLankaLeagueExperience {
     window.removeEventListener('blur', this.onBlur);
     if (this.toastTimer) window.clearTimeout(this.toastTimer);
     if (this.winTimer) window.clearTimeout(this.winTimer);
-    this.scene?.traverse((object) => {
+    this.scene?.traverse((object: any) => {
       const mesh = object as THREE.Mesh;
       if (mesh.geometry) mesh.geometry.dispose();
       if (mesh.material) {
         const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-        materials.forEach((material) => material.dispose());
+        materials.forEach((material: any) => material.dispose());
       }
     });
     this.renderer?.dispose();
